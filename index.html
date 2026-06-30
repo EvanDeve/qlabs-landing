@@ -214,9 +214,10 @@ nav {
   position: relative;
   box-shadow: 0 40px 80px rgba(0,0,0,0.1);
 }
-.video-mockup img {
+.video-mockup img, .video-mockup video {
   width: 100%;
   display: block;
+  object-fit: cover;
 }
 .play-btn {
   position: absolute;
@@ -805,6 +806,10 @@ footer { background: var(--bg-footer); color: #fff; padding: 80px 0 40px; }
     <div class="hero-btns fade-up">
       <a href="https://calendly.com/puravidarepublic/aas-pov" target="_blank" rel="noopener noreferrer" class="btn-primary">Agendar reunión</a>
       <a href="#services" class="btn-outline">Ver kit</a>
+    </div>
+
+    <div class="video-mockup fade-up" style="margin-top: 60px;">
+      <video src="hotels_video.mp4" autoplay loop muted playsinline></video>
     </div>
 
   </div>
