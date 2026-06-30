@@ -690,6 +690,188 @@ nav {
   padding-top: 24px;
 }
 
+/* Video Testimonial Section */
+.video-testimonial {
+  padding: 80px 0;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+/* Centered header */
+.vt-header {
+  text-align: center;
+  margin-bottom: 48px;
+  padding: 0 16px;
+}
+.vt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(112, 92, 246, 0.08);
+  color: var(--accent);
+  padding: 6px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  border: 1px solid rgba(112, 92, 246, 0.15);
+}
+.vt-header h2 {
+  font-size: clamp(28px, 5vw, 44px);
+  margin-bottom: 14px;
+  line-height: 1.15;
+}
+.vt-header p {
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Phone mockup — centered */
+.vt-phone-wrap {
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+.vt-phone-glow {
+  position: absolute;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(112,92,246,0.3) 0%, transparent 70%);
+  bottom: -80px; left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(40px);
+}
+.vt-phone-frame {
+  position: relative;
+  width: 300px;
+  border-radius: 40px;
+  background: #0a0b10;
+  padding: 12px;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.06),
+    0 50px 100px rgba(112, 92, 246, 0.22),
+    0 16px 40px rgba(0,0,0,0.18);
+  z-index: 1;
+}
+.vt-phone-notch {
+  width: 90px;
+  height: 24px;
+  background: #0a0b10;
+  border-radius: 0 0 18px 18px;
+  margin: 0 auto 8px;
+  position: relative;
+  z-index: 5;
+}
+.vt-phone-notch::after {
+  content: '';
+  width: 44px;
+  height: 9px;
+  background: #1a1b22;
+  border-radius: 9px;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+}
+.vt-phone-screen {
+  position: relative;
+  border-radius: 28px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #000;
+  aspect-ratio: 9 / 16;
+}
+.vt-phone-screen video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.vt-phone-screen:hover video {
+  transform: scale(1.02);
+}
+
+/* Overlay */
+.vt-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(10, 11, 16, 0.7) 0%,
+    transparent 50%
+  );
+  z-index: 1;
+  transition: opacity 0.4s ease;
+}
+.vt-phone-screen.playing .vt-overlay {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Play button */
+.vt-play-btn {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: 68px; height: 68px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 22px;
+  padding-left: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.vt-play-btn:hover { transform: translate(-50%, -50%) scale(1.12); }
+.vt-phone-screen.playing .vt-play-btn {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.7);
+  pointer-events: none;
+}
+@keyframes vt-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(112,92,246,0.4); }
+  70%  { box-shadow: 0 0 0 20px rgba(112,92,246,0); }
+  100% { box-shadow: 0 0 0 0   rgba(112,92,246,0); }
+}
+.vt-play-btn { animation: vt-pulse 2.2s ease-out infinite; }
+.vt-phone-screen.playing .vt-play-btn { animation: none; }
+
+/* Bottom label on phone */
+.vt-phone-label {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 2;
+  padding: 20px 16px;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.vt-phone-screen.playing .vt-phone-label {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+.vt-phone-label .vt-stars {
+  display: flex; gap: 3px; margin-bottom: 6px;
+}
+.vt-stars i { color: #fbbf24; font-size: 11px; }
+.vt-phone-label h4 { color: #fff; font-size: 14px; font-weight: 800; margin-bottom: 2px; }
+.vt-phone-label p  { color: rgba(255,255,255,0.65); font-size: 12px; font-weight: 500; }
+
+/* Responsive — mobile first */
+@media (max-width: 480px) {
+  .video-testimonial { padding: 64px 0; }
+  .vt-phone-frame { width: min(280px, 80vw); border-radius: 36px; }
+}
+
 /* Big CTA */
 .big-cta { padding: 120px 0; background: var(--bg-main); }
 .cta-box {
@@ -902,6 +1084,44 @@ footer { background: var(--bg-footer); color: #fff; padding: 80px 0 40px; }
 </section>
 
 
+<!-- Video Testimonial Section -->
+<section id="testimonial" class="video-testimonial">
+  <div class="container">
+
+    <!-- Header centrado -->
+    <div class="vt-header fade-up">
+      <div class="vt-badge"><i class="fa-solid fa-circle-play"></i> Testimonios reales</div>
+      <h2>Lo que dicen quienes ya <span class="serif-italic">confiaron</span> en nosotros</h2>
+      <p>Cuatro negocios. Cuatro historias de crecimiento real con Q Labs.</p>
+    </div>
+
+    <!-- Phone mockup centrado -->
+    <div class="vt-phone-wrap fade-up">
+      <div class="vt-phone-glow"></div>
+      <div class="vt-phone-frame">
+        <div class="vt-phone-notch"></div>
+        <div class="vt-phone-screen" id="vtPhoneScreen">
+          <video id="vtVideo" src="testimonios.mp4" preload="metadata" playsinline></video>
+          <div class="vt-overlay"></div>
+          <button class="vt-play-btn" id="vtPlayBtn" aria-label="Reproducir testimonios">
+            <i class="fa-solid fa-play"></i>
+          </button>
+          <div class="vt-phone-label">
+            <div class="vt-stars">
+              <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              <i class="fa-solid fa-star"></i>
+            </div>
+            <h4>Nuestros clientes</h4>
+            <p>Restaurantes &amp; Hoteles — Chile</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <section id="agenda" class="big-cta">
   <div class="container">
     <div class="cta-box fade-up">
@@ -922,6 +1142,29 @@ footer { background: var(--bg-footer); color: #fff; padding: 80px 0 40px; }
       y: 40, opacity: 0, duration: 0.8, ease: "power2.out", clearProps: "all"
     });
   });
+
+  // Video Testimonial toggle
+  const vtScreen  = document.getElementById('vtPhoneScreen');
+  const vtVideo   = document.getElementById('vtVideo');
+  const vtPlayBtn = document.getElementById('vtPlayBtn');
+
+  function playVideo() {
+    vtVideo.play();
+    vtScreen.classList.add('playing');
+  }
+
+  function pauseVideo() {
+    vtVideo.pause();
+    vtScreen.classList.remove('playing');
+  }
+
+  vtPlayBtn.addEventListener('click', playVideo);
+
+  vtVideo.addEventListener('click', () => {
+    if (!vtVideo.paused) pauseVideo();
+  });
+
+  vtVideo.addEventListener('ended', pauseVideo);
 
 
 </script>
