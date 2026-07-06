@@ -1,0 +1,266 @@
+/* Ported verbatim from prototypes/index-legacy.html — scoped under .qlabs-marketing
+   so it never leaks into /ugc. Class names match the original production site 1:1.
+   The <nav> markup itself is new (the original site had no navbar); it reuses the
+   nav/nav-wrap/logo/nav-links classes that already existed, unused, in that CSS. */
+
+.qlabs-marketing {
+  --bg-main: #ffffff;
+  --bg-secondary: #f9f8fe;
+  --bg-footer: #0a0b10;
+
+  --text-primary: #0a0b10;
+  --text-secondary: #4b5563;
+
+  --accent: #705cf6;
+  --accent-hover: #5a47e5;
+
+  --font-serif: var(--font-playfair), serif;
+
+  --radius-sm: 12px;
+  --radius-md: 24px;
+  --radius-lg: 32px;
+  --radius-pill: 100px;
+
+  --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  font-family: var(--font-jakarta), sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.qlabs-marketing h1,
+.qlabs-marketing h2,
+.qlabs-marketing h3,
+.qlabs-marketing h4 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.qlabs-marketing .serif-italic { color: var(--accent); }
+.qlabs-marketing .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* Nav */
+.qlabs-marketing nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 20px 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  transition: var(--transition);
+}
+.qlabs-marketing .nav-wrap { display: flex; justify-content: space-between; align-items: center; }
+.qlabs-marketing .logo {
+  font-size: 20px; font-weight: 800; color: var(--text-primary);
+  text-decoration: none; display: flex; align-items: center; gap: 12px;
+}
+.qlabs-marketing .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; }
+.qlabs-marketing .nav-links a {
+  color: var(--text-secondary); text-decoration: none; font-weight: 600; font-size: 15px;
+  transition: var(--transition);
+}
+.qlabs-marketing .nav-links a:hover, .qlabs-marketing .nav-links a.active { color: var(--accent); }
+.qlabs-marketing .nav-toggle {
+  display: none; background: none; border: none; font-size: 24px;
+  color: var(--text-primary); cursor: pointer; z-index: 110;
+}
+.qlabs-marketing .mobile-only { display: none; }
+
+/* Buttons */
+.qlabs-marketing .btn-primary {
+  background: var(--accent); color: #fff; padding: 14px 28px; border-radius: var(--radius-pill);
+  text-decoration: none; font-weight: 700; display: inline-block; transition: var(--transition);
+  border: 1px solid var(--accent); text-align: center;
+}
+.qlabs-marketing .btn-primary:hover {
+  background: var(--accent-hover); transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(112, 92, 246, 0.2);
+}
+.qlabs-marketing .btn-outline {
+  background: transparent; color: var(--text-primary); padding: 14px 28px; border-radius: var(--radius-pill);
+  text-decoration: none; font-weight: 700; display: inline-block; transition: var(--transition);
+  border: 1px solid rgba(0,0,0,0.1); text-align: center;
+}
+.qlabs-marketing .btn-outline:hover { border-color: var(--text-primary); }
+
+/* Hero */
+.qlabs-marketing .hero {
+  padding-top: 12vh; padding-bottom: 40px;
+  background: linear-gradient(180deg, #f4f3ff 0%, #ffffff 100%);
+  text-align: center;
+}
+.qlabs-marketing .badge-group {
+  display: inline-flex; align-items: center; gap: 12px; background: #fff; padding: 6px 16px;
+  border-radius: var(--radius-pill); box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 32px;
+  border: 1px solid rgba(0,0,0,0.02);
+}
+.qlabs-marketing .avatars { display: flex; }
+.qlabs-marketing .avatars img { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; margin-left: -8px; }
+.qlabs-marketing .avatars img:first-child { margin-left: 0; }
+.qlabs-marketing .badge-text { font-size: 13px; font-weight: 700; }
+.qlabs-marketing .hero h1 { font-size: clamp(40px, 7vw, 87px); max-width: 900px; margin: 0 auto 24px; }
+.qlabs-marketing .hero p {
+  font-size: clamp(16px, 2.5vw, 20px); color: var(--text-secondary); max-width: 600px;
+  margin: 0 auto 40px; padding: 0 16px;
+}
+.qlabs-marketing .hero-btns { display: flex; gap: 16px; justify-content: center; margin-bottom: 80px; flex-wrap: wrap; padding: 0 24px; }
+.qlabs-marketing .hero-btns .btn-primary, .qlabs-marketing .hero-btns .btn-outline { min-width: 160px; }
+.qlabs-marketing .video-mockup {
+  max-width: 1000px; margin: 0 auto; border-radius: var(--radius-md); overflow: hidden;
+  position: relative; box-shadow: 0 40px 80px rgba(0,0,0,0.1);
+}
+.qlabs-marketing .video-mockup img, .qlabs-marketing .video-mockup video { width: 100%; display: block; object-fit: cover; }
+
+/* Brands marquee */
+.qlabs-marketing .brands-section {
+  padding: 60px 0; border-top: 1px solid rgba(0,0,0,0.05); border-bottom: 1px solid rgba(0,0,0,0.05);
+  background: var(--bg-main); overflow: hidden; position: relative;
+}
+.qlabs-marketing .brands-section::before,
+.qlabs-marketing .brands-section::after {
+  content: ""; position: absolute; top: 0; width: 150px; height: 100%; z-index: 2;
+}
+.qlabs-marketing .brands-section::before { left: 0; background: linear-gradient(to right, var(--bg-main) 0%, transparent 100%); }
+.qlabs-marketing .brands-section::after { right: 0; background: linear-gradient(to left, var(--bg-main) 0%, transparent 100%); }
+.qlabs-marketing .brands-title {
+  text-align: center; color: var(--text-secondary); font-size: 13px; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 32px; font-weight: 700; padding: 0 24px;
+}
+.qlabs-marketing .marquee-container { display: flex; overflow: hidden; user-select: none; }
+.qlabs-marketing .marquee-content { flex-shrink: 0; display: flex; width: max-content; animation: qlabs-scrollMarquee 30s linear infinite; }
+.qlabs-marketing .marquee-item {
+  font-weight: 800; font-size: 28px; letter-spacing: -1px; color: var(--text-secondary); opacity: 0.5;
+  transition: var(--transition); cursor: pointer; white-space: nowrap; padding-right: 80px;
+}
+.qlabs-marketing .marquee-item:hover { opacity: 1; color: var(--accent); }
+@keyframes qlabs-scrollMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+/* Stats */
+.qlabs-marketing .stats { padding: 100px 0; background: var(--bg-main); border-bottom: 1px solid rgba(0,0,0,0.05); }
+.qlabs-marketing .stats-title {
+  text-align: center; margin-bottom: 60px; font-size: clamp(28px, 4vw, 48px); max-width: 800px;
+  margin-left: auto; margin-right: auto; line-height: 1.2; padding: 0 24px;
+}
+.qlabs-marketing .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; text-align: center; }
+.qlabs-marketing .stat-item { padding: 20px; }
+.qlabs-marketing .stat-num { font-size: clamp(50px, 6vw, 80px); font-weight: 800; color: var(--accent); line-height: 1; margin-bottom: 12px; }
+.qlabs-marketing .stat-label { font-size: 15px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Services */
+.qlabs-marketing .services { padding: 120px 0; background: var(--bg-secondary); }
+.qlabs-marketing .section-header { text-align: center; margin-bottom: 60px; padding: 0 24px; }
+.qlabs-marketing .section-header h2 { font-size: clamp(32px, 5vw, 48px); margin-bottom: 16px; }
+.qlabs-marketing .service-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-bottom: 48px; }
+.qlabs-marketing .service-card {
+  background: #fff; padding: 40px; border-radius: var(--radius-md); border: 1px solid rgba(0,0,0,0.05);
+  transition: var(--transition);
+}
+.qlabs-marketing .service-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); background: #faf9ff; }
+.qlabs-marketing .service-icon {
+  width: 56px; height: 56px; border: 1px solid var(--accent); border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center; color: var(--accent);
+  margin-bottom: 24px; font-size: 20px;
+}
+.qlabs-marketing .service-card h3 { font-size: 24px; margin-bottom: 16px; }
+.qlabs-marketing .service-card p { color: var(--text-secondary); margin-bottom: 24px; font-size: 15px; }
+.qlabs-marketing .services-btn-container { display: flex; justify-content: center; width: 100%; }
+
+/* Video testimonial (phone mockup) */
+.qlabs-marketing .video-testimonial { padding: 80px 0; background: var(--bg-secondary); overflow: hidden; }
+.qlabs-marketing .vt-header { text-align: center; margin-bottom: 48px; padding: 0 16px; }
+.qlabs-marketing .vt-badge {
+  display: inline-flex; align-items: center; gap: 8px; background: rgba(112, 92, 246, 0.08); color: var(--accent);
+  padding: 6px 18px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 20px; border: 1px solid rgba(112, 92, 246, 0.15);
+}
+.qlabs-marketing .vt-header h2 { font-size: clamp(28px, 5vw, 44px); margin-bottom: 14px; line-height: 1.15; }
+.qlabs-marketing .vt-header p { color: var(--text-secondary); font-size: 16px; line-height: 1.7; max-width: 480px; margin: 0 auto; }
+.qlabs-marketing .vt-phone-wrap { display: flex; justify-content: center; position: relative; }
+.qlabs-marketing .vt-phone-glow {
+  position: absolute; width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(112,92,246,0.3) 0%, transparent 70%);
+  bottom: -80px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 0; filter: blur(40px);
+}
+.qlabs-marketing .vt-phone-frame {
+  position: relative; width: 300px; border-radius: 40px; background: #0a0b10; padding: 12px;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.06), 0 50px 100px rgba(112, 92, 246, 0.22), 0 16px 40px rgba(0,0,0,0.18);
+  z-index: 1;
+}
+.qlabs-marketing .vt-phone-notch {
+  width: 90px; height: 24px; background: #0a0b10; border-radius: 0 0 18px 18px; margin: 0 auto 8px;
+  position: relative; z-index: 5;
+}
+.qlabs-marketing .vt-phone-notch::after {
+  content: ''; width: 44px; height: 9px; background: #1a1b22; border-radius: 9px; position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%); display: block;
+}
+.qlabs-marketing .vt-phone-screen { position: relative; border-radius: 28px; overflow: hidden; cursor: pointer; background: #000; aspect-ratio: 9 / 16; }
+.qlabs-marketing .vt-phone-screen video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+.qlabs-marketing .vt-phone-screen:hover video { transform: scale(1.02); }
+.qlabs-marketing .vt-overlay {
+  position: absolute; inset: 0; background: linear-gradient(to top, rgba(10, 11, 16, 0.7) 0%, transparent 50%);
+  z-index: 1; transition: opacity 0.4s ease;
+}
+.qlabs-marketing .vt-phone-screen.playing .vt-overlay { opacity: 0; pointer-events: none; }
+.qlabs-marketing .vt-play-btn {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3;
+  width: 68px; height: 68px; background: var(--accent); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px;
+  padding-left: 4px; border: none; cursor: pointer; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.qlabs-marketing .vt-play-btn:hover { transform: translate(-50%, -50%) scale(1.12); }
+.qlabs-marketing .vt-phone-screen.playing .vt-play-btn { opacity: 0; transform: translate(-50%, -50%) scale(0.7); pointer-events: none; }
+@keyframes qlabs-vt-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(112,92,246,0.4); }
+  70%  { box-shadow: 0 0 0 20px rgba(112,92,246,0); }
+  100% { box-shadow: 0 0 0 0   rgba(112,92,246,0); }
+}
+.qlabs-marketing .vt-play-btn { animation: qlabs-vt-pulse 2.2s ease-out infinite; }
+.qlabs-marketing .vt-phone-screen.playing .vt-play-btn { animation: none; }
+.qlabs-marketing .vt-phone-label { position: absolute; bottom: 0; left: 0; right: 0; z-index: 2; padding: 20px 16px; transition: opacity 0.4s ease, transform 0.4s ease; }
+.qlabs-marketing .vt-phone-screen.playing .vt-phone-label { opacity: 0; transform: translateY(8px); pointer-events: none; }
+.qlabs-marketing .vt-phone-label .vt-stars { display: flex; gap: 3px; margin-bottom: 6px; }
+.qlabs-marketing .vt-stars i { color: #fbbf24; font-size: 11px; }
+.qlabs-marketing .vt-phone-label h4 { color: #fff; font-size: 14px; font-weight: 800; margin-bottom: 2px; }
+.qlabs-marketing .vt-phone-label p { color: rgba(255,255,255,0.65); font-size: 12px; font-weight: 500; }
+
+/* Big CTA */
+.qlabs-marketing .big-cta { padding: 120px 0; background: var(--bg-main); }
+.qlabs-marketing .cta-box {
+  background: linear-gradient(135deg, #705cf6 0%, #5a47e5 100%); border-radius: 40px; padding: 80px 40px;
+  text-align: center; color: #fff; position: relative; overflow: hidden;
+}
+.qlabs-marketing .cta-box h2 { color: #fff; font-size: clamp(32px, 5vw, 56px); margin-bottom: 24px; max-width: 800px; margin-left: auto; margin-right: auto; }
+.qlabs-marketing .cta-box .serif-italic { color: #d3ccff !important; text-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.qlabs-marketing .cta-box p { font-size: 18px; opacity: 0.8; margin-bottom: 40px; }
+.qlabs-marketing .cta-box .btn-primary { background: #fff; color: var(--accent); border-color: #fff; }
+
+/* Responsive */
+@media (max-width: 991px) {
+  .qlabs-marketing .service-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .qlabs-marketing nav { padding: 15px 0; }
+  .qlabs-marketing .nav-toggle { display: block; }
+  .qlabs-marketing .nav-links {
+    position: fixed; top: 0; right: -100%; width: 80%; max-width: 400px; height: 100vh; background: #fff;
+    flex-direction: column; justify-content: center; align-items: center;
+    box-shadow: -10px 0 30px rgba(0,0,0,0.1); transition: var(--transition); z-index: 105; gap: 30px;
+  }
+  .qlabs-marketing .nav-links.active { right: 0; }
+  .qlabs-marketing .nav-links a { font-size: 20px; }
+  .qlabs-marketing .mobile-only { display: block; width: 80%; margin-top: 10px; }
+  .qlabs-marketing #desktop-btn { display: none; }
+  .qlabs-marketing .stats-grid { grid-template-columns: 1fr; gap: 20px; }
+  .qlabs-marketing .service-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .qlabs-marketing .video-testimonial { padding: 64px 0; }
+  .qlabs-marketing .vt-phone-frame { width: min(280px, 80vw); border-radius: 36px; }
+}

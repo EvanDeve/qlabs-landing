@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UGC·CRC — Marketplace de contenido</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A0B10;
+    --ink-soft:#5B5570;
+    --violet:#705CF6;
+    --violet-deep:#5641D8;
+    --periwinkle:#8E80F2;
+    --lavender:#F6F4FD;
+    --lavender-deep:#ECE7FB;
+    --paper:#FFFFFF;
+    --trust:#17A673;
+    --trust-bg:#E7F7F1;
+    --coral:#FF6B57;
+    --coral-bg:#FFEBE8;
+    --line:rgba(10,11,16,0.10);
+    --line-strong:rgba(10,11,16,0.16);
+    --radius:14px;
+    --radius-sm:8px;
+    --shadow:0 20px 48px -20px rgba(10,11,16,0.22);
+    --shadow-sm:0 8px 20px -12px rgba(10,11,16,0.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--lavender);
+    color:var(--ink);
+    font-family:'Plus Jakarta Sans',sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  h1,h2,h3,h4{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spacing:-0.01em;color:var(--ink);}
+  .mono{font-family:'Space Mono',monospace;}
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+  ::selection{background:var(--periwinkle);color:#fff;}
+
+  /* ---------- NAV ---------- */
+  .nav{
+    position:sticky;top:0;z-index:100;
+    background:rgba(246,244,253,0.86);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-inner{max-width:1180px;margin:0 auto;padding:16px 28px;display:flex;align-items:center;gap:28px;}
+  .logo{display:flex;align-items:center;gap:9px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:19px;letter-spacing:-0.02em;}
+  .logo-mark{
+    width:30px;height:30px;border-radius:9px;
+    background:linear-gradient(135deg,var(--violet),var(--periwinkle));
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:15px;
+    flex-shrink:0;
+  }
+  .logo .dim{color:var(--ink-soft);font-weight:600;}
+  .qlabs-back{
+    width:32px;height:32px;border-radius:9px;border:1px solid var(--line-strong);
+    display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:15px;
+    flex-shrink:0;transition:all .15s ease;
+  }
+  .qlabs-back:hover{background:var(--lavender-deep);color:var(--ink);border-color:transparent;}
+  .nav-tabs{display:flex;gap:4px;background:var(--lavender-deep);padding:4px;border-radius:999px;margin-left:auto;}
+  .nav-tabs button{
+    padding:8px 16px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--ink-soft);
+    transition:all .18s ease;
+  }
+  .nav-tabs button.active{background:var(--ink);color:#fff;}
+  .nav-tabs button:not(.active):hover{color:var(--ink);}
+  .nav-actions{display:flex;align-items:center;gap:10px;}
+  .btn{
+    padding:9px 18px;border-radius:999px;font-size:13.5px;font-weight:600;
+    transition:all .18s ease;white-space:nowrap;
+  }
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover{background:var(--violet-deep);}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line-strong);}
+  .btn-ghost:hover{border-color:var(--ink);}
+  .btn-violet{background:var(--violet);color:#fff;}
+  .btn-violet:hover{background:var(--violet-deep);}
+  .user-pill{
+    display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:999px;
+    background:var(--paper);border:1px solid var(--line-strong);font-size:13px;font-weight:600;
+  }
+  .avatar{
+    width:26px;height:26px;border-radius:50%;background:var(--periwinkle);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;
+  }
+
+  /* ---------- VIEWS ---------- */
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---------- PUBLIC VIEW ---------- */
+  .hero{padding:88px 0 56px;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'Space Mono',monospace;font-size:11.5px;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--violet-deep);background:var(--lavender-deep);padding:7px 14px;border-radius:999px;
+    margin-bottom:22px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--trust);}
+  .hero h1{font-size:clamp(38px,5.4vw,64px);line-height:1.03;font-weight:700;max-width:820px;}
+  .hero h1 em{font-style:normal;color:var(--violet);}
+  .hero p.lede{font-size:18px;color:var(--ink-soft);max-width:560px;margin:22px 0 32px;}
+  .hero-actions{display:flex;gap:12px;flex-wrap:wrap;}
+  .hero-actions .btn{padding:13px 26px;font-size:14.5px;}
+  .hero-stats{display:flex;gap:40px;margin-top:52px;padding-top:32px;border-top:1px solid var(--line);flex-wrap:wrap;}
+  .stat-num{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:28px;color:var(--ink);}
+  .stat-label{font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);margin-top:4px;}
+
+  .trust-bar{
+    display:flex;gap:28px;flex-wrap:wrap;padding:18px 0 0;margin-top:36px;
+  }
+  .trust-item{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-soft);}
+  .trust-item .ti-ic{
+    width:18px;height:18px;border-radius:50%;background:var(--trust-bg);color:var(--trust);
+    display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;
+  }
+
+  .section-head{display:flex;justify-content:space-between;align-items:flex-end;margin:64px 0 22px;gap:20px;flex-wrap:wrap;}
+  .section-head h2{font-size:26px;font-weight:700;}
+  .section-head p{color:var(--ink-soft);font-size:14px;margin-top:6px;}
+
+  .grid-campaigns{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;padding-bottom:40px;}
+  .campaign-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px;position:relative;overflow:hidden;transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .campaign-card:hover{box-shadow:var(--shadow-sm);transform:translateY(-2px);}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+  .brand-chip{display:flex;align-items:center;gap:8px;}
+  .brand-avatar{width:32px;height:32px;border-radius:9px;background:var(--lavender-deep);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--violet-deep);}
+  .brand-name{font-size:13.5px;font-weight:700;}
+  .brand-type{font-size:11px;color:var(--ink-soft);}
+  .format-tag{
+    font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;
+    background:var(--lavender);color:var(--violet-deep);padding:4px 8px;border-radius:6px;
+  }
+  .campaign-card h3{font-size:16.5px;font-weight:600;margin-bottom:10px;line-height:1.3;}
+  .card-meta{display:flex;gap:14px;margin:14px 0 16px;font-size:12.5px;color:var(--ink-soft);flex-wrap:wrap;}
+  .card-meta span{display:flex;align-items:center;gap:5px;}
+  .budget{font-family:'Space Mono',monospace;font-weight:700;color:var(--ink);font-size:15px;}
+
+  .locked{filter:blur(5px);user-select:none;pointer-events:none;}
+  .lock-overlay{
+    position:absolute;inset:0;background:rgba(255,255,255,0.35);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    backdrop-filter:blur(1px);
+  }
+  .lock-icon{
+    width:38px;height:38px;border-radius:50%;background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:16px;
+  }
+  .lock-overlay .btn{position:relative;pointer-events:auto;}
+
+  .grid-cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;padding-bottom:10px;}
+  .case-card{
+    background:var(--ink);color:#fff;border-radius:var(--radius);padding:26px;
+    display:flex;flex-direction:column;gap:16px;position:relative;overflow:hidden;
+  }
+  .case-metric{font-size:36px;font-weight:800;color:var(--periwinkle);line-height:1;}
+  .case-metric-label{font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px;}
+  .case-quote{font-size:14px;line-height:1.55;opacity:0.92;}
+  .case-foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:6px;border-top:1px solid rgba(255,255,255,0.14);}
+  .case-brand{font-weight:700;font-size:13px;}
+  .case-role{font-size:11.5px;color:rgba(255,255,255,0.55);}
+  .case-platforms{display:flex;gap:5px;}
+  .case-plat-tag{font-size:10px;font-family:'Space Mono',monospace;background:rgba(255,255,255,0.1);padding:3px 7px;border-radius:5px;}
+
+  .faq-section{padding:10px 0 76px;}
+  .faq-tabs{display:flex;gap:8px;margin:22px 0 18px;}
+  .faq-tab{padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid var(--line-strong);color:var(--ink-soft);}
+  .faq-tab.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .faq-list{display:none;flex-direction:column;gap:10px;}
+  .faq-list.active{display:flex;}
+  .faq-item{background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;}
+  .faq-q{
+    padding:16px 20px;display:flex;justify-content:space-between;align-items:center;
+    font-size:14px;font-weight:700;width:100%;text-align:left;
+  }
+  .faq-q .chev{transition:transform .2s ease;color:var(--violet);font-size:14px;}
+  .faq-item.open .faq-q .chev{transform:rotate(45deg);}
+  .faq-a{max-height:0;overflow:hidden;transition:max-height .25s ease;}
+  .faq-item.open .faq-a{max-height:200px;}
+  .faq-a p{padding:0 20px 18px;font-size:13.5px;color:var(--ink-soft);}
+
+  .how-it-works{padding:20px 0 70px;}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px;}
+  .step-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:24px;}
+  .step-num{font-family:'Space Mono',monospace;color:var(--violet);font-size:12px;margin-bottom:10px;}
+  .step-card h4{font-size:16px;margin-bottom:8px;}
+  .step-card p{font-size:13.5px;color:var(--ink-soft);}
+
+  .split-cta{
+    display:grid;grid-template-columns:1fr 1fr;gap:18px;padding-bottom:80px;
+  }
+  .split-card{
+    border-radius:20px;padding:34px;position:relative;overflow:hidden;
+  }
+  .split-card.creator-c{background:var(--ink);color:#fff;}
+  .split-card.brand-c{background:linear-gradient(135deg,var(--violet),var(--violet-deep));color:#fff;}
+  .split-card .tag{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.7;margin-bottom:14px;display:block;}
+  .split-card h3{color:#fff;font-size:24px;margin-bottom:10px;}
+  .split-card p{opacity:0.82;font-size:14px;margin-bottom:22px;max-width:340px;}
+  .split-card .btn{background:#fff;color:var(--ink);}
+  .split-card .btn:hover{background:var(--lavender);}
+
+  /* ---------- LOGIN MODAL ---------- */
+  .modal-backdrop{
+    display:none;position:fixed;inset:0;background:rgba(21,18,31,0.5);z-index:200;
+    align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);
+  }
+  .modal-backdrop.active{display:flex;}
+  .modal{background:#fff;border-radius:20px;max-width:400px;width:100%;padding:32px;box-shadow:var(--shadow);}
+  .modal h3{font-size:20px;margin-bottom:6px;}
+  .modal p.sub{color:var(--ink-soft);font-size:13.5px;margin-bottom:24px;}
+  .role-pick{display:flex;flex-direction:column;gap:10px;}
+  .role-opt{
+    display:flex;align-items:center;gap:14px;padding:16px;border:1.5px solid var(--line-strong);
+    border-radius:var(--radius-sm);transition:all .15s ease;text-align:left;width:100%;
+  }
+  .role-opt:hover{border-color:var(--violet);background:var(--lavender);}
+  .role-opt .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+  .role-opt.creator .ic{background:var(--coral-bg);}
+  .role-opt.brand .ic{background:var(--lavender-deep);}
+  .role-opt strong{display:block;font-size:14px;}
+  .role-opt span{font-size:12px;color:var(--ink-soft);}
+  .modal-close{position:absolute;top:18px;right:18px;font-size:20px;color:var(--ink-soft);}
+  .modal-wrap{position:relative;}
+
+  .ch-toprow{display:flex;justify-content:space-between;align-items:flex-start;}
+  .level-pill{
+    background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.24);color:#fff;
+    padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;backdrop-filter:blur(4px);
+  }
+  .xp-bar-wrap{margin-top:20px;max-width:340px;}
+  .xp-bar-track{height:7px;border-radius:999px;background:rgba(255,255,255,0.16);overflow:hidden;}
+  .xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--periwinkle),#fff);border-radius:999px;}
+  .xp-label{font-family:'Space Mono',monospace;font-size:10.5px;color:rgba(255,255,255,0.65);margin-top:7px;display:block;}
+
+  .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;}
+  .badge-chip{
+    display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);
+    padding:8px 13px;border-radius:999px;font-size:12px;font-weight:700;color:var(--ink-soft);
+  }
+  .badge-ic{font-size:14px;}
+
+  .skills-list{display:flex;flex-direction:column;gap:11px;max-width:420px;}
+  .skill-row{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .skill-name{font-size:13.5px;font-weight:600;}
+  .skill-dots{display:flex;gap:4px;flex-shrink:0;}
+  .skill-dots .dot{width:8px;height:8px;border-radius:50%;background:var(--lavender-deep);}
+  .skill-dots .dot.filled{background:var(--violet);}
+
+  .ch-banner{
+    background:linear-gradient(135deg,var(--ink),#2A2340 60%,var(--violet-deep));
+    border-radius:24px;padding:44px 36px;color:#fff;position:relative;overflow:hidden;margin-top:20px;
+  }
+  .ch-avatar{
+    width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);
+    display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin-bottom:16px;
+  }
+  .ch-name{font-size:clamp(30px,4.5vw,44px);font-weight:800;letter-spacing:-0.02em;color:#fff;}
+  .ch-sub{font-family:'Space Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:var(--periwinkle);margin-top:4px;}
+  .ch-contact{display:flex;gap:20px;flex-wrap:wrap;margin-top:22px;font-size:13px;color:rgba(255,255,255,0.85);}
+  .ch-contact span{display:flex;align-items:center;gap:6px;}
+  .ch-contact .trust-ring .pct{color:#fff;}
+
+  .cp-two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;}
+  .cp-list{list-style:none;display:flex;flex-direction:column;gap:9px;}
+  .cp-list li{font-size:13.5px;color:var(--ink-soft);padding-left:18px;position:relative;}
+  .cp-list li::before{content:'—';position:absolute;left:0;color:var(--violet);}
+
+  .cp-modal{max-width:520px;max-height:82vh;overflow-y:auto;}
+  .cp-header{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
+  .cp-bio{font-size:13.5px;color:var(--ink-soft);margin-bottom:14px;}
+  .cp-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+  .cp-section-title{font-family:'Space Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin:20px 0 10px;}
+  .cp-brands{display:flex;flex-direction:column;gap:10px;}
+  .cp-brand-cat{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .cp-cat-label{font-size:11.5px;font-weight:700;color:var(--ink-soft);min-width:80px;}
+  .cp-brand-chip{font-size:12px;font-weight:600;background:var(--lavender);padding:5px 11px;border-radius:999px;}
+  .cp-locked{margin-top:22px;border-radius:var(--radius);background:var(--lavender);padding:24px;text-align:center;}
+  .cp-locked-inner{max-width:340px;margin:0 auto;}
+
+  /* ---------- DASHBOARD LAYOUT ---------- */
+  .dash{display:grid;grid-template-columns:220px 1fr;gap:0;min-height:calc(100vh - 65px);}
+  .sidebar{border-right:1px solid var(--line);padding:28px 18px;}
+  .side-section{margin-bottom:26px;}
+  .side-label{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);padding:0 10px;margin-bottom:8px;}
+  .side-link{
+    display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--ink-soft);
+    width:100%;text-align:left;margin-bottom:2px;transition:all .15s ease;
+  }
+  .side-link .ic{width:18px;text-align:center;}
+  .side-link:hover{background:var(--lavender-deep);color:var(--ink);}
+  .side-link.active{background:var(--ink);color:#fff;}
+  .side-link.active .ic{filter:brightness(2);}
+  .dash-main{padding:32px 34px 60px;max-width:900px;}
+  .dash-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;gap:20px;flex-wrap:wrap;}
+  .dash-head h2{font-size:24px;}
+  .dash-head p{color:var(--ink-soft);font-size:13.5px;margin-top:5px;}
+  .subview{display:none;}
+  .subview.active{display:block;}
+
+  .my-level-pill{
+    background:var(--lavender-deep);color:var(--violet-deep);padding:8px 15px;border-radius:999px;
+    font-size:12.5px;font-weight:700;white-space:nowrap;
+  }
+  .my-level-pill span{font-family:'Space Mono',monospace;font-weight:400;opacity:0.75;}
+  .locked-card{opacity:0.6;}
+  .tier-lock-tag{
+    font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;
+    background:var(--coral-bg);color:var(--coral);padding:3px 8px;border-radius:6px;vertical-align:middle;
+  }
+
+  /* filter bar */
+  .filter-bar{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+  .chip{
+    padding:7px 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;font-weight:600;color:var(--ink-soft);
+  }
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .course-grid{display:none;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+  .course-grid.active{display:grid;}
+  .course-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:9px;}
+  .course-cat{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--violet-deep);}
+  .course-card h4{font-size:14.5px;font-weight:700;line-height:1.35;}
+  .course-meta{display:flex;gap:10px;font-size:11.5px;color:var(--ink-soft);}
+  .course-xp{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--trust);background:var(--trust-bg);padding:3px 8px;border-radius:6px;align-self:flex-start;}
+  .course-progress-track{height:5px;border-radius:999px;background:var(--lavender-deep);overflow:hidden;margin-top:2px;}
+  .course-progress-fill{height:100%;background:var(--violet);border-radius:999px;}
+  .course-card .btn{margin-top:4px;align-self:flex-start;}
+
+  .track-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:26px;}
+  .track-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;}
+  .track-card.done{border-color:var(--trust);background:var(--trust-bg);}
+  .track-name{font-size:13px;font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .track-cert{font-size:14px;}
+  .track-track{height:5px;border-radius:999px;background:var(--lavender-deep);overflow:hidden;margin-bottom:6px;}
+  .track-fill{height:100%;background:var(--violet);border-radius:999px;}
+  .track-card.done .track-fill{background:var(--trust);}
+  .track-meta{font-size:11px;color:var(--ink-soft);}
+
+  .feed-list{display:flex;flex-direction:column;gap:12px;}
+  .feed-item{
+    display:flex;gap:16px;align-items:flex-start;background:#fff;border:1px solid var(--line);
+    border-radius:var(--radius);padding:18px 20px;
+  }
+  .feed-ic{
+    width:40px;height:40px;border-radius:11px;background:var(--lavender-deep);color:var(--violet-deep);
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  }
+  .feed-body{flex:1;}
+  .feed-tag{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);}
+  .feed-body h4{font-size:14.5px;font-weight:700;margin:6px 0 4px;}
+  .feed-body p{font-size:13px;color:var(--ink-soft);}
+  .feed-cta{font-size:12.5px;font-weight:700;color:var(--violet-deep);white-space:nowrap;margin-top:4px;}
+
+  .tip-banner{
+    background:var(--lavender-deep);color:var(--violet-deep);padding:13px 18px;border-radius:var(--radius-sm);
+    font-size:13px;font-weight:600;margin-bottom:18px;
+  }
+
+  /* creator campaign card full */
+  .full-card{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:14px;
+    display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;
+  }
+  .full-card .info{flex:1;min-width:240px;}
+  .full-card .side-meta{display:flex;flex-direction:column;gap:10px;align-items:flex-end;min-width:150px;}
+  .deliverables{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
+  .deliv-tag{font-size:11.5px;background:var(--lavender);color:var(--violet-deep);padding:4px 9px;border-radius:6px;font-weight:600;}
+  .trust-ring{
+    position:relative;width:44px;height:44px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .trust-ring svg{position:absolute;inset:0;transform:rotate(-90deg);}
+  .trust-ring .pct{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--trust);}
+
+  /* book / portfolio grid */
+  .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+  .book-tile{
+    aspect-ratio:9/13;border-radius:11px;overflow:hidden;position:relative;
+    display:flex;align-items:flex-end;padding:10px;color:#fff;font-size:11px;font-weight:600;
+  }
+  .book-tile span{position:relative;z-index:1;}
+  .book-tile::before{content:'';position:absolute;inset:0;opacity:0.9;}
+  .book-tile.b1::before{background:linear-gradient(160deg,#FF9472,#FF6B57);}
+  .book-tile.b2::before{background:linear-gradient(160deg,#6B4FF0,#4F35C4);}
+  .book-tile.b3::before{background:linear-gradient(160deg,#17A673,#0E7A55);}
+  .book-tile.b4::before{background:linear-gradient(160deg,#8E80F2,#6B4FF0);}
+  .book-tile.b5::before{background:linear-gradient(160deg,#FFB347,#FF6B57);}
+  .book-tile.upload{
+    border:1.5px dashed var(--line-strong);color:var(--ink-soft);background:var(--lavender);
+    align-items:center;justify-content:center;flex-direction:column;gap:6px;
+  }
+  .book-tile.upload::before{content:none;}
+  .book-tile.upload .plus{font-size:22px;color:var(--violet);}
+
+  /* applications tracker */
+  .app-row{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);
+  }
+  .app-row:last-child{border-bottom:none;}
+  .status{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:0.03em;}
+  .status.pending{background:#FFF4D9;color:#8A6D00;}
+  .status.accepted{background:var(--trust-bg);color:var(--trust);}
+  .status.review{background:var(--lavender-deep);color:var(--violet-deep);}
+
+  /* brand: create campaign form */
+  .form-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:28px;max-width:640px;}
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:7px;color:var(--ink);}
+  .field .hint{font-size:11.5px;color:var(--ink-soft);font-weight:400;margin-left:6px;}
+  .field input, .field textarea, .field select{
+    width:100%;padding:11px 13px;border:1px solid var(--line-strong);border-radius:9px;font-family:'Plus Jakarta Sans',sans-serif;
+    font-size:13.5px;background:var(--lavender);color:var(--ink);
+  }
+  .field textarea{resize:vertical;min-height:70px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .tag-picker{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .tag-pick{padding:7px 13px;border-radius:999px;border:1px solid var(--line-strong);font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .tag-pick.picked{background:var(--violet);border-color:var(--violet);color:#fff;}
+
+  /* brand: my campaigns list */
+  .my-camp-row{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px 22px;margin-bottom:12px;
+    display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .my-camp-row h4{font-size:15px;margin-bottom:4px;}
+  .my-camp-row .subline{font-size:12px;color:var(--ink-soft);}
+  .applicant-count{
+    display:flex;align-items:center;gap:8px;background:var(--lavender);padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--violet-deep);
+  }
+
+  /* applicants review */
+  .applicant-card{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:12px;
+    display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;
+  }
+  .applicant-card .thumbs{display:flex;gap:6px;}
+  .mini-thumb{width:44px;height:60px;border-radius:6px;flex-shrink:0;}
+  .applicant-info{flex:1;min-width:200px;}
+  .applicant-actions{display:flex;gap:8px;}
+  .btn-sm{padding:8px 14px;font-size:12.5px;border-radius:999px;font-weight:700;}
+
+  .results-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;}
+  .result-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;}
+  .result-num{font-size:26px;font-weight:800;color:var(--violet-deep);}
+  .result-label{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+
+  footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:var(--ink-soft);font-size:12.5px;}
+
+  @media (max-width:820px){
+    .nav-tabs{display:none;}
+    .dash{grid-template-columns:1fr;}
+    .sidebar{display:flex;overflow-x:auto;padding:14px 18px;border-right:none;border-bottom:1px solid var(--line);gap:6px;}
+    .side-section{display:flex;gap:6px;margin-bottom:0;}
+    .side-label{display:none;}
+    .field-row{grid-template-columns:1fr;}
+    .cp-two-col{grid-template-columns:1fr;}
+    .split-cta{grid-template-columns:1fr;}
+    .steps{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="https://www.qlabsmethod.com" class="qlabs-back" title="Volver a Q Labs">←</a>
+    <div class="logo"><div class="logo-mark">Q</div>UGC<span class="dim">·CRC</span></div>
+    <div class="nav-tabs" id="navTabs">
+      <button data-view="public" class="active">Explorar</button>
+    </div>
+    <div class="nav-actions" id="navActions">
+      <button class="btn btn-ghost" onclick="openModal()">Iniciar sesión</button>
+      <button class="btn btn-violet" onclick="openModal()">Publicar campaña</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ PUBLIC VIEW ============ -->
+<div class="view active" id="view-public">
+  <div class="wrap">
+    <section class="hero">
+      <div class="eyebrow"><span class="dot"></span>UGC verificado · Costa Rica</div>
+      <h1>Contenido real, de creadores <em>reales</em>, para marcas que quieren vender más.</h1>
+      <p class="lede">UGC·CRC conecta marcas costarricenses con creadores de contenido verificados. Sin intermediarios raros, sin contenido genérico — solo matches que convierten.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" onclick="openModal()">Soy creador — ver promos</button>
+        <button class="btn btn-ghost" onclick="openModal()">Soy marca — publicar campaña</button>
+      </div>
+      <div class="hero-stats">
+        <div><div class="stat-num">128</div><div class="stat-label">Creadores verificados</div></div>
+        <div><div class="stat-num">340+</div><div class="stat-label">UGC entregados</div></div>
+        <div><div class="stat-num">₡38M</div><div class="stat-label">Pagados a creadores</div></div>
+      </div>
+    </section>
+
+    <section class="trust-bar">
+      <div class="trust-item"><span class="ti-ic">✓</span>Identidad verificada antes de aplicar</div>
+      <div class="trust-item"><span class="ti-ic">✓</span>Derechos de uso incluidos en cada entrega</div>
+      <div class="trust-item"><span class="ti-ic">✓</span>Pago protegido hasta que apruebes el contenido</div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Promos activas ahora</h2>
+          <p>Vista previa pública — iniciá sesión como creador para ver el brief completo y aplicar.</p>
+        </div>
+      </div>
+      <div class="grid-campaigns" id="publicGrid"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Casos de éxito</h2>
+          <p>Resultados reales de marcas que ya usan UGC·CRC.</p>
+        </div>
+      </div>
+      <div class="grid-cases" id="casesGrid"></div>
+    </section>
+
+    <section class="how-it-works">
+      <div class="section-head" style="margin-top:0;">
+        <div><h2>Cómo funciona</h2></div>
+      </div>
+      <div class="steps">
+        <div class="step-card">
+          <div class="step-num mono">01 / CREADOR</div>
+          <h4>Aplicá a promos abiertas</h4>
+          <p>Mirá el brief, el presupuesto y los entregables. Aplicá con tu book en un clic.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num mono">02 / MATCH</div>
+          <h4>La marca elige</h4>
+          <p>Revisamos que tu contenido sea auténtico antes de conectar con la marca.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num mono">03 / ENTREGA</div>
+          <h4>Entregás y cobrás</h4>
+          <p>Subís el contenido final, la marca aprueba, y el pago se libera.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="split-cta">
+      <div class="split-card creator-c">
+        <span class="tag">Para creadores</span>
+        <h3>Convertí tu contenido en ingresos.</h3>
+        <p>No importa si tenés 500 seguidores o 50K. Si generás contenido real, hay marcas buscando exactamente eso.</p>
+        <button class="btn" onclick="openModal()">Crear mi perfil</button>
+      </div>
+      <div class="split-card brand-c">
+        <span class="tag">Para marcas</span>
+        <h3>UGC que sí convierte.</h3>
+        <p>Publicá tu campaña, definí presupuesto y entregables, y recibí propuestas de creadores verificados.</p>
+        <button class="btn" onclick="openModal()">Publicar campaña</button>
+      </div>
+    </section>
+
+    <section class="faq-section">
+      <div class="section-head" style="margin-top:0;">
+        <div><h2>Preguntas frecuentes</h2></div>
+      </div>
+      <div class="faq-tabs">
+        <button class="faq-tab on" onclick="setFaqTab('creator', this)">Para creadores</button>
+        <button class="faq-tab" onclick="setFaqTab('brand', this)">Para marcas</button>
+      </div>
+      <div class="faq-list active" id="faq-creator"></div>
+      <div class="faq-list" id="faq-brand"></div>
+    </section>
+  </div>
+</div>
+
+<!-- ============ CREATOR VIEW ============ -->
+<div class="view" id="view-creator">
+  <div class="dash">
+    <aside class="sidebar">
+      <div class="side-section">
+        <div class="side-label">Menú</div>
+        <button class="side-link active" data-sub="c-feed" onclick="setSub('creator','c-feed',this)"><span class="ic">◆</span> Feed de promos</button>
+        <button class="side-link" data-sub="c-book" onclick="setSub('creator','c-book',this)"><span class="ic">▦</span> Mi book</button>
+        <button class="side-link" data-sub="c-apps" onclick="setSub('creator','c-apps',this)"><span class="ic">◷</span> Mis aplicaciones</button>
+        <button class="side-link" data-sub="c-academy" onclick="setSub('creator','c-academy',this)"><span class="ic">🎓</span> Academia</button>
+        <button class="side-link" data-sub="c-profile" onclick="setSub('creator','c-profile',this)"><span class="ic">○</span> Perfil</button>
+      </div>
+    </aside>
+    <main class="dash-main">
+
+      <div class="subview active" id="c-feed">
+        <div class="dash-head">
+          <div><h2>Promos disponibles</h2><p>Brief completo desbloqueado — aplicá directo desde acá.</p></div>
+          <div class="my-level-pill">🥈 Nivel Plata · <span>640/1000 XP</span></div>
+        </div>
+        <div class="filter-bar">
+          <button class="chip on">Todas</button>
+          <button class="chip">Restaurantes</button>
+          <button class="chip">Hoteles</button>
+          <button class="chip">Reel</button>
+          <button class="chip">TikTok</button>
+        </div>
+        <div class="tip-banner">💡 Las marcas ven tu book al aplicar — mantenelo actualizado con tus 3-5 mejores piezas para tener más chance de que te elijan.</div>
+        <div id="creatorFeed"></div>
+      </div>
+
+      <div class="subview" id="c-book">
+        <div class="dash-head">
+          <div><h2>Mi book</h2><p>Este es tu portafolio — lo que las marcas ven cuando aplicás.</p></div>
+          <button class="btn btn-primary">Subir contenido</button>
+        </div>
+        <div class="book-grid">
+          <div class="book-tile b1"><span>Reel · Zonna</span></div>
+          <div class="book-tile b2"><span>TikTok · Snowty</span></div>
+          <div class="book-tile b3"><span>Reel · Kosta Asiatika</span></div>
+          <div class="book-tile b4"><span>Story · La Bonta</span></div>
+          <div class="book-tile b5"><span>Reel · Dulce Chilena</span></div>
+          <div class="book-tile upload"><div class="plus">+</div><span>Subir nuevo</span></div>
+        </div>
+      </div>
+
+      <div class="subview" id="c-apps">
+        <div class="dash-head">
+          <div><h2>Mis aplicaciones</h2><p>Seguimiento de todo lo que aplicaste.</p></div>
+        </div>
+        <div class="form-card" style="max-width:100%;">
+          <div class="app-row">
+            <div><strong>Zonna — Reel de brunch de domingo</strong><div class="subline" style="color:var(--ink-soft);font-size:12.5px;margin-top:3px;">Aplicaste hace 2 días</div></div>
+            <span class="status accepted">Aceptada</span>
+          </div>
+          <div class="app-row">
+            <div><strong>La Arboleda — Lifestyle brunch al aire libre</strong><div class="subline" style="color:var(--ink-soft);font-size:12.5px;margin-top:3px;">Aplicaste hace 4 días</div></div>
+            <span class="status review">En revisión</span>
+          </div>
+          <div class="app-row">
+            <div><strong>Entrecot — Experiencia fine dining</strong><div class="subline" style="color:var(--ink-soft);font-size:12.5px;margin-top:3px;">Aplicaste hoy</div></div>
+            <span class="status pending">Pendiente</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="subview" id="c-academy">
+        <div class="dash-head">
+          <div><h2>Academia</h2><p>Tu progreso de aprendizaje — cada curso completado suma XP y te acerca al siguiente nivel.</p></div>
+        </div>
+        <div class="results-grid" id="academyOverview" style="margin-bottom:26px;"></div>
+
+        <div class="cp-section-title" style="margin-top:0;">Tracks de aprendizaje</div>
+        <div class="track-grid" id="trackGrid"></div>
+
+        <div class="cp-section-title">Todos los cursos</div>
+        <div class="course-grid active" id="myAcademyCreator"></div>
+      </div>
+
+      <div class="subview" id="c-profile">
+        <div class="dash-head"><div><h2>Perfil</h2><p>Así te ven las marcas cuando aplicás.</p></div></div>
+        <div class="form-card">
+          <div class="field"><label>Nombre / usuario</label><input value="@vale.creates"></div>
+          <div class="field"><label>Bio corta <span class="hint">aparece en tu tarjeta de aplicación</span></label><textarea>Creadora de contenido food & lifestyle en San José. Especializada en reels con storytelling real, sin guion forzado.</textarea></div>
+          <div class="field-row">
+            <div class="field"><label>Seguidores</label><input value="12,400"></div>
+            <div class="field"><label>Nicho principal</label><input value="Food & lifestyle"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Instagram</label><input value="@vale.creates"></div>
+            <div class="field"><label>TikTok</label><input value="@vale.creates"></div>
+          </div>
+          <div class="field"><label>Tarifa de referencia <span class="hint">por pieza, las marcas ven un rango</span></label><input value="₡80,000 – ₡150,000"></div>
+          <div class="field"><label>Trust score <span class="hint">verificación de autenticidad, sube con cada entrega aprobada</span></label><input value="92%" readonly></div>
+          <button class="btn btn-primary" style="margin-top:4px;">Guardar cambios</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ============ BRAND VIEW ============ -->
+<div class="view" id="view-brand">
+  <div class="dash">
+    <aside class="sidebar">
+      <div class="side-section">
+        <div class="side-label">Menú</div>
+        <button class="side-link active" data-sub="b-campaigns" onclick="setSub('brand','b-campaigns',this)"><span class="ic">▦</span> Mis campañas</button>
+        <button class="side-link" data-sub="b-create" onclick="setSub('brand','b-create',this)"><span class="ic">+</span> Crear campaña</button>
+        <button class="side-link" data-sub="b-applicants" onclick="setSub('brand','b-applicants',this)"><span class="ic">◆</span> Aplicantes</button>
+        <button class="side-link" data-sub="b-results" onclick="setSub('brand','b-results',this)"><span class="ic">▲</span> Resultados</button>
+        <button class="side-link" data-sub="b-feed" onclick="setSub('brand','b-feed',this)"><span class="ic">▤</span> Feed</button>
+        <button class="side-link" data-sub="b-profile" onclick="setSub('brand','b-profile',this)"><span class="ic">○</span> Perfil</button>
+      </div>
+    </aside>
+    <main class="dash-main">
+
+      <div class="subview active" id="b-campaigns">
+        <div class="dash-head">
+          <div><h2>Mis campañas</h2><p>Todo lo que publicaste en UGC·CRC.</p></div>
+        </div>
+        <div class="my-camp-row">
+          <div><h4>Reel de brunch de domingo</h4><div class="subline">Publicada hace 3 días · Presupuesto ₡150,000</div></div>
+          <div class="applicant-count">7 aplicantes</div>
+        </div>
+        <div class="my-camp-row">
+          <div><h4>UGC unboxing nuevo menú ramen</h4><div class="subline">Publicada hace 1 semana · Presupuesto ₡120,000</div></div>
+          <div class="applicant-count">4 aplicantes</div>
+        </div>
+        <div class="my-camp-row">
+          <div><h4>Video POV pidiendo tu postre favorito</h4><div class="subline">Publicada hace 2 semanas · Presupuesto ₡90,000</div></div>
+          <div class="applicant-count">12 aplicantes</div>
+        </div>
+      </div>
+
+      <div class="subview" id="b-create">
+        <div class="dash-head"><div><h2>Crear campaña</h2><p>Definí el brief — los creadores verificados verán esto en su feed.</p></div></div>
+        <div class="form-card">
+          <div class="field"><label>Nombre de la campaña</label><input placeholder="Ej. Reel de brunch de domingo"></div>
+          <div class="field"><label>Brief <span class="hint">qué querés que muestre el creador</span></label><textarea placeholder="Describí la experiencia, el ángulo, el mood..."></textarea></div>
+          <div class="field-row">
+            <div class="field"><label>Presupuesto</label><input placeholder="₡ 150,000"></div>
+            <div class="field"><label>Deadline</label><input placeholder="15 días"></div>
+          </div>
+          <div class="field">
+            <label>Entregables</label>
+            <div class="tag-picker">
+              <span class="tag-pick picked">1 Reel</span>
+              <span class="tag-pick">1 TikTok</span>
+              <span class="tag-pick picked">3 Stories</span>
+              <span class="tag-pick">Fotos</span>
+            </div>
+          </div>
+          <div class="field"><label>Audiencia ideal</label><input placeholder="Ej. Food & lifestyle, GAM, 5K+ seguidores"></div>
+          <button class="btn btn-primary" style="width:100%;padding:13px;">Publicar campaña</button>
+        </div>
+      </div>
+
+      <div class="subview" id="b-applicants">
+        <div class="dash-head"><div><h2>Aplicantes</h2><p>Reel de brunch de domingo — 7 creadores aplicaron.</p></div></div>
+        <div class="applicant-card">
+          <div class="thumbs"><div class="mini-thumb" style="background:linear-gradient(160deg,#FF9472,#FF6B57);"></div><div class="mini-thumb" style="background:linear-gradient(160deg,#6B4FF0,#4F35C4);"></div><div class="mini-thumb" style="background:linear-gradient(160deg,#17A673,#0E7A55);"></div></div>
+          <div class="applicant-info">
+            <strong>@vale.creates</strong> · 12.4K seguidores
+            <div style="color:var(--ink-soft);font-size:12.5px;margin-top:3px;">Trust score 92% · Food & lifestyle</div>
+          </div>
+          <div class="applicant-actions">
+            <button class="btn btn-sm btn-ghost" onclick="openCreatorProfile('vale.creates')">Ver book</button>
+            <button class="btn btn-sm" style="background:var(--trust);color:#fff;">Aceptar</button>
+          </div>
+        </div>
+        <div class="applicant-card">
+          <div class="thumbs"><div class="mini-thumb" style="background:linear-gradient(160deg,#8E80F2,#6B4FF0);"></div><div class="mini-thumb" style="background:linear-gradient(160deg,#FFB347,#FF6B57);"></div><div class="mini-thumb" style="background:linear-gradient(160deg,#6B4FF0,#4F35C4);"></div></div>
+          <div class="applicant-info">
+            <strong>@pura.vida.foodie</strong> · 8.1K seguidores
+            <div style="color:var(--ink-soft);font-size:12.5px;margin-top:3px;">Trust score 88% · Food</div>
+          </div>
+          <div class="applicant-actions">
+            <button class="btn btn-sm btn-ghost" onclick="openCreatorProfile('pura.vida.foodie')">Ver book</button>
+            <button class="btn btn-sm" style="background:var(--trust);color:#fff;">Aceptar</button>
+          </div>
+        </div>
+        <div class="applicant-card">
+          <div class="thumbs"><div class="mini-thumb" style="background:linear-gradient(160deg,#17A673,#0E7A55);"></div><div class="mini-thumb" style="background:linear-gradient(160deg,#FF9472,#FF6B57);"></div><div class="mini-thumb" style="background:linear-gradient(160deg,#8E80F2,#6B4FF0);"></div></div>
+          <div class="applicant-info">
+            <strong>@carlosreview.cr</strong> · 22K seguidores
+            <div style="color:var(--ink-soft);font-size:12.5px;margin-top:3px;">Trust score 95% · Restaurantes</div>
+          </div>
+          <div class="applicant-actions">
+            <button class="btn btn-sm btn-ghost" onclick="openCreatorProfile('carlosreview.cr')">Ver book</button>
+            <button class="btn btn-sm" style="background:var(--trust);color:#fff;">Aceptar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="subview" id="b-results">
+        <div class="dash-head"><div><h2>Resultados</h2><p>Lo que ha entregado UGC·CRC para tu marca hasta hoy.</p></div></div>
+        <div class="results-grid">
+          <div class="result-card"><div class="result-num">18</div><div class="result-label">Piezas de UGC entregadas</div></div>
+          <div class="result-card"><div class="result-num">₡1.85M</div><div class="result-label">Invertido en campañas</div></div>
+          <div class="result-card"><div class="result-num">412K</div><div class="result-label">Alcance estimado total</div></div>
+          <div class="result-card"><div class="result-num">4.8/5</div><div class="result-label">Calidad promedio del contenido</div></div>
+        </div>
+        <div class="form-card" style="max-width:100%;margin-top:18px;">
+          <div class="app-row"><div><strong>Reel de brunch de domingo</strong><div class="subline" style="color:var(--ink-soft);font-size:12.5px;margin-top:3px;">3 piezas entregadas · Instagram + TikTok</div></div><span class="status accepted">Completada</span></div>
+          <div class="app-row"><div><strong>UGC unboxing nuevo menú ramen</strong><div class="subline" style="color:var(--ink-soft);font-size:12.5px;margin-top:3px;">1 pieza entregada · TikTok</div></div><span class="status review">En producción</span></div>
+        </div>
+      </div>
+
+      <div class="subview" id="b-feed">
+        <div class="dash-head">
+          <div><h2>Feed</h2><p>Guías y novedades relevantes para tu cuenta — de tus servicios activos y de UGC.</p></div>
+        </div>
+        <div class="feed-list" id="brandFeed"></div>
+      </div>
+
+      <div class="subview" id="b-profile">
+        <div class="dash-head"><div><h2>Perfil de marca</h2><p>Esto es lo que ven los creadores al aplicar a tus campañas.</p></div></div>
+        <div class="form-card">
+          <div class="field"><label>Nombre de marca</label><input value="Zonna"></div>
+          <div class="field"><label>Rubro</label><input value="Restaurante"></div>
+          <div class="field"><label>Descripción breve</label><textarea>Gastrobar en Escazú con propuesta de brunch y coctelería de autor.</textarea></div>
+          <div class="field-row">
+            <div class="field"><label>Sitio web</label><input value="zonna.cr"></div>
+            <div class="field"><label>Instagram</label><input value="@zonna.cr"></div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:4px;">Guardar cambios</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<footer><div class="wrap">UGC·CRC — un producto del ecosistema Q Labs. Prototipo interactivo, datos de ejemplo.</div></footer>
+
+<!-- LOGIN MODAL -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-wrap">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <h3>¿Cómo querés entrar?</h3>
+      <p class="sub">Esto es un prototipo — elegí un rol para simular el login.</p>
+      <div class="role-pick">
+        <button class="role-opt creator" onclick="login('creator')">
+          <div class="ic">🎬</div>
+          <div><strong>Soy creador</strong><span>Ver promos completas y aplicar</span></div>
+        </button>
+        <button class="role-opt brand" onclick="login('brand')">
+          <div class="ic">🏷️</div>
+          <div><strong>Soy marca</strong><span>Publicar campañas y ver aplicantes</span></div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FULL CREATOR PROFILE VIEW ============ -->
+<div class="view" id="view-creator-profile-full">
+  <div class="wrap" style="padding-top:32px;padding-bottom:60px;">
+    <button class="btn btn-ghost" onclick="backFromProfile()">← Volver a aplicantes</button>
+    <div id="creatorProfileBody"></div>
+  </div>
+</div>
+
+<script>
+const campaigns = [
+  {brand:"Zonna", type:"Restaurante", title:"Reel de brunch de domingo", budget:"₡150,000", format:"Reel + Stories", deadline:"15 días", init:"Z", deliv:["1 Reel","3 Stories"]},
+  {brand:"Kosta Asiatika", type:"Restaurante", title:"UGC unboxing nuevo menú ramen", budget:"₡120,000", format:"TikTok", deadline:"10 días", init:"K", deliv:["1 TikTok"]},
+  {brand:"Snowty", type:"Postres", title:"Video POV pidiendo tu postre favorito", budget:"₡90,000", format:"Reel", deadline:"7 días", init:"S", deliv:["1 Reel"]},
+  {brand:"La Arboleda", type:"Restaurante", title:"Lifestyle brunch al aire libre", budget:"₡180,000", format:"Reel + Stories", deadline:"20 días", init:"A", deliv:["2 Reels","Stories"]},
+  {brand:"Dulce Chilena", type:"Repostería", title:"Receta casera con producto", budget:"₡100,000", format:"TikTok", deadline:"12 días", init:"D", deliv:["1 TikTok"]},
+  {brand:"Entrecot", type:"Fine dining", title:"Experiencia fine dining, mesa para dos", budget:"₡200,000", format:"Reel premium", deadline:"15 días", init:"E", deliv:["1 Reel"], minTier:"Oro"},
+];
+
+const cases = [
+  {brand:"Zonna", role:"Marketing", metric:"+340%", label:"engagement en Reels vs. contenido propio", quote:"Antes grabábamos nosotros mismos con el celular. Con UGC·CRC el contenido se ve como el de una marca grande, y la gente lo nota.", platforms:["Instagram","TikTok"]},
+  {brand:"Kosta Asiatika", role:"Fundador", metric:"5.2x", label:"más reservas la semana del lanzamiento del ramen", quote:"Publicamos la campaña un lunes y el viernes ya teníamos 4 creadores entregando. Nunca fue tan rápido conseguir contenido real.", platforms:["TikTok"]},
+  {brand:"La Arboleda", role:"Gerencia", metric:"₡180K → 412K", label:"alcance por cada campaña de brunch", quote:"El match funcionó de una: nos conectaron con creadores que ya vivían cerca y conocían la vibra que buscábamos.", platforms:["Instagram","Stories"]},
+];
+
+const faqCreator = [
+  {q:"¿Cuánto puedo ganar como creador?", a:"Depende de tu nicho y seguidores, pero las campañas activas en UGC·CRC van desde ₡90,000 hasta ₡200,000 por pieza. Vos ponés tu tarifa de referencia en tu perfil."},
+  {q:"¿Necesito muchos seguidores para aplicar?", a:"No. Priorizamos autenticidad sobre alcance — creadores desde 2K seguidores con buen contenido aplican y consiguen campañas todo el tiempo."},
+  {q:"¿Cómo funciona el pago?", a:"La marca deposita el presupuesto al aceptar tu aplicación. Vos entregás el contenido, la marca aprueba, y el pago se libera automáticamente — nunca entregás sin garantía de cobro."},
+  {q:"¿Qué es el trust score?", a:"Es tu puntaje de verificación: sube con cada entrega aprobada a tiempo y con buena calidad. Marcas con más presupuesto suelen priorizar creadores con trust score alto."},
+];
+
+const faqBrand = [
+  {q:"¿Cuánto cuesta publicar una campaña?", a:"Publicar es gratis. Vos definís el presupuesto para creadores y UGC·CRC cobra una comisión sobre ese monto — sin mensualidades ni setup fee."},
+  {q:"¿Quién es dueño del contenido final?", a:"Vos. Cada entrega incluye derechos de uso completos para tus redes, pauta paga y sitio web — eso queda claro desde el brief, no hay sorpresas después."},
+  {q:"¿Cómo verifican a los creadores?", a:"Revisamos identidad, historial de contenido y autenticidad de audiencia antes de aprobar cualquier perfil. Nada de bots ni cuentas compradas."},
+  {q:"¿Puedo elegir yo al creador o es automático?", a:"Elegís vos. Vos recibís las aplicaciones con book incluido y decidís con quién trabajar — nosotros solo garantizamos que todos los que aplican están verificados."},
+];
+
+function renderCases(){
+  document.getElementById('casesGrid').innerHTML = cases.map(c => `
+    <div class="case-card">
+      <div><div class="case-metric">${c.metric}</div><div class="case-metric-label">${c.label}</div></div>
+      <p class="case-quote">"${c.quote}"</p>
+      <div class="case-foot">
+        <div><div class="case-brand">${c.brand}</div><div class="case-role">${c.role}</div></div>
+        <div class="case-platforms">${c.platforms.map(p=>`<span class="case-plat-tag">${p}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderFaq(){
+  document.getElementById('faq-creator').innerHTML = faqCreator.map((f,i)=>faqItem(f,'c'+i)).join('');
+  document.getElementById('faq-brand').innerHTML = faqBrand.map((f,i)=>faqItem(f,'b'+i)).join('');
+}
+function faqItem(f,id){
+  return `<div class="faq-item" id="faq-${id}">
+    <button class="faq-q" onclick="toggleFaq('${id}')">${f.q}<span class="chev">+</span></button>
+    <div class="faq-a"><p>${f.a}</p></div>
+  </div>`;
+}
+function toggleFaq(id){ document.getElementById('faq-'+id).classList.toggle('open'); }
+function setFaqTab(tab, btn){
+  document.querySelectorAll('.faq-tab').forEach(t=>t.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.faq-list').forEach(l=>l.classList.remove('active'));
+  document.getElementById('faq-'+tab).classList.add('active');
+}
+
+const creatorProfiles = {
+  "vale.creates": {name:"@vale.creates", bio:"Creadora de contenido food & lifestyle en San José. Especializada en reels con storytelling real, sin guion forzado.", city:"San José, CR", langs:["Español","Inglés"], niches:["Food","Lifestyle"], trust:92, followers:"12,400", pastBrands:{"Restaurantes":["Zonna","Kosta Asiatika","Dulce Chilena"],"Lifestyle":["Ikiwell"]}, services:["Contenido orgánico","Testimoniales","Unboxing","Lifestyle","Fotos"], addons:["Hooks/CTAs adicionales","Derechos de uso para pauta","Raw footage","Rush fee (1-2 días)"],
+    skills:[{n:"Guion / storytelling",lv:5},{n:"Grabación de video",lv:5},{n:"Edición",lv:4},{n:"Fotografía",lv:3},{n:"Dirección de arte",lv:4}],
+    metrics:{views:"18.4K",engagement:"6.8%",reach:"24K"},
+    badges:[{ic:"✓",l:"Identidad verificada"},{ic:"🔥",l:"5 entregas a tiempo seguidas"},{ic:"⭐",l:"Top 10% en Food"},{ic:"🎯",l:"15+ campañas completadas"}],
+    level:{tier:"Plata",tierIc:"🥈",xp:640,next:1000,nextTier:"Oro"}},
+  "pura.vida.foodie": {name:"@pura.vida.foodie", bio:"Contenido de comida con enfoque en experiencias — de la mesa al feed en menos de 24h.", city:"Heredia, CR", langs:["Español"], niches:["Food"], trust:88, followers:"8,100", pastBrands:{"Restaurantes":["Snowty","La Bonta"]}, services:["Contenido orgánico","Unboxing","Fotos"], addons:["Raw footage","Rush fee (1-2 días)"],
+    skills:[{n:"Grabación de video",lv:4},{n:"Edición",lv:3},{n:"Fotografía",lv:4}],
+    metrics:{views:"9.2K",engagement:"5.1%",reach:"11K"},
+    badges:[{ic:"✓",l:"Identidad verificada"},{ic:"🌱",l:"Nueva en la plataforma"}],
+    level:{tier:"Bronce",tierIc:"🥉",xp:180,next:500,nextTier:"Plata"}},
+  "carlosreview.cr": {name:"@carlosreview.cr", bio:"Reviews honestas de restaurantes ticos — mi audiencia confía porque digo lo que no me gustó también.", city:"San José, CR", langs:["Español","Inglés"], niches:["Food","Testimoniales"], trust:95, followers:"22,000", pastBrands:{"Restaurantes":["Entrecot","Zonna","La Arboleda"],"Hoteles":["Marriott CR"]}, services:["Testimoniales","Paid ads","Contenido orgánico","Script reading"], addons:["Whitelisting","Derechos de uso variados","Hooks/CTAs adicionales"],
+    skills:[{n:"Guion / storytelling",lv:5},{n:"Grabación de video",lv:5},{n:"Edición",lv:5},{n:"Vocería / cámara",lv:5},{n:"Estrategia de hooks",lv:4}],
+    metrics:{views:"31.2K",engagement:"8.4%",reach:"46K"},
+    badges:[{ic:"✓",l:"Identidad verificada"},{ic:"🏆",l:"Creador del mes — Mayo"},{ic:"🔥",l:"12 entregas a tiempo seguidas"},{ic:"⭐",l:"Top 5% en Food"},{ic:"🎯",l:"30+ campañas completadas"}],
+    level:{tier:"Oro",tierIc:"🥇",xp:2140,next:3000,nextTier:"Platino"}},
+};
+function openCreatorProfile(key){
+  const c = creatorProfiles[key];
+  const initial = c.name[1].toUpperCase();
+  document.getElementById('creatorProfileBody').innerHTML = `
+    <div class="ch-banner">
+      <div class="ch-toprow">
+        <div class="ch-avatar">${initial}</div>
+        <div class="level-pill">${c.level.tierIc} Nivel ${c.level.tier}</div>
+      </div>
+      <div class="ch-name">${c.name}</div>
+      <div class="ch-sub">UGC Portfolio</div>
+      <div class="ch-contact">
+        <span>📍 ${c.city}</span>
+        <span>👥 ${c.followers} seguidores</span>
+        <span>${trustRingSVG(c.trust)} Trust score</span>
+      </div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${Math.round(c.level.xp/c.level.next*100)}%;"></div></div>
+        <span class="xp-label">${c.level.xp} / ${c.level.next} XP para Nivel ${c.level.nextTier}</span>
+      </div>
+    </div>
+
+    <div class="badge-row">
+      ${c.badges.map(b=>`<div class="badge-chip" title="${b.l}"><span class="badge-ic">${b.ic}</span>${b.l}</div>`).join('')}
+    </div>
+
+    <div class="cp-tags" style="margin:22px 0 4px;">${c.niches.map(n=>`<span class="deliv-tag">${n}</span>`).join('')}${c.langs.map(l=>`<span class="deliv-tag" style="background:var(--trust-bg);color:var(--trust);">${l}</span>`).join('')}</div>
+    <p class="cp-bio" style="max-width:560px;">${c.bio}</p>
+
+    <div class="cp-section-title">Alcance & interacción <span class="hint">promedio últimos 90 días</span></div>
+    <div class="results-grid" style="margin-bottom:6px;">
+      <div class="result-card"><div class="result-num">${c.metrics.views}</div><div class="result-label">Vistas promedio por pieza</div></div>
+      <div class="result-card"><div class="result-num">${c.metrics.engagement}</div><div class="result-label">Tasa de interacción</div></div>
+      <div class="result-card"><div class="result-num">${c.metrics.reach}</div><div class="result-label">Alcance promedio</div></div>
+    </div>
+
+    <div class="cp-section-title">Habilidades</div>
+    <div class="skills-list">
+      ${c.skills.map(s=>`<div class="skill-row"><span class="skill-name">${s.n}</span><div class="skill-dots">${[1,2,3,4,5].map(i=>`<span class="dot ${i<=s.lv?'filled':''}"></span>`).join('')}</div></div>`).join('')}
+    </div>
+
+    <div class="cp-section-title">Marcas con las que ha trabajado</div>
+    <div class="cp-brands">${Object.entries(c.pastBrands).map(([cat,brands])=>`<div class="cp-brand-cat"><span class="cp-cat-label">${cat}</span>${brands.map(b=>`<span class="cp-brand-chip">${b}</span>`).join('')}</div>`).join('')}</div>
+
+    <div class="cp-section-title">Portfolio</div>
+    <div class="filter-bar">
+      <button class="chip on" onclick="filterPortfolio('all',this)">Todo</button>
+      <button class="chip" onclick="filterPortfolio('ugc',this)">UGC</button>
+      <button class="chip" onclick="filterPortfolio('foto',this)">Fotografía</button>
+    </div>
+    <div class="book-grid" id="portfolioGrid">
+      ${(c.portfolio||defaultPortfolio).map(p=>`<div class="book-tile ${p.cls}" data-cat="${p.cat}"><span>${p.label}</span></div>`).join('')}
+    </div>
+
+    <div class="cp-two-col">
+      <div>
+        <div class="cp-section-title">Servicios</div>
+        <ul class="cp-list">${c.services.map(s=>`<li>${s}</li>`).join('')}</ul>
+      </div>
+      <div>
+        <div class="cp-section-title">Add-ons</div>
+        <ul class="cp-list">${c.addons.map(a=>`<li>${a}</li>`).join('')}</ul>
+      </div>
+    </div>
+
+    <div class="cp-locked">
+      <div class="cp-locked-inner">
+        <div class="lock-icon" style="margin:0 auto 8px;">🔒</div>
+        <strong style="display:block;margin-bottom:4px;">Contacto directo y directorio completo</strong>
+        <span style="font-size:12.5px;color:var(--ink-soft);">Disponible con el plan Marca Pro — accedé a todos los creadores verificados, no solo a los que aplican a tus campañas.</span>
+        <button class="btn btn-violet" style="margin-top:14px;">Suscribirme a Marca Pro</button>
+      </div>
+    </div>
+  `;
+  setView('creator-profile-full');
+}
+const defaultPortfolio = [
+  {cls:'b1',cat:'ugc',label:'Reel · Unboxing'},
+  {cls:'b2',cat:'foto',label:'Foto · Producto'},
+  {cls:'b3',cat:'ugc',label:'Reel · Testimonial'},
+  {cls:'b4',cat:'foto',label:'Foto · Lifestyle'},
+  {cls:'b5',cat:'ugc',label:'TikTok · POV'},
+];
+function filterPortfolio(cat, btn){
+  document.querySelectorAll('#portfolioGrid').forEach(()=>{});
+  document.querySelectorAll('.filter-bar .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('#portfolioGrid .book-tile').forEach(t=>{
+    t.style.display = (cat==='all' || t.dataset.cat===cat) ? 'flex' : 'none';
+  });
+}
+function backFromProfile(){
+  setView('brand');
+  const btn = document.querySelector('.side-link[data-sub="b-applicants"]');
+  if(btn) setSub('brand','b-applicants',btn);
+}
+
+const coursesCreator = [
+  {cat:"Producción", title:"Cómo grabar UGC con solo tu celular", dur:"25 min", level:"Básico", xp:40, progress:100},
+  {cat:"Guion", title:"Guion en 3 actos para reels que venden", dur:"18 min", level:"Básico", xp:30, progress:100},
+  {cat:"Edición", title:"Cortes, subtítulos y hooks que retienen", dur:"32 min", level:"Intermedio", xp:50, progress:60},
+  {cat:"Negocio", title:"Cómo cotizar tu primer trabajo UGC", dur:"15 min", level:"Básico", xp:25, progress:0},
+  {cat:"Legal", title:"Derechos de uso y whitelisting explicado", dur:"12 min", level:"Intermedio", xp:25, progress:0},
+];
+
+function courseCard(c){
+  const cta = c.progress === 100
+    ? `<button class="btn btn-ghost btn-sm" disabled>Completado ✓</button>`
+    : `<button class="btn btn-violet btn-sm">${c.progress > 0 ? 'Continuar' : 'Empezar'} curso</button>`;
+  return `<div class="course-card">
+    <span class="course-cat">${c.cat}</span>
+    <h4>${c.title}</h4>
+    <div class="course-meta"><span>⏱ ${c.dur}</span><span>· ${c.level}</span></div>
+    <span class="course-xp">+${c.xp} XP</span>
+    <div class="course-progress-track"><div class="course-progress-fill" style="width:${c.progress}%;"></div></div>
+    <span style="font-size:11px;color:var(--ink-soft);">${c.progress}% completado</span>
+    ${cta}
+  </div>`;
+}
+
+function renderCreatorAcademy(){
+  const totalXP = coursesCreator.reduce((s,c)=>s + (c.progress===100 ? c.xp : Math.round(c.xp*c.progress/100)), 0);
+  const doneCount = coursesCreator.filter(c=>c.progress===100).length;
+  const overallPct = Math.round(coursesCreator.reduce((s,c)=>s+c.progress,0)/coursesCreator.length);
+
+  document.getElementById('academyOverview').innerHTML = `
+    <div class="result-card"><div class="result-num">${overallPct}%</div><div class="result-label">Progreso general</div></div>
+    <div class="result-card"><div class="result-num">${totalXP} XP</div><div class="result-label">Ganados en la Academia</div></div>
+    <div class="result-card"><div class="result-num">${doneCount}/${coursesCreator.length}</div><div class="result-label">Cursos completados</div></div>
+  `;
+
+  const tracks = {};
+  coursesCreator.forEach(c => { (tracks[c.cat] = tracks[c.cat] || []).push(c); });
+  document.getElementById('trackGrid').innerHTML = Object.entries(tracks).map(([name, list]) => {
+    const pct = Math.round(list.reduce((s,c)=>s+c.progress,0)/list.length);
+    const done = pct === 100;
+    return `<div class="track-card${done ? ' done' : ''}">
+      <div class="track-name">${name} ${done ? '<span class="track-cert">🎖</span>' : ''}</div>
+      <div class="track-track"><div class="track-fill" style="width:${pct}%;"></div></div>
+      <div class="track-meta">${pct}% · ${list.length} curso${list.length>1?'s':''}${done ? ' · Certificado' : ''}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('myAcademyCreator').innerHTML = coursesCreator.map(c=>courseCard(c)).join('');
+}
+
+const brandFeed = [
+  {ic:"📧", tag:"Guía · Negocio", title:"Cómo crear tu correo empresarial, paso a paso", desc:"5 minutos, sin conocimiento técnico previo.", cta:"Leer guía"},
+  {ic:"⭐", tag:"Guía · Reputación", title:"Cómo pedir reseñas sin sonar desesperado", desc:"3 mensajes que sí funcionan, listos para copiar.", cta:"Leer guía"},
+  {ic:"🎬", tag:"Novedad · UGC·CRC", title:"Nuevo creador verificado en tu categoría: Food", desc:"@pura.vida.foodie se unió esta semana y aplica a campañas de restaurantes.", cta:"Ver perfil"},
+  {ic:"📊", tag:"Guía · Analítica", title:"Qué es un buen engagement rate, con números reales", desc:"Benchmarks por industria para que sepas si tu campaña funcionó.", cta:"Leer guía"},
+  {ic:"🎓", tag:"Academia", title:"Cómo armar un brief que atrae al creador correcto", desc:"Curso de 20 minutos — te acerca a tu próximo nivel de cuenta.", cta:"Ver curso"},
+  {ic:"🔍", tag:"Guía · SEO local", title:"Google Business Profile en 15 minutos", desc:"El paso que más negocios se saltan, y el que más pesa en Google.", cta:"Leer guía"},
+];
+function renderBrandFeed(){
+  document.getElementById('brandFeed').innerHTML = brandFeed.map(f => `
+    <div class="feed-item">
+      <div class="feed-ic">${f.ic}</div>
+      <div class="feed-body">
+        <span class="feed-tag">${f.tag}</span>
+        <h4>${f.title}</h4>
+        <p>${f.desc}</p>
+      </div>
+      <span class="feed-cta">${f.cta} →</span>
+    </div>
+  `).join('');
+}
+
+function trustRingSVG(pct){
+  const r=18, c=2*Math.PI*r, off=c*(1-pct/100);
+  return `<div class="trust-ring"><svg width="44" height="44"><circle cx="22" cy="22" r="${r}" stroke="#ECE7FB" stroke-width="4" fill="none"/><circle cx="22" cy="22" r="${r}" stroke="#17A673" stroke-width="4" fill="none" stroke-dasharray="${c}" stroke-dashoffset="${off}" stroke-linecap="round"/></svg><span class="pct">${pct}%</span></div>`;
+}
+
+function renderPublic(){
+  const grid = document.getElementById('publicGrid');
+  grid.innerHTML = campaigns.map(c => `
+    <div class="campaign-card">
+      <div class="card-top">
+        <div class="brand-chip">
+          <div class="brand-avatar">${c.init}</div>
+          <div><div class="brand-name">${c.brand}</div><div class="brand-type">${c.type}</div></div>
+        </div>
+        <div class="format-tag">${c.format}</div>
+      </div>
+      <div class="locked">
+        <h3>${c.title}</h3>
+        <div class="card-meta">
+          <span class="budget">${c.budget}</span>
+          <span>· ${c.deadline}</span>
+        </div>
+      </div>
+      <div class="lock-overlay">
+        <div class="lock-icon">🔒</div>
+        <button class="btn btn-primary" onclick="openModal()" style="padding:8px 16px;font-size:12.5px;">Ver brief completo</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderCreatorFeed(){
+  const myTier = "Plata"; // demo: creador actualmente logueado
+  const tierOrder = {"Bronce":0,"Plata":1,"Oro":2,"Platino":3};
+  const feed = document.getElementById('creatorFeed');
+  feed.innerHTML = campaigns.map(c => {
+    const locked = c.minTier && tierOrder[myTier] < tierOrder[c.minTier];
+    return `
+    <div class="full-card${locked ? ' locked-card' : ''}">
+      <div class="info">
+        <div class="brand-chip" style="margin-bottom:10px;">
+          <div class="brand-avatar">${c.init}</div>
+          <div><div class="brand-name">${c.brand}</div><div class="brand-type">${c.type}</div></div>
+        </div>
+        <h3 style="font-size:16.5px;font-weight:600;margin-bottom:6px;">${c.title}${locked ? ` <span class="tier-lock-tag">🔒 Nivel ${c.minTier}+</span>` : ''}</h3>
+        <div class="deliverables">${c.deliv.map(d=>`<span class="deliv-tag">${d}</span>`).join('')}</div>
+      </div>
+      <div class="side-meta">
+        <div class="budget">${c.budget}</div>
+        <div style="font-size:12px;color:var(--ink-soft);">Deadline: ${c.deadline}</div>
+        ${locked
+          ? `<button class="btn btn-ghost btn-sm" disabled style="opacity:0.55;cursor:not-allowed;">Requiere Nivel ${c.minTier}</button>`
+          : `<button class="btn btn-violet btn-sm" onclick="this.textContent='Aplicado ✓'; this.disabled=true; this.style.opacity=0.6;">Aplicar</button>`
+        }
+      </div>
+    </div>
+  `;
+  }).join('');
+}
+
+function openModal(){ document.getElementById('modalBackdrop').classList.add('active'); }
+function closeModal(){ document.getElementById('modalBackdrop').classList.remove('active'); }
+
+function login(role){
+  closeModal();
+  setView(role);
+  const actions = document.getElementById('navActions');
+  const name = role === 'creator' ? '@vale.creates' : 'Zonna';
+  const initial = role === 'creator' ? 'V' : 'Z';
+  actions.innerHTML = `
+    <div class="user-pill"><div class="avatar">${initial}</div>${name}</div>
+    <button class="btn btn-ghost" onclick="logout()">Salir</button>
+  `;
+}
+
+function logout(){
+  setView('public');
+  document.getElementById('navActions').innerHTML = `
+    <button class="btn btn-ghost" onclick="openModal()">Iniciar sesión</button>
+    <button class="btn btn-violet" onclick="openModal()">Publicar campaña</button>
+  `;
+}
+
+function setView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+
+  const tabs = document.getElementById('navTabs');
+  if(view==='public'){
+    tabs.innerHTML = `<button class="active">Explorar</button>`;
+  } else if(view==='creator'){
+    tabs.innerHTML = `<button class="active">Feed de creador</button>`;
+  } else if(view==='brand'){
+    tabs.innerHTML = `<button class="active">Panel de marca</button>`;
+  } else if(view==='creator-profile-full'){
+    tabs.innerHTML = `<button class="active">Perfil de creador</button>`;
+  }
+}
+
+function setSub(role, id, btn){
+  const scope = document.getElementById('view-'+role);
+  scope.querySelectorAll('.subview').forEach(s=>s.classList.remove('active'));
+  scope.querySelectorAll('.side-link').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// tag picker toggle (create campaign form)
+document.addEventListener('click', e=>{
+  if(e.target.classList.contains('tag-pick')){
+    e.target.classList.toggle('picked');
+  }
+});
+
+renderPublic();
+renderCreatorFeed();
+renderCases();
+renderFaq();
+renderCreatorAcademy();
+renderBrandFeed();
+</script>
+</body>
+</html>
