@@ -188,6 +188,14 @@ export interface Database {
         Args: Record<string, never>;
         Returns: AppRole | null;
       };
+      public_marketplace_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          published_campaigns_count: number;
+          creators_count: number;
+          brands_count: number;
+        }[];
+      };
     };
     Enums: {
       app_role: AppRole;
