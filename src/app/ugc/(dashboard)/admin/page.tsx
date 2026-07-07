@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import DashboardHeader from "@/components/ugc/DashboardHeader";
 import { setCreatorVerifiedAction, markCampaignCompletedAction } from "@/lib/actions/admin";
 import {
   APPLICATION_STATUS_LABEL,
@@ -50,9 +49,7 @@ export default async function AdminDashboardPage() {
   const creatorHandleById = new Map((creatorProfiles ?? []).map((c) => [c.profile_id, c.handle]));
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-16">
-      <DashboardHeader />
-
+    <div className="mx-auto max-w-4xl">
       <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-ink">Panel admin</h1>
       <p className="mb-10 text-ink-soft">
         Verificación de creadores, todas las campañas y aplicaciones recientes.

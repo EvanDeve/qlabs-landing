@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import DashboardHeader from "@/components/ugc/DashboardHeader";
 import { CAMPAIGN_STATUS_LABEL, CAMPAIGN_STATUS_STYLE } from "@/lib/ugc/campaign-status";
 
 export const dynamic = "force-dynamic";
@@ -28,9 +27,7 @@ export default async function MarcaDashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-16">
-      <DashboardHeader />
-
+    <div className="mx-auto max-w-3xl">
       <div className="mb-8 flex items-center justify-between gap-4">
         <h1 className="text-3xl font-extrabold tracking-tight text-ink">Mis campañas</h1>
         <Link

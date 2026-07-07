@@ -107,3 +107,44 @@ export async function updateApplicationStatusAction(formData: FormData) {
     }
   }
 }
+
+export async function approveApplicationAction(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/ugc/login");
+  }
+
+  const applicationId = String(formData.get("application_id") ?? "");
+  const campaignId = String(formData.get("campaign_id") ?? "");
+  if (!applicationId || !campaignId) return;
+
+  const { data: application } = await supabase
+    .from("applications")
+    .update({ status: "approved" })
+    .eq("id", applicationId)
+    .select("creator_id")
+    .single();
+
+  revalidatePath(`/ugc/marca/campanas/${campaignId}`);
+
+  if (application) {
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("title")
+      .eq("id", campaignId)
+      .single();
+
+    const creatorEmail = await getUserEmail(application.creator_id);
+    if (creatorEmail && campaign) {
+      await sendTransactionalEmail(
+        creatorEmail,
+        `Tu entrega en "${campaign.title}" fue aprobada`,
+        `<p>La marca aprobó tu entrega en <strong>${campaign.title}</strong>. ¡Buen trabajo!</p>`
+      );
+    }
+  }
+}

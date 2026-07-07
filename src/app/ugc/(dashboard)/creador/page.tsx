@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import DashboardHeader from "@/components/ugc/DashboardHeader";
 import ApplyForm from "@/components/ugc/creador/ApplyForm";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import {
@@ -36,18 +34,8 @@ export default async function CreadorFeedPage() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-16">
-      <DashboardHeader />
-
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">Campañas publicadas</h1>
-        <Link
-          href="/ugc/creador/aplicaciones"
-          className="rounded-pill border border-line px-5 py-2.5 text-sm font-bold text-ink transition hover:border-ink"
-        >
-          Mis aplicaciones
-        </Link>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      <h1 className="mb-8 text-3xl font-extrabold tracking-tight text-ink">Campañas publicadas</h1>
 
       {campaigns && campaigns.length > 0 ? (
         <div className="flex flex-col gap-5">

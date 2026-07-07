@@ -3,7 +3,7 @@ import CampaignForm from "@/components/ugc/marca/CampaignForm";
 
 export default function NuevaCampanaPage() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col items-center gap-6 px-6 py-16">
+    <div className="mx-auto flex max-w-2xl flex-col items-center gap-6">
       <Link href="/ugc/marca" className="self-start text-sm font-bold text-ink-soft hover:text-ink">
         ← Mis campañas
       </Link>

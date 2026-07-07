@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import DashboardHeader from "@/components/ugc/DashboardHeader";
+import DeliverySubmitForm from "@/components/ugc/creador/DeliverySubmitForm";
+import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
 import {
   APPLICATION_STATUS_LABEL,
   APPLICATION_STATUS_STYLE,
@@ -33,19 +33,36 @@ export default async function MisAplicacionesPage() {
   const campaignById = new Map((campaigns ?? []).map((c) => [c.id, c]));
   const brandNameByProfileId = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b.brand_name]));
 
-  return (
-    <div className="mx-auto max-w-3xl px-6 py-16">
-      <DashboardHeader />
+  const applicationIds = (applications ?? []).map((a) => a.id);
+  const { data: deliveries } = applicationIds.length
+    ? await supabase
+        .from("application_deliveries")
+        .select("*")
+        .in("application_id", applicationIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
 
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">Mis aplicaciones</h1>
-        <Link
-          href="/ugc/creador"
-          className="rounded-pill border border-line px-5 py-2.5 text-sm font-bold text-ink transition hover:border-ink"
-        >
-          ← Feed de campañas
-        </Link>
-      </div>
+  const deliveriesByApplicationId = new Map<string, typeof deliveries>();
+  for (const delivery of deliveries ?? []) {
+    const list = deliveriesByApplicationId.get(delivery.application_id) ?? [];
+    list.push(delivery);
+    deliveriesByApplicationId.set(delivery.application_id, list);
+  }
+
+  const fileDeliveries = (deliveries ?? []).filter((d) => d.kind === "file" && d.storage_path);
+  const signedUrlByPath = new Map<string, string>();
+  await Promise.all(
+    fileDeliveries.map(async (d) => {
+      const { data } = await supabase.storage
+        .from(DELIVERIES_BUCKET)
+        .createSignedUrl(d.storage_path!, DELIVERY_SIGNED_URL_TTL_SECONDS);
+      if (data?.signedUrl) signedUrlByPath.set(d.storage_path!, data.signedUrl);
+    })
+  );
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <h1 className="mb-8 text-3xl font-extrabold tracking-tight text-ink">Mis aplicaciones</h1>
 
       {applications && applications.length > 0 ? (
         <div className="flex flex-col gap-4">
@@ -75,6 +92,38 @@ export default async function MisAplicacionesPage() {
                   <p className="mt-3 rounded-lg bg-lavender p-3 text-sm text-ink-soft">
                     {app.pitch_message}
                   </p>
+                )}
+                {(deliveriesByApplicationId.get(app.id)?.length ?? 0) > 0 && (
+                  <div className="mt-3 flex flex-col gap-1.5">
+                    {deliveriesByApplicationId.get(app.id)!.map((d) => (
+                      <div key={d.id} className="text-sm text-ink-soft">
+                        {d.kind === "file" ? (
+                          <a
+                            href={signedUrlByPath.get(d.storage_path!) ?? "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-bold text-violet-deep hover:underline"
+                          >
+                            Ver archivo entregado
+                          </a>
+                        ) : (
+                          <a
+                            href={d.external_url!}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-bold text-violet-deep hover:underline"
+                          >
+                            Ver link entregado
+                          </a>
+                        )}
+                        {d.note && <span> — {d.note}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(app.status === "accepted" || app.status === "delivered") && (
+                  <DeliverySubmitForm applicationId={app.id} />
                 )}
               </div>
             );

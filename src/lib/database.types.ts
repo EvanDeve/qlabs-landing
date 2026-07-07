@@ -19,6 +19,7 @@ export type ApplicationStatus =
   | "rejected"
   | "delivered"
   | "approved";
+export type PortfolioMediaType = "image" | "video";
 
 export interface Database {
   public: {
@@ -57,6 +58,9 @@ export interface Database {
           rate_min: number | null;
           rate_max: number | null;
           verified: boolean;
+          avg_views: number | null;
+          engagement_rate: number | null;
+          avg_reach: number | null;
         };
         Insert: {
           profile_id: string;
@@ -69,8 +73,75 @@ export interface Database {
           rate_min?: number | null;
           rate_max?: number | null;
           verified?: boolean;
+          avg_views?: number | null;
+          engagement_rate?: number | null;
+          avg_reach?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["creator_profiles"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_skills: {
+        Row: {
+          id: string;
+          creator_id: string;
+          name: string;
+          level: number;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          name: string;
+          level: number;
+          position?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_skills"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_services: {
+        Row: {
+          id: string;
+          creator_id: string;
+          service: string;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          service: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_services"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_addons: {
+        Row: {
+          id: string;
+          creator_id: string;
+          addon: string;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          addon: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_addons"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_past_brands: {
+        Row: {
+          id: string;
+          creator_id: string;
+          category: string;
+          brand_name: string;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          category: string;
+          brand_name: string;
+          position?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_past_brands"]["Insert"]>;
         Relationships: [];
       };
       brand_profiles: {
@@ -136,6 +207,9 @@ export interface Database {
           status: ApplicationStatus;
           created_at: string;
           status_changed_at: string;
+          accepted_at: string | null;
+          delivered_at: string | null;
+          approved_at: string | null;
         };
         Insert: {
           id?: string;
@@ -145,8 +219,35 @@ export interface Database {
           status?: ApplicationStatus;
           created_at?: string;
           status_changed_at?: string;
+          accepted_at?: string | null;
+          delivered_at?: string | null;
+          approved_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;
+        Relationships: [];
+      };
+      application_deliveries: {
+        Row: {
+          id: string;
+          application_id: string;
+          creator_id: string;
+          kind: "file" | "link";
+          storage_path: string | null;
+          external_url: string | null;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          application_id: string;
+          creator_id: string;
+          kind: "file" | "link";
+          storage_path?: string | null;
+          external_url?: string | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["application_deliveries"]["Insert"]>;
         Relationships: [];
       };
       notifications: {
@@ -167,6 +268,30 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>;
+        Relationships: [];
+      };
+      portfolio_items: {
+        Row: {
+          id: string;
+          creator_id: string;
+          storage_path: string;
+          media_type: PortfolioMediaType;
+          category: string;
+          caption: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          storage_path: string;
+          media_type: PortfolioMediaType;
+          category?: string;
+          caption?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["portfolio_items"]["Insert"]>;
         Relationships: [];
       };
     };
@@ -194,6 +319,13 @@ export interface Database {
           published_campaigns_count: number;
           creators_count: number;
           brands_count: number;
+        }[];
+      };
+      creator_delivery_stats: {
+        Args: { p_creator_id: string };
+        Returns: {
+          approved_count: number;
+          on_time_ratio: number | null;
         }[];
       };
     };

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { publishCampaignAction } from "@/lib/actions/campaigns";
-import { updateApplicationStatusAction } from "@/lib/actions/applications";
+import { updateApplicationStatusAction, approveApplicationAction } from "@/lib/actions/applications";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
+import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
 import {
   APPLICATION_STATUS_LABEL,
   APPLICATION_STATUS_STYLE,
@@ -50,12 +51,39 @@ export default async function CampaignDetailPage({
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
   const creatorProfileById = new Map((creatorProfiles ?? []).map((c) => [c.profile_id, c]));
 
+  const applicationIds = (applications ?? []).map((a) => a.id);
+  const { data: deliveries } = applicationIds.length
+    ? await supabase
+        .from("application_deliveries")
+        .select("*")
+        .in("application_id", applicationIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+
+  const deliveriesByApplicationId = new Map<string, typeof deliveries>();
+  for (const delivery of deliveries ?? []) {
+    const list = deliveriesByApplicationId.get(delivery.application_id) ?? [];
+    list.push(delivery);
+    deliveriesByApplicationId.set(delivery.application_id, list);
+  }
+
+  const fileDeliveries = (deliveries ?? []).filter((d) => d.kind === "file" && d.storage_path);
+  const signedUrlByPath = new Map<string, string>();
+  await Promise.all(
+    fileDeliveries.map(async (d) => {
+      const { data } = await supabase.storage
+        .from(DELIVERIES_BUCKET)
+        .createSignedUrl(d.storage_path!, DELIVERY_SIGNED_URL_TTL_SECONDS);
+      if (data?.signedUrl) signedUrlByPath.set(d.storage_path!, data.signedUrl);
+    })
+  );
+
   const deliverables = Array.isArray(campaign.deliverables)
     ? (campaign.deliverables as { type: string; qty: number }[])
     : [];
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-16">
+    <div className="mx-auto max-w-3xl">
       <Link href="/ugc/marca" className="text-sm font-bold text-ink-soft hover:text-ink">
         ← Mis campañas
       </Link>
@@ -120,9 +148,16 @@ export default async function CampaignDetailPage({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-ink">
-                        {creatorProfile?.handle ?? profile?.display_name ?? "Creador"}
-                      </span>
+                      {creatorProfile?.handle ? (
+                        <Link
+                          href={`/ugc/creadores/${creatorProfile.handle}`}
+                          className="font-extrabold text-ink hover:text-violet-deep"
+                        >
+                          {creatorProfile.handle}
+                        </Link>
+                      ) : (
+                        <span className="font-extrabold text-ink">{profile?.display_name ?? "Creador"}</span>
+                      )}
                       {creatorProfile?.verified && (
                         <span className="rounded-pill bg-trust-bg px-2 py-0.5 text-xs font-bold text-trust">
                           Verificado
@@ -186,6 +221,49 @@ export default async function CampaignDetailPage({
                       </button>
                     </form>
                   </div>
+                )}
+
+                {(app.status === "delivered" || app.status === "approved") &&
+                  (deliveriesByApplicationId.get(app.id)?.length ?? 0) > 0 && (
+                    <div className="mt-3 flex flex-col gap-1.5">
+                      {deliveriesByApplicationId.get(app.id)!.map((d) => (
+                        <div key={d.id} className="text-sm text-ink-soft">
+                          {d.kind === "file" ? (
+                            <a
+                              href={signedUrlByPath.get(d.storage_path!) ?? "#"}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-violet-deep hover:underline"
+                            >
+                              Ver pieza entregada
+                            </a>
+                          ) : (
+                            <a
+                              href={d.external_url!}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-violet-deep hover:underline"
+                            >
+                              Ver link entregado
+                            </a>
+                          )}
+                          {d.note && <span> — {d.note}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                {app.status === "delivered" && (
+                  <form action={approveApplicationAction} className="mt-4">
+                    <input type="hidden" name="application_id" value={app.id} />
+                    <input type="hidden" name="campaign_id" value={campaign.id} />
+                    <button
+                      type="submit"
+                      className="rounded-pill bg-trust px-5 py-2 text-sm font-bold text-white transition hover:opacity-90"
+                    >
+                      Aprobar entrega
+                    </button>
+                  </form>
                 )}
               </div>
             );
