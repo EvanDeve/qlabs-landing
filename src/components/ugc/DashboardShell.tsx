@@ -20,9 +20,7 @@ export default function DashboardShell({
       <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col justify-between border-r border-line bg-white p-6">
         <div>
           <Link href="/ugc" className="flex items-center gap-2 text-lg font-extrabold text-ink">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet text-sm text-white">
-              Q
-            </span>
+            <img src="/favicon-logo.png" alt="Q Labs" className="h-7 w-7 rounded-lg object-cover" />
             UGC·CRC
           </Link>
 

@@ -61,12 +61,7 @@ export default function QosShell({
       <div className={styles.app}>
         <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
           <div className={styles.sbBrand}>
-            <div className={styles.qMark} aria-hidden>
-              <svg width="22" height="22" viewBox="0 0 32 32">
-                <circle cx="14.5" cy="14.5" r="9" fill="none" stroke="#fff" strokeWidth="3" />
-                <line x1="18" y1="18" x2="25" y2="25" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" />
-              </svg>
-            </div>
+            <img src="/favicon-logo.png" alt="Q Labs" className={styles.qMark} style={{ objectFit: "cover" }} />
             <div>
               <div className={styles.name}>
                 Q<span style={{ opacity: 0.5, fontWeight: 400 }}> ·</span> OS

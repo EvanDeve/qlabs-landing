@@ -56,9 +56,7 @@ export default async function OnboardingPage({
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 py-16">
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="flex items-center gap-2 text-lg font-extrabold">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet text-sm text-white">
-            Q
-          </span>
+          <img src="/favicon-logo.png" alt="Q Labs" className="h-7 w-7 rounded-lg object-cover" />
           UGC·CRC
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink">

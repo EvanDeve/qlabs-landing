@@ -5,9 +5,7 @@ export default function PublicNav() {
     <header className="sticky top-0 z-20 border-b border-line bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href="/ugc" className="flex items-center gap-2 text-lg font-extrabold text-ink">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet text-sm text-white">
-            Q
-          </span>
+          <img src="/favicon-logo.png" alt="Q Labs" className="h-7 w-7 rounded-lg object-cover" />
           UGC·CRC
         </Link>
 
