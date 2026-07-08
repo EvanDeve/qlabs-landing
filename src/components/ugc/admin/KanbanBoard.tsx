@@ -88,6 +88,10 @@ export default function KanbanBoard({
           brandName={brandNameById.get(selectedPiece.brand_id) ?? ""}
           staff={staff}
           onClose={() => setSelectedPiece(null)}
+          onDeleted={() => {
+            setLocalPieces((prev) => prev.filter((p) => p.id !== selectedPiece.id));
+            setSelectedPiece(null);
+          }}
         />
       )}
 

@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { upsertStaffMemberAction, setStaffActiveAction } from "@/lib/actions/staff";
+import { upsertStaffMemberAction, setStaffActiveAction, deleteStaffMemberAction } from "@/lib/actions/staff";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import InviteStaffForm from "@/components/ugc/admin/InviteStaffForm";
+import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import type { StaffRole } from "@/lib/database.types";
 import styles from "../qos.module.css";
 
@@ -44,6 +45,13 @@ export default async function EquipoPage() {
                 {staff.active ? "Desactivar" : "Activar"}
               </button>
             </form>
+            <ConfirmDeleteButton
+              action={deleteStaffMemberAction.bind(null, staff.profile_id)}
+              confirmMessage={`¿Borrar definitivamente a ${profileById.get(staff.profile_id)?.display_name ?? "este colaborador"}? Esto elimina su cuenta por completo. No se puede deshacer.`}
+              className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+            >
+              Borrar
+            </ConfirmDeleteButton>
           </div>
         ))}
       </div>

@@ -66,6 +66,17 @@ export async function upsertStaffMemberAction(formData: FormData) {
   revalidatePath("/ugc/admin/equipo");
 }
 
+// Borra la cuenta completa del colaborador (auth.users), lo que cascadea a
+// profiles/staff_members vía FK on delete cascade. Usado para limpiar data
+// de prueba, no para desactivar a alguien temporalmente (para eso está
+// setStaffActiveAction).
+export async function deleteStaffMemberAction(profileId: string) {
+  const admin = createAdminClient();
+  await admin.auth.admin.deleteUser(profileId);
+
+  revalidatePath("/ugc/admin/equipo");
+}
+
 export async function setStaffActiveAction(formData: FormData) {
   const supabase = await createClient();
   const {

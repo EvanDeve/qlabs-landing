@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import type { Database } from "@/lib/database.types";
-import { updateContentPieceAction, updateContentPieceStageAction } from "@/lib/actions/content-pieces";
+import { updateContentPieceAction, updateContentPieceStageAction, deleteContentPieceAction } from "@/lib/actions/content-pieces";
 import { CONTENT_STAGE_LABEL, CONTENT_STAGE_SOP, nextContentStage } from "@/lib/ugc/content-stage";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import type { StaffOption } from "./KanbanBoard";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
@@ -15,11 +16,13 @@ export default function ContentPieceDrawer({
   brandName,
   staff,
   onClose,
+  onDeleted,
 }: {
   piece: ContentPiece;
   brandName: string;
   staff: StaffOption[];
   onClose: () => void;
+  onDeleted: () => void;
 }) {
   const [stage, setStage] = useState(piece.stage);
   const [isPending, startTransition] = useTransition();
@@ -32,6 +35,11 @@ export default function ContentPieceDrawer({
       await updateContentPieceStageAction(piece.id, upcoming);
       setStage(upcoming);
     });
+  }
+
+  async function handleDelete() {
+    await deleteContentPieceAction(piece.id);
+    onDeleted();
   }
 
   return (
@@ -144,9 +152,18 @@ export default function ContentPieceDrawer({
               <textarea name="notes" rows={3} defaultValue={piece.notes ?? ""} className={styles.inp} />
             </div>
 
-            <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-              Guardar
-            </button>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
+                Guardar
+              </button>
+              <ConfirmDeleteButton
+                action={handleDelete}
+                confirmMessage={`¿Borrar la pieza "${piece.title}"? No se puede deshacer.`}
+                className={`${styles.btn} ${styles.btnGhost}`}
+              >
+                Borrar pieza
+              </ConfirmDeleteButton>
+            </div>
           </form>
         </div>
       </aside>

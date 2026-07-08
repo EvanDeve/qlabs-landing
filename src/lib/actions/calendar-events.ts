@@ -31,6 +31,19 @@ export async function createCalendarEventAction(formData: FormData) {
   revalidatePath("/ugc/admin");
 }
 
+export async function deleteCalendarEventAction(id: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("calendar_events").delete().eq("id", id);
+
+  revalidatePath("/ugc/admin/calendario");
+  revalidatePath("/ugc/admin");
+}
+
 export async function updateCalendarEventAction(formData: FormData) {
   const supabase = await createClient();
   const {

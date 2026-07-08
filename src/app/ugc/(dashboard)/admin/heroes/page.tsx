@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { setHeroManagedAction } from "@/lib/actions/heroes";
+import { setHeroManagedAction, deleteHeroAction } from "@/lib/actions/heroes";
 import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
 import { HERO_RISK_LABEL } from "@/lib/ugc/content-meta";
 import NewHeroButton from "@/components/ugc/admin/NewHeroButton";
+import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import styles from "../qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +110,14 @@ export default async function HeroesPage() {
                   {isManaged ? "Quitar de Heroes" : "Marcar Hero"}
                 </button>
               </form>
+              <ConfirmDeleteButton
+                action={deleteHeroAction.bind(null, brand.profile_id)}
+                confirmMessage={`¿Borrar definitivamente a ${brand.brand_name}? Esto elimina la cuenta, sus campañas, piezas y eventos. No se puede deshacer.`}
+                className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+                style={{ width: "100%", justifyContent: "center", marginTop: "8px" }}
+              >
+                Borrar Hero
+              </ConfirmDeleteButton>
             </div>
           );
         })}

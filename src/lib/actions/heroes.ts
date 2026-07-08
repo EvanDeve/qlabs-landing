@@ -49,6 +49,19 @@ export async function createHeroAction(
   redirect(`/ugc/admin/heroes/${profileId}`);
 }
 
+// Borra la cuenta completa del Hero (auth.users), lo que cascadea a
+// profiles/brand_profiles/hero_profiles/campaigns/content_pieces/applications
+// vía FK on delete cascade. Usado para limpiar data de prueba.
+export async function deleteHeroAction(profileId: string) {
+  const admin = createAdminClient();
+  await admin.auth.admin.deleteUser(profileId);
+
+  revalidatePath("/ugc/admin/heroes");
+  revalidatePath("/ugc/admin/pipeline");
+  revalidatePath("/ugc/admin/calendario");
+  revalidatePath("/ugc/admin");
+}
+
 export async function setHeroManagedAction(formData: FormData) {
   const supabase = await createClient();
   const {

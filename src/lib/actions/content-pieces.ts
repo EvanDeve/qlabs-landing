@@ -38,6 +38,27 @@ export async function createContentPieceAction(formData: FormData) {
   revalidatePath(`/ugc/admin/heroes/${brandId}`);
 }
 
+export async function deleteContentPieceAction(pieceId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: current } = await supabase
+    .from("content_pieces")
+    .select("brand_id")
+    .eq("id", pieceId)
+    .single();
+
+  await supabase.from("content_pieces").delete().eq("id", pieceId);
+
+  revalidatePath("/ugc/admin/pipeline");
+  revalidatePath("/ugc/admin/calendario");
+  revalidatePath("/ugc/admin");
+  if (current?.brand_id) revalidatePath(`/ugc/admin/heroes/${current.brand_id}`);
+}
+
 export async function updateContentPieceStageAction(pieceId: string, stage: ContentStage) {
   const supabase = await createClient();
   const {

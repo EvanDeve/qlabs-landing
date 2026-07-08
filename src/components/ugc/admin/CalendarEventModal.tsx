@@ -4,8 +4,9 @@ import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 import type { CalendarItem } from "@/lib/ugc/calendar";
 import { CALENDAR_EVENT_TYPE_LABEL, COSTA_RICA_TZ } from "@/lib/ugc/calendar";
-import { createCalendarEventAction, updateCalendarEventAction } from "@/lib/actions/calendar-events";
+import { createCalendarEventAction, updateCalendarEventAction, deleteCalendarEventAction } from "@/lib/actions/calendar-events";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type Option = { id: string; name: string };
@@ -114,9 +115,23 @@ export default function CalendarEventModal({
               </div>
             )}
 
-            <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-              {item ? "Guardar" : "Crear evento"}
-            </button>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
+                {item ? "Guardar" : "Crear evento"}
+              </button>
+              {item && (
+                <ConfirmDeleteButton
+                  action={async () => {
+                    await deleteCalendarEventAction(item.id);
+                    onClose();
+                  }}
+                  confirmMessage={`¿Borrar el evento "${item.title}"? No se puede deshacer.`}
+                  className={`${styles.btn} ${styles.btnGhost}`}
+                >
+                  Borrar evento
+                </ConfirmDeleteButton>
+              )}
+            </div>
           </form>
         )}
       </div>
