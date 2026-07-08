@@ -53,7 +53,7 @@ export default function NotificationsBell({ notifications }: { notifications: No
         aria-label="Notificaciones"
         className="relative flex h-9 w-9 items-center justify-center rounded-full border border-line text-lg transition hover:border-ink"
       >
-        🔔
+        <i className="fa-solid fa-bell" aria-hidden />
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-coral px-1 text-[10px] font-bold text-white">
             {unreadCount}
@@ -103,7 +103,7 @@ export default function NotificationsBell({ notifications }: { notifications: No
                             aria-label="Marcar como leída"
                             className="text-xs text-ink-soft hover:text-ink"
                           >
-                            ✓
+                            <i className="fa-solid fa-check" aria-hidden />
                           </button>
                         </form>
                       )}

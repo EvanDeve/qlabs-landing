@@ -40,7 +40,7 @@ export default function CampaignCard({ campaign }: { campaign: CampaignPreview }
           <div className="h-8 w-1/3 rounded bg-lavender-deep" />
         </div>
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/70 text-center">
-          <span className="text-xl">🔒</span>
+          <i className="fa-solid fa-lock text-xl text-ink-soft" aria-hidden />
           <p className="max-w-[220px] text-xs font-semibold text-ink-soft">
             Presupuesto y brief completo visibles para creadores registrados
           </p>

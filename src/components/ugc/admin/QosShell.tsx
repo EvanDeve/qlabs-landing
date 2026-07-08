@@ -62,12 +62,7 @@ export default function QosShell({
         <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
           <div className={styles.sbBrand}>
             <img src="/favicon-logo.png" alt="Q Labs" className={styles.qMark} style={{ objectFit: "cover" }} />
-            <div>
-              <div className={styles.name}>
-                Q<span style={{ opacity: 0.5, fontWeight: 400 }}> ·</span> OS
-              </div>
-              <div className={styles.sub}>Centro de Mando</div>
-            </div>
+            <div className={styles.sub}>Centro de Mando</div>
           </div>
 
           <nav className={styles.sbNav} aria-label="Navegación principal">

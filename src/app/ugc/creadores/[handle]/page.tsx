@@ -92,8 +92,15 @@ export default async function CreatorPublicProfilePage({
         </div>
         <h1 className="mt-4 text-2xl font-extrabold tracking-tight">@{creatorProfile.handle}</h1>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/70">
-          {profile?.city && <span>📍 {profile.city}</span>}
-          <span>👥 {creatorProfile.followers_count.toLocaleString("es-CR")} seguidores</span>
+          {profile?.city && (
+            <span>
+              <i className="fa-solid fa-location-dot" aria-hidden /> {profile.city}
+            </span>
+          )}
+          <span>
+            <i className="fa-solid fa-users" aria-hidden /> {creatorProfile.followers_count.toLocaleString("es-CR")}{" "}
+            seguidores
+          </span>
         </div>
 
         {(creatorProfile.niches.length > 0 || creatorProfile.languages.length > 0) && (
