@@ -184,10 +184,8 @@
   height: 38px;
   border-radius: 11px;
   flex-shrink: 0;
-  background: linear-gradient(150deg, var(--b-400), var(--b-600));
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 16px rgba(109, 84, 243, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .name {
   font-family: var(--font-display);
