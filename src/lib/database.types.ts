@@ -339,10 +339,15 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["staff_members"]["Insert"]>;
         Relationships: [];
       };
-      hero_profiles: {
+      agency_clients: {
         Row: {
-          profile_id: string;
-          is_managed: boolean;
+          id: string;
+          name: string;
+          industry: string | null;
+          website: string | null;
+          contact_email: string | null;
+          logo_url: string | null;
+          drive_url: string | null;
           objetivo: string | null;
           servicios: string[];
           contacts: string | null;
@@ -351,8 +356,13 @@ export interface Database {
           created_at: string;
         };
         Insert: {
-          profile_id: string;
-          is_managed?: boolean;
+          id?: string;
+          name: string;
+          industry?: string | null;
+          website?: string | null;
+          contact_email?: string | null;
+          logo_url?: string | null;
+          drive_url?: string | null;
           objetivo?: string | null;
           servicios?: string[];
           contacts?: string | null;
@@ -360,7 +370,7 @@ export interface Database {
           client_since?: string | null;
           created_at?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["hero_profiles"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["agency_clients"]["Insert"]>;
         Relationships: [];
       };
       content_pieces: {

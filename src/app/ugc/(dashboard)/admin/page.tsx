@@ -26,14 +26,12 @@ export default async function AdminDashboardPage() {
   const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const [
-    { data: heroProfiles },
-    { data: brandProfiles },
+    { data: agencyClients },
     { data: contentPieces },
     { data: staffMembers },
     { data: calendarEvents },
   ] = await Promise.all([
-    supabase.from("hero_profiles").select("*").eq("is_managed", true),
-    supabase.from("brand_profiles").select("profile_id, brand_name"),
+    supabase.from("agency_clients").select("*"),
     supabase.from("content_pieces").select("*").order("publish_date", { ascending: true }),
     supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
     supabase
@@ -43,7 +41,7 @@ export default async function AdminDashboardPage() {
       .lte("starts_at", in7Days.toISOString()),
   ]);
 
-  const brandNameByProfileId = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b.brand_name]));
+  const brandNameByProfileId = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
 
   const staffIds = (staffMembers ?? []).map((s) => s.profile_id);
   const { data: staffAccountProfiles } = staffIds.length
@@ -54,7 +52,7 @@ export default async function AdminDashboardPage() {
   const pieces = contentPieces ?? [];
   const activePieces = pieces.filter((p) => p.stage !== "publicado");
 
-  const heroesManaged = heroProfiles ?? [];
+  const heroesManaged = agencyClients ?? [];
   const heroesActive = heroesManaged.filter((h) => h.risk !== "onboarding");
   const heroesOnboarding = heroesManaged.filter((h) => h.risk === "onboarding");
 
@@ -179,23 +177,25 @@ export default async function AdminDashboardPage() {
               </thead>
               <tbody>
                 {heroesManaged.map((hero) => {
-                  const heroPieces = pieces.filter((p) => p.brand_id === hero.profile_id);
+                  const heroPieces = pieces.filter((p) => p.brand_id === hero.id);
                   const activeHeroPieces = heroPieces.filter((p) => p.stage !== "publicado");
                   const nextPublish = heroPieces
                     .filter((p) => p.publish_date && new Date(p.publish_date) >= now)
                     .sort((a, b) => new Date(a.publish_date!).getTime() - new Date(b.publish_date!).getTime())[0];
 
                   return (
-                    <tr key={hero.profile_id}>
+                    <tr key={hero.id}>
                       <td>
-                        <Link href={`/ugc/admin/heroes/${hero.profile_id}`} className={styles.acctHero}>
-                          <span
-                            className={styles.heroMono}
-                            style={{ background: staffColorFromString(hero.profile_id) }}
-                          >
-                            {(brandNameByProfileId.get(hero.profile_id) ?? "?").slice(0, 2).toUpperCase()}
-                          </span>
-                          {brandNameByProfileId.get(hero.profile_id)}
+                        <Link href={`/ugc/admin/heroes/${hero.id}`} className={styles.acctHero}>
+                          {hero.logo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={hero.logo_url} alt={hero.name} className={styles.heroMono} style={{ objectFit: "cover" }} />
+                          ) : (
+                            <span className={styles.heroMono} style={{ background: staffColorFromString(hero.id) }}>
+                              {hero.name.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                          {hero.name}
                         </Link>
                       </td>
                       <td>

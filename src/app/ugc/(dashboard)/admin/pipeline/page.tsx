@@ -14,8 +14,8 @@ export default async function PipelinePage({
   const { brand, owner, priority } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: brandProfiles }, { data: staffMembers }, piecesQuery] = await Promise.all([
-    supabase.from("brand_profiles").select("profile_id, brand_name").order("brand_name"),
+  const [{ data: agencyClients }, { data: staffMembers }, piecesQuery] = await Promise.all([
+    supabase.from("agency_clients").select("id, name").order("name"),
     supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
     (() => {
       let query = supabase.from("content_pieces").select("*").order("created_at", { ascending: false });
@@ -34,7 +34,7 @@ export default async function PipelinePage({
     : { data: [] };
   const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
 
-  const brands = (brandProfiles ?? []).map((b) => ({ id: b.profile_id, name: b.brand_name }));
+  const brands = (agencyClients ?? []).map((c) => ({ id: c.id, name: c.name }));
   const staff = (staffMembers ?? []).map((s) => ({
     id: s.profile_id,
     name: staffNameById.get(s.profile_id) ?? "Sin nombre",

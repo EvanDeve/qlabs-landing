@@ -35,14 +35,14 @@ export default function NewHeroModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <p style={{ fontSize: "12px", color: "var(--ink-3)", marginBottom: "16px" }}>
-          Crea el negocio directo, sin pasar por el registro público del marketplace. Queda marcado como
-          Hero gestionado.
+          Registrá un cliente actual de la agencia. Es un registro interno de Q·OS, independiente del
+          marketplace UGC·CRC.
         </p>
 
         <form action={formAction}>
           <div className={styles.field}>
-            <label>Nombre de la marca</label>
-            <input name="brand_name" required className={styles.inp} />
+            <label>Nombre del cliente</label>
+            <input name="name" required className={styles.inp} />
           </div>
 
           <div className={styles.field}>
@@ -51,8 +51,23 @@ export default function NewHeroModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className={styles.field}>
-            <label>Email de contacto</label>
-            <input type="email" name="contact_email" required className={styles.inp} />
+            <label>Sitio web (opcional)</label>
+            <input name="website" className={styles.inp} />
+          </div>
+
+          <div className={styles.field}>
+            <label>Email de contacto (opcional)</label>
+            <input type="email" name="contact_email" className={styles.inp} />
+          </div>
+
+          <div className={styles.field}>
+            <label>Link de Drive (opcional)</label>
+            <input name="drive_url" placeholder="https://drive.google.com/..." className={styles.inp} />
+          </div>
+
+          <div className={styles.field}>
+            <label>Logo (opcional)</label>
+            <input type="file" name="logo" accept="image/*" className={styles.inp} />
           </div>
 
           {state?.error && <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--risk)", marginBottom: "12px" }}>{state.error}</p>}

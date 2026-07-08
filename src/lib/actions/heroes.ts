@@ -1,84 +1,72 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import type { HeroRisk } from "@/lib/database.types";
+
+const HERO_LOGO_BUCKET = "hero-logos";
 
 export type CreateHeroState = { error: string } | null;
 
-// Crea un Hero sin pasar por el registro público del marketplace: da de alta
-// el auth.users + profiles + brand_profiles directo (sin invitar ni pedir
-// contraseña todavía) y lo marca como gestionado. Si el negocio quiere acceso
-// al marketplace más adelante, puede "reclamar" ese email vía reset de clave
-// (no construido todavía — fuera de alcance de esta pasada).
+async function uploadHeroLogo(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  logo: FormDataEntryValue | null
+): Promise<string | null> {
+  if (!(logo instanceof File) || logo.size === 0) return null;
+
+  const extension = logo.name.includes(".") ? logo.name.split(".").pop() : "jpg";
+  const storagePath = `${randomUUID()}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from(HERO_LOGO_BUCKET)
+    .upload(storagePath, logo, { contentType: logo.type });
+
+  if (error) return null;
+
+  return supabase.storage.from(HERO_LOGO_BUCKET).getPublicUrl(storagePath).data.publicUrl;
+}
+
 export async function createHeroAction(
   _prevState: CreateHeroState,
   formData: FormData
 ): Promise<CreateHeroState> {
-  const brandName = String(formData.get("brand_name") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
   const industry = String(formData.get("industry") ?? "").trim() || null;
-  const contactEmail = String(formData.get("contact_email") ?? "").trim().toLowerCase();
+  const contactEmail = String(formData.get("contact_email") ?? "").trim().toLowerCase() || null;
+  const website = String(formData.get("website") ?? "").trim() || null;
+  const driveUrl = String(formData.get("drive_url") ?? "").trim() || null;
 
-  if (!brandName || !contactEmail) {
-    return { error: "Nombre y email de contacto son obligatorios." };
+  if (!name) {
+    return { error: "El nombre es obligatorio." };
   }
 
-  const admin = createAdminClient();
-  const { data, error } = await admin.auth.admin.createUser({
-    email: contactEmail,
-    email_confirm: true,
-    user_metadata: { role: "brand", full_name: brandName },
-  });
+  const supabase = await createClient();
+  const logoUrl = await uploadHeroLogo(supabase, formData.get("logo"));
 
-  if (error || !data.user) {
-    return {
-      error: error?.message.includes("already been registered")
-        ? "Ese email ya tiene una cuenta."
-        : "No se pudo crear el Hero. Intentá de nuevo.",
-    };
+  const { data, error } = await supabase
+    .from("agency_clients")
+    .insert({ name, industry, contact_email: contactEmail, website, drive_url: driveUrl, logo_url: logoUrl })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { error: "No se pudo crear el Hero. Intentá de nuevo." };
   }
-
-  const profileId = data.user.id;
-
-  await admin.from("brand_profiles").insert({ profile_id: profileId, brand_name: brandName, industry });
-  await admin.from("hero_profiles").insert({ profile_id: profileId, is_managed: true });
 
   revalidatePath("/ugc/admin/heroes");
-  redirect(`/ugc/admin/heroes/${profileId}`);
+  redirect(`/ugc/admin/heroes/${data.id}`);
 }
 
-// Borra la cuenta completa del Hero (auth.users), lo que cascadea a
-// profiles/brand_profiles/hero_profiles/campaigns/content_pieces/applications
-// vía FK on delete cascade. Usado para limpiar data de prueba.
-export async function deleteHeroAction(profileId: string) {
-  const admin = createAdminClient();
-  await admin.auth.admin.deleteUser(profileId);
+export async function deleteHeroAction(id: string) {
+  const supabase = await createClient();
+  await supabase.from("agency_clients").delete().eq("id", id);
 
   revalidatePath("/ugc/admin/heroes");
   revalidatePath("/ugc/admin/pipeline");
   revalidatePath("/ugc/admin/calendario");
   revalidatePath("/ugc/admin");
-}
-
-export async function setHeroManagedAction(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const profileId = String(formData.get("profile_id") ?? "");
-  const isManaged = formData.get("is_managed") === "true";
-  if (!profileId) return;
-
-  await supabase
-    .from("hero_profiles")
-    .upsert({ profile_id: profileId, is_managed: isManaged }, { onConflict: "profile_id" });
-
-  revalidatePath("/ugc/admin/heroes");
-  revalidatePath(`/ugc/admin/heroes/${profileId}`);
 }
 
 export async function updateHeroProfileAction(formData: FormData) {
@@ -88,9 +76,14 @@ export async function updateHeroProfileAction(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  const profileId = String(formData.get("profile_id") ?? "");
-  if (!profileId) return;
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
 
+  const name = String(formData.get("name") ?? "").trim();
+  const industry = String(formData.get("industry") ?? "").trim() || null;
+  const website = String(formData.get("website") ?? "").trim() || null;
+  const contactEmail = String(formData.get("contact_email") ?? "").trim().toLowerCase() || null;
+  const driveUrl = String(formData.get("drive_url") ?? "").trim() || null;
   const objetivo = String(formData.get("objetivo") ?? "").trim() || null;
   const contacts = String(formData.get("contacts") ?? "").trim() || null;
   const risk = String(formData.get("risk") ?? "onboarding") as HeroRisk;
@@ -101,19 +94,25 @@ export async function updateHeroProfileAction(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  await supabase.from("hero_profiles").upsert(
-    {
-      profile_id: profileId,
-      is_managed: true,
+  const logoUrl = await uploadHeroLogo(supabase, formData.get("logo"));
+
+  await supabase
+    .from("agency_clients")
+    .update({
+      name,
+      industry,
+      website,
+      contact_email: contactEmail,
+      drive_url: driveUrl,
       objetivo,
       contacts,
       risk,
       client_since: clientSince,
       servicios,
-    },
-    { onConflict: "profile_id" }
-  );
+      ...(logoUrl ? { logo_url: logoUrl } : {}),
+    })
+    .eq("id", id);
 
   revalidatePath("/ugc/admin/heroes");
-  revalidatePath(`/ugc/admin/heroes/${profileId}`);
+  revalidatePath(`/ugc/admin/heroes/${id}`);
 }

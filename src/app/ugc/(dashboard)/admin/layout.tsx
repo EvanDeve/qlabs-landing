@@ -20,7 +20,7 @@ export default async function AdminLayout({
       supabase.from("profiles").select("display_name").eq("id", user.id).single(),
       supabase.from("staff_members").select("staff_role").eq("profile_id", user.id).maybeSingle(),
       supabase.from("content_pieces").select("id").neq("stage", "publicado"),
-      supabase.from("hero_profiles").select("profile_id").eq("is_managed", true),
+      supabase.from("agency_clients").select("id"),
     ]);
 
   const navItems: QosNavItem[] = [

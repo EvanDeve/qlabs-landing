@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { setHeroManagedAction, deleteHeroAction } from "@/lib/actions/heroes";
+import { deleteHeroAction } from "@/lib/actions/heroes";
 import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
 import { HERO_RISK_LABEL } from "@/lib/ugc/content-meta";
 import NewHeroButton from "@/components/ugc/admin/NewHeroButton";
@@ -26,23 +26,16 @@ function colorFor(id: string) {
 export default async function HeroesPage() {
   const supabase = await createClient();
 
-  const { data: brandProfiles } = await supabase
-    .from("brand_profiles")
-    .select("profile_id, brand_name, industry")
-    .order("brand_name", { ascending: true });
+  const { data: clients } = await supabase
+    .from("agency_clients")
+    .select("id, name, industry, logo_url, risk")
+    .order("name", { ascending: true });
 
-  const brandIds = (brandProfiles ?? []).map((b) => b.profile_id);
+  const clientIds = (clients ?? []).map((c) => c.id);
 
-  const [{ data: heroProfiles }, { data: contentPieces }] = await Promise.all([
-    brandIds.length
-      ? supabase.from("hero_profiles").select("*").in("profile_id", brandIds)
-      : Promise.resolve({ data: [] }),
-    brandIds.length
-      ? supabase.from("content_pieces").select("brand_id, stage, publish_date").in("brand_id", brandIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const heroByProfileId = new Map((heroProfiles ?? []).map((h) => [h.profile_id, h]));
+  const { data: contentPieces } = clientIds.length
+    ? await supabase.from("content_pieces").select("brand_id, stage, publish_date").in("brand_id", clientIds)
+    : { data: [] };
 
   const latestStageByBrandId = new Map<string, string>();
   const nextPublishByBrandId = new Map<string, string>();
@@ -58,39 +51,37 @@ export default async function HeroesPage() {
     <div>
       <NewHeroButton />
       <div className={styles.heroCards}>
-        {(brandProfiles ?? []).map((brand) => {
-          const hero = heroByProfileId.get(brand.profile_id);
-          const isManaged = hero?.is_managed ?? false;
-          const stage = latestStageByBrandId.get(brand.profile_id);
-          const nextPublish = nextPublishByBrandId.get(brand.profile_id);
-          const color = colorFor(brand.profile_id);
+        {(clients ?? []).map((client) => {
+          const stage = latestStageByBrandId.get(client.id);
+          const nextPublish = nextPublishByBrandId.get(client.id);
+          const color = colorFor(client.id);
 
           return (
-            <div key={brand.profile_id} className={styles.hcard}>
-              <Link href={`/ugc/admin/heroes/${brand.profile_id}`}>
+            <div key={client.id} className={styles.hcard}>
+              <Link href={`/ugc/admin/heroes/${client.id}`}>
                 <div className={styles.hcardTop}>
-                  <span className={styles.hcardMono} style={{ background: color }}>
-                    {brand.brand_name.slice(0, 2).toUpperCase()}
-                  </span>
+                  {client.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={client.logo_url} alt={client.name} className={styles.hcardMono} style={{ objectFit: "cover" }} />
+                  ) : (
+                    <span className={styles.hcardMono} style={{ background: color }}>
+                      {client.name.slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
                   <div>
-                    <div className={styles.hcardName}>{brand.brand_name}</div>
-                    <div className={styles.hcardInd}>{brand.industry ?? "Sin industria"}</div>
+                    <div className={styles.hcardName}>{client.name}</div>
+                    <div className={styles.hcardInd}>{client.industry ?? "Sin industria"}</div>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  {isManaged && hero && (
-                    <span className={`${styles.riskPill} ${styles[RISK_CLASS[hero.risk]]}`}>
-                      {HERO_RISK_LABEL[hero.risk]}
-                    </span>
-                  )}
+                  <span className={`${styles.riskPill} ${styles[RISK_CLASS[client.risk]]}`}>
+                    {HERO_RISK_LABEL[client.risk]}
+                  </span>
                   {stage && <span className={styles.tag}>{CONTENT_STAGE_LABEL[stage as keyof typeof CONTENT_STAGE_LABEL]}</span>}
                 </div>
                 <div className={styles.hcardFoot}>
-                  <span style={{ fontSize: "11.5px", color: "var(--ink-3)" }}>
-                    {isManaged ? "Hero gestionado" : "No gestionado"}
-                  </span>
                   {nextPublish && (
-                    <span style={{ marginLeft: "auto", fontSize: "11.5px", color: "var(--ink-2)" }}>
+                    <span style={{ fontSize: "11.5px", color: "var(--ink-2)" }}>
                       Próx.{" "}
                       <b style={{ color: "var(--ink)", fontWeight: 600 }}>
                         {new Date(nextPublish).toLocaleDateString("es-CR", { day: "numeric", month: "short" })}
@@ -99,22 +90,11 @@ export default async function HeroesPage() {
                   )}
                 </div>
               </Link>
-              <form action={setHeroManagedAction} style={{ marginTop: "12px" }}>
-                <input type="hidden" name="profile_id" value={brand.profile_id} />
-                <input type="hidden" name="is_managed" value={(!isManaged).toString()} />
-                <button
-                  type="submit"
-                  className={`${styles.btn} ${styles.btnSm} ${isManaged ? styles.btnGhost : styles.btnPrimary}`}
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  {isManaged ? "Quitar de Heroes" : "Marcar Hero"}
-                </button>
-              </form>
               <ConfirmDeleteButton
-                action={deleteHeroAction.bind(null, brand.profile_id)}
-                confirmMessage={`¿Borrar definitivamente a ${brand.brand_name}? Esto elimina la cuenta, sus campañas, piezas y eventos. No se puede deshacer.`}
+                action={deleteHeroAction.bind(null, client.id)}
+                confirmMessage={`¿Borrar definitivamente a ${client.name}? Esto elimina sus piezas y eventos. No se puede deshacer.`}
                 className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger}`}
-                style={{ width: "100%", justifyContent: "center", marginTop: "8px" }}
+                style={{ width: "100%", justifyContent: "center", marginTop: "12px" }}
               >
                 Borrar Hero
               </ConfirmDeleteButton>

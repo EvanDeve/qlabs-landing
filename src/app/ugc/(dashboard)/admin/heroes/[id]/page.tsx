@@ -19,22 +19,15 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: brand } = await supabase
-    .from("brand_profiles")
-    .select("profile_id, brand_name, industry, website")
-    .eq("profile_id", id)
-    .single();
+  const { data: client } = await supabase.from("agency_clients").select("*").eq("id", id).maybeSingle();
 
-  if (!brand) notFound();
+  if (!client) notFound();
 
-  const [{ data: hero }, { data: contentPieces }] = await Promise.all([
-    supabase.from("hero_profiles").select("*").eq("profile_id", id).maybeSingle(),
-    supabase
-      .from("content_pieces")
-      .select("id, code, title, stage, publish_date")
-      .eq("brand_id", id)
-      .order("created_at", { ascending: false }),
-  ]);
+  const { data: contentPieces } = await supabase
+    .from("content_pieces")
+    .select("id, code, title, stage, publish_date")
+    .eq("brand_id", id)
+    .order("created_at", { ascending: false });
 
   const activeCount = (contentPieces ?? []).filter((p) => p.stage !== "publicado").length;
   const publishedCount = (contentPieces ?? []).filter((p) => p.stage === "publicado").length;
@@ -47,14 +40,28 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
 
       <div className={styles.dossierHd}>
         <div className={styles.dsrRow}>
-          <span className={styles.dsrMono} style={{ background: colorFor(brand.profile_id) }}>
-            {brand.brand_name.slice(0, 2).toUpperCase()}
-          </span>
+          {client.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={client.logo_url} alt={client.name} className={styles.dsrMono} style={{ objectFit: "cover" }} />
+          ) : (
+            <span className={styles.dsrMono} style={{ background: colorFor(client.id) }}>
+              {client.name.slice(0, 2).toUpperCase()}
+            </span>
+          )}
           <div>
             <div className={styles.dsrId}>EXPEDIENTE HERO</div>
-            <div className={styles.dsrName}>{brand.brand_name}</div>
+            <div className={styles.dsrName}>{client.name}</div>
             <div className={styles.dsrInd}>
-              {brand.industry ?? "Sin industria"} {brand.website && `· ${brand.website}`}
+              {client.industry ?? "Sin industria"} {client.website && `· ${client.website}`}
+              {client.drive_url && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a href={client.drive_url} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+                    Drive
+                  </a>
+                </>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", gap: "26px", marginLeft: "auto", flexWrap: "wrap" }}>
@@ -72,50 +79,80 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
             </div>
           </div>
         </div>
-        {hero && (
-          <div className={styles.dsrMeta}>
-            <div>
-              <div className={styles.dmL}>Riesgo</div>
-              <div className={styles.dmV}>{hero.risk}</div>
-            </div>
-            <div>
-              <div className={styles.dmL}>Cliente desde</div>
-              <div className={styles.dmV}>{hero.client_since ?? "—"}</div>
-            </div>
-            <div>
-              <div className={styles.dmL}>Contactos</div>
-              <div className={styles.dmV}>{hero.contacts ?? "—"}</div>
-            </div>
+        <div className={styles.dsrMeta}>
+          <div>
+            <div className={styles.dmL}>Riesgo</div>
+            <div className={styles.dmV}>{client.risk}</div>
           </div>
-        )}
+          <div>
+            <div className={styles.dmL}>Cliente desde</div>
+            <div className={styles.dmV}>{client.client_since ?? "—"}</div>
+          </div>
+          <div>
+            <div className={styles.dmL}>Contactos</div>
+            <div className={styles.dmV}>{client.contacts ?? "—"}</div>
+          </div>
+        </div>
       </div>
 
       <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
         <div className={styles.sectionHead}>
-          <h2>Datos de operación</h2>
+          <h2>Datos del cliente</h2>
         </div>
         <form action={updateHeroProfileAction}>
-          <input type="hidden" name="profile_id" value={brand.profile_id} />
+          <input type="hidden" name="id" value={client.id} />
+
+          <div style={{ display: "flex", gap: "12px" }}>
+            <div className={styles.field} style={{ flex: 1 }}>
+              <label>Nombre</label>
+              <input name="name" required defaultValue={client.name} className={styles.inp} />
+            </div>
+            <div className={styles.field} style={{ flex: 1 }}>
+              <label>Industria</label>
+              <input name="industry" defaultValue={client.industry ?? ""} className={styles.inp} />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "12px" }}>
+            <div className={styles.field} style={{ flex: 1 }}>
+              <label>Sitio web</label>
+              <input name="website" defaultValue={client.website ?? ""} className={styles.inp} />
+            </div>
+            <div className={styles.field} style={{ flex: 1 }}>
+              <label>Email de contacto</label>
+              <input type="email" name="contact_email" defaultValue={client.contact_email ?? ""} className={styles.inp} />
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label>Link de Drive</label>
+            <input name="drive_url" placeholder="https://drive.google.com/..." defaultValue={client.drive_url ?? ""} className={styles.inp} />
+          </div>
+
+          <div className={styles.field}>
+            <label>Logo</label>
+            <input type="file" name="logo" accept="image/*" className={styles.inp} />
+          </div>
 
           <div className={styles.field}>
             <label>Objetivo</label>
-            <textarea name="objetivo" defaultValue={hero?.objetivo ?? ""} rows={2} className={styles.inp} />
+            <textarea name="objetivo" defaultValue={client.objetivo ?? ""} rows={2} className={styles.inp} />
           </div>
 
           <div className={styles.field}>
             <label>Servicios contratados (separados por coma)</label>
-            <input name="servicios" defaultValue={(hero?.servicios ?? []).join(", ")} className={styles.inp} />
+            <input name="servicios" defaultValue={(client.servicios ?? []).join(", ")} className={styles.inp} />
           </div>
 
           <div className={styles.field}>
             <label>Contactos</label>
-            <input name="contacts" defaultValue={hero?.contacts ?? ""} className={styles.inp} />
+            <input name="contacts" defaultValue={client.contacts ?? ""} className={styles.inp} />
           </div>
 
           <div style={{ display: "flex", gap: "12px" }}>
             <div className={styles.field} style={{ flex: 1 }}>
               <label>Estado de riesgo</label>
-              <select name="risk" defaultValue={hero?.risk ?? "onboarding"} className={styles.inp}>
+              <select name="risk" defaultValue={client.risk} className={styles.inp}>
                 <option value="onboarding">Onboarding</option>
                 <option value="ok">Al día</option>
                 <option value="warn">Atención</option>
@@ -124,7 +161,7 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
             </div>
             <div className={styles.field} style={{ flex: 1 }}>
               <label>Cliente desde</label>
-              <input type="date" name="client_since" defaultValue={hero?.client_since ?? ""} className={styles.inp} />
+              <input type="date" name="client_since" defaultValue={client.client_since ?? ""} className={styles.inp} />
             </div>
           </div>
 

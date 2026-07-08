@@ -45,9 +45,9 @@ export default async function CalendarioPage({
 
   const supabase = await createClient();
 
-  const [{ data: brandProfiles }, { data: staffMembers }, { data: calendarEvents }, { data: contentPieces }] =
+  const [{ data: agencyClients }, { data: staffMembers }, { data: calendarEvents }, { data: contentPieces }] =
     await Promise.all([
-      supabase.from("brand_profiles").select("profile_id, brand_name"),
+      supabase.from("agency_clients").select("id, name"),
       supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
       supabase
         .from("calendar_events")
@@ -67,7 +67,7 @@ export default async function CalendarioPage({
     ? await supabase.from("profiles").select("id, display_name").in("id", staffIds)
     : { data: [] };
   const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
-  const brandNameById = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b.brand_name]));
+  const brandNameById = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
 
   const items: CalendarItem[] = [];
 
@@ -120,7 +120,7 @@ export default async function CalendarioPage({
     itemsByDay[key].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
-  const brands = (brandProfiles ?? []).map((b) => ({ id: b.profile_id, name: b.brand_name }));
+  const brands = (agencyClients ?? []).map((c) => ({ id: c.id, name: c.name }));
   const staff = (staffMembers ?? []).map((s) => ({
     id: s.profile_id,
     name: staffNameById.get(s.profile_id) ?? "Sin nombre",
