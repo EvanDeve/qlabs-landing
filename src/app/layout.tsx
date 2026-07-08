@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Space_Mono, Playfair_Display } from "next/font/google";
+import { Plus_Jakarta_Sans, Space_Mono, Playfair_Display, Outfit, Inter, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -22,6 +22,26 @@ const playfair = Playfair_Display({
   style: ["italic"],
 });
 
+// Q·OS (módulo interno /ugc/admin) usa su propia identidad visual — ver
+// Q-OS-Centro-de-Mando.html — distinta del resto de la app a pedido del usuario.
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
 export const metadata: Metadata = {
   title: "Q Labs — Equipamos restaurantes y hoteles para digitalizarse y vender más",
   description:
@@ -39,7 +59,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${jakarta.variable} ${spaceMono.variable} ${playfair.variable}`}
+      className={`${jakarta.variable} ${spaceMono.variable} ${playfair.variable} ${outfit.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
       <body className="antialiased">
         <link

@@ -9,9 +9,10 @@ export default function DashboardNav({ items }: { items: { href: string; label: 
   return (
     <nav className="flex flex-col gap-1">
       {items.map((item) => {
-        const isActive = item.href === "/ugc/creador" || item.href === "/ugc/marca"
-          ? pathname === item.href
-          : pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const isActive =
+          item.href === "/ugc/creador" || item.href === "/ugc/marca" || item.href === "/ugc/admin"
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
         return (
           <Link

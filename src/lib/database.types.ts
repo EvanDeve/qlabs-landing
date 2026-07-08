@@ -20,6 +20,33 @@ export type ApplicationStatus =
   | "delivered"
   | "approved";
 export type PortfolioMediaType = "image" | "video";
+export type StaffRole =
+  | "director"
+  | "pm"
+  | "estratega"
+  | "guionista"
+  | "productor"
+  | "editor"
+  | "qa"
+  | "community"
+  | "ventas";
+export type HeroRisk = "onboarding" | "ok" | "warn" | "risk";
+export type ContentStage =
+  | "pendiente"
+  | "estrategia"
+  | "guion"
+  | "aprobacion_guion"
+  | "grabacion"
+  | "edicion"
+  | "qa"
+  | "revision_cliente"
+  | "programado"
+  | "publicado";
+export type ContentApproval = "pendiente" | "correccion" | "revisado";
+export type ContentPriority = "baja" | "media" | "alta";
+export type ContentPlatform = "instagram" | "tiktok" | "reels";
+export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega";
+export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 
 export interface Database {
   public: {
@@ -294,6 +321,116 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["portfolio_items"]["Insert"]>;
         Relationships: [];
       };
+      staff_members: {
+        Row: {
+          profile_id: string;
+          staff_role: StaffRole;
+          color: string;
+          active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          staff_role: StaffRole;
+          color?: string;
+          active?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["staff_members"]["Insert"]>;
+        Relationships: [];
+      };
+      hero_profiles: {
+        Row: {
+          profile_id: string;
+          is_managed: boolean;
+          objetivo: string | null;
+          servicios: string[];
+          contacts: string | null;
+          risk: HeroRisk;
+          client_since: string | null;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          is_managed?: boolean;
+          objetivo?: string | null;
+          servicios?: string[];
+          contacts?: string | null;
+          risk?: HeroRisk;
+          client_since?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["hero_profiles"]["Insert"]>;
+        Relationships: [];
+      };
+      content_pieces: {
+        Row: {
+          id: string;
+          brand_id: string;
+          title: string;
+          code: string;
+          stage: ContentStage;
+          approval: ContentApproval;
+          owner_id: string | null;
+          priority: ContentPriority;
+          platform: ContentPlatform;
+          publish_date: string | null;
+          record_date: string | null;
+          drive_url: string | null;
+          script_url: string | null;
+          final_url: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          brand_id: string;
+          title: string;
+          code: string;
+          stage?: ContentStage;
+          approval?: ContentApproval;
+          owner_id?: string | null;
+          priority?: ContentPriority;
+          platform?: ContentPlatform;
+          publish_date?: string | null;
+          record_date?: string | null;
+          drive_url?: string | null;
+          script_url?: string | null;
+          final_url?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["content_pieces"]["Insert"]>;
+        Relationships: [];
+      };
+      calendar_events: {
+        Row: {
+          id: string;
+          type: CalendarEventType;
+          brand_id: string | null;
+          content_piece_id: string | null;
+          title: string;
+          starts_at: string;
+          responsible_id: string | null;
+          status: CalendarEventStatus;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          type: CalendarEventType;
+          brand_id?: string | null;
+          content_piece_id?: string | null;
+          title: string;
+          starts_at: string;
+          responsible_id?: string | null;
+          status?: CalendarEventStatus;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["calendar_events"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       campaign_previews: {
@@ -333,6 +470,14 @@ export interface Database {
       app_role: AppRole;
       campaign_status: CampaignStatus;
       application_status: ApplicationStatus;
+      staff_role: StaffRole;
+      hero_risk: HeroRisk;
+      content_stage: ContentStage;
+      content_approval: ContentApproval;
+      content_priority: ContentPriority;
+      content_platform: ContentPlatform;
+      calendar_event_type: CalendarEventType;
+      calendar_event_status: CalendarEventStatus;
     };
   };
 }

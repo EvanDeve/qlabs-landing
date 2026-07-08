@@ -1,181 +1,296 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { setCreatorVerifiedAction, markCampaignCompletedAction } from "@/lib/actions/admin";
-import {
-  APPLICATION_STATUS_LABEL,
-  APPLICATION_STATUS_STYLE,
-} from "@/lib/ugc/application-status";
-import { CAMPAIGN_STATUS_LABEL, CAMPAIGN_STATUS_STYLE } from "@/lib/ugc/campaign-status";
+import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
+import { HERO_RISK_LABEL, STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
+import { QosIcon } from "@/lib/ugc/qos-icons";
+import styles from "./qos.module.css";
 
 export const dynamic = "force-dynamic";
+
+const OVERLOAD_THRESHOLD = 6;
+
+const RISK_CLASS: Record<string, string> = {
+  onboarding: "riskOnb",
+  ok: "riskOk",
+  warn: "riskWarn",
+  risk: "riskRisk",
+};
+
+const KPI_COLORS = ["#6d54f3", "#1f9ac9", "#df4650", "#c07414", "#14a06a"];
+const KPI_ICONS = ["users", "sparkle", "alert", "check", "calendar"];
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: creatorProfiles }, { data: campaigns }, { data: applications }] =
-    await Promise.all([
-      supabase
-        .from("creator_profiles")
-        .select("*")
-        .order("verified", { ascending: true })
-        .order("followers_count", { ascending: false }),
-      supabase.from("campaigns").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("applications")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
+  const now = new Date();
+  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const creatorProfileIds = (creatorProfiles ?? []).map((c) => c.profile_id);
-  const { data: creatorAccountProfiles } = creatorProfileIds.length
-    ? await supabase.from("profiles").select("id, display_name, city").in("id", creatorProfileIds)
-    : { data: [] };
-  const accountProfileById = new Map((creatorAccountProfiles ?? []).map((p) => [p.id, p]));
+  const [
+    { data: heroProfiles },
+    { data: brandProfiles },
+    { data: contentPieces },
+    { data: staffMembers },
+    { data: calendarEvents },
+  ] = await Promise.all([
+    supabase.from("hero_profiles").select("*").eq("is_managed", true),
+    supabase.from("brand_profiles").select("profile_id, brand_name"),
+    supabase.from("content_pieces").select("*").order("publish_date", { ascending: true }),
+    supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
+    supabase
+      .from("calendar_events")
+      .select("*")
+      .gte("starts_at", now.toISOString())
+      .lte("starts_at", in7Days.toISOString()),
+  ]);
 
-  const brandIds = [...new Set((campaigns ?? []).map((c) => c.brand_id))];
-  const { data: brandProfiles } = brandIds.length
-    ? await supabase.from("brand_profiles").select("profile_id, brand_name").in("profile_id", brandIds)
-    : { data: [] };
   const brandNameByProfileId = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b.brand_name]));
 
-  const campaignById = new Map((campaigns ?? []).map((c) => [c.id, c]));
-  const applicantCounts = new Map<string, number>();
-  for (const app of applications ?? []) {
-    // recent applications list is capped at 20, so this count is only a
-    // lower bound for older campaigns — good enough for an admin glance
-    applicantCounts.set(app.campaign_id, (applicantCounts.get(app.campaign_id) ?? 0) + 1);
-  }
+  const staffIds = (staffMembers ?? []).map((s) => s.profile_id);
+  const { data: staffAccountProfiles } = staffIds.length
+    ? await supabase.from("profiles").select("id, display_name").in("id", staffIds)
+    : { data: [] };
+  const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
 
-  const creatorHandleById = new Map((creatorProfiles ?? []).map((c) => [c.profile_id, c.handle]));
+  const pieces = contentPieces ?? [];
+  const activePieces = pieces.filter((p) => p.stage !== "publicado");
+
+  const heroesManaged = heroProfiles ?? [];
+  const heroesActive = heroesManaged.filter((h) => h.risk !== "onboarding");
+  const heroesOnboarding = heroesManaged.filter((h) => h.risk === "onboarding");
+
+  const overduePieces = activePieces.filter((p) => p.publish_date && new Date(p.publish_date) < now);
+  const pendingApprovalPieces = activePieces.filter(
+    (p) => p.stage === "aprobacion_guion" || p.stage === "revision_cliente"
+  );
+  const publishingThisWeekPieces = pieces.filter(
+    (p) => p.publish_date && new Date(p.publish_date) >= now && new Date(p.publish_date) <= in7Days
+  );
+
+  const kpis = [
+    { label: "Heroes activos", value: heroesActive.length },
+    { label: "En onboarding", value: heroesOnboarding.length },
+    { label: "Piezas atrasadas", value: overduePieces.length },
+    { label: "Pend. aprobación", value: pendingApprovalPieces.length },
+    { label: "Publican esta semana", value: publishingThisWeekPieces.length },
+  ];
+
+  const attentionItems = [
+    ...overduePieces.map((p) => ({ piece: p, reason: "Publicación vencida", late: true })),
+    ...pendingApprovalPieces
+      .filter((p) => !overduePieces.includes(p))
+      .map((p) => ({ piece: p, reason: "Esperando aprobación del cliente", late: false })),
+  ].sort((a, b) => {
+    const aDate = a.piece.publish_date ? new Date(a.piece.publish_date).getTime() : Infinity;
+    const bDate = b.piece.publish_date ? new Date(b.piece.publish_date).getTime() : Infinity;
+    return aDate - bDate;
+  });
+
+  const weekAgendaItems = [
+    ...pieces
+      .filter((p) => p.publish_date && new Date(p.publish_date) >= now && new Date(p.publish_date) <= in7Days)
+      .map((p) => ({ date: p.publish_date as string, title: p.title, type: "Publicación", brandId: p.brand_id })),
+    ...pieces
+      .filter((p) => p.record_date && new Date(p.record_date) >= now && new Date(p.record_date) <= in7Days)
+      .map((p) => ({ date: p.record_date as string, title: p.title, type: "Grabación", brandId: p.brand_id })),
+    ...(calendarEvents ?? []).map((e) => ({
+      date: e.starts_at,
+      title: e.title,
+      type: e.type,
+      brandId: e.brand_id,
+    })),
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const teamLoad = (staffMembers ?? []).map((staff) => {
+    const count = activePieces.filter((p) => p.owner_id === staff.profile_id).length;
+    return {
+      profileId: staff.profile_id,
+      name: staffNameById.get(staff.profile_id) ?? "Sin nombre",
+      role: STAFF_ROLE_LABEL[staff.staff_role],
+      color: staff.color,
+      count,
+      overloaded: count > OVERLOAD_THRESHOLD,
+    };
+  });
+
+  const maxLoad = Math.max(1, ...teamLoad.map((t) => t.count));
+  const overloadedStaff = teamLoad.filter((t) => t.overloaded);
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-ink">Panel admin</h1>
-      <p className="mb-10 text-ink-soft">
-        Verificación de creadores, todas las campañas y aplicaciones recientes.
-      </p>
-
-      <section className="mb-12">
-        <h2 className="mb-4 text-xl font-extrabold text-ink">
-          Creadores ({creatorProfiles?.length ?? 0})
-        </h2>
-        <div className="flex flex-col gap-3">
-          {(creatorProfiles ?? []).map((creator) => {
-            const account = accountProfileById.get(creator.profile_id);
-            return (
-              <div
-                key={creator.profile_id}
-                className="flex items-center justify-between gap-4 rounded-card border border-line p-4"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-ink">{creator.handle}</span>
-                    {creator.verified && (
-                      <span className="rounded-pill bg-trust-bg px-2 py-0.5 text-xs font-bold text-trust">
-                        Verificado
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 text-sm text-ink-soft">
-                    {account?.city && `${account.city} · `}
-                    {creator.followers_count.toLocaleString("es-CR")} seguidores
-                  </div>
-                </div>
-                <form action={setCreatorVerifiedAction}>
-                  <input type="hidden" name="profile_id" value={creator.profile_id} />
-                  <input type="hidden" name="verified" value={(!creator.verified).toString()} />
-                  <button
-                    type="submit"
-                    className={`rounded-pill px-5 py-2 text-sm font-bold transition ${
-                      creator.verified
-                        ? "border border-line text-ink-soft hover:border-coral hover:text-coral"
-                        : "bg-violet text-white hover:bg-violet-deep"
-                    }`}
-                  >
-                    {creator.verified ? "Quitar verificación" : "Verificar"}
-                  </button>
-                </form>
+    <div>
+      <div className={styles.kpiRow}>
+        {kpis.map((kpi, i) => (
+          <div key={kpi.label} className={styles.kpi}>
+            <div className={styles.kTop}>
+              <div className={styles.kIc} style={{ background: `${KPI_COLORS[i]}22`, color: KPI_COLORS[i] }}>
+                <QosIcon name={KPI_ICONS[i]} size={16} />
               </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mb-12">
-        <h2 className="mb-4 text-xl font-extrabold text-ink">
-          Campañas ({campaigns?.length ?? 0})
-        </h2>
-        <div className="flex flex-col gap-3">
-          {(campaigns ?? []).map((campaign) => (
-            <div
-              key={campaign.id}
-              className="flex items-center justify-between gap-4 rounded-card border border-line p-4"
-            >
-              <div>
-                <div className="font-extrabold text-ink">{campaign.title}</div>
-                <div className="mt-1 text-sm text-ink-soft">
-                  {brandNameByProfileId.get(campaign.brand_id)} · ₡
-                  {campaign.budget_amount.toLocaleString("es-CR")}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span
-                  className={`rounded-pill px-3 py-1 text-xs font-bold ${CAMPAIGN_STATUS_STYLE[campaign.status]}`}
-                >
-                  {CAMPAIGN_STATUS_LABEL[campaign.status]}
-                </span>
-                {(campaign.status === "published" || campaign.status === "in_progress") && (
-                  <form action={markCampaignCompletedAction}>
-                    <input type="hidden" name="campaign_id" value={campaign.id} />
-                    <button
-                      type="submit"
-                      className="rounded-pill border border-line px-4 py-1.5 text-xs font-bold text-ink-soft transition hover:border-ink hover:text-ink"
-                    >
-                      Marcar completada
-                    </button>
-                  </form>
-                )}
-              </div>
+              <div className={styles.kLabel}>{kpi.label}</div>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className={styles.kNum} style={{ color: KPI_COLORS[i] }}>
+              {kpi.value}
+            </div>
+          </div>
+        ))}
+      </div>
 
-      <section>
-        <h2 className="mb-4 text-xl font-extrabold text-ink">Aplicaciones recientes</h2>
-        <div className="flex flex-col gap-3">
-          {applications && applications.length > 0 ? (
-            applications.map((app) => {
-              const campaign = campaignById.get(app.campaign_id);
-              return (
-                <div
-                  key={app.id}
-                  className="flex items-center justify-between gap-4 rounded-card border border-line p-4"
-                >
-                  <div>
-                    <div className="font-extrabold text-ink">
-                      {creatorHandleById.get(app.creator_id) ?? "Creador"}
-                    </div>
-                    <div className="mt-1 text-sm text-ink-soft">
-                      {campaign?.title ?? "Campaña"}
-                      {campaign && ` · ${brandNameByProfileId.get(campaign.brand_id)}`}
+      <div className={styles.dashGrid}>
+        <div className={styles.stack}>
+          <div className={`${styles.card} ${styles.cardPad}`}>
+            <div className={styles.sectionHead}>
+              <h2 className={styles.sectionHeadBig}>Requiere tu atención</h2>
+              <span className={`${styles.chip} ${styles.riskRisk}`}>{attentionItems.length} items</span>
+            </div>
+            {attentionItems.length > 0 ? (
+              attentionItems.map(({ piece, reason, late }) => (
+                <Link key={piece.id} href={`/ugc/admin/heroes/${piece.brand_id}`} className={styles.attnItem}>
+                  <div className={styles.attnBar} style={{ background: late ? "var(--risk)" : "var(--warn)" }} />
+                  <div className={styles.attnBody}>
+                    <div className={styles.attnTitle}>{piece.title}</div>
+                    <div className={styles.attnMeta}>
+                      <span>{brandNameByProfileId.get(piece.brand_id)}</span>
+                      <span>·</span>
+                      <span style={{ color: late ? "var(--risk)" : "var(--warn)", fontWeight: 600 }}>{reason}</span>
                     </div>
                   </div>
-                  <span
-                    className={`rounded-pill px-3 py-1 text-xs font-bold ${APPLICATION_STATUS_STYLE[app.status]}`}
-                  >
-                    {APPLICATION_STATUS_LABEL[app.status]}
+                  <div className={styles.attnRight}>
+                    <span className={styles.tag}>{CONTENT_STAGE_LABEL[piece.stage]}</span>
+                    <QosIcon name="chevR" size={16} />
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className={styles.empty}>Nada pendiente por ahora.</div>
+            )}
+          </div>
+
+          <div className={`${styles.card} ${styles.cardPad}`}>
+            <div className={styles.sectionHead}>
+              <h2>Estado de las cuentas</h2>
+            </div>
+            <table className={styles.acctTable}>
+              <thead>
+                <tr>
+                  <th>Hero</th>
+                  <th>Etapa actual</th>
+                  <th>Estado</th>
+                  <th>Próx. publicación</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {heroesManaged.map((hero) => {
+                  const heroPieces = pieces.filter((p) => p.brand_id === hero.profile_id);
+                  const activeHeroPieces = heroPieces.filter((p) => p.stage !== "publicado");
+                  const nextPublish = heroPieces
+                    .filter((p) => p.publish_date && new Date(p.publish_date) >= now)
+                    .sort((a, b) => new Date(a.publish_date!).getTime() - new Date(b.publish_date!).getTime())[0];
+
+                  return (
+                    <tr key={hero.profile_id}>
+                      <td>
+                        <Link href={`/ugc/admin/heroes/${hero.profile_id}`} className={styles.acctHero}>
+                          <span
+                            className={styles.heroMono}
+                            style={{ background: staffColorFromString(hero.profile_id) }}
+                          >
+                            {(brandNameByProfileId.get(hero.profile_id) ?? "?").slice(0, 2).toUpperCase()}
+                          </span>
+                          {brandNameByProfileId.get(hero.profile_id)}
+                        </Link>
+                      </td>
+                      <td>
+                        {activeHeroPieces.length > 0 ? CONTENT_STAGE_LABEL[activeHeroPieces[0].stage] : "Sin piezas"}
+                      </td>
+                      <td>
+                        <span className={`${styles.riskPill} ${styles[RISK_CLASS[hero.risk]]}`}>
+                          {HERO_RISK_LABEL[hero.risk]}
+                        </span>
+                      </td>
+                      <td style={{ color: "var(--ink-2)" }}>
+                        {nextPublish
+                          ? new Date(nextPublish.publish_date!).toLocaleDateString("es-CR", {
+                              day: "numeric",
+                              month: "short",
+                            })
+                          : "—"}
+                      </td>
+                      <td style={{ textAlign: "right", color: "var(--ink-3)" }}>
+                        <QosIcon name="chevR" size={16} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className={styles.stack}>
+          <div className={`${styles.card} ${styles.cardPad}`}>
+            <div className={styles.sectionHead}>
+              <h2>Esta semana</h2>
+            </div>
+            {weekAgendaItems.length > 0 ? (
+              weekAgendaItems.map((item, i) => (
+                <div key={i} className={styles.weekRow}>
+                  <div className={styles.weekWhen}>
+                    {new Date(item.date).toLocaleDateString("es-CR", { day: "numeric", month: "short" })}
+                  </div>
+                  <span className={styles.weekType} style={{ background: "#6d54f3" }} />
+                  <div className={styles.weekBody}>
+                    {item.title}
+                    <small>
+                      {item.type}
+                      {item.brandId && ` · ${brandNameByProfileId.get(item.brandId)}`}
+                    </small>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className={styles.empty}>No hay eventos en los próximos 7 días.</div>
+            )}
+          </div>
+
+          <div className={`${styles.card} ${styles.cardPad}`}>
+            <div className={styles.sectionHead}>
+              <h2>Carga del equipo</h2>
+            </div>
+            {teamLoad.map((t) => (
+              <div key={t.profileId} className={styles.loadRow}>
+                <div className={styles.lrName}>
+                  <span className={styles.avSm} style={{ background: t.color, display: "grid", placeItems: "center", color: "#fff", fontWeight: 700 }}>
+                    {t.name.charAt(0).toUpperCase()}
                   </span>
+                  {t.name}
                 </div>
-              );
-            })
-          ) : (
-            <div className="rounded-card border border-line p-10 text-center text-ink-soft">
-              Todavía no hay aplicaciones.
-            </div>
-          )}
+                <div className={styles.loadTrack}>
+                  <div
+                    className={styles.loadFill}
+                    style={{
+                      width: `${Math.min(100, (t.count / maxLoad) * 100)}%`,
+                      background: t.overloaded ? "var(--risk)" : "var(--b-500)",
+                    }}
+                  />
+                </div>
+                <div className={styles.loadVal}>{t.count} piezas</div>
+              </div>
+            ))}
+            {overloadedStaff.length > 0 && (
+              <div style={{ fontSize: "11.5px", color: "var(--ink-3)", marginTop: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <QosIcon name="alert" size={13} />
+                {overloadedStaff.map((t) => t.name).join(", ")} con más de {OVERLOAD_THRESHOLD} piezas activas.
+              </div>
+            )}
+          </div>
         </div>
-      </section>
+      </div>
     </div>
   );
+}
+
+function staffColorFromString(input: string): string {
+  const palette = ["#6d54f3", "#c0392b", "#2aa5c0", "#3f8f4f", "#b3487f", "#8a5a2b", "#1f9ac9"];
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  return palette[hash % palette.length];
 }

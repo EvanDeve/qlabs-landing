@@ -16,7 +16,7 @@ export async function setCreatorVerifiedAction(formData: FormData) {
 
   await supabase.from("creator_profiles").update({ verified }).eq("profile_id", profileId);
 
-  revalidatePath("/ugc/admin");
+  revalidatePath("/ugc/admin/marketplace");
 }
 
 export async function markCampaignCompletedAction(formData: FormData) {
@@ -31,5 +31,5 @@ export async function markCampaignCompletedAction(formData: FormData) {
 
   await supabase.from("campaigns").update({ status: "completed" }).eq("id", campaignId);
 
-  revalidatePath("/ugc/admin");
+  revalidatePath("/ugc/admin/marketplace");
 }
