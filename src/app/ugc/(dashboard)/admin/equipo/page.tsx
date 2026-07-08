@@ -48,7 +48,7 @@ export default async function EquipoPage() {
             <ConfirmDeleteButton
               action={deleteStaffMemberAction.bind(null, staff.profile_id)}
               confirmMessage={`¿Borrar definitivamente a ${profileById.get(staff.profile_id)?.display_name ?? "este colaborador"}? Esto elimina su cuenta por completo. No se puede deshacer.`}
-              className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+              className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger}`}
             >
               Borrar
             </ConfirmDeleteButton>

@@ -384,23 +384,32 @@
   border: 1px solid transparent;
   white-space: nowrap;
 }
-.btnPrimary {
+.btn.btnPrimary {
   background: var(--b-500);
   color: #fff;
   box-shadow: 0 2px 6px rgba(109, 84, 243, 0.3);
 }
-.btnPrimary:hover {
+.btn.btnPrimary:hover {
   background: var(--b-600);
   box-shadow: 0 4px 12px rgba(109, 84, 243, 0.4);
 }
-.btnGhost {
+.btn.btnGhost {
   background: var(--surface);
   color: var(--ink);
   border-color: var(--line);
 }
-.btnGhost:hover {
+.btn.btnGhost:hover {
   border-color: var(--line-strong);
   box-shadow: var(--sh-sm);
+}
+.btn.btnDanger {
+  background: #e5484d;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(229, 72, 77, 0.3);
+}
+.btn.btnDanger:hover {
+  background: #c9313a;
+  box-shadow: 0 4px 12px rgba(229, 72, 77, 0.4);
 }
 .btnSm {
   padding: 6px 11px;

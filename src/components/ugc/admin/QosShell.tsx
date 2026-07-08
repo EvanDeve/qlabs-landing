@@ -56,7 +56,7 @@ export default function QosShell({
     .toUpperCase();
 
   return (
-    <div className={styles.qosRoot}>
+    <div className={styles.qosRoot} id="qos-root">
       {mobileOpen && <div className={styles.sbScrim} onClick={() => setMobileOpen(false)} />}
       <div className={styles.app}>
         <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>

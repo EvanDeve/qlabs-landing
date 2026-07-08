@@ -126,7 +126,7 @@ export default function CalendarEventModal({
                     onClose();
                   }}
                   confirmMessage={`¿Borrar el evento "${item.title}"? No se puede deshacer.`}
-                  className={`${styles.btn} ${styles.btnGhost}`}
+                  className={`${styles.btn} ${styles.btnDanger}`}
                 >
                   Borrar evento
                 </ConfirmDeleteButton>

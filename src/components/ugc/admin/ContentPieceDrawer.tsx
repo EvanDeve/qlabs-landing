@@ -159,7 +159,7 @@ export default function ContentPieceDrawer({
               <ConfirmDeleteButton
                 action={handleDelete}
                 confirmMessage={`¿Borrar la pieza "${piece.title}"? No se puede deshacer.`}
-                className={`${styles.btn} ${styles.btnGhost}`}
+                className={`${styles.btn} ${styles.btnDanger}`}
               >
                 Borrar pieza
               </ConfirmDeleteButton>

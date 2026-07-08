@@ -113,7 +113,7 @@ export default async function HeroesPage() {
               <ConfirmDeleteButton
                 action={deleteHeroAction.bind(null, brand.profile_id)}
                 confirmMessage={`¿Borrar definitivamente a ${brand.brand_name}? Esto elimina la cuenta, sus campañas, piezas y eventos. No se puede deshacer.`}
-                className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+                className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger}`}
                 style={{ width: "100%", justifyContent: "center", marginTop: "8px" }}
               >
                 Borrar Hero
