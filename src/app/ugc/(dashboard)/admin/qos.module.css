@@ -563,7 +563,7 @@
    ============================================================ */
 .kpiRow {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 22px;
 }
@@ -1329,6 +1329,41 @@
   outline: none;
   border-color: var(--b-400);
   box-shadow: var(--sh-glow);
+}
+
+.settingsRow {
+  display: flex;
+  gap: 28px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.settingsRow:last-child {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+.settingsLabel {
+  width: 220px;
+  flex-shrink: 0;
+}
+.settingsLabel strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+.settingsLabel p {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.4;
+}
+.settingsControl {
+  flex: 1;
+  min-width: 240px;
+}
+.settingsControl .field {
+  margin-bottom: 0;
 }
 
 .empty {

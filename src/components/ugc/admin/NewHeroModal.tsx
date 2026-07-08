@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { createHeroAction, type CreateHeroState } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import HeroLogoField from "./HeroLogoField";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export default function NewHeroModal({ onClose }: { onClose: () => void }) {
@@ -65,10 +66,7 @@ export default function NewHeroModal({ onClose }: { onClose: () => void }) {
             <input name="drive_url" placeholder="https://drive.google.com/..." className={styles.inp} />
           </div>
 
-          <div className={styles.field}>
-            <label>Logo (opcional)</label>
-            <input type="file" name="logo" accept="image/*" className={styles.inp} />
-          </div>
+          <HeroLogoField />
 
           {state?.error && <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--risk)", marginBottom: "12px" }}>{state.error}</p>}
 

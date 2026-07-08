@@ -99,9 +99,12 @@ export default async function EquipoPage() {
               <input type="color" name="color" defaultValue="#705CF6" style={{ height: "42px", width: "56px" }} />
             </div>
 
-            <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-              Agregar
-            </button>
+            <div className={styles.field}>
+              <label style={{ opacity: 0 }}>Agregar</label>
+              <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
+                Agregar
+              </button>
+            </div>
           </form>
         </div>
       )}

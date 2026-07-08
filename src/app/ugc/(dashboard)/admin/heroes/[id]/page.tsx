@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { updateHeroProfileAction } from "@/lib/actions/heroes";
 import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import HeroLogoField from "@/components/ugc/admin/HeroLogoField";
+import HeroContactsField from "@/components/ugc/admin/HeroContactsField";
 import styles from "../../qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -57,8 +59,13 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
                 <>
                   {" "}
                   ·{" "}
-                  <a href={client.drive_url} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
-                    Drive
+                  <a
+                    href={client.drive_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "inherit", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                  >
+                    <QosIcon name="drive" size={13} /> Drive
                   </a>
                 </>
               )}
@@ -86,75 +93,131 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
           </div>
           <div>
             <div className={styles.dmL}>Contactos</div>
-            <div className={styles.dmV}>{client.contacts ?? "—"}</div>
+            <div className={styles.dmV}>
+              {client.contacts.length > 0 ? client.contacts.map((c) => c.name).join(", ") : "—"}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
-        <div className={styles.sectionHead}>
-          <h2>Datos del cliente</h2>
-        </div>
-        <form action={updateHeroProfileAction}>
-          <input type="hidden" name="id" value={client.id} />
+      <form action={updateHeroProfileAction}>
+        <input type="hidden" name="id" value={client.id} />
 
-          <div style={{ display: "flex", gap: "12px" }}>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Nombre</label>
+        <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
+          <div className={styles.sectionHead}>
+            <QosIcon name="briefcase" size={16} />
+            <h2>Perfil</h2>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Nombre</strong>
+              <p>Cómo aparece este cliente en todo Q·OS.</p>
+            </div>
+            <div className={styles.settingsControl}>
               <input name="name" required defaultValue={client.name} className={styles.inp} />
             </div>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Industria</label>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Industria</strong>
+              <p>Rubro del negocio (opcional).</p>
+            </div>
+            <div className={styles.settingsControl}>
               <input name="industry" defaultValue={client.industry ?? ""} className={styles.inp} />
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "12px" }}>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Sitio web</label>
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Sitio web</strong>
+              <p>Link a la página del cliente (opcional).</p>
+            </div>
+            <div className={styles.settingsControl}>
               <input name="website" defaultValue={client.website ?? ""} className={styles.inp} />
             </div>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Email de contacto</label>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Logo</strong>
+              <p>Se muestra en las tarjetas y el expediente.</p>
+            </div>
+            <div className={styles.settingsControl}>
+              <HeroLogoField currentUrl={client.logo_url} />
+            </div>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Cliente desde</strong>
+              <p>Fecha en la que empezó la relación comercial.</p>
+            </div>
+            <div className={styles.settingsControl}>
+              <input type="date" name="client_since" defaultValue={client.client_since ?? ""} className={styles.inp} />
+            </div>
+          </div>
+        </div>
+
+        <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
+          <div className={styles.sectionHead}>
+            <QosIcon name="drive" size={16} />
+            <h2>Acceso y contacto</h2>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Link de Drive</strong>
+              <p>Carpeta compartida con este cliente.</p>
+            </div>
+            <div className={styles.settingsControl}>
+              <input name="drive_url" placeholder="https://drive.google.com/..." defaultValue={client.drive_url ?? ""} className={styles.inp} />
+            </div>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Email de contacto</strong>
+              <p>Correo principal para coordinar con el cliente.</p>
+            </div>
+            <div className={styles.settingsControl}>
               <input type="email" name="contact_email" defaultValue={client.contact_email ?? ""} className={styles.inp} />
             </div>
           </div>
 
-          <div className={styles.field}>
-            <label>Link de Drive</label>
-            <input name="drive_url" placeholder="https://drive.google.com/..." defaultValue={client.drive_url ?? ""} className={styles.inp} />
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Contactos</strong>
+              <p>Personas del lado del cliente con las que coordinamos.</p>
+            </div>
+            <div className={styles.settingsControl}>
+              <HeroContactsField defaultValue={client.contacts} />
+            </div>
+          </div>
+        </div>
+
+        <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
+          <div className={styles.sectionHead}>
+            <QosIcon name="doc" size={16} />
+            <h2>Relación comercial</h2>
           </div>
 
-          <div className={styles.field}>
-            <label>Logo</label>
-            <input type="file" name="logo" accept="image/*" className={styles.inp} />
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Servicios contratados</strong>
+              <p>Separados por coma.</p>
+            </div>
+            <div className={styles.settingsControl}>
+              <input name="servicios" defaultValue={(client.servicios ?? []).join(", ")} className={styles.inp} />
+            </div>
           </div>
+        </div>
 
-          <div className={styles.field}>
-            <label>Objetivo</label>
-            <textarea name="objetivo" defaultValue={client.objetivo ?? ""} rows={2} className={styles.inp} />
-          </div>
-
-          <div className={styles.field}>
-            <label>Servicios contratados (separados por coma)</label>
-            <input name="servicios" defaultValue={(client.servicios ?? []).join(", ")} className={styles.inp} />
-          </div>
-
-          <div className={styles.field}>
-            <label>Contactos</label>
-            <input name="contacts" defaultValue={client.contacts ?? ""} className={styles.inp} />
-          </div>
-
-          <div className={styles.field}>
-            <label>Cliente desde</label>
-            <input type="date" name="client_since" defaultValue={client.client_since ?? ""} className={styles.inp} />
-          </div>
-
-          <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-            Guardar
-          </button>
-        </form>
-      </div>
+        <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} style={{ marginBottom: "28px" }}>
+          Guardar
+        </button>
+      </form>
 
       <div className={`${styles.card} ${styles.cardPad}`}>
         <div className={styles.sectionHead}>

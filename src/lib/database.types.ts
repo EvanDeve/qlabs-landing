@@ -20,6 +20,7 @@ export type ApplicationStatus =
   | "delivered"
   | "approved";
 export type PortfolioMediaType = "image" | "video";
+export type HeroContact = { name: string; role?: string; phone?: string; email?: string };
 export type StaffRole =
   | "director"
   | "pm"
@@ -347,9 +348,8 @@ export interface Database {
           contact_email: string | null;
           logo_url: string | null;
           drive_url: string | null;
-          objetivo: string | null;
           servicios: string[];
-          contacts: string | null;
+          contacts: HeroContact[];
           client_since: string | null;
           created_at: string;
         };
@@ -361,9 +361,8 @@ export interface Database {
           contact_email?: string | null;
           logo_url?: string | null;
           drive_url?: string | null;
-          objetivo?: string | null;
           servicios?: string[];
-          contacts?: string | null;
+          contacts?: HeroContact[];
           client_since?: string | null;
           created_at?: string;
         };

@@ -4,8 +4,26 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { HeroContact } from "@/lib/database.types";
 
 const HERO_LOGO_BUCKET = "hero-logos";
+
+function parseContacts(raw: FormDataEntryValue | null): HeroContact[] {
+  try {
+    const parsed = JSON.parse(String(raw ?? "[]"));
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((c) => c && typeof c.name === "string" && c.name.trim())
+      .map((c) => ({
+        name: String(c.name).trim(),
+        ...(c.role && String(c.role).trim() ? { role: String(c.role).trim() } : {}),
+        ...(c.phone && String(c.phone).trim() ? { phone: String(c.phone).trim() } : {}),
+        ...(c.email && String(c.email).trim() ? { email: String(c.email).trim() } : {}),
+      }));
+  } catch {
+    return [];
+  }
+}
 
 export type CreateHeroState = { error: string } | null;
 
@@ -83,8 +101,7 @@ export async function updateHeroProfileAction(formData: FormData) {
   const website = String(formData.get("website") ?? "").trim() || null;
   const contactEmail = String(formData.get("contact_email") ?? "").trim().toLowerCase() || null;
   const driveUrl = String(formData.get("drive_url") ?? "").trim() || null;
-  const objetivo = String(formData.get("objetivo") ?? "").trim() || null;
-  const contacts = String(formData.get("contacts") ?? "").trim() || null;
+  const contacts = parseContacts(formData.get("contacts_json"));
   const clientSinceRaw = String(formData.get("client_since") ?? "").trim();
   const clientSince = clientSinceRaw || null;
   const servicios = String(formData.get("servicios") ?? "")
@@ -102,7 +119,6 @@ export async function updateHeroProfileAction(formData: FormData) {
       website,
       contact_email: contactEmail,
       drive_url: driveUrl,
-      objetivo,
       contacts,
       client_since: clientSince,
       servicios,

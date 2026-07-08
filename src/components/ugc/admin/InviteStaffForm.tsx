@@ -39,9 +39,12 @@ export default function InviteStaffForm() {
         <input type="color" name="color" defaultValue="#705CF6" style={{ height: "42px", width: "56px" }} />
       </div>
 
-      <button type="submit" disabled={isPending} className={`${styles.btn} ${styles.btnPrimary}`}>
-        {isPending ? "Enviando…" : "Invitar"}
-      </button>
+      <div className={styles.field}>
+        <label style={{ opacity: 0 }}>Invitar</label>
+        <button type="submit" disabled={isPending} className={`${styles.btn} ${styles.btnPrimary}`}>
+          {isPending ? "Enviando…" : "Invitar"}
+        </button>
+      </div>
 
       {state && "error" in state && (
         <p style={{ width: "100%", fontSize: "13px", fontWeight: 700, color: "var(--risk)" }}>{state.error}</p>
