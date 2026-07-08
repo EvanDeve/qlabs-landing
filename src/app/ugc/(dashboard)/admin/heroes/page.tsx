@@ -18,7 +18,7 @@ function colorFor(id: string) {
 export default async function HeroesPage() {
   const supabase = await createClient();
 
-  const { data: clients, error: clientsError } = await supabase
+  const { data: clients } = await supabase
     .from("agency_clients")
     .select("id, name, industry, logo_url")
     .order("name", { ascending: true });
@@ -42,14 +42,6 @@ export default async function HeroesPage() {
   return (
     <div>
       <NewHeroButton />
-      {clientsError && (
-        <pre style={{ background: "#fee", color: "#900", padding: "12px", marginBottom: "16px", whiteSpace: "pre-wrap" }}>
-          DEBUG ERROR: {JSON.stringify(clientsError, null, 2)}
-        </pre>
-      )}
-      {!clientsError && (clients ?? []).length === 0 && (
-        <p style={{ color: "#900", marginBottom: "16px" }}>DEBUG: query succeeded but returned 0 rows.</p>
-      )}
       <div className={styles.heroCards}>
         {(clients ?? []).map((client) => {
           const stage = latestStageByBrandId.get(client.id);
