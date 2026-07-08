@@ -30,7 +30,6 @@ export type StaffRole =
   | "qa"
   | "community"
   | "ventas";
-export type HeroRisk = "onboarding" | "ok" | "warn" | "risk";
 export type ContentStage =
   | "pendiente"
   | "estrategia"
@@ -351,7 +350,6 @@ export interface Database {
           objetivo: string | null;
           servicios: string[];
           contacts: string | null;
-          risk: HeroRisk;
           client_since: string | null;
           created_at: string;
         };
@@ -366,7 +364,6 @@ export interface Database {
           objetivo?: string | null;
           servicios?: string[];
           contacts?: string | null;
-          risk?: HeroRisk;
           client_since?: string | null;
           created_at?: string;
         };
@@ -481,7 +478,6 @@ export interface Database {
       campaign_status: CampaignStatus;
       application_status: ApplicationStatus;
       staff_role: StaffRole;
-      hero_risk: HeroRisk;
       content_stage: ContentStage;
       content_approval: ContentApproval;
       content_priority: ContentPriority;

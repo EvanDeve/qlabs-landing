@@ -2,19 +2,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { deleteHeroAction } from "@/lib/actions/heroes";
 import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
-import { HERO_RISK_LABEL } from "@/lib/ugc/content-meta";
 import NewHeroButton from "@/components/ugc/admin/NewHeroButton";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import styles from "../qos.module.css";
 
 export const dynamic = "force-dynamic";
-
-const RISK_CLASS: Record<string, string> = {
-  onboarding: "riskOnb",
-  ok: "riskOk",
-  warn: "riskWarn",
-  risk: "riskRisk",
-};
 
 const PALETTE = ["#6d54f3", "#c0392b", "#2aa5c0", "#3f8f4f", "#b3487f", "#8a5a2b", "#1f9ac9", "#b8442f", "#5a5f6d"];
 function colorFor(id: string) {
@@ -26,9 +18,9 @@ function colorFor(id: string) {
 export default async function HeroesPage() {
   const supabase = await createClient();
 
-  const { data: clients } = await supabase
+  const { data: clients, error: clientsError } = await supabase
     .from("agency_clients")
-    .select("id, name, industry, logo_url, risk")
+    .select("id, name, industry, logo_url")
     .order("name", { ascending: true });
 
   const clientIds = (clients ?? []).map((c) => c.id);
@@ -50,6 +42,14 @@ export default async function HeroesPage() {
   return (
     <div>
       <NewHeroButton />
+      {clientsError && (
+        <pre style={{ background: "#fee", color: "#900", padding: "12px", marginBottom: "16px", whiteSpace: "pre-wrap" }}>
+          DEBUG ERROR: {JSON.stringify(clientsError, null, 2)}
+        </pre>
+      )}
+      {!clientsError && (clients ?? []).length === 0 && (
+        <p style={{ color: "#900", marginBottom: "16px" }}>DEBUG: query succeeded but returned 0 rows.</p>
+      )}
       <div className={styles.heroCards}>
         {(clients ?? []).map((client) => {
           const stage = latestStageByBrandId.get(client.id);
@@ -73,12 +73,11 @@ export default async function HeroesPage() {
                     <div className={styles.hcardInd}>{client.industry ?? "Sin industria"}</div>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <span className={`${styles.riskPill} ${styles[RISK_CLASS[client.risk]]}`}>
-                    {HERO_RISK_LABEL[client.risk]}
-                  </span>
-                  {stage && <span className={styles.tag}>{CONTENT_STAGE_LABEL[stage as keyof typeof CONTENT_STAGE_LABEL]}</span>}
-                </div>
+                {stage && (
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <span className={styles.tag}>{CONTENT_STAGE_LABEL[stage as keyof typeof CONTENT_STAGE_LABEL]}</span>
+                  </div>
+                )}
                 <div className={styles.hcardFoot}>
                   {nextPublish && (
                     <span style={{ fontSize: "11.5px", color: "var(--ink-2)" }}>

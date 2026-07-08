@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
-import { HERO_RISK_LABEL, STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
+import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "./qos.module.css";
 
@@ -9,15 +9,8 @@ export const dynamic = "force-dynamic";
 
 const OVERLOAD_THRESHOLD = 6;
 
-const RISK_CLASS: Record<string, string> = {
-  onboarding: "riskOnb",
-  ok: "riskOk",
-  warn: "riskWarn",
-  risk: "riskRisk",
-};
-
-const KPI_COLORS = ["#6d54f3", "#1f9ac9", "#df4650", "#c07414", "#14a06a"];
-const KPI_ICONS = ["users", "sparkle", "alert", "check", "calendar"];
+const KPI_COLORS = ["#6d54f3", "#df4650", "#c07414", "#14a06a"];
+const KPI_ICONS = ["users", "alert", "check", "calendar"];
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
@@ -53,8 +46,6 @@ export default async function AdminDashboardPage() {
   const activePieces = pieces.filter((p) => p.stage !== "publicado");
 
   const heroesManaged = agencyClients ?? [];
-  const heroesActive = heroesManaged.filter((h) => h.risk !== "onboarding");
-  const heroesOnboarding = heroesManaged.filter((h) => h.risk === "onboarding");
 
   const overduePieces = activePieces.filter((p) => p.publish_date && new Date(p.publish_date) < now);
   const pendingApprovalPieces = activePieces.filter(
@@ -65,8 +56,7 @@ export default async function AdminDashboardPage() {
   );
 
   const kpis = [
-    { label: "Heroes activos", value: heroesActive.length },
-    { label: "En onboarding", value: heroesOnboarding.length },
+    { label: "Heroes", value: heroesManaged.length },
     { label: "Piezas atrasadas", value: overduePieces.length },
     { label: "Pend. aprobación", value: pendingApprovalPieces.length },
     { label: "Publican esta semana", value: publishingThisWeekPieces.length },
@@ -170,7 +160,6 @@ export default async function AdminDashboardPage() {
                 <tr>
                   <th>Hero</th>
                   <th>Etapa actual</th>
-                  <th>Estado</th>
                   <th>Próx. publicación</th>
                   <th></th>
                 </tr>
@@ -200,11 +189,6 @@ export default async function AdminDashboardPage() {
                       </td>
                       <td>
                         {activeHeroPieces.length > 0 ? CONTENT_STAGE_LABEL[activeHeroPieces[0].stage] : "Sin piezas"}
-                      </td>
-                      <td>
-                        <span className={`${styles.riskPill} ${styles[RISK_CLASS[hero.risk]]}`}>
-                          {HERO_RISK_LABEL[hero.risk]}
-                        </span>
                       </td>
                       <td style={{ color: "var(--ink-2)" }}>
                         {nextPublish

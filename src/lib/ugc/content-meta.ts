@@ -2,7 +2,6 @@ import type {
   ContentApproval,
   ContentPriority,
   ContentPlatform,
-  HeroRisk,
   StaffRole,
 } from "@/lib/database.types";
 
@@ -34,20 +33,6 @@ export const CONTENT_PLATFORM_LABEL: Record<ContentPlatform, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
   reels: "Reels",
-};
-
-export const HERO_RISK_LABEL: Record<HeroRisk, string> = {
-  onboarding: "Onboarding",
-  ok: "Al día",
-  warn: "Atención",
-  risk: "En riesgo",
-};
-
-export const HERO_RISK_STYLE: Record<HeroRisk, string> = {
-  onboarding: "bg-lavender text-ink-soft",
-  ok: "bg-trust-bg text-trust",
-  warn: "bg-coral-bg text-coral",
-  risk: "bg-coral-bg text-coral",
 };
 
 export const STAFF_ROLE_LABEL: Record<StaffRole, string> = {

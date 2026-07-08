@@ -4,7 +4,6 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { HeroRisk } from "@/lib/database.types";
 
 const HERO_LOGO_BUCKET = "hero-logos";
 
@@ -86,7 +85,6 @@ export async function updateHeroProfileAction(formData: FormData) {
   const driveUrl = String(formData.get("drive_url") ?? "").trim() || null;
   const objetivo = String(formData.get("objetivo") ?? "").trim() || null;
   const contacts = String(formData.get("contacts") ?? "").trim() || null;
-  const risk = String(formData.get("risk") ?? "onboarding") as HeroRisk;
   const clientSinceRaw = String(formData.get("client_since") ?? "").trim();
   const clientSince = clientSinceRaw || null;
   const servicios = String(formData.get("servicios") ?? "")
@@ -106,7 +104,6 @@ export async function updateHeroProfileAction(formData: FormData) {
       drive_url: driveUrl,
       objetivo,
       contacts,
-      risk,
       client_since: clientSince,
       servicios,
       ...(logoUrl ? { logo_url: logoUrl } : {}),

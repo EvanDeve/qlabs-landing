@@ -534,17 +534,9 @@
   background: var(--ok-bg);
   color: var(--ok);
 }
-.riskWarn {
-  background: var(--warn-bg);
-  color: var(--warn);
-}
 .riskRisk {
   background: var(--risk-bg);
   color: var(--risk);
-}
-.riskOnb {
-  background: var(--info-bg);
-  color: var(--info);
 }
 
 .av {

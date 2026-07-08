@@ -81,10 +81,6 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
         </div>
         <div className={styles.dsrMeta}>
           <div>
-            <div className={styles.dmL}>Riesgo</div>
-            <div className={styles.dmV}>{client.risk}</div>
-          </div>
-          <div>
             <div className={styles.dmL}>Cliente desde</div>
             <div className={styles.dmV}>{client.client_since ?? "—"}</div>
           </div>
@@ -149,20 +145,9 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
             <input name="contacts" defaultValue={client.contacts ?? ""} className={styles.inp} />
           </div>
 
-          <div style={{ display: "flex", gap: "12px" }}>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Estado de riesgo</label>
-              <select name="risk" defaultValue={client.risk} className={styles.inp}>
-                <option value="onboarding">Onboarding</option>
-                <option value="ok">Al día</option>
-                <option value="warn">Atención</option>
-                <option value="risk">En riesgo</option>
-              </select>
-            </div>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Cliente desde</label>
-              <input type="date" name="client_since" defaultValue={client.client_since ?? ""} className={styles.inp} />
-            </div>
+          <div className={styles.field}>
+            <label>Cliente desde</label>
+            <input type="date" name="client_since" defaultValue={client.client_since ?? ""} className={styles.inp} />
           </div>
 
           <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
