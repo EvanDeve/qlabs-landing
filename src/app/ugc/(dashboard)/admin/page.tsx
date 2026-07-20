@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { toggleCalendarMonthAction } from "@/lib/actions/heroes";
 import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { QosIcon } from "@/lib/ugc/qos-icons";
@@ -18,11 +19,19 @@ export default async function AdminDashboardPage() {
   const now = new Date();
   const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const dayOfMonth = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthFraction = dayOfMonth / daysInMonth;
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
   const [
     { data: agencyClients },
     { data: contentPieces },
     { data: staffMembers },
     { data: calendarEvents },
+    { data: calendarMonths },
   ] = await Promise.all([
     supabase.from("agency_clients").select("*"),
     supabase.from("content_pieces").select("*").order("publish_date", { ascending: true }),
@@ -32,6 +41,7 @@ export default async function AdminDashboardPage() {
       .select("*")
       .gte("starts_at", now.toISOString())
       .lte("starts_at", in7Days.toISOString()),
+    supabase.from("hero_calendar_months").select("hero_id, status").eq("month", monthKey),
   ]);
 
   const brandNameByProfileId = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
@@ -46,6 +56,75 @@ export default async function AdminDashboardPage() {
   const activePieces = pieces.filter((p) => p.stage !== "publicado");
 
   const heroesManaged = agencyClients ?? [];
+
+  // ---- Pase de servicio: progreso del mes por Hero ----
+  const approvedByHeroId = new Map((calendarMonths ?? []).map((r) => [r.hero_id, r.status === "aprobado"]));
+
+  const publishedThisMonth = (heroId: string) =>
+    pieces.filter(
+      (p) =>
+        p.brand_id === heroId &&
+        p.stage === "publicado" &&
+        p.publish_date &&
+        new Date(p.publish_date) >= monthStart &&
+        new Date(p.publish_date) < monthEnd
+    ).length;
+
+  const heroStats = heroesManaged.map((hero) => {
+    const published = publishedThisMonth(hero.id);
+    const calendarApproved = approvedByHeroId.get(hero.id) ?? false;
+    const target = hero.monthly_target;
+
+    if (target == null) {
+      return { hero, target: null, published, remaining: null, deficit: 0, calendarApproved, risk: null };
+    }
+
+    // Ritmo esperado proporcional al día del mes (meta × día/días del mes).
+    const expected = +(target * monthFraction).toFixed(1);
+    const deficit = +(expected - published).toFixed(1);
+
+    let risk: "alto" | "medio" | "bajo";
+    if (published === 0) risk = "alto";
+    else if (deficit > expected * 0.5) risk = "alto";
+    else if (!calendarApproved) risk = "medio";
+    else if (deficit > 0) risk = "medio";
+    else risk = "bajo";
+
+    return { hero, target, published, remaining: Math.max(target - published, 0), deficit, calendarApproved, risk };
+  });
+
+  const riskOrder = { alto: 0, medio: 1, bajo: 2 } as const;
+  const sortedHeroStats = [...heroStats].sort(
+    (a, b) =>
+      (a.risk ? riskOrder[a.risk] : 3) - (b.risk ? riskOrder[b.risk] : 3) || a.hero.name.localeCompare(b.hero.name)
+  );
+
+  const withTarget = heroStats.filter((s) => s.target != null);
+  const metaTotal = withTarget.reduce((sum, s) => sum + (s.target ?? 0), 0);
+  const publishedTotal = heroStats.reduce((sum, s) => sum + s.published, 0);
+  const remainingTotal = withTarget.reduce((sum, s) => sum + (s.remaining ?? 0), 0);
+  const expectedTotal = Math.round(metaTotal * monthFraction);
+  const approvedCount = heroStats.filter((s) => s.calendarApproved).length;
+  const monthName = now.toLocaleDateString("es-CR", { month: "long" });
+  const daysLeft = daysInMonth - dayOfMonth;
+
+  const bottlenecks = [
+    {
+      label: "Cero videos publicados este mes",
+      color: "var(--risk)",
+      heroes: withTarget.filter((s) => s.published === 0),
+    },
+    {
+      label: "Sin calendario aprobado",
+      color: "var(--warn)",
+      heroes: heroStats.filter((s) => !s.calendarApproved),
+    },
+    {
+      label: "Atrasados vs. ritmo",
+      color: "var(--warn)",
+      heroes: withTarget.filter((s) => s.published > 0 && s.deficit > 0),
+    },
+  ].filter((b) => b.heroes.length > 0);
 
   const overduePieces = activePieces.filter((p) => p.publish_date && new Date(p.publish_date) < now);
   const pendingApprovalPieces = activePieces.filter(
@@ -121,13 +200,71 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
+      <div className={styles.kpiRow}>
+        {[
+          {
+            label: "Meta del mes",
+            value: metaTotal,
+            sub: `${withTarget.length} de ${heroesManaged.length} heroes con paquete definido`,
+            icon: "flag",
+            color: "#6d54f3",
+          },
+          {
+            label: "Publicados",
+            value: publishedTotal,
+            sub: `ritmo esperado a hoy: ~${expectedTotal}`,
+            icon: "check",
+            color: "#14a06a",
+          },
+          {
+            label: "Restantes",
+            value: remainingTotal,
+            sub: `quedan ${daysLeft} días de ${monthName}`,
+            icon: "clock",
+            color: "#c07414",
+          },
+          {
+            label: "Calendarios aprobados",
+            value: `${approvedCount}/${heroesManaged.length}`,
+            sub: `cronogramas de ${monthName}`,
+            icon: "calendar",
+            color: "#2aa5c0",
+          },
+        ].map((card) => (
+          <div key={card.label} className={styles.kpi}>
+            <div className={styles.kTop}>
+              <div className={styles.kIc} style={{ background: `${card.color}22`, color: card.color }}>
+                <QosIcon name={card.icon} size={16} />
+              </div>
+              <div className={styles.kLabel}>{card.label}</div>
+            </div>
+            <div className={styles.kNum} style={{ color: card.color }}>
+              {card.value}
+            </div>
+            <div className={styles.kSub}>{card.sub}</div>
+          </div>
+        ))}
+      </div>
+
       <div className={styles.dashGrid}>
         <div className={styles.stack}>
           <div className={`${styles.card} ${styles.cardPad}`}>
             <div className={styles.sectionHead}>
               <h2 className={styles.sectionHeadBig}>Requiere tu atención</h2>
-              <span className={`${styles.chip} ${styles.riskRisk}`}>{attentionItems.length} items</span>
+              <span className={`${styles.chip} ${styles.riskRisk}`}>
+                {bottlenecks.length + attentionItems.length} items
+              </span>
             </div>
+            {bottlenecks.map((b) => (
+              <div key={b.label} className={styles.attnItem} style={{ cursor: "default" }}>
+                <div className={styles.attnBar} style={{ background: b.color }} />
+                <div className={styles.attnBody}>
+                  <div className={styles.attnTitle}>{b.label}</div>
+                  <div className={styles.attnMeta}>{b.heroes.map((s) => s.hero.name).join(", ")}</div>
+                </div>
+                <span className={styles.tag}>{b.heroes.length}</span>
+              </div>
+            ))}
             {attentionItems.length > 0 ? (
               attentionItems.map(({ piece, reason, late }) => (
                 <Link key={piece.id} href={`/ugc/admin/heroes/${piece.brand_id}`} className={styles.attnItem}>
@@ -146,9 +283,9 @@ export default async function AdminDashboardPage() {
                   </div>
                 </Link>
               ))
-            ) : (
+            ) : bottlenecks.length === 0 ? (
               <div className={styles.empty}>Nada pendiente por ahora.</div>
-            )}
+            ) : null}
           </div>
 
           <div className={`${styles.card} ${styles.cardPad}`}>
@@ -159,51 +296,69 @@ export default async function AdminDashboardPage() {
               <thead>
                 <tr>
                   <th>Hero</th>
-                  <th>Etapa actual</th>
-                  <th>Próx. publicación</th>
-                  <th></th>
+                  <th>Calendario</th>
+                  <th>Publicados</th>
+                  <th>Rest.</th>
+                  <th>Ritmo</th>
+                  <th style={{ textAlign: "right" }}>Riesgo</th>
                 </tr>
               </thead>
               <tbody>
-                {heroesManaged.map((hero) => {
-                  const heroPieces = pieces.filter((p) => p.brand_id === hero.id);
-                  const activeHeroPieces = heroPieces.filter((p) => p.stage !== "publicado");
-                  const nextPublish = heroPieces
-                    .filter((p) => p.publish_date && new Date(p.publish_date) >= now)
-                    .sort((a, b) => new Date(a.publish_date!).getTime() - new Date(b.publish_date!).getTime())[0];
-
-                  return (
-                    <tr key={hero.id}>
-                      <td>
-                        <Link href={`/ugc/admin/heroes/${hero.id}`} className={styles.acctHero}>
-                          {hero.logo_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={hero.logo_url} alt={hero.name} className={styles.heroMono} style={{ objectFit: "cover" }} />
-                          ) : (
-                            <span className={styles.heroMono} style={{ background: staffColorFromString(hero.id) }}>
-                              {hero.name.slice(0, 2).toUpperCase()}
-                            </span>
-                          )}
-                          {hero.name}
-                        </Link>
-                      </td>
-                      <td>
-                        {activeHeroPieces.length > 0 ? CONTENT_STAGE_LABEL[activeHeroPieces[0].stage] : "Sin piezas"}
-                      </td>
-                      <td style={{ color: "var(--ink-2)" }}>
-                        {nextPublish
-                          ? new Date(nextPublish.publish_date!).toLocaleDateString("es-CR", {
-                              day: "numeric",
-                              month: "short",
-                            })
-                          : "—"}
-                      </td>
-                      <td style={{ textAlign: "right", color: "var(--ink-3)" }}>
-                        <QosIcon name="chevR" size={16} />
-                      </td>
-                    </tr>
-                  );
-                })}
+                {sortedHeroStats.map(({ hero, target, published, remaining, deficit, calendarApproved, risk }) => (
+                  <tr key={hero.id}>
+                    <td>
+                      <Link href={`/ugc/admin/heroes/${hero.id}`} className={styles.acctHero}>
+                        {hero.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={hero.logo_url} alt={hero.name} className={styles.heroMono} style={{ objectFit: "cover" }} />
+                        ) : (
+                          <span className={styles.heroMono} style={{ background: staffColorFromString(hero.id) }}>
+                            {hero.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                        {hero.name}
+                      </Link>
+                    </td>
+                    <td>
+                      <form action={toggleCalendarMonthAction.bind(null, hero.id)}>
+                        <button
+                          type="submit"
+                          className={`${styles.calBtn} ${calendarApproved ? styles.calBtnOk : styles.calBtnPend}`}
+                          title={`Marcar cronograma de ${monthName} como ${calendarApproved ? "pendiente" : "aprobado"}`}
+                        >
+                          <span className={styles.dot} />
+                          {calendarApproved ? "Aprobado" : "Pendiente"}
+                        </button>
+                      </form>
+                    </td>
+                    <td className={styles.paceCell}>
+                      {published}/{target ?? "—"}
+                    </td>
+                    <td className={styles.paceCell}>{remaining ?? "—"}</td>
+                    <td>
+                      {target != null ? (
+                        <span className={`${styles.paceCell} ${deficit > 0 ? styles.paceBad : styles.paceOk}`}>
+                          {deficit > 0 ? `−${deficit}` : deficit < 0 ? `+${Math.abs(deficit)}` : "a tiempo"}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--ink-3)" }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      {risk ? (
+                        <span
+                          className={`${styles.riskPill} ${
+                            risk === "alto" ? styles.riskRisk : risk === "medio" ? styles.riskWarn : styles.riskOk
+                          }`}
+                        >
+                          {risk === "alto" ? "Alto" : risk === "medio" ? "Medio" : "Bajo"}
+                        </span>
+                      ) : (
+                        <span className={`${styles.riskPill} ${styles.riskMuted}`}>Sin meta</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

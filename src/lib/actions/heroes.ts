@@ -109,6 +109,9 @@ export async function updateHeroProfileAction(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  const monthlyTargetRaw = String(formData.get("monthly_target") ?? "").trim();
+  const monthlyTarget = monthlyTargetRaw ? Math.max(0, parseInt(monthlyTargetRaw, 10) || 0) : null;
+
   const logoUrl = await uploadHeroLogo(supabase, formData.get("logo"));
 
   await supabase
@@ -122,10 +125,38 @@ export async function updateHeroProfileAction(formData: FormData) {
       contacts,
       client_since: clientSince,
       servicios,
+      monthly_target: monthlyTarget,
       ...(logoUrl ? { logo_url: logoUrl } : {}),
     })
     .eq("id", id);
 
   revalidatePath("/ugc/admin/heroes");
   revalidatePath(`/ugc/admin/heroes/${id}`);
+  revalidatePath("/ugc/admin");
+}
+
+// Alterna el estado del cronograma del mes actual (pendiente ↔ aprobado).
+export async function toggleCalendarMonthAction(heroId: string) {
+  const supabase = await createClient();
+
+  const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
+  const { data: existing } = await supabase
+    .from("hero_calendar_months")
+    .select("status")
+    .eq("hero_id", heroId)
+    .eq("month", month)
+    .maybeSingle();
+
+  const approving = existing?.status !== "aprobado";
+
+  await supabase.from("hero_calendar_months").upsert({
+    hero_id: heroId,
+    month,
+    status: approving ? "aprobado" : "pendiente",
+    approved_at: approving ? new Date().toISOString() : null,
+  });
+
+  revalidatePath("/ugc/admin");
 }

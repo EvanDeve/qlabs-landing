@@ -212,6 +212,22 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
               <input name="servicios" defaultValue={(client.servicios ?? []).join(", ")} className={styles.inp} />
             </div>
           </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsLabel}>
+              <strong>Videos por mes</strong>
+              <p>Meta mensual según el paquete contratado. Vacío = sin paquete definido.</p>
+            </div>
+            <div className={styles.settingsControl}>
+              <input
+                type="number"
+                name="monthly_target"
+                min={0}
+                defaultValue={client.monthly_target ?? ""}
+                className={styles.inp}
+              />
+            </div>
+          </div>
         </div>
 
         <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} style={{ marginBottom: "28px" }}>

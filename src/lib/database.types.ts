@@ -47,6 +47,7 @@ export type ContentPriority = "baja" | "media" | "alta";
 export type ContentPlatform = "instagram" | "tiktok" | "reels";
 export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega";
 export type CalendarEventStatus = "programado" | "hecho" | "pausado";
+export type CalendarMonthStatus = "pendiente" | "aprobado";
 
 export interface Database {
   public: {
@@ -351,6 +352,7 @@ export interface Database {
           servicios: string[];
           contacts: HeroContact[];
           client_since: string | null;
+          monthly_target: number | null;
           created_at: string;
         };
         Insert: {
@@ -364,6 +366,7 @@ export interface Database {
           servicios?: string[];
           contacts?: HeroContact[];
           client_since?: string | null;
+          monthly_target?: number | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["agency_clients"]["Insert"]>;
@@ -437,6 +440,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["calendar_events"]["Insert"]>;
         Relationships: [];
       };
+      hero_calendar_months: {
+        Row: {
+          hero_id: string;
+          month: string;
+          status: CalendarMonthStatus;
+          approved_at: string | null;
+        };
+        Insert: {
+          hero_id: string;
+          month: string;
+          status?: CalendarMonthStatus;
+          approved_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["hero_calendar_months"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       campaign_previews: {
@@ -483,6 +502,7 @@ export interface Database {
       content_platform: ContentPlatform;
       calendar_event_type: CalendarEventType;
       calendar_event_status: CalendarEventStatus;
+      calendar_month_status: CalendarMonthStatus;
     };
   };
 }

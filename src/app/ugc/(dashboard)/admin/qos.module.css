@@ -538,6 +538,55 @@
   background: var(--risk-bg);
   color: var(--risk);
 }
+.riskWarn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.riskMuted {
+  background: var(--surface-3);
+  color: var(--ink-3);
+}
+
+.calBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: var(--t-fast);
+}
+.calBtn .dot {
+  background: currentColor;
+}
+.calBtn:hover {
+  filter: brightness(0.96);
+  box-shadow: var(--sh-sm);
+}
+.calBtnOk {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.calBtnPend {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.paceCell {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+.paceOk {
+  color: var(--ok);
+}
+.paceBad {
+  color: var(--risk);
+}
 
 .av {
   width: 26px;
