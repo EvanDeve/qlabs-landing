@@ -150,7 +150,7 @@ export default async function CampaignDetailPage({
                     <div className="flex items-center gap-2">
                       {creatorProfile?.handle ? (
                         <Link
-                          href={`/ugc/creadores/${creatorProfile.handle}`}
+                          href={`/ugc/creadores/${creatorProfile.handle.replace(/^@/, "")}`}
                           className="font-extrabold text-ink hover:text-violet-deep"
                         >
                           {creatorProfile.handle}

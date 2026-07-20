@@ -13,12 +13,13 @@ export default async function CreatorPublicProfilePage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = await params;
+  const normalizedHandle = handle.startsWith("@") ? handle : `@${handle}`;
   const supabase = await createClient();
 
   const { data: creatorProfile } = await supabase
     .from("creator_profiles")
     .select("*")
-    .eq("handle", handle)
+    .eq("handle", normalizedHandle)
     .single();
 
   if (!creatorProfile) {
@@ -90,7 +91,7 @@ export default async function CreatorPublicProfilePage({
             </div>
           </div>
         </div>
-        <h1 className="mt-4 text-2xl font-extrabold tracking-tight">@{creatorProfile.handle}</h1>
+        <h1 className="mt-4 text-2xl font-extrabold tracking-tight">{creatorProfile.handle}</h1>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/70">
           {profile?.city && (
             <span>

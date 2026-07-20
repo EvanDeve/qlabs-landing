@@ -35,7 +35,7 @@ export default async function CreatorProfileEditPage() {
         </div>
         {creatorProfile?.handle && (
           <Link
-            href={`/ugc/creadores/${creatorProfile.handle}`}
+            href={`/ugc/creadores/${creatorProfile.handle.replace(/^@/, "")}`}
             className="shrink-0 rounded-pill border border-line px-5 py-2.5 text-sm font-bold text-ink transition hover:border-ink"
           >
             Ver perfil
