@@ -7,18 +7,9 @@ export default function Hero() {
         <div className="badge-group fade-up">
           <div className="avatars">
             {/* eslint-disable @next/next/no-img-element */}
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100"
-              alt="User"
-            />
-            <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100"
-              alt="User"
-            />
-            <img
-              src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=100"
-              alt="User"
-            />
+            <img src="/kosta_logo.jpeg" alt="Kosta Asiatika" />
+            <img src="/entrecote_logo.png" alt="Entrecote" />
+            <img src="/zonna_logo.png" alt="Zonna Gastrobar" />
           </div>
           <span className="badge-text">Para restaurantes y hoteles</span>
         </div>

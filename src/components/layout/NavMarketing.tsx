@@ -11,7 +11,7 @@ export default function NavMarketing() {
       <div className="container nav-wrap">
         <a href="#" className="logo">
           <img src="/favicon-logo.png" alt="Q" style={{ height: "1.4em" }} />
-          Q Labs
+          Labs
         </a>
 
         <ul className={`nav-links${open ? " active" : ""}`}>
@@ -51,6 +51,11 @@ export default function NavMarketing() {
           <i className={`fa-solid ${open ? "fa-xmark" : "fa-bars"}`} />
         </button>
       </div>
+
+      <div
+        className={`nav-overlay${open ? " active" : ""}`}
+        onClick={() => setOpen(false)}
+      />
     </nav>
   );
 }
