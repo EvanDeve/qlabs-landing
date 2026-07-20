@@ -278,6 +278,9 @@
 }
 
 .sbFoot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   position: relative;
@@ -289,6 +292,22 @@
   gap: 10px;
   padding: 8px;
   border-radius: var(--r-md);
+  flex: 1;
+  min-width: 0;
+}
+.sbSignOut {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-md);
+  color: rgba(244, 243, 251, 0.55);
+  transition: var(--t-fast);
+  flex-shrink: 0;
+}
+.sbSignOut:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 .sbUser .av {
   width: 32px;

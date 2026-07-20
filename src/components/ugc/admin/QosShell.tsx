@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { Database } from "@/lib/database.types";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import NotificationsBell from "@/components/ugc/NotificationsBell";
+import { signOutAction } from "@/lib/actions/auth";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
@@ -98,6 +99,11 @@ export default function QosShell({
                 <div className={styles.uRole}>{userRole}</div>
               </div>
             </div>
+            <form action={signOutAction}>
+              <button type="submit" className={styles.sbSignOut} title="Cerrar sesión" aria-label="Cerrar sesión">
+                <QosIcon name="logout" size={16} />
+              </button>
+            </form>
           </div>
         </aside>
 
