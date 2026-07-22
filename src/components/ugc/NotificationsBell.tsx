@@ -38,6 +38,13 @@ function describe(notification: Notification): { text: string; href: string } {
     };
   }
 
+  if (notification.type === "application_delivered") {
+    return {
+      text: `Llegó una entrega en "${campaignTitle}" — revisala y aprobala para seguir con el pago`,
+      href: `/ugc/marca/campanas/${payload.campaign_id}`,
+    };
+  }
+
   return { text: notification.type, href: "#" };
 }
 

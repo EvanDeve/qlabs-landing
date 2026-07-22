@@ -26,6 +26,7 @@ export async function createCampaignAction(
   const targetAudience = String(formData.get("target_audience") ?? "").trim() || null;
   const deadlineDaysRaw = String(formData.get("deadline_days") ?? "").trim();
   const deadlineDays = deadlineDaysRaw ? Number(deadlineDaysRaw) : null;
+  const compensationDetails = String(formData.get("compensation_details") ?? "").trim() || null;
   const intent = formData.get("intent") === "publish" ? "publish" : "draft";
 
   const deliverables = DELIVERABLE_TYPES.map((type) => ({
@@ -47,6 +48,7 @@ export async function createCampaignAction(
     budget_amount: budgetAmount,
     target_audience: targetAudience,
     deadline_days: deadlineDays,
+    compensation_details: compensationDetails,
     deliverables,
     status: intent === "publish" ? "published" : "draft",
     published_at: intent === "publish" ? new Date().toISOString() : null,
@@ -57,7 +59,8 @@ export async function createCampaignAction(
   }
 
   revalidatePath("/ugc/marca");
-  redirect("/ugc/marca");
+  revalidatePath("/ugc/marca/ugc");
+  redirect("/ugc/marca/ugc");
 }
 
 export async function publishCampaignAction(formData: FormData) {
@@ -80,4 +83,5 @@ export async function publishCampaignAction(formData: FormData) {
     .eq("brand_id", user.id);
 
   revalidatePath("/ugc/marca");
+  revalidatePath("/ugc/marca/ugc");
 }

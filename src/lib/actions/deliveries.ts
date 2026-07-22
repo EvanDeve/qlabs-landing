@@ -42,43 +42,51 @@ export async function submitDeliveryAction(
     return { error: "No podés entregar en esta aplicación." };
   }
 
-  let kind: "file" | "link";
-  let storagePath: string | null = null;
+  const hasFile = file instanceof File && file.size > 0;
+  if (!hasFile && !externalUrl) {
+    return { error: "Subí un archivo, pegá un link, o ambos." };
+  }
 
-  if (file instanceof File && file.size > 0) {
-    if (file.size > MAX_DELIVERY_FILE_BYTES) {
-      return { error: "El archivo pesa más de 200MB." };
-    }
-    kind = "file";
-    const extension = file.name.includes(".") ? file.name.split(".").pop() : "bin";
-    storagePath = `${applicationId}/${randomUUID()}.${extension}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from(DELIVERIES_BUCKET)
-      .upload(storagePath, file, { contentType: file.type });
-
-    if (uploadError) {
-      return { error: "No se pudo subir el archivo. Intentá de nuevo." };
-    }
-  } else if (externalUrl) {
-    kind = "link";
+  if (externalUrl) {
     try {
       new URL(externalUrl);
     } catch {
       return { error: "El link no es una URL válida." };
     }
-  } else {
-    return { error: "Subí un archivo o pegá un link." };
   }
 
-  const { error: insertError } = await supabase.from("application_deliveries").insert({
-    application_id: applicationId,
-    creator_id: user.id,
-    kind,
-    storage_path: storagePath,
-    external_url: kind === "link" ? externalUrl : null,
-    note,
-  });
+  let storagePath: string | null = null;
+
+  if (hasFile) {
+    const uploadedFile = file as File;
+    if (uploadedFile.size > MAX_DELIVERY_FILE_BYTES) {
+      return { error: "El archivo pesa más de 200MB." };
+    }
+    const extension = uploadedFile.name.includes(".") ? uploadedFile.name.split(".").pop() : "bin";
+    storagePath = `${applicationId}/${randomUUID()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(DELIVERIES_BUCKET)
+      .upload(storagePath, uploadedFile, { contentType: uploadedFile.type });
+
+    if (uploadError) {
+      return { error: "No se pudo subir el archivo. Intentá de nuevo." };
+    }
+  }
+
+  // El creador puede entregar el archivo crudo y el link del post ya
+  // publicado en la misma tanda — cada uno se guarda como su propia fila,
+  // application_deliveries siempre soportó múltiples piezas por aplicación.
+  const rows = [
+    ...(storagePath
+      ? [{ application_id: applicationId, creator_id: user.id, kind: "file" as const, storage_path: storagePath, external_url: null, note }]
+      : []),
+    ...(externalUrl
+      ? [{ application_id: applicationId, creator_id: user.id, kind: "link" as const, storage_path: null, external_url: externalUrl, note }]
+      : []),
+  ];
+
+  const { error: insertError } = await supabase.from("application_deliveries").insert(rows);
 
   if (insertError) {
     if (storagePath) {
@@ -96,7 +104,7 @@ export async function submitDeliveryAction(
 
   const { data: campaign } = await supabase
     .from("campaigns")
-    .select("title, brand_id")
+    .select("title, brand_id, budget_amount")
     .eq("id", application.campaign_id)
     .single();
 
@@ -106,7 +114,8 @@ export async function submitDeliveryAction(
       await sendTransactionalEmail(
         brandEmail,
         `Nueva entrega en "${campaign.title}"`,
-        `<p>El creador subió una pieza en <strong>${campaign.title}</strong>. Entrá a UGC·CRC para revisarla y aprobarla.</p>`
+        `<p>El creador subió una pieza en <strong>${campaign.title}</strong>. Entrá a UGC·CRC para revisarla.</p>
+         <p>Si todo está bien, aprobala para que sigamos con el pago de ₡${campaign.budget_amount.toLocaleString("es-CR")} a la agencia.</p>`
       );
     }
   }

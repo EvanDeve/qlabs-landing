@@ -207,6 +207,7 @@ export interface Database {
           min_tier: string | null;
           created_at: string;
           published_at: string | null;
+          compensation_details: string | null;
         };
         Insert: {
           id?: string;
@@ -222,6 +223,7 @@ export interface Database {
           min_tier?: string | null;
           created_at?: string;
           published_at?: string | null;
+          compensation_details?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["campaigns"]["Insert"]>;
         Relationships: [];
@@ -238,6 +240,7 @@ export interface Database {
           accepted_at: string | null;
           delivered_at: string | null;
           approved_at: string | null;
+          rating: number | null;
         };
         Insert: {
           id?: string;
@@ -250,6 +253,7 @@ export interface Database {
           accepted_at?: string | null;
           delivered_at?: string | null;
           approved_at?: string | null;
+          rating?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;
         Relationships: [];
@@ -308,6 +312,7 @@ export interface Database {
           caption: string | null;
           position: number;
           created_at: string;
+          views: number | null;
         };
         Insert: {
           id?: string;
@@ -318,6 +323,7 @@ export interface Database {
           caption?: string | null;
           position?: number;
           created_at?: string;
+          views?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["portfolio_items"]["Insert"]>;
         Relationships: [];

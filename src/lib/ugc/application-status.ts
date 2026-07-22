@@ -9,11 +9,13 @@ export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
   approved: "Aprobada",
 };
 
-export const APPLICATION_STATUS_STYLE: Record<ApplicationStatus, string> = {
-  pending: "bg-lavender text-ink-soft",
-  reviewing: "bg-lavender-deep text-violet-deep",
-  accepted: "bg-trust-bg text-trust",
-  rejected: "bg-coral-bg text-coral",
-  delivered: "bg-trust-bg text-trust",
-  approved: "bg-trust-bg text-trust",
+// Sufijo de las clases riskOk/riskWarn/riskRisk/riskMuted en qos.module.css —
+// className={`${styles.riskPill} ${styles["risk" + APPLICATION_STATUS_STYLE[status]]}`}
+export const APPLICATION_STATUS_STYLE: Record<ApplicationStatus, "Ok" | "Warn" | "Risk" | "Muted"> = {
+  pending: "Muted",
+  reviewing: "Warn",
+  accepted: "Ok",
+  rejected: "Risk",
+  delivered: "Ok",
+  approved: "Ok",
 };

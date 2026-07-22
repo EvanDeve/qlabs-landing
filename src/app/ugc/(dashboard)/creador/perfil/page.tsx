@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreatorProfileEditForm from "@/components/ugc/creador/CreatorProfileEditForm";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -25,18 +26,29 @@ export default async function CreatorProfileEditPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-8 flex items-center justify-between gap-4">
+    <div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "16px",
+          marginBottom: "20px",
+        }}
+      >
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink">Mi perfil</h1>
-          <p className="mt-1 text-ink-soft">
+          <h1 className={styles.tbTitle} style={{ fontSize: "26px" }}>
+            Mi perfil
+          </h1>
+          <p style={{ marginTop: "4px", color: "var(--ink-2)" }}>
             Esto es lo que las marcas ven en tu perfil completo cuando aplicás a una campaña.
           </p>
         </div>
         {creatorProfile?.handle && (
           <Link
             href={`/ugc/creadores/${creatorProfile.handle.replace(/^@/, "")}`}
-            className="shrink-0 rounded-pill border border-line px-5 py-2.5 text-sm font-bold text-ink transition hover:border-ink"
+            className={`${styles.btn} ${styles.btnGhost}`}
+            style={{ flexShrink: 0 }}
           >
             Ver perfil
           </Link>

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { applyToCampaignAction, type ApplyActionState } from "@/lib/actions/applications";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export default function ApplyForm({ campaignId }: { campaignId: string }) {
   const [state, formAction, pending] = useActionState<ApplyActionState, FormData>(
@@ -10,21 +11,23 @@ export default function ApplyForm({ campaignId }: { campaignId: string }) {
   );
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2">
+    <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       <input type="hidden" name="campaign_id" value={campaignId} />
       <textarea
         name="pitch_message"
         placeholder="Mensaje opcional para la marca (por qué encajás con esta campaña)"
         rows={2}
-        className="resize-none rounded-lg border border-black/10 bg-lavender px-4 py-3 text-sm outline-none focus:border-violet"
+        className={styles.inp}
+        style={{ resize: "none" }}
       />
-      {state?.error && <p className="text-sm text-coral">{state.error}</p>}
+      {state?.error && <p style={{ fontSize: "12.5px", color: "var(--risk)" }}>{state.error}</p>}
       <button
         type="submit"
         disabled={pending}
-        className="self-start rounded-pill bg-violet px-6 py-2.5 text-sm font-bold text-white transition hover:bg-violet-deep disabled:opacity-60"
+        className={`${styles.btn} ${styles.btnPrimary}`}
+        style={{ alignSelf: "flex-start" }}
       >
-        {pending ? "Enviando..." : "Aplicar"}
+        {pending ? "Enviando…" : "Aplicar"}
       </button>
     </form>
   );

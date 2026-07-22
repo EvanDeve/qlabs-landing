@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import DeliverySubmitForm from "@/components/ugc/creador/DeliverySubmitForm";
 import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
-import {
-  APPLICATION_STATUS_LABEL,
-  APPLICATION_STATUS_STYLE,
-} from "@/lib/ugc/application-status";
+import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
+import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
+import { creatorPayout } from "@/lib/ugc/payout";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,10 @@ export default async function MisAplicacionesPage() {
 
   const campaignIds = [...new Set((applications ?? []).map((a) => a.campaign_id))];
   const { data: campaigns } = campaignIds.length
-    ? await supabase.from("campaigns").select("id, title, brand_id, budget_amount").in("id", campaignIds)
+    ? await supabase
+        .from("campaigns")
+        .select("id, title, brand_id, budget_amount, deadline_days, deliverables, compensation_details")
+        .in("id", campaignIds)
     : { data: [] };
 
   const brandIds = [...new Set((campaigns ?? []).map((c) => c.brand_id))];
@@ -61,58 +64,83 @@ export default async function MisAplicacionesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="mb-8 text-3xl font-extrabold tracking-tight text-ink">Mis aplicaciones</h1>
+    <div>
+      <h1 className={styles.tbTitle} style={{ fontSize: "26px", marginBottom: "20px" }}>
+        Mis aplicaciones
+      </h1>
 
       {applications && applications.length > 0 ? (
-        <div className="flex flex-col gap-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {applications.map((app) => {
             const campaign = campaignById.get(app.campaign_id);
             const brandName = campaign ? brandNameByProfileId.get(campaign.brand_id) : null;
 
             return (
-              <div key={app.id} className="rounded-card border border-line p-5">
-                <div className="flex items-center justify-between gap-4">
+              <div key={app.id} className={`${styles.card} ${styles.cardPad}`}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
                   <div>
-                    <div className="text-sm font-bold text-ink-soft">{brandName}</div>
-                    <div className="font-extrabold text-ink">{campaign?.title ?? "Campaña"}</div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink-2)" }}>{brandName}</div>
+                    <div style={{ fontWeight: 800, color: "var(--ink)" }}>{campaign?.title ?? "Campaña"}</div>
                     {campaign && (
-                      <div className="mt-1 text-sm text-ink-soft">
-                        ₡{campaign.budget_amount.toLocaleString("es-CR")}
+                      <div style={{ marginTop: "4px", fontSize: "13px", color: "var(--ink-3)" }}>
+                        ₡{creatorPayout(campaign.budget_amount).toLocaleString("es-CR")}
+                        {campaign.deadline_days && ` · ${campaign.deadline_days} días para entregar`}
                       </div>
                     )}
                   </div>
                   <span
-                    className={`shrink-0 rounded-pill px-3 py-1 text-xs font-bold ${APPLICATION_STATUS_STYLE[app.status]}`}
+                    className={`${styles.riskPill} ${styles["risk" + APPLICATION_STATUS_STYLE[app.status]]}`}
+                    style={{ flexShrink: 0 }}
                   >
                     {APPLICATION_STATUS_LABEL[app.status]}
                   </span>
                 </div>
+
+                {campaign && Array.isArray(campaign.deliverables) && campaign.deliverables.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "10px" }}>
+                    {(campaign.deliverables as { type: string; qty: number }[]).map((d) => (
+                      <span key={d.type} className={styles.tag}>
+                        {d.qty}x {FORMAT_LABEL[d.type] ?? d.type}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {campaign?.compensation_details && (
+                  <p style={{ marginTop: "8px", fontSize: "13px", color: "var(--b-600)" }}>
+                    + {campaign.compensation_details}
+                  </p>
+                )}
+
                 {app.pitch_message && (
-                  <p className="mt-3 rounded-lg bg-lavender p-3 text-sm text-ink-soft">
+                  <p
+                    style={{
+                      marginTop: "12px",
+                      padding: "12px",
+                      borderRadius: "var(--r-md)",
+                      background: "var(--surface-3)",
+                      fontSize: "13.5px",
+                      color: "var(--ink-2)",
+                    }}
+                  >
                     {app.pitch_message}
                   </p>
                 )}
                 {(deliveriesByApplicationId.get(app.id)?.length ?? 0) > 0 && (
-                  <div className="mt-3 flex flex-col gap-1.5">
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px" }}>
                     {deliveriesByApplicationId.get(app.id)!.map((d) => (
-                      <div key={d.id} className="text-sm text-ink-soft">
+                      <div key={d.id} style={{ fontSize: "13.5px", color: "var(--ink-2)" }}>
                         {d.kind === "file" ? (
                           <a
                             href={signedUrlByPath.get(d.storage_path!) ?? "#"}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-bold text-violet-deep hover:underline"
+                            className={styles.linkMore}
                           >
                             Ver archivo entregado
                           </a>
                         ) : (
-                          <a
-                            href={d.external_url!}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-bold text-violet-deep hover:underline"
-                          >
+                          <a href={d.external_url!} target="_blank" rel="noreferrer" className={styles.linkMore}>
                             Ver link entregado
                           </a>
                         )}
@@ -125,14 +153,19 @@ export default async function MisAplicacionesPage() {
                 {(app.status === "accepted" || app.status === "delivered") && (
                   <DeliverySubmitForm applicationId={app.id} />
                 )}
+
+                {app.status === "approved" && app.rating && (
+                  <div style={{ marginTop: "12px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+                    La marca calificó esta entrega con {"★".repeat(app.rating)}
+                    {"☆".repeat(5 - app.rating)}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       ) : (
-        <div className="rounded-card border border-line p-10 text-center text-ink-soft">
-          Todavía no aplicaste a ninguna campaña.
-        </div>
+        <div className={`${styles.card} ${styles.empty}`}>Todavía no aplicaste a ninguna campaña.</div>
       )}
     </div>
   );

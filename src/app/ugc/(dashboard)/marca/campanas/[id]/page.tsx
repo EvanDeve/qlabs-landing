@@ -2,13 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { publishCampaignAction } from "@/lib/actions/campaigns";
-import { updateApplicationStatusAction, approveApplicationAction } from "@/lib/actions/applications";
+import { updateApplicationStatusAction } from "@/lib/actions/applications";
+import ApproveWithRatingForm from "@/components/ugc/marca/ApproveWithRatingForm";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
-import {
-  APPLICATION_STATUS_LABEL,
-  APPLICATION_STATUS_STYLE,
-} from "@/lib/ugc/application-status";
+import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
+import { QosIcon } from "@/lib/ugc/qos-icons";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -83,16 +83,19 @@ export default async function CampaignDetailPage({
     : [];
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <Link href="/ugc/marca" className="text-sm font-bold text-ink-soft hover:text-ink">
-        ← Mis campañas
+    <div>
+      <Link href="/ugc/marca/ugc" className={styles.backBtn}>
+        <QosIcon name="chevL" size={16} />
+        Volver a UGC·CRC
       </Link>
 
-      <div className="mt-6 rounded-card border border-line p-6">
-        <div className="flex items-start justify-between gap-4">
+      <div className={`${styles.card} ${styles.cardPad}`}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px" }}>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-ink">{campaign.title}</h1>
-            <div className="mt-1 text-sm font-semibold text-ink-soft">
+            <h1 className={styles.tbTitle} style={{ fontSize: "24px" }}>
+              {campaign.title}
+            </h1>
+            <div style={{ marginTop: "4px", fontSize: "13.5px", fontWeight: 600, color: "var(--ink-2)" }}>
               ₡{campaign.budget_amount.toLocaleString("es-CR")}
               {campaign.deadline_days ? ` · ${campaign.deadline_days} días` : ""}
             </div>
@@ -100,32 +103,33 @@ export default async function CampaignDetailPage({
           {campaign.status === "draft" && (
             <form action={publishCampaignAction}>
               <input type="hidden" name="campaign_id" value={campaign.id} />
-              <button
-                type="submit"
-                className="rounded-pill bg-violet px-5 py-2.5 text-sm font-bold text-white transition hover:bg-violet-deep"
-              >
+              <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
                 Publicar
               </button>
             </form>
           )}
         </div>
 
-        <p className="mt-4 text-ink-soft">{campaign.brief}</p>
+        <p style={{ marginTop: "16px", color: "var(--ink-2)" }}>{campaign.brief}</p>
 
         {campaign.target_audience && (
-          <p className="mt-3 text-sm text-ink-soft">
-            <span className="font-bold text-ink">Audiencia: </span>
+          <p style={{ marginTop: "12px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+            <span style={{ fontWeight: 700, color: "var(--ink)" }}>Audiencia: </span>
             {campaign.target_audience}
           </p>
         )}
 
+        {campaign.compensation_details && (
+          <p style={{ marginTop: "8px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+            <span style={{ fontWeight: 700, color: "var(--ink)" }}>Compensación adicional: </span>
+            {campaign.compensation_details}
+          </p>
+        )}
+
         {deliverables.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "16px" }}>
             {deliverables.map((d) => (
-              <span
-                key={d.type}
-                className="rounded-pill border border-line px-3 py-1 text-xs font-semibold text-ink-soft"
-              >
+              <span key={d.type} className={styles.tag}>
                 {d.qty}x {FORMAT_LABEL[d.type] ?? d.type}
               </span>
             ))}
@@ -133,50 +137,47 @@ export default async function CampaignDetailPage({
         )}
       </div>
 
-      <h2 className="mb-4 mt-10 text-xl font-extrabold text-ink">
-        Aplicantes ({applications?.length ?? 0})
-      </h2>
+      <div className={styles.sectionHead} style={{ marginTop: "28px" }}>
+        <h2 className={styles.sectionHeadBig}>Aplicantes ({applications?.length ?? 0})</h2>
+      </div>
 
       {applications && applications.length > 0 ? (
-        <div className="flex flex-col gap-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {applications.map((app) => {
             const profile = profileById.get(app.creator_id);
             const creatorProfile = creatorProfileById.get(app.creator_id);
 
             return (
-              <div key={app.id} className="rounded-card border border-line p-5">
-                <div className="flex items-start justify-between gap-4">
+              <div key={app.id} className={`${styles.card} ${styles.cardPad}`}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px" }}>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       {creatorProfile?.handle ? (
                         <Link
                           href={`/ugc/creadores/${creatorProfile.handle.replace(/^@/, "")}`}
-                          className="font-extrabold text-ink hover:text-violet-deep"
+                          style={{ fontWeight: 800, color: "var(--ink)" }}
                         >
                           {creatorProfile.handle}
                         </Link>
                       ) : (
-                        <span className="font-extrabold text-ink">{profile?.display_name ?? "Creador"}</span>
-                      )}
-                      {creatorProfile?.verified && (
-                        <span className="rounded-pill bg-trust-bg px-2 py-0.5 text-xs font-bold text-trust">
-                          Verificado
+                        <span style={{ fontWeight: 800, color: "var(--ink)" }}>
+                          {profile?.display_name ?? "Creador"}
                         </span>
                       )}
+                      {creatorProfile?.verified && (
+                        <span className={`${styles.riskPill} ${styles.riskOk}`}>Verificado</span>
+                      )}
                     </div>
-                    <div className="mt-1 text-sm text-ink-soft">
+                    <div style={{ marginTop: "4px", fontSize: "13px", color: "var(--ink-3)" }}>
                       {profile?.city && `${profile.city} · `}
                       {creatorProfile?.followers_count
                         ? `${creatorProfile.followers_count.toLocaleString("es-CR")} seguidores`
                         : null}
                     </div>
                     {creatorProfile?.niches && creatorProfile.niches.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
                         {creatorProfile.niches.map((niche) => (
-                          <span
-                            key={niche}
-                            className="rounded-pill bg-lavender px-2.5 py-1 text-xs font-semibold text-violet-deep"
-                          >
+                          <span key={niche} className={styles.chip}>
                             {niche}
                           </span>
                         ))}
@@ -184,28 +185,34 @@ export default async function CampaignDetailPage({
                     )}
                   </div>
                   <span
-                    className={`shrink-0 rounded-pill px-3 py-1 text-xs font-bold ${APPLICATION_STATUS_STYLE[app.status]}`}
+                    className={`${styles.riskPill} ${styles["risk" + APPLICATION_STATUS_STYLE[app.status]]}`}
                   >
                     {APPLICATION_STATUS_LABEL[app.status]}
                   </span>
                 </div>
 
                 {app.pitch_message && (
-                  <p className="mt-3 rounded-lg bg-lavender p-3 text-sm text-ink-soft">
+                  <p
+                    style={{
+                      marginTop: "12px",
+                      padding: "12px",
+                      borderRadius: "var(--r-md)",
+                      background: "var(--surface-3)",
+                      fontSize: "13.5px",
+                      color: "var(--ink-2)",
+                    }}
+                  >
                     {app.pitch_message}
                   </p>
                 )}
 
                 {(app.status === "pending" || app.status === "reviewing") && (
-                  <div className="mt-4 flex gap-3">
+                  <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
                     <form action={updateApplicationStatusAction}>
                       <input type="hidden" name="application_id" value={app.id} />
                       <input type="hidden" name="campaign_id" value={campaign.id} />
                       <input type="hidden" name="status" value="accepted" />
-                      <button
-                        type="submit"
-                        className="rounded-pill bg-trust px-5 py-2 text-sm font-bold text-white transition hover:opacity-90"
-                      >
+                      <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
                         Aceptar
                       </button>
                     </form>
@@ -213,10 +220,7 @@ export default async function CampaignDetailPage({
                       <input type="hidden" name="application_id" value={app.id} />
                       <input type="hidden" name="campaign_id" value={campaign.id} />
                       <input type="hidden" name="status" value="rejected" />
-                      <button
-                        type="submit"
-                        className="rounded-pill border border-line px-5 py-2 text-sm font-bold text-ink-soft transition hover:border-coral hover:text-coral"
-                      >
+                      <button type="submit" className={`${styles.btn} ${styles.btnGhost}`}>
                         Rechazar
                       </button>
                     </form>
@@ -225,25 +229,20 @@ export default async function CampaignDetailPage({
 
                 {(app.status === "delivered" || app.status === "approved") &&
                   (deliveriesByApplicationId.get(app.id)?.length ?? 0) > 0 && (
-                    <div className="mt-3 flex flex-col gap-1.5">
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px" }}>
                       {deliveriesByApplicationId.get(app.id)!.map((d) => (
-                        <div key={d.id} className="text-sm text-ink-soft">
+                        <div key={d.id} style={{ fontSize: "13.5px", color: "var(--ink-2)" }}>
                           {d.kind === "file" ? (
                             <a
                               href={signedUrlByPath.get(d.storage_path!) ?? "#"}
                               target="_blank"
                               rel="noreferrer"
-                              className="font-bold text-violet-deep hover:underline"
+                              className={styles.linkMore}
                             >
                               Ver pieza entregada
                             </a>
                           ) : (
-                            <a
-                              href={d.external_url!}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="font-bold text-violet-deep hover:underline"
-                            >
+                            <a href={d.external_url!} target="_blank" rel="noreferrer" className={styles.linkMore}>
                               Ver link entregado
                             </a>
                           )}
@@ -254,25 +253,21 @@ export default async function CampaignDetailPage({
                   )}
 
                 {app.status === "delivered" && (
-                  <form action={approveApplicationAction} className="mt-4">
-                    <input type="hidden" name="application_id" value={app.id} />
-                    <input type="hidden" name="campaign_id" value={campaign.id} />
-                    <button
-                      type="submit"
-                      className="rounded-pill bg-trust px-5 py-2 text-sm font-bold text-white transition hover:opacity-90"
-                    >
-                      Aprobar entrega
-                    </button>
-                  </form>
+                  <ApproveWithRatingForm applicationId={app.id} campaignId={campaign.id} />
+                )}
+
+                {app.status === "approved" && app.rating && (
+                  <div style={{ marginTop: "12px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+                    Calificaste esta entrega con {"★".repeat(app.rating)}
+                    {"☆".repeat(5 - app.rating)}
+                  </div>
                 )}
               </div>
             );
           })}
         </div>
       ) : (
-        <div className="rounded-card border border-line p-10 text-center text-ink-soft">
-          Todavía no hay aplicantes.
-        </div>
+        <div className={`${styles.card} ${styles.empty}`}>Todavía no hay aplicantes.</div>
       )}
     </div>
   );

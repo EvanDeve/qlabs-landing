@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PORTFOLIO_BUCKET } from "@/lib/ugc/portfolio";
 import { computeTrustScore } from "@/lib/ugc/trust-score";
 import TrustRing from "@/components/ugc/TrustRing";
+import CreatorPublicBook from "@/components/ugc/creador/CreatorPublicBook";
 
 export const dynamic = "force-dynamic";
 
@@ -197,25 +198,14 @@ export default async function CreatorPublicProfilePage({
       {portfolioItems && portfolioItems.length > 0 && (
         <section className="mt-10">
           <h2 className="mb-3 text-lg font-extrabold text-ink">Book</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {portfolioItems.map((item) => {
-              const url = supabase.storage.from(PORTFOLIO_BUCKET).getPublicUrl(item.storage_path)
-                .data.publicUrl;
-              return (
-                <div
-                  key={item.id}
-                  className="aspect-square overflow-hidden rounded-card border border-line bg-lavender"
-                >
-                  {item.media_type === "image" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt={item.caption ?? ""} className="h-full w-full object-cover" />
-                  ) : (
-                    <video src={url} className="h-full w-full object-cover" muted playsInline />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <CreatorPublicBook
+            items={portfolioItems.map((item) => ({
+              id: item.id,
+              url: supabase.storage.from(PORTFOLIO_BUCKET).getPublicUrl(item.storage_path).data.publicUrl,
+              media_type: item.media_type,
+              caption: item.caption,
+            }))}
+          />
         </section>
       )}
 

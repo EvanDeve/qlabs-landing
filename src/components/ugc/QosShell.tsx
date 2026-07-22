@@ -8,6 +8,10 @@ import { QosIcon } from "@/lib/ugc/qos-icons";
 import NotificationsBell from "@/components/ugc/NotificationsBell";
 import { signOutAction } from "@/lib/actions/auth";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+// ^ el CSS module vive físicamente bajo admin/ porque ahí lo importan otros
+// ~15 componentes de admin; moverlo implicaría tocar todos esos imports por
+// una razón puramente cosmética. QosShell ya no es admin-only, pero el
+// archivo de estilos sigue siendo la fuente compartida real.
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 
@@ -24,12 +28,14 @@ export default function QosShell({
   notifications,
   userName,
   userRole,
+  section = "Operación",
   children,
 }: {
   navItems: QosNavItem[];
   notifications: Notification[];
   userName: string;
   userRole: string;
+  section?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -121,7 +127,7 @@ export default function QosShell({
               <div className={styles.tbCrumb}>
                 <span>Q Labs</span>
                 <span>/</span>
-                <span>Operación</span>
+                <span>{section}</span>
               </div>
               <div className={styles.tbTitle}>{activeItem?.label ?? "Q·OS"}</div>
             </div>

@@ -1,22 +1,28 @@
 import Link from "next/link";
 import CampaignForm from "@/components/ugc/marca/CampaignForm";
+import { QosIcon } from "@/lib/ugc/qos-icons";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export default function NuevaCampanaPage() {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col items-center gap-6">
-      <Link href="/ugc/marca" className="self-start text-sm font-bold text-ink-soft hover:text-ink">
-        ← Mis campañas
+    <div style={{ maxWidth: "640px", margin: "0 auto" }}>
+      <Link href="/ugc/marca/ugc" className={styles.backBtn}>
+        <QosIcon name="chevL" size={16} />
+        Mis campañas
       </Link>
 
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">Nueva campaña</h1>
-        <p className="max-w-md text-ink-soft">
-          Publicala para que los creadores la vean, o guardala como borrador y
-          publicala más tarde.
+      <div style={{ textAlign: "center", marginBottom: "24px" }}>
+        <h1 className={styles.tbTitle} style={{ fontSize: "28px" }}>
+          Nueva campaña
+        </h1>
+        <p style={{ marginTop: "8px", color: "var(--ink-2)" }}>
+          Publicala para que los creadores la vean, o guardala como borrador y publicala más tarde.
         </p>
       </div>
 
-      <CampaignForm />
+      <div className={`${styles.card} ${styles.cardPad}`}>
+        <CampaignForm />
+      </div>
     </div>
   );
 }

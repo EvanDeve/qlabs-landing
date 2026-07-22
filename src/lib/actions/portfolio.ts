@@ -28,6 +28,8 @@ export async function uploadPortfolioItemAction(
   const file = formData.get("file");
   const category = String(formData.get("category") ?? "ugc");
   const caption = String(formData.get("caption") ?? "").trim() || null;
+  const viewsRaw = formData.get("views");
+  const views = viewsRaw && Number(viewsRaw) > 0 ? Number(viewsRaw) : null;
 
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Elegí un archivo para subir." };
@@ -78,6 +80,7 @@ export async function uploadPortfolioItemAction(
     category,
     caption,
     position: nextPosition,
+    views,
   });
 
   if (insertError) {

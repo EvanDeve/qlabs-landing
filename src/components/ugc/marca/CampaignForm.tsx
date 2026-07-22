@@ -42,6 +42,12 @@ export default function CampaignForm() {
         placeholder="Food & lifestyle, GAM, 5K+ seguidores"
       />
 
+      <Field
+        label="Compensación adicional (opcional)"
+        name="compensation_details"
+        placeholder="Ej: Cena para 2 personas incluida"
+      />
+
       <fieldset className="flex flex-col gap-2 text-left">
         <legend className="mb-1 text-xs font-bold text-ink">Entregables</legend>
         <div className="grid grid-cols-2 gap-3">

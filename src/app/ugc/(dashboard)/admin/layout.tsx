@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth/require-role";
-import QosShell, { type QosNavItem } from "@/components/ugc/admin/QosShell";
+import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 
 export default async function AdminLayout({

@@ -378,6 +378,7 @@
   padding: 26px;
   max-width: 1400px;
   width: 100%;
+  margin: 0 auto;
 }
 
 /* ============================================================
@@ -421,6 +422,15 @@
 .btn.btnDanger:hover {
   background: #c9313a;
   box-shadow: 0 4px 12px rgba(229, 72, 77, 0.4);
+}
+.btn.btnSoft {
+  background: var(--b-50);
+  color: var(--b-600);
+  border-color: var(--b-100);
+}
+.btn.btnSoft:hover {
+  background: var(--b-100);
+  border-color: var(--b-300);
 }
 .btnSm {
   padding: 6px 11px;
@@ -1438,6 +1448,283 @@
   text-align: center;
   padding: 40px 20px;
   color: var(--ink-3);
+}
+
+/* ============================================================
+   MARKETPLACE (creador + marca): subtabs, grid de promos, book, rating
+   ============================================================ */
+.subtabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+/* .qosRoot-prefixed so these beat the ".qosRoot button { border:none;
+   background:none; color:inherit }" reset above — a bare single-class
+   selector on a <button> loses that specificity fight (see the 2026-07-08
+   .btnPrimary/.btnGhost bug in project memory; same root cause). */
+.qosRoot .subtab {
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  transition: var(--t-fast);
+}
+.qosRoot .subtab:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+.qosRoot .subtabOn {
+  background: var(--ink-deep);
+  color: #fff;
+  border-color: var(--ink-deep);
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.bookGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.bookClip {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--sh-sm);
+}
+.bookThumb {
+  aspect-ratio: 9 / 13;
+  background: linear-gradient(160deg, var(--ink-side-2), var(--ink-deep));
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.bookPlay {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.bookViews {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 3px 8px;
+  border-radius: 7px;
+  backdrop-filter: blur(4px);
+}
+.bookOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 8px;
+  opacity: 0;
+  transition: var(--t-fast);
+}
+.bookThumb:hover .bookOverlay {
+  opacity: 1;
+}
+.qosRoot .bookOverlayBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.qosRoot .bookOverlayBtn:disabled {
+  opacity: 0.4;
+}
+.bookInfo {
+  padding: 12px 14px;
+}
+.bookInfo b {
+  font-size: 13px;
+  font-weight: 600;
+}
+.bookInfo span {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+
+.stars {
+  display: inline-flex;
+  gap: 2px;
+}
+.qosRoot .starBtn {
+  color: var(--line-strong);
+  transition: var(--t-fast);
+}
+.qosRoot .starBtnOn {
+  color: #f5a623;
+}
+.qosRoot .starBtn:hover {
+  color: #f5a623;
+}
+
+.sysCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sysHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sysIc {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--b-50);
+  color: var(--b-600);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.sysHead h3 {
+  font-size: 15.5px;
+  font-weight: 700;
+}
+.sysDesc {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.sysFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.campRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  margin-bottom: 12px;
+}
+.campBody {
+  flex: 1;
+  min-width: 0;
+}
+.campBody b {
+  font-size: 16px;
+  font-weight: 700;
+}
+.campBody span {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+.campN {
+  text-align: center;
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+.campN b {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--b-500);
+}
+.campN small {
+  font-size: 11px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.applicantRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  margin-bottom: 10px;
+}
+.applicantAv {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.applicantBody {
+  flex: 1;
+  min-width: 0;
+}
+.applicantBody b {
+  font-size: 15px;
+  font-weight: 600;
+}
+.applicantBody span {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.applicantActs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.miniStat {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fileName {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ============================================================

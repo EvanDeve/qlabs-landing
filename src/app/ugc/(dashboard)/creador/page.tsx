@@ -1,10 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import ApplyForm from "@/components/ugc/creador/ApplyForm";
-import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
-import {
-  APPLICATION_STATUS_LABEL,
-  APPLICATION_STATUS_STYLE,
-} from "@/lib/ugc/application-status";
+import CreadorFeedGrid from "@/components/ugc/creador/CreadorFeedGrid";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +10,14 @@ export default async function CreadorFeedPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: campaigns }, { data: myApplications }] = await Promise.all([
+  const [{ data: campaigns }, { data: myApplications }, { data: creatorProfile }] = await Promise.all([
     supabase
       .from("campaigns")
       .select("*")
       .eq("status", "published")
       .order("published_at", { ascending: false }),
     supabase.from("applications").select("*").eq("creator_id", user!.id),
+    supabase.from("creator_profiles").select("verified").eq("profile_id", user!.id).single(),
   ]);
 
   const brandIds = [...new Set((campaigns ?? []).map((c) => c.brand_id))];
@@ -29,75 +26,53 @@ export default async function CreadorFeedPage() {
     : { data: [] };
   const brandByProfileId = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b]));
 
-  const applicationByCampaignId = new Map(
-    (myApplications ?? []).map((a) => [a.campaign_id, a])
-  );
+  const applicationByCampaignId = new Map((myApplications ?? []).map((a) => [a.campaign_id, a]));
+
+  const feedCampaigns = (campaigns ?? []).map((campaign) => {
+    const brand = brandByProfileId.get(campaign.brand_id);
+    const application = applicationByCampaignId.get(campaign.id);
+    return {
+      id: campaign.id,
+      title: campaign.title,
+      brief: campaign.brief,
+      budget_amount: campaign.budget_amount,
+      compensation_details: campaign.compensation_details,
+      deadline_days: campaign.deadline_days,
+      target_audience: campaign.target_audience,
+      deliverables: Array.isArray(campaign.deliverables)
+        ? (campaign.deliverables as { type: string; qty: number }[])
+        : [],
+      brandName: brand?.brand_name ?? null,
+      brandIndustry: brand?.industry ?? null,
+      applicationStatus: application?.status ?? null,
+    };
+  });
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="mb-8 text-3xl font-extrabold tracking-tight text-ink">Campañas publicadas</h1>
+    <div>
+      <h1 className={styles.tbTitle} style={{ fontSize: "26px" }}>
+        Feed de promos
+      </h1>
+      <p style={{ color: "var(--ink-2)", marginBottom: "20px" }}>
+        Campañas de marcas verificadas buscando creadores como vos. Aplicá con tu book en un clic.
+      </p>
 
-      {campaigns && campaigns.length > 0 ? (
-        <div className="flex flex-col gap-5">
-          {campaigns.map((campaign) => {
-            const brand = brandByProfileId.get(campaign.brand_id);
-            const application = applicationByCampaignId.get(campaign.id);
-            const deliverables = Array.isArray(campaign.deliverables)
-              ? (campaign.deliverables as { type: string; qty: number }[])
-              : [];
-
-            return (
-              <div key={campaign.id} className="rounded-card border border-line p-6">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold text-ink-soft">{brand?.brand_name}</span>
-                  {brand?.industry && (
-                    <span className="rounded-pill bg-lavender px-3 py-1 text-xs font-bold text-violet-deep">
-                      {brand.industry}
-                    </span>
-                  )}
-                </div>
-
-                <h2 className="mt-3 text-lg font-extrabold text-ink">{campaign.title}</h2>
-                <p className="mt-2 text-ink-soft">{campaign.brief}</p>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
-                  <span className="font-bold text-ink">₡{campaign.budget_amount.toLocaleString("es-CR")}</span>
-                  {campaign.deadline_days && <span>· {campaign.deadline_days} días</span>}
-                  {campaign.target_audience && <span>· {campaign.target_audience}</span>}
-                </div>
-
-                {deliverables.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {deliverables.map((d) => (
-                      <span
-                        key={d.type}
-                        className="rounded-pill border border-line px-3 py-1 text-xs font-semibold text-ink-soft"
-                      >
-                        {d.qty}x {FORMAT_LABEL[d.type] ?? d.type}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {application ? (
-                  <div className="mt-4 flex items-center gap-2">
-                    <span
-                      className={`rounded-pill px-3 py-1 text-xs font-bold ${APPLICATION_STATUS_STYLE[application.status]}`}
-                    >
-                      Ya aplicaste — {APPLICATION_STATUS_LABEL[application.status]}
-                    </span>
-                  </div>
-                ) : (
-                  <ApplyForm campaignId={campaign.id} />
-                )}
-              </div>
-            );
-          })}
+      {!creatorProfile?.verified && (
+        <div
+          className={`${styles.card} ${styles.cardPad}`}
+          style={{ marginBottom: "20px", background: "var(--warn-bg)", border: "1px solid var(--warn-line)" }}
+        >
+          <b style={{ color: "var(--warn)" }}>Tu perfil está en revisión.</b>
+          <p style={{ marginTop: "4px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+            Todavía no podés aplicar a promos — mientras esperás, aprovechá para completar tu book y tu perfil.
+          </p>
         </div>
+      )}
+
+      {feedCampaigns.length > 0 ? (
+        <CreadorFeedGrid campaigns={feedCampaigns} verified={creatorProfile?.verified ?? false} />
       ) : (
-        <div className="rounded-card border border-line p-10 text-center text-ink-soft">
-          No hay campañas publicadas por ahora. Volvé pronto.
-        </div>
+        <div className={`${styles.card} ${styles.empty}`}>No hay campañas publicadas por ahora. Volvé pronto.</div>
       )}
     </div>
   );

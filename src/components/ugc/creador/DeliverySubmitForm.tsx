@@ -1,15 +1,19 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { submitDeliveryAction, type SubmitDeliveryState } from "@/lib/actions/deliveries";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export default function DeliverySubmitForm({ applicationId }: { applicationId: string }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState<SubmitDeliveryState, FormData>(
     async (_prevState, formData) => {
       const result = await submitDeliveryAction(_prevState, formData);
       if (!result) {
         formRef.current?.reset();
+        setFileName(null);
       }
       return result;
     },
@@ -17,44 +21,59 @@ export default function DeliverySubmitForm({ applicationId }: { applicationId: s
   );
 
   return (
-    <form ref={formRef} action={formAction} className="mt-4 flex flex-col gap-3 rounded-card bg-lavender p-4">
-      <div className="flex flex-col gap-1 text-sm font-semibold text-ink-soft">
-        <label>
-          Archivo
+    <form
+      ref={formRef}
+      action={formAction}
+      style={{
+        marginTop: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        padding: "16px",
+        borderRadius: "var(--r-lg)",
+        background: "var(--surface-3)",
+      }}
+    >
+      <p style={{ fontSize: "12.5px", color: "var(--ink-3)" }}>
+        Subí el video final y pegá el link del post ya publicado en redes — podés mandar los dos juntos.
+      </p>
+      <div className={styles.field} style={{ marginBottom: 0 }}>
+        <label>Archivo (video final)</label>
+        <div className={styles.fileRow}>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.btnSoft}`}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Elegir archivo
+          </button>
+          <span className={styles.fileName}>{fileName ?? "Sin archivo seleccionado"}</span>
           <input
+            ref={fileInputRef}
             type="file"
             name="file"
-            className="mt-1 block w-full text-sm text-ink-soft file:mr-3 file:rounded-pill file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-bold file:text-violet-deep"
+            style={{ display: "none" }}
+            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
           />
-        </label>
+        </div>
       </div>
-      <div className="text-center text-xs font-bold text-ink-soft">o</div>
-      <label className="flex flex-col gap-1 text-sm font-semibold text-ink-soft">
-        Link (Drive, WeTransfer, etc.)
-        <input
-          type="url"
-          name="external_url"
-          placeholder="https://..."
-          className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-violet"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-semibold text-ink-soft">
-        Nota (opcional)
-        <input
-          type="text"
-          name="note"
-          placeholder="Reel final, versión con subtítulos"
-          className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-violet"
-        />
-      </label>
+      <div className={styles.field} style={{ marginBottom: 0 }}>
+        <label>Link del post publicado (Instagram, TikTok, etc.)</label>
+        <input type="url" name="external_url" placeholder="https://..." className={styles.inp} />
+      </div>
+      <div className={styles.field} style={{ marginBottom: 0 }}>
+        <label>Nota (opcional)</label>
+        <input type="text" name="note" placeholder="Reel final, versión con subtítulos" className={styles.inp} />
+      </div>
       <input type="hidden" name="application_id" value={applicationId} />
-      {state?.error && <p className="text-sm text-coral">{state.error}</p>}
+      {state?.error && <p style={{ fontSize: "12.5px", color: "var(--risk)" }}>{state.error}</p>}
       <button
         type="submit"
         disabled={pending}
-        className="self-start rounded-pill bg-violet px-6 py-2.5 text-sm font-bold text-white transition hover:bg-violet-deep disabled:opacity-60"
+        className={`${styles.btn} ${styles.btnPrimary}`}
+        style={{ alignSelf: "flex-start" }}
       >
-        {pending ? "Entregando..." : "Entregar pieza"}
+        {pending ? "Entregando…" : "Entregar pieza"}
       </button>
     </form>
   );
