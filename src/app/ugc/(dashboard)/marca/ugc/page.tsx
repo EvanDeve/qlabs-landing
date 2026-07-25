@@ -10,11 +10,14 @@ export default async function MarcaUgcPanelPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: campaigns } = await supabase
-    .from("campaigns")
-    .select("id, title, status, budget_amount, created_at")
-    .eq("brand_id", user!.id)
-    .order("created_at", { ascending: false });
+  const [{ data: campaigns }, { data: brandProfile }] = await Promise.all([
+    supabase
+      .from("campaigns")
+      .select("id, title, status, budget_amount, created_at")
+      .eq("brand_id", user!.id)
+      .order("created_at", { ascending: false }),
+    supabase.from("brand_profiles").select("verified").eq("profile_id", user!.id).maybeSingle(),
+  ]);
 
   const campaignIds = (campaigns ?? []).map((c) => c.id);
   const { data: applications } = campaignIds.length
@@ -76,6 +79,23 @@ export default async function MarcaUgcPanelPage() {
       <p style={{ color: "var(--ink-2)", marginBottom: "20px" }}>
         Publicá campañas, revisá aplicantes y convertí contenido real en prueba social.
       </p>
+
+      {!brandProfile?.verified && (
+        <div
+          className={`${styles.card} ${styles.cardPad}`}
+          style={{
+            marginBottom: "20px",
+            background: "var(--warn-bg)",
+            border: "1px solid var(--warn-line)",
+          }}
+        >
+          <b style={{ color: "var(--warn)" }}>Tu negocio está en revisión.</b>
+          <p style={{ marginTop: "4px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+            Todavía no podés publicar campañas — guardalas como borrador y las publicás apenas te
+            verifiquemos.
+          </p>
+        </div>
+      )}
 
       <UgcTabs
         campaigns={(campaigns ?? []).map((c) => ({

@@ -7,6 +7,17 @@ import { DELIVERABLE_TYPES } from "@/lib/ugc/deliverables";
 
 export type CampaignActionState = { error: string } | null;
 
+type Client = Awaited<ReturnType<typeof createClient>>;
+
+async function isBrandVerified(supabase: Client, userId: string) {
+  const { data } = await supabase
+    .from("brand_profiles")
+    .select("verified")
+    .eq("profile_id", userId)
+    .maybeSingle();
+  return data?.verified === true;
+}
+
 export async function createCampaignAction(
   _prevState: CampaignActionState,
   formData: FormData
@@ -39,6 +50,15 @@ export async function createCampaignAction(
   }
   if (deliverables.length === 0) {
     return { error: "Elegí al menos un entregable con cantidad mayor a 0." };
+  }
+
+  // El gate real vive en RLS; esto solo convierte la negación cruda en un
+  // mensaje entendible. Guardar como borrador sí está permitido sin verificar.
+  if (intent === "publish" && !(await isBrandVerified(supabase, user.id))) {
+    return {
+      error:
+        "Tu negocio todavía está en revisión, así que aún no podés publicar. Guardala como borrador y la publicás apenas te verifiquemos.",
+    };
   }
 
   const { error } = await supabase.from("campaigns").insert({
@@ -75,6 +95,12 @@ export async function publishCampaignAction(formData: FormData) {
 
   const campaignId = String(formData.get("campaign_id") ?? "");
   if (!campaignId) return;
+
+  // Publicar un borrador pasa por el mismo gate: RLS lo rechazaría igual, pero
+  // se corta antes para no dejar la impresión de que "no pasó nada".
+  if (!(await isBrandVerified(supabase, user.id))) {
+    return;
+  }
 
   await supabase
     .from("campaigns")

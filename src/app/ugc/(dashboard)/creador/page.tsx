@@ -44,6 +44,10 @@ export default async function CreadorFeedPage() {
         : [],
       brandName: brand?.brand_name ?? null,
       brandIndustry: brand?.industry ?? null,
+      brandLogoUrl: brand?.logo_url ?? null,
+      brandLocation: brand?.location ?? null,
+      brandSlug: brand?.slug ?? null,
+      brandVerified: brand?.verified ?? false,
       applicationStatus: application?.status ?? null,
     };
   });

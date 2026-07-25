@@ -180,6 +180,10 @@ export interface Database {
           website: string | null;
           instagram_handle: string | null;
           description: string | null;
+          logo_url: string | null;
+          location: string | null;
+          verified: boolean;
+          slug: string | null;
         };
         Insert: {
           profile_id: string;
@@ -188,6 +192,10 @@ export interface Database {
           website?: string | null;
           instagram_handle?: string | null;
           description?: string | null;
+          logo_url?: string | null;
+          location?: string | null;
+          verified?: boolean;
+          slug?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["brand_profiles"]["Insert"]>;
         Relationships: [];
@@ -464,12 +472,35 @@ export interface Database {
       };
     };
     Views: {
+      creator_public_profiles: {
+        Row: {
+          profile_id: string;
+          handle: string;
+          followers_count: number;
+          niches: string[];
+          languages: string[];
+          instagram_handle: string | null;
+          tiktok_handle: string | null;
+          verified: boolean;
+          engagement_rate: number | null;
+          avg_views: number | null;
+          display_name: string | null;
+          bio: string | null;
+          city: string | null;
+          avatar_url: string | null;
+        };
+        Relationships: [];
+      };
       campaign_previews: {
         Row: {
           id: string;
           title: string;
           brand_name: string;
           industry: string | null;
+          brand_logo_url: string | null;
+          brand_location: string | null;
+          brand_slug: string | null;
+          brand_verified: boolean;
           deliverable_types: string[] | null;
           published_at: string | null;
         };
@@ -486,7 +517,17 @@ export interface Database {
         Returns: {
           published_campaigns_count: number;
           creators_count: number;
+          verified_creators_count: number;
           brands_count: number;
+        }[];
+      };
+      brand_public_campaigns: {
+        Args: { p_slug: string };
+        Returns: {
+          id: string;
+          title: string;
+          deliverable_types: string[] | null;
+          published_at: string | null;
         }[];
       };
       creator_delivery_stats: {
@@ -494,6 +535,16 @@ export interface Database {
         Returns: {
           approved_count: number;
           on_time_ratio: number | null;
+        }[];
+      };
+      creator_public_stats: {
+        Args: { p_creator_id: string };
+        Returns: {
+          approved_count: number;
+          delivered_count: number;
+          on_time_ratio: number | null;
+          avg_rating: number | null;
+          rating_count: number;
         }[];
       };
     };

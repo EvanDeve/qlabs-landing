@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Database } from "@/lib/database.types";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
+import BrandAvatar from "@/components/ugc/BrandAvatar";
 
 type CampaignPreview = Database["public"]["Views"]["campaign_previews"]["Row"];
 
@@ -9,13 +10,37 @@ export default function CampaignCard({ campaign }: { campaign: CampaignPreview }
 
   return (
     <div className="flex flex-col rounded-card border border-line bg-white p-6">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-bold text-ink-soft">{campaign.brand_name}</span>
-        {campaign.industry && (
-          <span className="rounded-pill bg-lavender px-3 py-1 text-xs font-bold text-violet-deep">
-            {campaign.industry}
-          </span>
-        )}
+      <div className="flex items-center gap-3">
+        <BrandAvatar
+          name={campaign.brand_name}
+          logoUrl={campaign.brand_logo_url}
+          size={38}
+          radius={10}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            {campaign.brand_slug ? (
+              <Link
+                href={`/ugc/marcas/${campaign.brand_slug}`}
+                className="truncate text-sm font-bold text-ink transition hover:text-violet"
+              >
+                {campaign.brand_name}
+              </Link>
+            ) : (
+              <span className="truncate text-sm font-bold text-ink">{campaign.brand_name}</span>
+            )}
+            {campaign.brand_verified && (
+              <i
+                className="fa-solid fa-circle-check shrink-0 text-xs text-trust"
+                title="Marca verificada"
+                aria-label="Marca verificada"
+              />
+            )}
+          </div>
+          <div className="truncate text-xs text-ink-soft">
+            {[campaign.industry, campaign.brand_location].filter(Boolean).join(" · ")}
+          </div>
+        </div>
       </div>
 
       <h3 className="mt-3 text-lg font-extrabold leading-snug text-ink">{campaign.title}</h3>

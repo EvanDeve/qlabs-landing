@@ -17,7 +17,7 @@ export default async function MarcaPerfilPage() {
     .single();
 
   return (
-    <div style={{ maxWidth: "560px" }}>
+    <div style={{ maxWidth: "920px" }}>
       <h1 className={styles.tbTitle} style={{ fontSize: "26px" }}>
         Perfil del negocio
       </h1>
@@ -25,17 +25,59 @@ export default async function MarcaPerfilPage() {
         Así te ven los creadores dentro de UGC·CRC.
       </p>
 
-      <div className={`${styles.card} ${styles.cardPad}`}>
-        <BrandProfileEditForm
-          initial={{
-            brand_name: brandProfile?.brand_name ?? "",
-            industry: brandProfile?.industry ?? null,
-            website: brandProfile?.website ?? null,
-            instagram_handle: brandProfile?.instagram_handle ?? null,
-            description: brandProfile?.description ?? null,
+      {brandProfile?.verified ? (
+        <div
+          className={`${styles.card} ${styles.cardPad}`}
+          style={{
+            marginBottom: "20px",
+            background: "var(--ok-bg)",
+            border: "1px solid var(--ok-line)",
           }}
-        />
-      </div>
+        >
+          <b style={{ color: "var(--ok)" }}>Negocio verificado.</b>
+          <p style={{ marginTop: "4px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+            Los creadores ven el sello en tus promos.{" "}
+            {brandProfile.slug && (
+              <a
+                href={`/ugc/marcas/${brandProfile.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--b-600)", fontWeight: 600 }}
+              >
+                Ver tu perfil público →
+              </a>
+            )}
+          </p>
+        </div>
+      ) : (
+        <div
+          className={`${styles.card} ${styles.cardPad}`}
+          style={{
+            marginBottom: "20px",
+            background: "var(--warn-bg)",
+            border: "1px solid var(--warn-line)",
+          }}
+        >
+          <b style={{ color: "var(--warn)" }}>Tu negocio está en revisión.</b>
+          <p style={{ marginTop: "4px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+            Verificamos cada negocio antes de que publique, para que los creadores sepan con quién
+            trabajan. Mientras tanto podés dejar tus campañas listas como borrador. Completar este
+            perfil (logo, zona y descripción) acelera la revisión.
+          </p>
+        </div>
+      )}
+
+      <BrandProfileEditForm
+        initial={{
+          brand_name: brandProfile?.brand_name ?? "",
+          industry: brandProfile?.industry ?? null,
+          website: brandProfile?.website ?? null,
+          instagram_handle: brandProfile?.instagram_handle ?? null,
+          description: brandProfile?.description ?? null,
+          location: brandProfile?.location ?? null,
+          logo_url: brandProfile?.logo_url ?? null,
+        }}
+      />
     </div>
   );
 }

@@ -1,15 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
-import { setCreatorVerifiedAction, markCampaignCompletedAction } from "@/lib/actions/admin";
+import {
+  setCreatorVerifiedAction,
+  setBrandVerifiedAction,
+  markCampaignCompletedAction,
+} from "@/lib/actions/admin";
+import BrandAvatar from "@/components/ugc/BrandAvatar";
 import { APPLICATION_STATUS_LABEL } from "@/lib/ugc/application-status";
 import { CAMPAIGN_STATUS_LABEL } from "@/lib/ugc/campaign-status";
 import styles from "../qos.module.css";
+import { displayHandle } from "@/lib/ugc/handles";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMarketplacePage() {
   const supabase = await createClient();
 
-  const [{ data: creatorProfiles }, { data: campaigns }, { data: applications }] =
+  const [{ data: creatorProfiles }, { data: campaigns }, { data: applications }, { data: allBrands }] =
     await Promise.all([
       supabase
         .from("creator_profiles")
@@ -22,6 +28,13 @@ export default async function AdminMarketplacePage() {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(20),
+      // Todas las marcas, no solo las que ya publicaron: una marca nueva tiene
+      // que poder verificarse ANTES de poder publicar (el gate es duro).
+      supabase
+        .from("brand_profiles")
+        .select("*")
+        .order("verified", { ascending: true })
+        .order("brand_name"),
     ]);
 
   const creatorProfileIds = (creatorProfiles ?? []).map((c) => c.profile_id);
@@ -51,7 +64,7 @@ export default async function AdminMarketplacePage() {
             <div key={creator.profile_id} className={styles.attnItem} style={{ cursor: "default" }}>
               <div className={styles.attnBody}>
                 <div className={styles.attnTitle}>
-                  {creator.handle} {creator.verified && <span className={`${styles.riskPill} ${styles.riskOk}`}>Verificado</span>}
+                  {displayHandle(creator.handle)} {creator.verified && <span className={`${styles.riskPill} ${styles.riskOk}`}>Verificado</span>}
                 </div>
                 <div className={styles.attnMeta}>
                   {account?.city && `${account.city} · `}
@@ -71,6 +84,50 @@ export default async function AdminMarketplacePage() {
             </div>
           );
         })}
+      </div>
+
+      <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
+        <div className={styles.sectionHead}>
+          <h2>Marcas ({allBrands?.length ?? 0})</h2>
+        </div>
+        {(allBrands ?? []).map((brand) => (
+          <div key={brand.profile_id} className={styles.attnItem} style={{ cursor: "default" }}>
+            <BrandAvatar name={brand.brand_name} logoUrl={brand.logo_url} size={32} radius={9} />
+            <div className={styles.attnBody}>
+              <div className={styles.attnTitle}>
+                {brand.brand_name}{" "}
+                {brand.verified && (
+                  <span className={`${styles.riskPill} ${styles.riskOk}`}>Verificada</span>
+                )}
+              </div>
+              <div className={styles.attnMeta}>
+                {[brand.industry, brand.location].filter(Boolean).join(" · ") || "Sin datos"}
+              </div>
+            </div>
+            <div className={styles.attnRight}>
+              {brand.slug && (
+                <a
+                  href={`/ugc/marcas/${brand.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                >
+                  Ver perfil
+                </a>
+              )}
+              <form action={setBrandVerifiedAction}>
+                <input type="hidden" name="profile_id" value={brand.profile_id} />
+                <input type="hidden" name="verified" value={(!brand.verified).toString()} />
+                <button
+                  type="submit"
+                  className={`${styles.btn} ${styles.btnSm} ${brand.verified ? styles.btnGhost : styles.btnPrimary}`}
+                >
+                  {brand.verified ? "Quitar verificación" : "Verificar"}
+                </button>
+              </form>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>

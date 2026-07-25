@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import ApplyForm from "@/components/ugc/creador/ApplyForm";
+import BrandAvatar from "@/components/ugc/BrandAvatar";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
 import { creatorPayout } from "@/lib/ugc/payout";
@@ -19,6 +21,10 @@ type FeedCampaign = {
   deliverables: { type: string; qty: number }[];
   brandName: string | null;
   brandIndustry: string | null;
+  brandLogoUrl: string | null;
+  brandLocation: string | null;
+  brandSlug: string | null;
+  brandVerified: boolean;
   applicationStatus: ApplicationStatus | null;
 };
 
@@ -63,15 +69,36 @@ export default function CreadorFeedGrid({
         <div className={styles.cardsGrid}>
           {visible.map((campaign) => (
             <div key={campaign.id} className={`${styles.card} ${styles.cardPad} ${styles.sysCard}`}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink-2)" }}>
-                  {campaign.brandName}
-                </span>
-                {campaign.brandIndustry && <span className={styles.chip}>{campaign.brandIndustry}</span>}
+              <div className={styles.promoHead}>
+                <BrandAvatar
+                  name={campaign.brandName ?? "Marca"}
+                  logoUrl={campaign.brandLogoUrl}
+                  size={36}
+                  radius={10}
+                />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className={styles.promoBrand}>
+                    {campaign.brandName}
+                    {campaign.brandVerified && (
+                      <i
+                        className="fa-solid fa-circle-check"
+                        title="Marca verificada"
+                        style={{ marginLeft: "5px", color: "var(--ok)", fontSize: "11px" }}
+                      />
+                    )}
+                  </div>
+                  <div className={styles.promoBrandMeta}>
+                    {[campaign.brandIndustry, campaign.brandLocation].filter(Boolean).join(" · ")}
+                  </div>
+                </div>
               </div>
 
-              <h3 style={{ fontSize: "16px", fontWeight: 700, letterSpacing: "-0.01em" }}>{campaign.title}</h3>
-              <p style={{ fontSize: "13.5px", color: "var(--ink-2)", lineHeight: 1.5 }}>{campaign.brief}</p>
+              <Link href={`/ugc/creador/promos/${campaign.id}`} className={styles.promoTitle}>
+                {campaign.title}
+              </Link>
+              {/* Acotado a 3 líneas: el brief completo vive en el detalle, así
+                  todas las tarjetas de la grilla miden lo mismo. */}
+              <p className={styles.promoBrief}>{campaign.brief}</p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", fontSize: "12.5px", color: "var(--ink-3)" }}>
                 <span style={{ fontWeight: 700, color: "var(--ink)" }}>
@@ -95,7 +122,10 @@ export default function CreadorFeedGrid({
                 </div>
               )}
 
-              <div style={{ marginTop: "auto", paddingTop: "4px" }}>
+              <div className={styles.promoFoot}>
+                <Link href={`/ugc/creador/promos/${campaign.id}`} className={styles.promoMore}>
+                  Ver detalle →
+                </Link>
                 {campaign.applicationStatus ? (
                   <span
                     className={`${styles.riskPill} ${styles["risk" + APPLICATION_STATUS_STYLE[campaign.applicationStatus]]}`}
