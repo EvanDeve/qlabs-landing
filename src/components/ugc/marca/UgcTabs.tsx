@@ -122,12 +122,26 @@ export default function UgcTabs({ campaigns, applicants }: { campaigns: Campaign
                         </span>
                       )}
                     </div>
+                    {/* Antes seguidores y nichos caían por separado a
+                        `campaignTitle` cuando venían vacíos, así que un creador
+                        con el perfil a medias mostraba el título de la campaña
+                        DOS veces en la misma fila. Ahora cada slot muestra lo
+                        suyo y la campaña tiene el suyo propio. */}
                     <span>
-                      {a.followersCount ? `${a.followersCount.toLocaleString("es-CR")} seguidores` : a.campaignTitle}
-                      {a.engagementRate ? ` · ${a.engagementRate}% engagement` : ""}
+                      {[
+                        a.followersCount
+                          ? `${a.followersCount.toLocaleString("es-CR")} seguidores`
+                          : null,
+                        a.engagementRate ? `${a.engagementRate}% engagement` : null,
+                        a.niches.slice(0, 2).join(" · ") || null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "Perfil sin completar"}
                     </span>
                   </div>
-                  <span className={styles.miniStat}>{a.niches.slice(0, 2).join(" · ") || a.campaignTitle}</span>
+                  <span className={styles.miniStat} title={a.campaignTitle}>
+                    {a.campaignTitle}
+                  </span>
                   <div className={styles.applicantActs}>
                     {a.creatorHandle && (
                       <Link

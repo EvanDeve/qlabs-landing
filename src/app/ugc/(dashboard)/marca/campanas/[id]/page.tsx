@@ -9,6 +9,7 @@ import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/de
 import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import { displayHandle } from "@/lib/ugc/handles";
 
 export const dynamic = "force-dynamic";
 
@@ -157,7 +158,7 @@ export default async function CampaignDetailPage({
                           href={`/ugc/creadores/${creatorProfile.handle.replace(/^@/, "")}`}
                           style={{ fontWeight: 800, color: "var(--ink)" }}
                         >
-                          {creatorProfile.handle}
+                          {displayHandle(creatorProfile.handle)}
                         </Link>
                       ) : (
                         <span style={{ fontWeight: 800, color: "var(--ink)" }}>

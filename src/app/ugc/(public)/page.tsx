@@ -26,7 +26,7 @@ export default async function UgcPublicPage() {
       <Hero />
       <Stats
         campaignsCount={stats?.published_campaigns_count ?? campaigns?.length ?? 0}
-        creatorsCount={stats?.creators_count ?? 0}
+        creatorsCount={stats?.verified_creators_count ?? 0}
         brandsCount={stats?.brands_count ?? 0}
       />
       <CampaignsGrid campaigns={campaigns ?? []} />

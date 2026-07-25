@@ -30,8 +30,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
-    request.nextUrl.pathname.startsWith(prefix)
+  // OJO: tiene que comparar por SEGMENTO, no con startsWith pelado.
+  // "/ugc/creadores/vale".startsWith("/ugc/creador") es true, así que el perfil
+  // público del creador (y "/ugc/marcas/..." vs "/ugc/marca") quedaba detrás del
+  // login: justo las dos páginas pensadas para compartirse por fuera de la app.
+  const { pathname } = request.nextUrl;
+  const isProtected = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
 
   if (isProtected && !user) {

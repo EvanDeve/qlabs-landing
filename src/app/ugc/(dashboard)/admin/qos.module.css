@@ -100,16 +100,26 @@
   letter-spacing: -0.01em;
   color: var(--ink);
 }
-.qosRoot a {
-  color: inherit;
-  text-decoration: none;
-}
-.qosRoot button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: inherit;
+/* Estos dos resets van dentro de @layer components a propósito.
+   `@import "tailwindcss"` (v4) emite las utilidades dentro de @layer utilities,
+   y el CSS *sin capa* le gana a CUALQUIER capa sin importar la especificidad.
+   Sin esto, un <button>/<a> estilizado con clases de Tailwind dentro del shell
+   Q·OS pierde su borde/fondo/color y se renderiza como texto plano — no hay
+   cantidad de clases que lo salve. Dentro de components, el orden queda:
+   components (este reset) < utilities (Tailwind) < sin capa (las clases .btn,
+   .subtab, etc. de este mismo archivo), que es exactamente lo que queremos. */
+@layer components {
+  .qosRoot a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .qosRoot button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
+  }
 }
 .qosRoot input,
 .qosRoot textarea,
@@ -313,6 +323,7 @@
   width: 32px;
   height: 32px;
   border-radius: 9px;
+  overflow: hidden;
   background: linear-gradient(150deg, var(--b-400), var(--b-600));
   display: grid;
   place-items: center;
@@ -321,11 +332,29 @@
   color: #fff;
   flex-shrink: 0;
 }
+/* La foto (si la subió) llena el cuadro y tapa el degradado de respaldo.
+   Va absoluta con inset:0 en vez de width/height:100% porque .av es un grid
+   cuya fila se auto-dimensiona al contenido: con alto porcentual la foto se
+   medía contra una fila que a su vez dependía de la foto, y una imagen
+   vertical terminaba en 32x57 (object-fit nunca recortaba). Contra la caja
+   posicionada el alto sí es definido, y sirve para cualquier tamaño de .av. */
+.avImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 .sbUser .uName {
   font-size: 13px;
   font-weight: 600;
   color: #fff;
   line-height: 1.2;
+  /* Un handle o nombre de negocio largo desbordaba la sidebar. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sbUser .uRole {
   font-size: 11px;
@@ -618,6 +647,7 @@
 }
 
 .av {
+  position: relative; /* base para .avImg */
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -1459,10 +1489,7 @@
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
-/* .qosRoot-prefixed so these beat the ".qosRoot button { border:none;
-   background:none; color:inherit }" reset above — a bare single-class
-   selector on a <button> loses that specificity fight (see the 2026-07-08
-   .btnPrimary/.btnGhost bug in project memory; same root cause). */
+/* .qosRoot-prefixed para ganarle al reset de <button> de arriba. */
 .qosRoot .subtab {
   font-size: 13.5px;
   font-weight: 600;
@@ -1473,7 +1500,10 @@
   color: var(--ink-2);
   transition: var(--t-fast);
 }
-.qosRoot .subtab:hover {
+/* :not(.subtabOn) es necesario: `.subtab:hover` (0,2,1) le gana a `.subtabOn`
+   (0,2,0) por el pseudo-clase, así que sin esto el chip activo quedaba con
+   texto --ink sobre fondo --ink-deep al pasar el mouse: ilegible. */
+.qosRoot .subtab:hover:not(.subtabOn) {
   border-color: var(--line-strong);
   color: var(--ink);
 }
@@ -1708,10 +1738,17 @@
   gap: 8px;
   flex-shrink: 0;
 }
+/* Sin el max-width + truncado, un título de campaña largo se quedaba con todo
+   el ancho (flex-shrink:0) y aplastaba los datos del creador a la izquierda. */
 .miniStat {
   font-size: 12.5px;
   color: var(--ink-3);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fileRow {
@@ -1778,4 +1815,213 @@
   .kpiRow {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================================
+   PERFIL DE LA MARCA: logo, zona y vista previa en vivo
+   ============================================================ */
+.brandProfileGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .brandProfileGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.hiddenFile {
+  display: none;
+}
+.fieldHint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.formError {
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--risk);
+}
+.brandPreviewCol {
+  position: sticky;
+  top: 24px;
+}
+.previewLabel {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.brandPreviewHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brandPreviewName {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brandPreviewMeta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.brandPreviewDesc {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ============================================================
+   FEED DE PROMOS: encabezado con logo, brief acotado, detalle
+   ============================================================ */
+.promoHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.promoBrand {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.promoBrandMeta {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qosRoot .promoTitle {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  transition: var(--t-fast);
+}
+.qosRoot .promoTitle:hover {
+  color: var(--b-600);
+}
+/* El brief se acota acá para que la grilla no quede despareja; completo en el detalle. */
+.promoBrief {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.promoFoot {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+/* El form de aplicar (textarea + botón) necesita el ancho completo: como
+   hermano flex de "Ver detalle" se desbordaba de la tarjeta. Va siempre en su
+   propia línea; el link y la píldora de estado sí comparten fila. */
+.promoFoot > form {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.qosRoot .promoMore {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--b-600);
+}
+.qosRoot .promoMore:hover {
+  color: var(--b-700);
+}
+
+/* ============================================================
+   DETALLE DE LA PROMO
+   ============================================================ */
+.promoDetailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .promoDetailGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.promoDetailBrief {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+.promoFacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 18px 0 4px;
+}
+.promoFact {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  background: var(--surface-2);
+}
+.promoFactLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.promoFactValue {
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.brandCardHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.brandCardLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.qosRoot .brandCardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--b-600);
+}
+.qosRoot .brandCardLink:hover {
+  color: var(--b-700);
 }
