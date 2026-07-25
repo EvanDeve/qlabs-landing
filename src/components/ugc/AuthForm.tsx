@@ -1,12 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import {
-  signInAction,
-  signUpAction,
-  signInWithGoogleAction,
-  type AuthActionState,
-} from "@/lib/actions/auth";
+import { signInAction, signUpAction, type AuthActionState } from "@/lib/actions/auth";
 
 type Role = "creator" | "brand";
 
@@ -29,29 +24,6 @@ const ROLE_META: Record<
     chip: "bg-[#FCE1D3] text-[#C2410C]",
   },
 };
-
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0012 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09a6.6 6.6 0 010-4.18V7.07H2.18a11 11 0 000 9.86l3.66-2.84z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.46 14.97.5 12 .5A11 11 0 002.18 7.07l3.66 2.84C6.71 7.31 9.14 4.75 12 4.75z"
-      />
-    </svg>
-  );
-}
 
 function PasswordInput({
   name,
@@ -95,13 +67,7 @@ function PasswordInput({
   );
 }
 
-export default function AuthForm({
-  initialIntent,
-  googleError = false,
-}: {
-  initialIntent?: Role;
-  googleError?: boolean;
-}) {
+export default function AuthForm({ initialIntent }: { initialIntent?: Role }) {
   const [step, setStep] = useState<"role" | "auth">(initialIntent ? "auth" : "role");
   const [role, setRole] = useState<Role>(initialIntent ?? "creator");
   const [tab, setTab] = useState<"login" | "signup">("login");
@@ -118,8 +84,6 @@ export default function AuthForm({
     signUpAction,
     null
   );
-
-  const googleAction = signInWithGoogleAction.bind(null, role);
 
   // ---------------- PASO 1 · ROL ----------------
   if (step === "role") {
@@ -202,22 +166,6 @@ export default function AuthForm({
         </button>
       </div>
 
-      <form action={googleAction}>
-        <button
-          type="submit"
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-line py-3.5 text-sm font-bold text-ink transition hover:border-ink hover:bg-lavender/50"
-        >
-          <GoogleIcon />
-          Continuar con Google
-        </button>
-      </form>
-
-      <div className="my-5 flex items-center gap-3 text-xs text-ink-soft">
-        <div className="h-px flex-1 bg-line" />
-        <span className="h-1.5 w-1.5 rounded-full border border-line" />
-        <div className="h-px flex-1 bg-line" />
-      </div>
-
       {tab === "login" ? (
         <form key="login" action={signInFormAction} className="flex flex-col gap-3">
           <input
@@ -290,12 +238,6 @@ export default function AuthForm({
             {signUpPending ? "Creando cuenta..." : "Crear cuenta"}
           </button>
         </form>
-      )}
-
-      {googleError && (
-        <p className="mt-4 text-center text-sm text-coral">
-          No se pudo conectar con Google. Probá de nuevo o usá email.
-        </p>
       )}
 
       <p className="mt-5 text-center text-xs text-ink-soft">

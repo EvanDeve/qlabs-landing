@@ -14,9 +14,9 @@ const INTENT_TO_ROLE: Record<string, "creator" | "brand"> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ intent?: string; next?: string; error?: string }>;
+  searchParams: Promise<{ intent?: string; next?: string }>;
 }) {
-  const { intent, next, error } = await searchParams;
+  const { intent, next } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -49,10 +49,7 @@ export default async function LoginPage({
       </header>
 
       <main className="flex flex-1 items-center justify-center px-5 py-8">
-        <AuthForm
-          initialIntent={intent ? INTENT_TO_ROLE[intent] : undefined}
-          googleError={error === "google"}
-        />
+        <AuthForm initialIntent={intent ? INTENT_TO_ROLE[intent] : undefined} />
       </main>
     </div>
   );

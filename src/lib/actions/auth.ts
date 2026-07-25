@@ -105,6 +105,12 @@ export async function signUpAction(
   return { message: "Te enviamos un email para confirmar tu cuenta. Revisá tu bandeja de entrada." };
 }
 
+// NOTA: hoy ninguna UI llama a esta acción. El botón "Continuar con Google" se
+// quitó de AuthForm porque el provider de Google NO está habilitado en el
+// proyecto de Supabase (/auth/v1/settings devuelve `external` vacío), así que
+// el click siempre terminaba en /ugc/login?error=google. Se deja el código listo:
+// para reactivarlo, habilitá Google en Supabase → Auth → Providers y volvé a
+// montar el botón en AuthForm.
 export async function signInWithGoogleAction(intent?: string) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const next = intent ? `/ugc/onboarding?role=${intent}` : "/ugc/onboarding";
