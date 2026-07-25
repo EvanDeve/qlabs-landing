@@ -1,15 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AuthForm from "@/components/ugc/AuthForm";
-import type { AppRole } from "@/lib/database.types";
+import { ROLE_DASHBOARD } from "@/lib/ugc/roles";
 
 export const dynamic = "force-dynamic";
-
-const ROLE_DASHBOARD: Record<AppRole, string> = {
-  creator: "/ugc/creador",
-  brand: "/ugc/marca",
-  admin: "/ugc/admin",
-};
 
 const INTENT_TO_ROLE: Record<string, "creator" | "brand"> = {
   creador: "creator",
@@ -40,29 +35,25 @@ export default async function LoginPage({
     redirect("/ugc/onboarding");
   }
 
-  const heading =
-    intent === "marca"
-      ? "Publicá tu campaña"
-      : intent === "creador"
-        ? "Aplicá como creador"
-        : "¿Cómo querés entrar?";
-
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 py-16">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex items-center gap-2 text-lg font-extrabold">
+    <div className="flex min-h-screen flex-col bg-lavender/40">
+      <header className="flex items-center justify-between px-6 py-5 sm:px-8">
+        <div className="flex items-center gap-2 text-lg font-extrabold text-ink">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/favicon-logo.png" alt="Q Labs" className="h-7 w-7 rounded-lg object-cover" />
           UGC·CRC
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">{heading}</h1>
-        {error === "google" && (
-          <p className="text-sm text-coral">
-            No se pudo conectar con Google. Probá de nuevo o usá email.
-          </p>
-        )}
-      </div>
+        <Link href="/" className="text-sm font-semibold text-ink-soft transition hover:text-ink">
+          ← Volver al sitio
+        </Link>
+      </header>
 
-      <AuthForm initialIntent={intent ? INTENT_TO_ROLE[intent] : undefined} />
+      <main className="flex flex-1 items-center justify-center px-5 py-8">
+        <AuthForm
+          initialIntent={intent ? INTENT_TO_ROLE[intent] : undefined}
+          googleError={error === "google"}
+        />
+      </main>
     </div>
   );
 }

@@ -53,21 +53,17 @@ export default async function OnboardingPage({
   const initialRole = lockedRole ?? (roleParam === "brand" ? "brand" : "creator");
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 py-16">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <div className="flex items-center gap-2 text-lg font-extrabold">
+    <div className="flex min-h-screen flex-col bg-lavender/40">
+      <header className="flex items-center justify-between px-6 py-5 sm:px-8">
+        <div className="flex items-center gap-2 text-lg font-extrabold text-ink">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/favicon-logo.png" alt="Q Labs" className="h-7 w-7 rounded-lg object-cover" />
           UGC·CRC
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">
-          Completá tu perfil
-        </h1>
-        <p className="text-ink-soft">
-          Últimos datos antes de entrar a tu panel.
-        </p>
-      </div>
-
-      <OnboardingForm lockedRole={lockedRole} initialRole={initialRole} />
+      </header>
+      <main className="flex flex-1 items-center justify-center px-5 py-8">
+        <OnboardingForm lockedRole={lockedRole} initialRole={initialRole} />
+      </main>
     </div>
   );
 }

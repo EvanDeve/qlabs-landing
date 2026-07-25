@@ -13,15 +13,13 @@ export default async function CreatorProfileEditPage() {
 
   const [
     { data: creatorProfile },
+    { data: profile },
     { data: skills },
-    { data: services },
-    { data: addons },
     { data: pastBrands },
   ] = await Promise.all([
     supabase.from("creator_profiles").select("*").eq("profile_id", user!.id).single(),
+    supabase.from("profiles").select("bio, city, avatar_url").eq("id", user!.id).single(),
     supabase.from("creator_skills").select("*").eq("creator_id", user!.id).order("position"),
-    supabase.from("creator_services").select("*").eq("creator_id", user!.id),
-    supabase.from("creator_addons").select("*").eq("creator_id", user!.id),
     supabase.from("creator_past_brands").select("*").eq("creator_id", user!.id).order("position"),
   ]);
 
@@ -56,15 +54,20 @@ export default async function CreatorProfileEditPage() {
       </div>
 
       <CreatorProfileEditForm
-        initialSkills={(skills ?? []).map((s) => ({ name: s.name, level: s.level }))}
-        initialServices={(services ?? []).map((s) => s.service)}
-        initialAddons={(addons ?? []).map((a) => a.addon)}
-        initialPastBrands={(pastBrands ?? []).map((b) => ({ category: b.category, brand_name: b.brand_name }))}
-        initialMetrics={{
-          avg_views: creatorProfile?.avg_views ?? null,
-          engagement_rate: creatorProfile?.engagement_rate ?? null,
-          avg_reach: creatorProfile?.avg_reach ?? null,
+        initialProfile={{
+          handle: creatorProfile?.handle ?? "",
+          verified: creatorProfile?.verified ?? false,
+          bio: profile?.bio ?? "",
+          city: profile?.city ?? "",
+          followers_count: creatorProfile?.followers_count ?? 0,
+          niches: creatorProfile?.niches ?? [],
+          languages: creatorProfile?.languages ?? ["es"],
+          instagram_handle: creatorProfile?.instagram_handle ?? "",
+          tiktok_handle: creatorProfile?.tiktok_handle ?? "",
+          avatar_url: profile?.avatar_url ?? null,
         }}
+        initialSkills={(skills ?? []).map((s) => ({ name: s.name, level: s.level }))}
+        initialPastBrands={(pastBrands ?? []).map((b) => ({ category: b.category, brand_name: b.brand_name }))}
       />
     </div>
   );

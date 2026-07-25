@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { SERVICES_CATALOG, ADDONS_CATALOG } from "@/lib/ugc/catalog";
+import { AVATAR_BUCKET, MAX_AVATAR_FILE_BYTES } from "@/lib/ugc/avatars";
+import { parseLanguages } from "@/lib/ugc/languages";
 
 export type UpdateCreatorProfileDetailsState = { error: string } | null;
 
@@ -26,54 +27,80 @@ export async function updateCreatorProfileDetailsAction(
     .map((name, i) => ({ name, level: skillLevels[i] }))
     .filter((s) => s.name && s.level >= 1 && s.level <= 5);
 
-  const services = formData
-    .getAll("services")
-    .map((v) => String(v))
-    .filter((v) => (SERVICES_CATALOG as readonly string[]).includes(v));
-
-  const addons = formData
-    .getAll("addons")
-    .map((v) => String(v))
-    .filter((v) => (ADDONS_CATALOG as readonly string[]).includes(v));
-
   const brandCategories = formData.getAll("brand_category").map((v) => String(v).trim());
   const brandNames = formData.getAll("brand_name").map((v) => String(v).trim());
   const pastBrands = brandCategories
     .map((category, i) => ({ category, brand_name: brandNames[i] }))
     .filter((b) => b.category && b.brand_name);
 
-  const avgViews = formData.get("avg_views") ? Number(formData.get("avg_views")) : null;
-  const engagementRate = formData.get("engagement_rate") ? Number(formData.get("engagement_rate")) : null;
-  const avgReach = formData.get("avg_reach") ? Number(formData.get("avg_reach")) : null;
+  // ---- Identidad (antes solo se seteaba en el onboarding, ahora editable) ----
+  const bio = String(formData.get("bio") ?? "").trim() || null;
+  const city = String(formData.get("city") ?? "").trim() || null;
+  const niches = String(formData.get("niches") ?? "")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  const languages = parseLanguages(formData.getAll("languages").map((v) => String(v)));
+  const followersCount = Number(formData.get("followers_count") ?? 0) || 0;
+  const instagramHandle = String(formData.get("instagram_handle") ?? "").trim() || null;
+  const tiktokHandle = String(formData.get("tiktok_handle") ?? "").trim() || null;
 
-  const { error: metricsError } = await supabase
+  // ---- Foto de perfil (opcional) ----
+  const avatarFile = formData.get("avatar");
+  let avatarUrl: string | undefined;
+  if (avatarFile instanceof File && avatarFile.size > 0) {
+    if (avatarFile.size > MAX_AVATAR_FILE_BYTES) {
+      return { error: "La foto supera el tamaño máximo (5 MB)." };
+    }
+    const ext = avatarFile.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(AVATAR_BUCKET)
+      .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type });
+    if (uploadError) {
+      return { error: "No se pudo subir la foto. Intentá de nuevo." };
+    }
+    avatarUrl = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path).data.publicUrl;
+  }
+
+  const profileUpdate: { bio: string | null; city: string | null; avatar_url?: string } = {
+    bio,
+    city,
+  };
+  if (avatarUrl) {
+    profileUpdate.avatar_url = avatarUrl;
+  }
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update(profileUpdate)
+    .eq("id", user.id);
+
+  if (profileError) {
+    return { error: "No se pudo guardar tu perfil. Intentá de nuevo." };
+  }
+
+  const { error: creatorError } = await supabase
     .from("creator_profiles")
-    .update({ avg_views: avgViews, engagement_rate: engagementRate, avg_reach: avgReach })
+    .update({
+      niches,
+      languages,
+      followers_count: followersCount,
+      instagram_handle: instagramHandle,
+      tiktok_handle: tiktokHandle,
+    })
     .eq("profile_id", user.id);
 
-  if (metricsError) {
-    return { error: "No se pudieron guardar las métricas. Intentá de nuevo." };
+  if (creatorError) {
+    return { error: "No se pudieron guardar los datos. Intentá de nuevo." };
   }
 
   await supabase.from("creator_skills").delete().eq("creator_id", user.id);
-  await supabase.from("creator_services").delete().eq("creator_id", user.id);
-  await supabase.from("creator_addons").delete().eq("creator_id", user.id);
   await supabase.from("creator_past_brands").delete().eq("creator_id", user.id);
 
   if (skills.length > 0) {
     await supabase.from("creator_skills").insert(
       skills.map((s, i) => ({ creator_id: user.id, name: s.name, level: s.level, position: i }))
     );
-  }
-
-  if (services.length > 0) {
-    await supabase
-      .from("creator_services")
-      .insert(services.map((service) => ({ creator_id: user.id, service })));
-  }
-
-  if (addons.length > 0) {
-    await supabase.from("creator_addons").insert(addons.map((addon) => ({ creator_id: user.id, addon })));
   }
 
   if (pastBrands.length > 0) {

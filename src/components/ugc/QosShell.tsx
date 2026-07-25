@@ -28,6 +28,7 @@ export default function QosShell({
   notifications,
   userName,
   userRole,
+  userAvatarUrl = null,
   section = "Operación",
   children,
 }: {
@@ -35,6 +36,7 @@ export default function QosShell({
   notifications: Notification[];
   userName: string;
   userRole: string;
+  userAvatarUrl?: string | null;
   section?: string;
   children: React.ReactNode;
 }) {
@@ -55,12 +57,17 @@ export default function QosShell({
     }
   }
 
-  const initials = userName
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  // El "@" de los handles no sirve como inicial (todos los creadores tendrían
+  // la misma), así que se descarta antes de sacar las letras.
+  const initials =
+    userName
+      .replace(/^@+/, "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "Q";
 
   return (
     <div className={styles.qosRoot} id="qos-root">
@@ -99,9 +106,18 @@ export default function QosShell({
 
           <div className={styles.sbFoot}>
             <div className={styles.sbUser}>
-              <div className={styles.av}>{initials || "Q"}</div>
+              <div className={styles.av}>
+                {userAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={userAvatarUrl} alt="" className={styles.avImg} />
+                ) : (
+                  initials
+                )}
+              </div>
               <div style={{ minWidth: 0 }}>
-                <div className={styles.uName}>{userName}</div>
+                <div className={styles.uName} title={userName}>
+                  {userName}
+                </div>
                 <div className={styles.uRole}>{userRole}</div>
               </div>
             </div>

@@ -39,3 +39,19 @@ body {
   background: var(--color-periwinkle);
   color: #fff;
 }
+
+/* Transición de pasos del wizard de onboarding */
+@keyframes onbStepIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.onb-step-in {
+  animation: onbStepIn 0.38s cubic-bezier(0.22, 0.61, 0.36, 1);
+}

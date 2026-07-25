@@ -2,15 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { AppRole } from "@/lib/database.types";
+import { ROLE_DASHBOARD } from "@/lib/ugc/roles";
 
 export type AuthActionState = { error: string } | { message: string } | null;
-
-const ROLE_DASHBOARD: Record<AppRole, string> = {
-  creator: "/ugc/creador",
-  brand: "/ugc/marca",
-  admin: "/ugc/admin",
-};
 
 async function redirectAfterLogin(userId: string): Promise<never> {
   const supabase = await createClient();
@@ -20,7 +14,26 @@ async function redirectAfterLogin(userId: string): Promise<never> {
     .eq("id", userId)
     .single();
 
-  redirect(profile?.role ? ROLE_DASHBOARD[profile.role] : "/ugc/onboarding");
+  if (!profile?.role) {
+    redirect("/ugc/onboarding");
+  }
+
+  // El onboarding puede quedar a medias (rol seteado por el trigger pero sin el
+  // perfil de creador/marca todavía). En ese caso se manda al onboarding, no al
+  // dashboard, que sin ese perfil quedaría vacío/roto.
+  if (profile.role === "creator" || profile.role === "brand") {
+    const table = profile.role === "creator" ? "creator_profiles" : "brand_profiles";
+    const { data: roleProfile } = await supabase
+      .from(table)
+      .select("profile_id")
+      .eq("profile_id", userId)
+      .maybeSingle();
+    if (!roleProfile) {
+      redirect("/ugc/onboarding");
+    }
+  }
+
+  redirect(ROLE_DASHBOARD[profile.role]);
 }
 
 export async function signInAction(
@@ -34,6 +47,7 @@ export async function signInAction(
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    console.error("[signInAction] supabase signIn error:", error.status, error.message);
     return { error: "Email o contraseña incorrectos." };
   }
 
@@ -44,15 +58,22 @@ export async function signUpAction(
   _prevState: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  const email = String(formData.get("email") ?? "");
+  const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const passwordConfirm = String(formData.get("password_confirm") ?? "");
   const role = String(formData.get("role") ?? "");
 
   if (role !== "creator" && role !== "brand") {
     return { error: "Elegí si sos creador o marca." };
   }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return { error: "Poné un email válido." };
+  }
   if (password.length < 8) {
     return { error: "La contraseña debe tener al menos 8 caracteres." };
+  }
+  if (password !== passwordConfirm) {
+    return { error: "Las contraseñas no coinciden." };
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -67,14 +88,18 @@ export async function signUpAction(
   });
 
   if (error) {
+    console.error("[signUpAction] supabase signUp error:", error.status, error.message);
     return { error: error.message === "User already registered"
       ? "Ese email ya tiene una cuenta — iniciá sesión."
       : "No se pudo crear la cuenta. Intentá de nuevo." };
   }
 
   if (data.session) {
-    // email confirmation is disabled on this project: session starts immediately
-    await redirectAfterLogin(data.user!.id);
+    // Sin confirmación por email la sesión arranca de una. El trigger ya dejó
+    // seteado profiles.role, pero todavía falta crear el perfil de creador/marca
+    // (handle, nichos, etc.), así que se manda SIEMPRE al onboarding — no al
+    // dashboard, que sin ese perfil quedaría vacío/roto.
+    redirect("/ugc/onboarding");
   }
 
   return { message: "Te enviamos un email para confirmar tu cuenta. Revisá tu bandeja de entrada." };

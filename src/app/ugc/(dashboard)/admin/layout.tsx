@@ -17,7 +17,7 @@ export default async function AdminLayout({
         .eq("profile_id", user.id)
         .order("created_at", { ascending: false })
         .limit(15),
-      supabase.from("profiles").select("display_name").eq("id", user.id).single(),
+      supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single(),
       supabase.from("staff_members").select("staff_role").eq("profile_id", user.id).maybeSingle(),
       supabase.from("content_pieces").select("id").neq("stage", "publicado"),
       supabase.from("agency_clients").select("id"),
@@ -43,6 +43,7 @@ export default async function AdminLayout({
       navItems={navItems}
       notifications={notifications ?? []}
       userName={profile?.display_name ?? "Sin nombre"}
+      userAvatarUrl={profile?.avatar_url ?? null}
       userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
     >
       {children}

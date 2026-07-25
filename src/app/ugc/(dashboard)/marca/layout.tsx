@@ -15,7 +15,7 @@ export default async function MarcaLayout({
       .eq("profile_id", user.id)
       .order("created_at", { ascending: false })
       .limit(15),
-    supabase.from("profiles").select("display_name").eq("id", user.id).single(),
+    supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single(),
     supabase.from("campaigns").select("id").eq("brand_id", user.id),
   ]);
 
@@ -45,6 +45,7 @@ export default async function MarcaLayout({
       navItems={navItems}
       notifications={notifications ?? []}
       userName={profile?.display_name ?? "Sin nombre"}
+      userAvatarUrl={profile?.avatar_url ?? null}
       userRole="Marca"
       section="Marca"
     >
