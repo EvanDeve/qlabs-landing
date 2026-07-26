@@ -60,11 +60,17 @@ export default function PublicNavClient({ session }: { session: NavSession }) {
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
+      {/* Flex en móvil (logo + hamburguesa a los extremos). En desktop pasa a
+          grid 1fr/auto/1fr por lo mismo que el nav de la landing: con
+          space-between el centro se corre según cuánto difieran los lados, y
+          acá el lado derecho cambia de ancho según haya sesión o no (un botón
+          vs. tres CTAs). Con columnas laterales iguales el centro no depende
+          de eso. */}
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4 min-[769px]:grid min-[769px]:grid-cols-[1fr_auto_1fr]">
         <Link
           href="/ugc"
           onClick={cerrar}
-          className="flex shrink-0 items-center gap-2 text-lg font-extrabold text-ink"
+          className="flex shrink-0 items-center gap-2 text-lg font-extrabold text-ink min-[769px]:justify-self-start"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/favicon-logo.png" alt="Q Labs" className="h-7 w-7 rounded-lg object-cover" />
@@ -73,7 +79,7 @@ export default function PublicNavClient({ session }: { session: NavSession }) {
 
         {/* Navegación de secciones: la misma que la landing principal, para que
             desde cualquiera de los dos lados se pueda llegar al otro. */}
-        <nav className="hidden items-center gap-6 md:flex">
+        <nav className="hidden items-center gap-6 min-[769px]:flex min-[769px]:justify-self-center">
           {LINKS.map((l) => (
             <Link
               key={l.href}
@@ -85,14 +91,14 @@ export default function PublicNavClient({ session }: { session: NavSession }) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">{acciones(false)}</div>
+        <div className="hidden items-center gap-3 min-[769px]:flex min-[769px]:justify-self-end">{acciones(false)}</div>
 
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={open}
-          className="text-xl text-ink md:hidden"
+          className="text-xl text-ink min-[769px]:hidden"
         >
           <i className={`fa-solid ${open ? "fa-xmark" : "fa-bars"}`} aria-hidden />
         </button>
@@ -108,9 +114,9 @@ export default function PublicNavClient({ session }: { session: NavSession }) {
             type="button"
             aria-label="Cerrar menú"
             onClick={cerrar}
-            className="fixed left-0 top-0 z-30 h-screen w-screen bg-ink/40 md:hidden"
+            className="fixed left-0 top-0 z-30 h-screen w-screen bg-ink/40 min-[769px]:hidden"
           />
-          <div className="fixed right-0 top-0 z-40 flex h-screen w-[82%] max-w-sm flex-col gap-1 bg-white px-6 pb-10 pt-6 shadow-[-10px_0_30px_rgba(0,0,0,0.1)] md:hidden">
+          <div className="fixed right-0 top-0 z-40 flex h-screen w-[82%] max-w-sm flex-col gap-1 bg-white px-6 pb-10 pt-6 shadow-[-10px_0_30px_rgba(0,0,0,0.1)] min-[769px]:hidden">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-lg font-extrabold text-ink">Menú</span>
               <button
