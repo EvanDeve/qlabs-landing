@@ -7,6 +7,7 @@ import ApproveWithRatingForm from "@/components/ugc/marca/ApproveWithRatingForm"
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
 import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
+import { hasUsageRights, usageRightsChips } from "@/lib/ugc/usage-rights";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 import { displayHandle } from "@/lib/ugc/handles";
@@ -124,6 +125,19 @@ export default async function CampaignDetailPage({
           <p style={{ marginTop: "8px", fontSize: "13.5px", color: "var(--ink-2)" }}>
             <span style={{ fontWeight: 700, color: "var(--ink)" }}>Compensación adicional: </span>
             {campaign.compensation_details}
+          </p>
+        )}
+
+        {hasUsageRights(campaign) ? (
+          <p style={{ marginTop: "8px", fontSize: "13.5px", color: "var(--ink-2)" }}>
+            <span style={{ fontWeight: 700, color: "var(--ink)" }}>Derechos de uso: </span>
+            {usageRightsChips(campaign).join(" · ")}
+            {campaign.usage_rights_notes ? ` — ${campaign.usage_rights_notes}` : ""}
+          </p>
+        ) : (
+          <p style={{ marginTop: "8px", fontSize: "13.5px", color: "var(--ink-3)" }}>
+            <span style={{ fontWeight: 700 }}>Derechos de uso: </span>
+            no especificados (campaña creada antes de este campo)
           </p>
         )}
 

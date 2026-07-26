@@ -6,6 +6,7 @@ import BrandAvatar from "@/components/ugc/BrandAvatar";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
 import { creatorPayout } from "@/lib/ugc/payout";
+import { hasUsageRights, usageRightsChips } from "@/lib/ugc/usage-rights";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,7 @@ export default async function PromoDetailPage({
     ? (campaign.deliverables as { type: string; qty: number }[])
     : [];
   const payout = creatorPayout(campaign.budget_amount);
+  const usageChips = usageRightsChips(campaign);
   const brandName = brand?.brand_name ?? "Marca";
   const igHandle = brand?.instagram_handle?.replace(/^@/, "");
 
@@ -111,6 +113,40 @@ export default async function PromoDetailPage({
                 {campaign.target_audience}
               </p>
             </>
+          )}
+
+          {/* Va justo antes del botón de aplicar a propósito: es lo último que
+              el creador debería leer antes de comprometerse. */}
+          <h2 style={{ fontSize: "15px", margin: "22px 0 8px" }}>Derechos de uso</h2>
+          {hasUsageRights(campaign) ? (
+            <>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {usageChips.map((chip) => (
+                  <span key={chip} className={styles.tag}>
+                    {chip}
+                  </span>
+                ))}
+              </div>
+              <p style={{ marginTop: "10px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6 }}>
+                {brandName} puede usar la pieza en{" "}
+                <b>{usageChips[0]?.toLowerCase()}</b> durante <b>{usageChips[1]?.toLowerCase()}</b>{" "}
+                desde que aprueba la entrega, y{" "}
+                {campaign.usage_rights_editing
+                  ? "puede recortarla o reeditarla"
+                  : "debe publicarla tal como se la entregás"}
+                . Vos siempre podés publicarla en tu propio perfil.
+              </p>
+              {campaign.usage_rights_notes && (
+                <p style={{ marginTop: "8px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6 }}>
+                  {campaign.usage_rights_notes}
+                </p>
+              )}
+            </>
+          ) : (
+            <p style={{ fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6 }}>
+              Esta promo se publicó sin especificar derechos de uso. Antes de entregar, acordá con{" "}
+              {brandName} dónde y por cuánto tiempo va a usar el contenido.
+            </p>
           )}
 
           <div style={{ marginTop: "26px", borderTop: "1px solid var(--line)", paddingTop: "20px" }}>

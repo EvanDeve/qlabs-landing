@@ -3,6 +3,13 @@
 import { useActionState } from "react";
 import { createCampaignAction, type CampaignActionState } from "@/lib/actions/campaigns";
 import { DELIVERABLE_TYPES, FORMAT_LABEL } from "@/lib/ugc/deliverables";
+import {
+  USAGE_SCOPES,
+  USAGE_DURATIONS,
+  USAGE_SCOPE_LABEL,
+  USAGE_SCOPE_DESC,
+  USAGE_DURATION_LABEL,
+} from "@/lib/ugc/usage-rights";
 
 export default function CampaignForm() {
   const [state, formAction, pending] = useActionState<CampaignActionState, FormData>(
@@ -69,6 +76,89 @@ export default function CampaignForm() {
         </div>
       </fieldset>
 
+      {/* Derechos de uso. Deliberadamente sin opción preseleccionada: define qué
+          cede el creador, así que conviene que sea una decisión consciente y no
+          el default que nadie miró. */}
+      <fieldset className="flex flex-col gap-4 rounded-lg border border-black/10 bg-lavender/50 p-4 text-left">
+        <legend className="px-1 text-xs font-bold text-ink">Derechos de uso del contenido</legend>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-bold text-ink">¿Dónde puede usarse el contenido?</span>
+          {USAGE_SCOPES.map((scope) => (
+            <label
+              key={scope}
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 transition hover:border-violet"
+            >
+              <input
+                type="radio"
+                name="usage_rights_scope"
+                value={scope}
+                required
+                className="mt-0.5 accent-violet"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-ink">
+                  {USAGE_SCOPE_LABEL[scope]}
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-soft">{USAGE_SCOPE_DESC[scope]}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-bold text-ink">
+            ¿Por cuánto tiempo? <span className="font-semibold text-ink-soft">(desde que aprobás la entrega)</span>
+          </span>
+          <div className="grid grid-cols-2 gap-2">
+            {USAGE_DURATIONS.map((duration) => (
+              <label
+                key={duration}
+                className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-black/10 bg-white px-4 py-3 transition hover:border-violet"
+              >
+                <input
+                  type="radio"
+                  name="usage_rights_duration"
+                  value={duration}
+                  required
+                  className="accent-violet"
+                />
+                <span className="text-sm font-semibold text-ink">
+                  {USAGE_DURATION_LABEL[duration]}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 transition hover:border-violet">
+          <input
+            type="checkbox"
+            name="usage_rights_editing"
+            value="on"
+            className="mt-0.5 accent-violet"
+          />
+          <span>
+            <span className="block text-sm font-semibold text-ink">Podés editar el material</span>
+            <span className="mt-0.5 block text-xs text-ink-soft">
+              Si lo dejás sin marcar, te comprometés a publicar la pieza tal como te la entregan.
+            </span>
+          </span>
+        </label>
+
+        <TextArea
+          label="Aclaraciones (opcional)"
+          name="usage_rights_notes"
+          placeholder="Ej: la pieza no puede usarse en campañas de otra sede."
+          rows={2}
+        />
+
+        <p className="text-xs text-ink-soft">
+          El creador siempre puede publicar la pieza en su propio perfil — es parte de cómo
+          funciona el UGC.
+        </p>
+      </fieldset>
+
       {state && "error" in state && <p className="text-sm text-coral">{state.error}</p>}
 
       <div className="mt-2 flex gap-3">
@@ -127,11 +217,13 @@ function TextArea({
   name,
   placeholder,
   required,
+  rows = 4,
 }: {
   label: string;
   name: string;
   placeholder?: string;
   required?: boolean;
+  rows?: number;
 }) {
   return (
     <label className="flex flex-col gap-1.5 text-left">
@@ -140,7 +232,7 @@ function TextArea({
         name={name}
         required={required}
         placeholder={placeholder}
-        rows={4}
+        rows={rows}
         className="resize-none rounded-lg border border-black/10 bg-lavender px-4 py-3 text-sm outline-none focus:border-violet"
       />
     </label>

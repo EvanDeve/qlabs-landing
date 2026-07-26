@@ -12,6 +12,8 @@ export type Json =
 
 export type AppRole = "creator" | "brand" | "admin";
 export type CampaignStatus = "draft" | "published" | "in_progress" | "completed" | "cancelled";
+export type CampaignUsageScope = "organico" | "pauta" | "todo_medio";
+export type CampaignUsageDuration = "meses_3" | "meses_6" | "meses_12" | "perpetuo";
 export type ApplicationStatus =
   | "pending"
   | "reviewing"
@@ -216,6 +218,10 @@ export interface Database {
           created_at: string;
           published_at: string | null;
           compensation_details: string | null;
+          usage_rights_scope: CampaignUsageScope | null;
+          usage_rights_duration: CampaignUsageDuration | null;
+          usage_rights_editing: boolean | null;
+          usage_rights_notes: string | null;
         };
         Insert: {
           id?: string;
@@ -232,6 +238,10 @@ export interface Database {
           created_at?: string;
           published_at?: string | null;
           compensation_details?: string | null;
+          usage_rights_scope?: CampaignUsageScope | null;
+          usage_rights_duration?: CampaignUsageDuration | null;
+          usage_rights_editing?: boolean | null;
+          usage_rights_notes?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["campaigns"]["Insert"]>;
         Relationships: [];
@@ -551,6 +561,8 @@ export interface Database {
     Enums: {
       app_role: AppRole;
       campaign_status: CampaignStatus;
+      campaign_usage_scope: CampaignUsageScope;
+      campaign_usage_duration: CampaignUsageDuration;
       application_status: ApplicationStatus;
       staff_role: StaffRole;
       content_stage: ContentStage;

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { DELIVERABLE_TYPES } from "@/lib/ugc/deliverables";
+import { isUsageScope, isUsageDuration } from "@/lib/ugc/usage-rights";
 
 export type CampaignActionState = { error: string } | null;
 
@@ -40,6 +41,15 @@ export async function createCampaignAction(
   const compensationDetails = String(formData.get("compensation_details") ?? "").trim() || null;
   const intent = formData.get("intent") === "publish" ? "publish" : "draft";
 
+  // Los radios del formulario son `required`, pero eso solo cubre el navegador:
+  // se revalida acá porque define qué derechos cede el creador.
+  const scopeRaw = String(formData.get("usage_rights_scope") ?? "");
+  const durationRaw = String(formData.get("usage_rights_duration") ?? "");
+  const usageScope = isUsageScope(scopeRaw) ? scopeRaw : null;
+  const usageDuration = isUsageDuration(durationRaw) ? durationRaw : null;
+  const usageEditing = formData.get("usage_rights_editing") === "on";
+  const usageNotes = String(formData.get("usage_rights_notes") ?? "").trim() || null;
+
   const deliverables = DELIVERABLE_TYPES.map((type) => ({
     type,
     qty: Number(formData.get(`qty_${type}`) ?? 0) || 0,
@@ -50,6 +60,11 @@ export async function createCampaignAction(
   }
   if (deliverables.length === 0) {
     return { error: "Elegí al menos un entregable con cantidad mayor a 0." };
+  }
+  if (!usageScope || !usageDuration) {
+    return {
+      error: "Definí los derechos de uso: dónde puede usarse el contenido y por cuánto tiempo.",
+    };
   }
 
   // El gate real vive en RLS; esto solo convierte la negación cruda en un
@@ -69,6 +84,10 @@ export async function createCampaignAction(
     target_audience: targetAudience,
     deadline_days: deadlineDays,
     compensation_details: compensationDetails,
+    usage_rights_scope: usageScope,
+    usage_rights_duration: usageDuration,
+    usage_rights_editing: usageEditing,
+    usage_rights_notes: usageNotes,
     deliverables,
     status: intent === "publish" ? "published" : "draft",
     published_at: intent === "publish" ? new Date().toISOString() : null,
