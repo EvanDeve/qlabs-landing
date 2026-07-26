@@ -29,7 +29,7 @@ export default function Brands() {
     <section className="brands-section">
       <div className="container">
         <p className="brands-title fade-up">Confiado por marcas líderes en su sector</p>
-        <div className="brands-grid fade-up">
+        <div className="brands-grid fade-up" data-motion="brands">
           {BRANDS.map((brand) => (
             <BrandMark key={brand.name} {...brand} />
           ))}

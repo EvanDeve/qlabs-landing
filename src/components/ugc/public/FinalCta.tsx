@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function FinalCta() {
   return (
     <section>
-      <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+      <div className="mx-auto max-w-3xl px-6 py-20 text-center" data-anim="cta">
         <h2 className="text-3xl font-extrabold tracking-tight text-ink">
           ¿Listo para empezar?
         </h2>

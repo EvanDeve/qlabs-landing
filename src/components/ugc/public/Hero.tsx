@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function Hero() {
   return (
     <section className="border-b border-line bg-lavender">
-      <div className="mx-auto max-w-6xl px-6 py-20 text-center">
+      <div className="mx-auto max-w-6xl px-6 py-20 text-center" data-anim="hero">
         <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-pill border border-line bg-white px-4 py-1.5 text-sm font-bold text-ink-soft">
           El puente entre marcas y creadores en Costa Rica
         </div>

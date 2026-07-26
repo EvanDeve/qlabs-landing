@@ -47,7 +47,7 @@ export default function Hero() {
           </a>
         </div>
 
-        <div className="video-mockup fade-up" style={{ marginTop: 60 }}>
+        <div className="video-mockup fade-up" data-motion="hero-video" style={{ marginTop: 60 }}>
           <video src="/hotels_video.mp4" autoPlay loop muted playsInline />
         </div>
       </div>

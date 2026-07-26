@@ -49,7 +49,7 @@ export default function Faq() {
   return (
     <section className="border-b border-line bg-lavender/40">
       <div className="mx-auto max-w-3xl px-6 py-20">
-        <h2 className="text-center text-3xl font-extrabold tracking-tight text-ink">
+        <h2 className="text-center text-3xl font-extrabold tracking-tight text-ink" data-anim-in>
           Preguntas frecuentes
         </h2>
 
@@ -67,7 +67,7 @@ export default function Faq() {
           ))}
         </div>
 
-        <div className="mt-10 space-y-4">
+        <div className="mt-10 space-y-4" data-anim-stagger>
           {FAQ_BY_ROLE[role].map((item) => (
             <div key={item.q} className="rounded-card border border-line bg-white p-5">
               <div className="font-bold text-ink">{item.q}</div>

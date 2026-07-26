@@ -28,7 +28,7 @@ export default function Services() {
           </h2>
         </div>
 
-        <div className="service-grid">
+        <div className="service-grid" data-motion="services">
           {SERVICES.map((service) => (
             <div className="service-card fade-up" key={service.title}>
               <div className="service-icon">

@@ -4,7 +4,7 @@ export default function BigCta() {
   return (
     <section id="agenda" className="big-cta">
       <div className="container">
-        <div className="cta-box fade-up">
+        <div className="cta-box fade-up" data-motion="cta">
           <h2>
             La misión empieza con una <span className="serif-italic">Llamada</span>
           </h2>

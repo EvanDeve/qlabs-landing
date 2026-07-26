@@ -1,5 +1,5 @@
 import NavMarketing from "@/components/layout/NavMarketing";
-import FadeUpMotion from "@/components/marketing/FadeUpMotion";
+import ScrollMotion from "@/components/marketing/ScrollMotion";
 import "./marketing.css";
 
 export default function MarketingLayout({
@@ -9,7 +9,11 @@ export default function MarketingLayout({
 }>) {
   return (
     <div className="qlabs-marketing">
-      <FadeUpMotion />
+      <ScrollMotion />
+      {/* Progreso de lectura. Va antes del nav para que quede por encima. */}
+      <div className="scroll-progress" aria-hidden>
+        <div className="scroll-progress-bar" />
+      </div>
       <NavMarketing />
       {children}
     </div>
