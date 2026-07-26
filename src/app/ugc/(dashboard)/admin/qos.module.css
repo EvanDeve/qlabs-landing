@@ -1815,6 +1815,40 @@
   .kpiRow {
     grid-template-columns: 1fr;
   }
+
+  /* Las filas de campaña y de aplicante son flex de 4-5 items con flex-shrink:0
+     (columnas de stats, pill de estado, botones de acción). En un teléfono no
+     entran y hacían desbordar la página ENTERA en horizontal, no solo la fila.
+     Se dejan envolver: el título ocupa la fila completa y las acciones bajan. */
+  .campRow,
+  .applicantRow {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+  }
+  .campBody,
+  .applicantBody {
+    flex: 1 1 100%;
+  }
+  .campN {
+    padding: 0;
+    text-align: left;
+    min-width: 84px;
+  }
+  /* El "Ver" a lo ancho: en móvil es la acción principal de la fila. */
+  .campRow > a {
+    flex: 1 1 100%;
+  }
+  .miniStat {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  .applicantActs {
+    flex: 1 1 100%;
+  }
+  .applicantActs > * {
+    flex: 1;
+  }
 }
 
 /* ============================================================

@@ -130,7 +130,10 @@ function CreatorWizard() {
             submit();
           }
         }}
-        className="rounded-[22px] border border-line bg-white p-7 shadow-[0_30px_70px_-40px_rgba(11,11,18,0.35)] sm:p-9"
+        // min-w-0: los items de grid traen min-width:auto y la pista se
+        // dimensiona al min-content (un <input> aporta su ancho intrínseco
+        // aunque tenga width:100%), lo que desborda en pantallas angostas.
+        className="min-w-0 rounded-[22px] border border-line bg-white p-7 shadow-[0_30px_70px_-40px_rgba(11,11,18,0.35)] sm:p-9"
       >
         {/* Progreso */}
         <div className="mb-2 flex items-center gap-1.5">
@@ -286,7 +289,7 @@ function CreatorWizard() {
       </form>
 
       {/* Preview en vivo */}
-      <aside className="order-first lg:order-last lg:sticky lg:top-6 h-fit">
+      <aside className="order-first lg:order-last lg:sticky lg:top-6 h-fit min-w-0">
         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-soft">Tu perfil</p>
         <ProfilePreview
           handle={handle}

@@ -90,8 +90,12 @@ export default function CreatorProfileEditForm({
       {cropping && (
         <ImageCropModal file={cropping} onCancel={cancelCrop} onConfirm={applyCrop} />
       )}
-      {/* ---------------- IZQUIERDA: campos ---------------- */}
-      <div className="flex flex-col gap-6">
+      {/* ---------------- IZQUIERDA: campos ----------------
+          min-w-0: los items de grid traen min-width:auto, así que la pista se
+          dimensiona al min-content del contenido (un <input> aporta ~174px por
+          su ancho intrínseco aunque tenga width:100%) y la página entera
+          desborda en horizontal en pantallas angostas. */}
+      <div className="flex min-w-0 flex-col gap-6">
         {/* Identidad */}
         <section className="rounded-card border border-line bg-white p-6">
           <h2 className="mb-4 text-lg font-extrabold text-ink">Identidad</h2>
@@ -239,6 +243,9 @@ export default function CreatorProfileEditForm({
           <div className="flex flex-col gap-3">
             {skills.map((skill, i) => (
               <div key={i} className="flex items-center gap-3">
+                {/* min-w-0: sin esto el min-width:auto del item flex impide que el
+                    input encoja por debajo de su ancho intrínseco y la fila
+                    desborda en pantallas angostas. */}
                 <input
                   type="text"
                   name="skill_name"
@@ -247,7 +254,7 @@ export default function CreatorProfileEditForm({
                   onChange={(e) =>
                     setSkills((prev) => prev.map((s, idx) => (idx === i ? { ...s, name: e.target.value } : s)))
                   }
-                  className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-violet"
+                  className="min-w-0 flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-violet"
                 />
                 <select
                   name="skill_level"
@@ -289,7 +296,13 @@ export default function CreatorProfileEditForm({
           <h2 className="mb-4 text-lg font-extrabold text-ink">Marcas con las que trabajaste</h2>
           <div className="flex flex-col gap-3">
             {pastBrands.map((brand, i) => (
-              <div key={i} className="flex items-center gap-3">
+              // Dos campos de texto lado a lado no entran de forma usable en un
+              // teléfono, así que en pantallas angostas la fila se apila y se
+              // encuadra para que se vea qué campos son de la misma marca.
+              <div
+                key={i}
+                className="flex flex-col gap-3 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:border-0 sm:p-0"
+              >
                 <input
                   type="text"
                   name="brand_category"
@@ -300,7 +313,7 @@ export default function CreatorProfileEditForm({
                       prev.map((b, idx) => (idx === i ? { ...b, category: e.target.value } : b))
                     )
                   }
-                  className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-violet"
+                  className="min-w-0 flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-violet"
                 />
                 <input
                   type="text"
@@ -312,12 +325,12 @@ export default function CreatorProfileEditForm({
                       prev.map((b, idx) => (idx === i ? { ...b, brand_name: e.target.value } : b))
                     )
                   }
-                  className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-violet"
+                  className="min-w-0 flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-violet"
                 />
                 <button
                   type="button"
                   onClick={() => setPastBrands((prev) => prev.filter((_, idx) => idx !== i))}
-                  className="shrink-0 text-sm font-bold text-coral"
+                  className="shrink-0 self-end text-sm font-bold text-coral sm:self-auto"
                 >
                   Quitar
                 </button>
@@ -345,7 +358,7 @@ export default function CreatorProfileEditForm({
       </div>
 
       {/* ---------------- DERECHA: preview en vivo ---------------- */}
-      <aside className="lg:sticky lg:top-6 h-fit">
+      <aside className="lg:sticky lg:top-6 h-fit min-w-0">
         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-soft">
           Vista previa — así te ve la marca
         </p>
