@@ -1,6 +1,8 @@
-import NavMarketing from "@/components/layout/NavMarketing";
+import SiteNav from "@/components/layout/SiteNav";
 import ScrollMotion from "@/components/marketing/ScrollMotion";
 import "./marketing.css";
+
+const CALENDLY_URL = "https://calendly.com/puravidarepublic/aas-pov";
 
 export default function MarketingLayout({
   children,
@@ -14,7 +16,13 @@ export default function MarketingLayout({
       <div className="scroll-progress" aria-hidden>
         <div className="scroll-progress-bar" />
       </div>
-      <NavMarketing />
+      <SiteNav
+        logoHref="/"
+        logoLabel="Labs"
+        actions={[
+          { href: CALENDLY_URL, label: "Agendar reunión", variant: "primary", external: true },
+        ]}
+      />
       {children}
     </div>
   );
