@@ -20,7 +20,9 @@ export type ApplicationStatus =
   | "accepted"
   | "rejected"
   | "delivered"
-  | "approved";
+  | "approved"
+  | "cancelled"
+  | "disputed";
 export type PortfolioMediaType = "image" | "video";
 export type HeroContact = { name: string; role?: string; phone?: string; email?: string };
 export type StaffRole =
@@ -259,6 +261,10 @@ export interface Database {
           delivered_at: string | null;
           approved_at: string | null;
           rating: number | null;
+          conflict_reason: string | null;
+          conflict_by: string | null;
+          conflict_at: string | null;
+          admin_note: string | null;
         };
         Insert: {
           id?: string;
@@ -272,6 +278,10 @@ export interface Database {
           delivered_at?: string | null;
           approved_at?: string | null;
           rating?: number | null;
+          conflict_reason?: string | null;
+          conflict_by?: string | null;
+          conflict_at?: string | null;
+          admin_note?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;
         Relationships: [];

@@ -6,7 +6,13 @@ import { updateApplicationStatusAction } from "@/lib/actions/applications";
 import ApproveWithRatingForm from "@/components/ugc/marca/ApproveWithRatingForm";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
-import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
+import {
+  APPLICATION_STATUS_LABEL,
+  APPLICATION_STATUS_STYLE,
+  canCancel,
+  canDispute,
+} from "@/lib/ugc/application-status";
+import ConflictActionButton from "@/components/ugc/ConflictActionButton";
 import { hasUsageRights, usageRightsChips } from "@/lib/ugc/usage-rights";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -275,6 +281,51 @@ export default async function CampaignDetailPage({
                   <div style={{ marginTop: "12px", fontSize: "13.5px", color: "var(--ink-2)" }}>
                     Calificaste esta entrega con {"★".repeat(app.rating)}
                     {"☆".repeat(5 - app.rating)}
+                  </div>
+                )}
+
+                {/* Después de que hay entrega la marca ya NO puede cancelar
+                    —sería quedarse con el material— solo abrir un caso. */}
+                {(canCancel(app.status) || canDispute(app.status)) && (
+                  <div
+                    style={{
+                      marginTop: "14px",
+                      paddingTop: "14px",
+                      borderTop: "1px solid var(--line-2)",
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    {canCancel(app.status) && (
+                      <ConflictActionButton
+                        applicationId={app.id}
+                        kind="cancel"
+                        label="Cancelar colaboración"
+                        className={`${styles.btn} ${styles.btnGhost}`}
+                      />
+                    )}
+                    {canDispute(app.status) && (
+                      <ConflictActionButton
+                        applicationId={app.id}
+                        kind="dispute"
+                        label="Reportar un problema"
+                        className={`${styles.btn} ${styles.btnGhost}`}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {(app.status === "cancelled" || app.status === "disputed") && app.conflict_reason && (
+                  <div style={{ marginTop: "12px", fontSize: "13px", color: "var(--ink-2)" }}>
+                    <b>{app.status === "cancelled" ? "Motivo de la cancelación: " : "Caso abierto: "}</b>
+                    {app.conflict_reason}
+                  </div>
+                )}
+
+                {app.admin_note && (
+                  <div style={{ marginTop: "8px", fontSize: "13px", color: "var(--ink-2)" }}>
+                    <b>Resolución de Q Labs: </b>
+                    {app.admin_note}
                   </div>
                 )}
               </div>

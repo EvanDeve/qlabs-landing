@@ -1,7 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import DeliverySubmitForm from "@/components/ugc/creador/DeliverySubmitForm";
 import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
-import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
+import {
+  APPLICATION_STATUS_LABEL,
+  APPLICATION_STATUS_STYLE,
+  canCancel,
+  canDispute,
+} from "@/lib/ugc/application-status";
+import ConflictActionButton from "@/components/ugc/ConflictActionButton";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { creatorPayout } from "@/lib/ugc/payout";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -158,6 +164,51 @@ export default async function MisAplicacionesPage() {
                   <div style={{ marginTop: "12px", fontSize: "13.5px", color: "var(--ink-2)" }}>
                     La marca calificó esta entrega con {"★".repeat(app.rating)}
                     {"☆".repeat(5 - app.rating)}
+                  </div>
+                )}
+
+                {/* Salidas. Cancelar solo mientras no haya entrega; después es
+                    disputa, porque ya hay trabajo hecho. */}
+                {(canCancel(app.status) || canDispute(app.status)) && (
+                  <div
+                    style={{
+                      marginTop: "14px",
+                      paddingTop: "14px",
+                      borderTop: "1px solid var(--line-2)",
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    {canCancel(app.status) && (
+                      <ConflictActionButton
+                        applicationId={app.id}
+                        kind="cancel"
+                        label="Ya no puedo con esta promo"
+                        className={`${styles.btn} ${styles.btnGhost}`}
+                      />
+                    )}
+                    {canDispute(app.status) && (
+                      <ConflictActionButton
+                        applicationId={app.id}
+                        kind="dispute"
+                        label="Reportar un problema"
+                        className={`${styles.btn} ${styles.btnGhost}`}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {(app.status === "cancelled" || app.status === "disputed") && app.conflict_reason && (
+                  <div style={{ marginTop: "12px", fontSize: "13px", color: "var(--ink-2)" }}>
+                    <b>{app.status === "cancelled" ? "Motivo de la cancelación: " : "Caso abierto: "}</b>
+                    {app.conflict_reason}
+                  </div>
+                )}
+
+                {app.admin_note && (
+                  <div style={{ marginTop: "8px", fontSize: "13px", color: "var(--ink-2)" }}>
+                    <b>Resolución de Q Labs: </b>
+                    {app.admin_note}
                   </div>
                 )}
               </div>

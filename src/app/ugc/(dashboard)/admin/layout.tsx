@@ -23,6 +23,13 @@ export default async function AdminLayout({
       supabase.from("agency_clients").select("id"),
     ]);
 
+  // Las disputas van con contador en el nav: si nadie las ve, quedan abiertas
+  // indefinidamente y ese es justo el problema que vinieron a resolver.
+  const { count: disputasAbiertas } = await supabase
+    .from("applications")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "disputed");
+
   const navItems: QosNavItem[] = [
     { href: "/ugc/admin", label: "Dashboard", icon: "grid", group: "Operación" },
     {
@@ -36,6 +43,13 @@ export default async function AdminLayout({
     { href: "/ugc/admin/heroes", label: "Heroes", icon: "users", group: "Operación", count: heroes?.length ?? 0 },
     { href: "/ugc/admin/equipo", label: "Equipo", icon: "briefcase", group: "Sistema" },
     { href: "/ugc/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
+    {
+      href: "/ugc/admin/disputas",
+      label: "Disputas",
+      icon: "megaphone",
+      group: "Sistema",
+      count: disputasAbiertas ?? 0,
+    },
   ];
 
   return (
