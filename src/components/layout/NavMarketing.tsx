@@ -14,7 +14,14 @@ export default function NavMarketing() {
           Labs
         </a>
 
+        {/* Las mismas dos secciones que el nav de /ugc: desde cualquiera de los
+            dos lados se tiene que poder llegar al otro. */}
         <ul className={`nav-links${open ? " active" : ""}`}>
+          <li>
+            <Link href="/" onClick={() => setOpen(false)}>
+              Inicio
+            </Link>
+          </li>
           <li>
             <Link href="/ugc" onClick={() => setOpen(false)}>
               UGC·CRC
