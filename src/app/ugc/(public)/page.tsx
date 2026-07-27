@@ -4,6 +4,7 @@ import HowItWorks from "@/components/ugc/public/HowItWorks";
 import EarlyAccess from "@/components/ugc/public/EarlyAccess";
 import Faq from "@/components/ugc/public/Faq";
 import FinalCta from "@/components/ugc/public/FinalCta";
+import PublicFooter from "@/components/ugc/public/PublicFooter";
 
 // Las secciones de stats y de campañas publicadas están desmontadas a propósito:
 // hasta que entren marcas y creadores reales, lo único que mostraban eran las
@@ -25,6 +26,7 @@ export default function UgcPublicPage() {
       <EarlyAccess />
       <Faq />
       <FinalCta />
+      <PublicFooter />
     </>
   );
 }

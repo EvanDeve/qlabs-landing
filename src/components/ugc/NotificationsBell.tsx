@@ -45,6 +45,15 @@ function describe(notification: Notification): { text: string; href: string } {
     };
   }
 
+  if (notification.type === "verification_pending") {
+    const name = String(payload.subject_name ?? "Alguien");
+    const roleLabel = payload.subject_role === "brand" ? "marca" : "creador";
+    return {
+      text: `${name} (${roleLabel}) terminó el registro y está esperando verificación`,
+      href: "/ugc/admin/marketplace",
+    };
+  }
+
   if (notification.type === "application_delivered") {
     return {
       text: `Llegó una entrega en "${campaignTitle}" — revisala y aprobala para seguir con el pago`,

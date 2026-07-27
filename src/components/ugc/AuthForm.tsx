@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { signInAction, signUpAction, type AuthActionState } from "@/lib/actions/auth";
 
 type Role = "creator" | "brand";
@@ -240,8 +241,19 @@ export default function AuthForm({ initialIntent }: { initialIntent?: Role }) {
         </form>
       )}
 
+      {/* Esta frase estuvo mucho tiempo como texto plano, nombrando dos
+          documentos que no existían. Ahora son links reales: si se vuelven a
+          mover de ruta, hay que actualizarlos acá también. */}
       <p className="mt-5 text-center text-xs text-ink-soft">
-        Al continuar aceptás los Términos y la Política de privacidad de Q Labs.
+        Al continuar aceptás los{" "}
+        <Link href="/legal/terminos" className="font-bold text-violet hover:underline">
+          Términos y condiciones
+        </Link>{" "}
+        y la{" "}
+        <Link href="/legal/privacidad" className="font-bold text-violet hover:underline">
+          Política de privacidad
+        </Link>{" "}
+        de Q Labs.
       </p>
     </div>
   );

@@ -1,0 +1,121 @@
+/* Tipografía de los documentos legales.
+ *
+ * Va como hoja aparte y no como clases de Tailwind repetidas en cada párrafo
+ * porque son dos documentos largos de HTML semántico: escribir el markup limpio
+ * (<h2>, <p>, <ul>) y darle estilo desde acá mantiene el texto legible en el
+ * repo, que es donde se va a editar cuando el abogado devuelva correcciones.
+ *
+ * Los colores salen de los mismos tokens que el resto del sitio público
+ * (ver @theme en globals.css) para que no se sienta una página pegada aparte.
+ */
+
+.legal-prose {
+  color: var(--color-ink-soft);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.legal-prose h2 {
+  color: var(--color-ink);
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-top: 2.75rem;
+  margin-bottom: 0.875rem;
+  scroll-margin-top: 6rem; /* el nav es sticky: sin esto los anclas quedan tapadas */
+}
+
+.legal-prose h3 {
+  color: var(--color-ink);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.legal-prose p {
+  margin-bottom: 1rem;
+}
+
+.legal-prose ul,
+.legal-prose ol {
+  margin-bottom: 1rem;
+  padding-left: 1.25rem;
+}
+
+.legal-prose ul {
+  list-style: disc;
+}
+
+.legal-prose ol {
+  list-style: decimal;
+}
+
+.legal-prose li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+.legal-prose strong {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.legal-prose a {
+  color: var(--color-violet);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-prose a:hover {
+  color: var(--color-violet-deep);
+}
+
+/* Bloque destacado para las reglas que más conflictos generan (comisión,
+   derechos de uso, disputas). Que salten a la vista es parte del punto. */
+.legal-callout {
+  background: var(--color-lavender);
+  border: 1px solid var(--color-lavender-deep);
+  border-radius: var(--radius-card);
+  padding: 1.125rem 1.25rem;
+  margin: 1.5rem 0;
+}
+
+.legal-callout p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tabla simple para el detalle de datos personales. Se desplaza sola en móvil
+   en vez de empujar el ancho de la página — misma regla que el resto del sitio. */
+.legal-tablewrap {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.legal-prose table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 34rem;
+  font-size: 0.9375rem;
+}
+
+.legal-prose th,
+.legal-prose td {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: top;
+}
+
+.legal-prose thead th {
+  color: var(--color-ink);
+  font-weight: 700;
+  background: var(--color-lavender);
+}
+
+.legal-prose tbody tr:last-child td {
+  border-bottom: none;
+}

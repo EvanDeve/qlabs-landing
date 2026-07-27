@@ -51,6 +51,19 @@ export default async function LoginPage({
       <main className="flex flex-1 items-center justify-center px-5 py-8">
         <AuthForm initialIntent={intent ? INTENT_TO_ROLE[intent] : undefined} />
       </main>
+
+      {/* Los links legales de AuthForm viven en el segundo paso (el formulario);
+          en el primero —elegir rol— hay un return temprano y no se renderizan.
+          Como /ugc/login sin intent es justo por donde entra la mayoría, van
+          también acá abajo para que sean alcanzables siempre. */}
+      <footer className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-6 pb-8 text-xs text-ink-soft">
+        <Link href="/legal/terminos" className="font-semibold transition hover:text-ink">
+          Términos y condiciones
+        </Link>
+        <Link href="/legal/privacidad" className="font-semibold transition hover:text-ink">
+          Política de privacidad
+        </Link>
+      </footer>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ROLE_DASHBOARD } from "@/lib/ugc/roles";
+import { notifyAdminsOfPendingVerification } from "@/lib/ugc/admin-alerts";
 
 export type OnboardingActionState = { error: string } | null;
 
@@ -73,6 +74,16 @@ export async function completeOnboardingAction(
       return { error: "No se pudo guardar tu perfil. Intentá de nuevo." };
     }
 
+    // Se mira ANTES del upsert para saber si esto es un registro nuevo o alguien
+    // que vuelve a pasar por el onboarding. No sirve mirar `profiles.role`: el
+    // trigger `handle_new_user` ya lo dejó puesto desde el metadata del signup,
+    // así que siempre viene lleno y nunca avisaríamos a nadie.
+    const { data: existingCreator } = await supabase
+      .from("creator_profiles")
+      .select("profile_id")
+      .eq("profile_id", user.id)
+      .maybeSingle();
+
     const { error: creatorError } = await supabase.from("creator_profiles").upsert({
       profile_id: user.id,
       handle,
@@ -92,6 +103,15 @@ export async function completeOnboardingAction(
 
     if (bio) {
       await supabase.from("profiles").update({ bio }).eq("id", user.id);
+    }
+
+    if (!existingCreator) {
+      await notifyAdminsOfPendingVerification({
+        profileId: user.id,
+        role: "creator",
+        name: handle,
+        detail: city || null,
+      });
     }
   } else {
     const brandName = String(formData.get("brand_name") ?? "").trim();
@@ -118,6 +138,14 @@ export async function completeOnboardingAction(
       return { error: "No se pudo guardar tu perfil. Intentá de nuevo." };
     }
 
+    // Ver el comentario equivalente en la rama de creador: `profiles.role` no
+    // sirve como señal de "registro nuevo", la existencia de la fila sí.
+    const { data: existingBrand } = await supabase
+      .from("brand_profiles")
+      .select("profile_id")
+      .eq("profile_id", user.id)
+      .maybeSingle();
+
     const { error: brandError } = await supabase.from("brand_profiles").upsert({
       profile_id: user.id,
       brand_name: brandName,
@@ -128,6 +156,15 @@ export async function completeOnboardingAction(
 
     if (brandError) {
       return { error: "No se pudo guardar tu perfil. Intentá de nuevo." };
+    }
+
+    if (!existingBrand) {
+      await notifyAdminsOfPendingVerification({
+        profileId: user.id,
+        role: "brand",
+        name: brandName,
+        detail: industry,
+      });
     }
   }
 
