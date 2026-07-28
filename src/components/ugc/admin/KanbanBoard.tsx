@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -10,12 +10,13 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import type { Database, ContentStage } from "@/lib/database.types";
-import { updateContentPieceStageAction } from "@/lib/actions/content-pieces";
-import { CONTENT_STAGE_ORDER, CONTENT_STAGE_LABEL, CONTENT_STAGE_COLOR, CONTENT_STAGE_SOP } from "@/lib/ugc/content-stage";
+import type { Database } from "@/lib/database.types";
+import { updateContentPieceColumnAction } from "@/lib/actions/content-pieces";
+import type { ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ContentPieceDrawer from "./ContentPieceDrawer";
 import NewContentPieceModal from "./NewContentPieceModal";
+import ContentColumnModal from "./ContentColumnModal";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
@@ -24,18 +25,32 @@ export type StaffOption = { id: string; name: string; role: string; color: strin
 
 export default function KanbanBoard({
   pieces,
+  columns,
   brands,
   staff,
 }: {
   pieces: ContentPiece[];
+  columns: ContentColumn[];
   brands: BrandOption[];
   staff: StaffOption[];
 }) {
   const [localPieces, setLocalPieces] = useState(pieces);
   const [selectedPiece, setSelectedPiece] = useState<ContentPiece | null>(null);
-  const [showNewForm, setShowNewForm] = useState(false);
+  // Guarda EN QUÉ columna se está creando, no un booleano: el "+" de cada
+  // columna abre el modal ya posicionado ahí.
+  const [creatingInColumn, setCreatingInColumn] = useState<string | null>(null);
+  // null = cerrado, "nueva" = crear, o la columna que se está editando.
+  const [columnModal, setColumnModal] = useState<ContentColumn | "nueva" | null>(null);
 
-  useEffect(() => setLocalPieces(pieces), [pieces]);
+  // Resincroniza cuando el server action revalida y llegan props nuevas. Se
+  // ajusta durante el render y no con un useEffect: React trata este caso
+  // especial —re-renderiza de una sin pintar el estado viejo— mientras que con
+  // efecto la lista parpadea con los datos anteriores por un frame.
+  const [piecesPrev, setPiecesPrev] = useState(pieces);
+  if (piecesPrev !== pieces) {
+    setPiecesPrev(pieces);
+    setLocalPieces(pieces);
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -47,36 +62,50 @@ export default function KanbanBoard({
     if (!over) return;
 
     const pieceId = String(active.id);
-    const newStage = String(over.id) as ContentStage;
+    const newColumnId = String(over.id);
     const piece = localPieces.find((p) => p.id === pieceId);
-    if (!piece || piece.stage === newStage) return;
+    if (!piece || piece.column_id === newColumnId) return;
 
-    setLocalPieces((prev) => prev.map((p) => (p.id === pieceId ? { ...p, stage: newStage } : p)));
-    void updateContentPieceStageAction(pieceId, newStage);
+    setLocalPieces((prev) =>
+      prev.map((p) => (p.id === pieceId ? { ...p, column_id: newColumnId } : p))
+    );
+    void updateContentPieceColumnAction(pieceId, newColumnId);
   }
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setShowNewForm(true)}
-        className={`${styles.btn} ${styles.btnPrimary}`}
-        style={{ marginBottom: "16px" }}
-      >
-        <QosIcon name="plus" size={16} />
-        Nueva pieza
-      </button>
+      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={() => setCreatingInColumn(columns[0]?.id ?? null)}
+          disabled={columns.length === 0}
+          className={`${styles.btn} ${styles.btnPrimary}`}
+        >
+          <QosIcon name="plus" size={16} />
+          Nueva pieza
+        </button>
+        <button
+          type="button"
+          onClick={() => setColumnModal("nueva")}
+          className={`${styles.btn} ${styles.btnGhost}`}
+        >
+          <QosIcon name="columns" size={16} />
+          Nueva columna
+        </button>
+      </div>
 
       <DndContext id="kanban-board" sensors={sensors} onDragEnd={handleDragEnd}>
         <div className={styles.kanban}>
-          {CONTENT_STAGE_ORDER.map((stage) => (
+          {columns.map((column) => (
             <Column
-              key={stage}
-              stage={stage}
-              pieces={localPieces.filter((p) => p.stage === stage)}
+              key={column.id}
+              column={column}
+              pieces={localPieces.filter((p) => p.column_id === column.id)}
               brandNameById={brandNameById}
               staffById={staffById}
               onSelect={setSelectedPiece}
+              onAdd={setCreatingInColumn}
+              onEditColumn={setColumnModal}
             />
           ))}
         </div>
@@ -85,6 +114,7 @@ export default function KanbanBoard({
       {selectedPiece && (
         <ContentPieceDrawer
           piece={selectedPiece}
+          columns={columns}
           brandName={brandNameById.get(selectedPiece.brand_id) ?? ""}
           staff={staff}
           onClose={() => setSelectedPiece(null)}
@@ -95,42 +125,90 @@ export default function KanbanBoard({
         />
       )}
 
-      {showNewForm && (
-        <NewContentPieceModal brands={brands} staff={staff} onClose={() => setShowNewForm(false)} />
+      {creatingInColumn && (
+        <NewContentPieceModal
+          brands={brands}
+          staff={staff}
+          columns={columns}
+          columnId={creatingInColumn}
+          onClose={() => setCreatingInColumn(null)}
+        />
+      )}
+
+      {columnModal && (
+        <ContentColumnModal
+          column={columnModal === "nueva" ? null : columnModal}
+          totalColumns={columns.length}
+          pieceCount={
+            columnModal === "nueva"
+              ? 0
+              : localPieces.filter((p) => p.column_id === columnModal.id).length
+          }
+          isOnlyDoneColumn={
+            columnModal !== "nueva" &&
+            columnModal.is_done &&
+            columns.filter((c) => c.is_done).length === 1
+          }
+          onClose={() => setColumnModal(null)}
+        />
       )}
     </div>
   );
 }
 
 function Column({
-  stage,
+  column,
   pieces,
   brandNameById,
   staffById,
   onSelect,
+  onAdd,
+  onEditColumn,
 }: {
-  stage: ContentStage;
+  column: ContentColumn;
   pieces: ContentPiece[];
   brandNameById: Map<string, string>;
   staffById: Map<string, StaffOption>;
   onSelect: (piece: ContentPiece) => void;
+  onAdd: (columnId: string) => void;
+  onEditColumn: (c: ContentColumn) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: stage });
-  const sop = CONTENT_STAGE_SOP[stage];
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
     <div ref={setNodeRef} className={`${styles.kcol} ${isOver ? styles.kcolDropHi : ""}`}>
       <div className={styles.kcolHead}>
-        <span className={styles.dot} style={{ background: CONTENT_STAGE_COLOR[stage] }} />
-        <span className={styles.kcName}>{CONTENT_STAGE_LABEL[stage]}</span>
+        <span className={styles.dot} style={{ background: column.color }} />
+        <span className={styles.kcName}>{column.name}</span>
         <span className={styles.kcCount}>{pieces.length}</span>
-        {sop.sopCode && <span className={styles.sopTag} style={{ marginLeft: "auto" }}>{sop.sopCode}</span>}
+        {column.sop_code && <span className={styles.sopTag}>{column.sop_code}</span>}
+        <button
+          type="button"
+          onClick={() => onEditColumn(column)}
+          className={styles.kcAdd}
+          style={{ marginLeft: "auto" }}
+          title={`Editar columna ${column.name}`}
+          aria-label={`Editar columna ${column.name}`}
+        >
+          <QosIcon name="sparkle" size={12} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onAdd(column.id)}
+          className={styles.kcAdd}
+          style={{ marginLeft: 0 }}
+          title={`Nueva pieza en ${column.name}`}
+          aria-label={`Nueva pieza en ${column.name}`}
+        >
+          <QosIcon name="plus" size={13} />
+        </button>
       </div>
       <div className={styles.kcolBody}>
         {pieces.map((piece) => (
           <Card
             key={piece.id}
             piece={piece}
+            isDone={column.is_done}
             brandName={brandNameById.get(piece.brand_id) ?? ""}
             owner={piece.owner_id ? staffById.get(piece.owner_id) : undefined}
             onSelect={onSelect}
@@ -145,17 +223,21 @@ const PRIO_CLASS: Record<string, string> = { alta: "prioAlta", media: "prioMedia
 
 function Card({
   piece,
+  isDone,
   brandName,
   owner,
   onSelect,
 }: {
   piece: ContentPiece;
+  isDone: boolean;
   brandName: string;
   owner?: StaffOption;
   onSelect: (piece: ContentPiece) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: piece.id });
-  const isOverdue = piece.publish_date && new Date(piece.publish_date) < new Date() && piece.stage !== "publicado";
+  // Una pieza en una columna de "terminado" ya no está atrasada, por más que
+  // la fecha de publicación haya pasado.
+  const isOverdue = piece.publish_date && new Date(piece.publish_date) < new Date() && !isDone;
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 10 }

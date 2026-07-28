@@ -19,7 +19,10 @@ export default async function AdminLayout({
         .limit(15),
       supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single(),
       supabase.from("staff_members").select("staff_role").eq("profile_id", user.id).maybeSingle(),
-      supabase.from("content_pieces").select("id").neq("stage", "publicado"),
+      // Piezas activas = las que NO están en una columna marcada como
+      // "publicadas". Se pregunta por la bandera y no por el nombre: el equipo
+      // puede renombrar sus columnas.
+      supabase.from("content_pieces").select("id, content_columns!inner(is_done)").eq("content_columns.is_done", false),
       supabase.from("agency_clients").select("id"),
     ]);
 

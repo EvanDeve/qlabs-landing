@@ -167,6 +167,14 @@
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
   min-height: 100vh;
+  transition: grid-template-columns 200ms ease;
+}
+
+/* Sidebar encogido: queda un riel de iconos, como el de q-system-app.
+   Se aplica en .app y no en .sidebar porque el que define el ancho es el
+   grid del contenedor; tocar solo el aside dejaría la columna vacía. */
+.appCollapsed {
+  grid-template-columns: 62px 1fr;
 }
 
 .sidebar {
@@ -285,6 +293,81 @@
   padding: 1px 7px;
   min-width: 20px;
   text-align: center;
+}
+
+/* ---- Sidebar encogido ----
+   Los textos se ocultan con width:0 + opacity y NO con display:none, para que
+   la transición del ancho se vea continua en vez de saltar. */
+.appCollapsed .sidebar .navItem span,
+.appCollapsed .sidebar .navLabel,
+.appCollapsed .sidebar .sub,
+.appCollapsed .sidebar .sbUser {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+}
+.appCollapsed .sidebar .navItem {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  gap: 0;
+}
+.appCollapsed .sidebar .sbNav {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.appCollapsed .sidebar .sbBrand {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.appCollapsed .sidebar .sbFoot {
+  justify-content: center;
+}
+/* El contador tiene margin-left:auto; encogido lo empuja fuera del riel, así
+   que pasa a ser un punto sobre el icono. */
+.appCollapsed .sidebar .navCount {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+  width: 7px;
+  height: 7px;
+  font-size: 0;
+  background: var(--b-400);
+}
+
+/* Botón de encoger/expandir. Prefijo .qosRoot obligatorio: el reset
+   `.qosRoot button` le gana a cualquier selector de una sola clase y el botón
+   saldría sin fondo ni borde. */
+.qosRoot .sbToggle {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(244, 243, 251, 0.75);
+  transition: var(--t-fast);
+  position: absolute;
+  top: 16px;
+  right: 12px;
+  z-index: 2;
+}
+.qosRoot .sbToggle:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.appCollapsed .qosRoot .sbToggle,
+.appCollapsed .sbToggle {
+  position: static;
+  margin: 0 auto 10px;
 }
 
 .sbFoot {
@@ -967,6 +1050,31 @@
   min-width: 20px;
   text-align: center;
 }
+/* "+" para crear directo en una columna del Kanban.
+   OJO con el prefijo .qosRoot: el reset `.qosRoot button { background:none;
+   border:none; color:inherit }` le gana en especificidad a cualquier selector
+   de una sola clase, y el botón saldría sin borde ni fondo sin que se note en
+   una captura. Ya pasó con .subtab, .starBtn y .bookOverlayBtn. */
+.qosRoot .kcAdd {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.qosRoot .kcAdd:hover {
+  border-color: var(--b-400);
+  background: var(--b-50);
+  color: var(--b-600);
+}
+
 .kcolBody {
   flex: 1;
   overflow-y: auto;
@@ -2058,4 +2166,233 @@
 }
 .qosRoot .brandCardLink:hover {
   color: var(--b-700);
+}
+
+/* ============================================================
+   ESPACIO DE TRABAJO DE PANELES
+   Usado por la transcripción. Toma el modo de trabajo del
+   analizador de q-system-app —paneles lado a lado, colapsables,
+   con la altura completa— pero con los colores y la tipografía
+   de acá, para no meter una segunda estética en el dashboard.
+   ============================================================ */
+/* El contenedor se estira para llenar lo que queda bajo la topbar y el
+   workspace ocupa ese 100%. Se hace con :has() y flex en vez de
+   `calc(100vh - 71px)` a propósito: el alto de la topbar cambia con el
+   viewport y con lo largo del título, así que cualquier número fijo deja un
+   sobrante y hace scrollear la página entera. Medido: con 62px sobraban 9px.
+
+   El padding y el max-width se anulan solo en esta página, para que los
+   paneles lleguen a los bordes y se lea como un espacio de trabajo. */
+.main:has(.workspace) .content {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  max-width: none;
+}
+
+.workspace {
+  display: flex;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.wsPanel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  transition: width 200ms ease, flex-basis 200ms ease;
+}
+.wsPanelSide {
+  width: 320px;
+  flex-shrink: 0;
+}
+.wsPanelMain {
+  flex: 1;
+  border-right: none;
+  background: var(--bg);
+}
+.wsPanelCollapsed {
+  width: 0;
+  overflow: hidden;
+  border-right-width: 0;
+}
+
+.wsHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.wsTitle {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.wsStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.wsDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+/* Pulso solo mientras se procesa: un punto que late cuando ya terminó
+   dice que sigue pasando algo y no es cierto. */
+.wsDotLive {
+  animation: wsPulse 1.6s ease-in-out infinite;
+}
+@keyframes wsPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.qosRoot .wsCollapseBtn {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  color: var(--ink-3);
+  transition: var(--t-fast);
+  flex-shrink: 0;
+}
+.qosRoot .wsCollapseBtn:hover {
+  background: var(--b-50);
+  color: var(--b-600);
+}
+
+.wsBody {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.wsBodyPad {
+  padding: 16px;
+}
+
+/* Barra para devolver un panel escondido. Solo aparece si hay alguno. */
+.wsRestore {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--b-50);
+  flex-shrink: 0;
+}
+
+/* ---- Fuentes (panel lateral) ---- */
+.wsSource {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: var(--r-md);
+  text-align: left;
+  transition: var(--t-fast);
+  margin-bottom: 2px;
+}
+.wsSource:hover {
+  background: var(--b-50);
+}
+.wsSourceOn {
+  background: var(--b-50);
+}
+.wsSourceName {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.wsSourceOn .wsSourceName {
+  color: var(--ink);
+  font-weight: 600;
+}
+.wsSourceMeta {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+/* ---- Segmentos de la transcripción ---- */
+.wsSegment {
+  display: flex;
+  gap: 14px;
+  padding: 7px 0;
+}
+.wsTime {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--b-600);
+  flex-shrink: 0;
+  padding-top: 3px;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.wsText {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+/* Esqueleto mientras transcribe: da idea de que viene texto, en vez de
+   dejar el panel en blanco. */
+.wsSkel {
+  height: 11px;
+  border-radius: var(--r-sm);
+  background: var(--line);
+  animation: wsPulse 1.4s ease-in-out infinite;
+}
+
+.wsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 10px;
+  padding: 32px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  /* Dos paneles lado a lado no entran en un teléfono: se apilan y el
+     espacio deja de pelear con el alto de la ventana. */
+  .main:has(.workspace) .content {
+    flex: none;
+  }
+  .workspace {
+    flex-direction: column;
+    height: auto;
+  }
+  .wsPanelSide {
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .wsPanelCollapsed {
+    width: auto;
+    height: 0;
+    border-bottom-width: 0;
+  }
 }

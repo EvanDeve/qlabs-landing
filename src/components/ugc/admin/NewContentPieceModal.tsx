@@ -2,16 +2,22 @@
 
 import { createContentPieceAction } from "@/lib/actions/content-pieces";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import type { ContentColumn } from "@/lib/ugc/content-columns";
 import type { BrandOption, StaffOption } from "./KanbanBoard";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export default function NewContentPieceModal({
   brands,
   staff,
+  columns,
+  columnId,
   onClose,
 }: {
   brands: BrandOption[];
   staff: StaffOption[];
+  columns: ContentColumn[];
+  /** Columna desde la que se abrió el modal: la pieza nace ahí. */
+  columnId: string;
   onClose: () => void;
 }) {
   return (
@@ -24,7 +30,12 @@ export default function NewContentPieceModal({
           </button>
         </div>
 
+        <p style={{ fontSize: "13px", color: "var(--ink-2)", marginTop: "-8px", marginBottom: "16px" }}>
+          Entra en <b>{columns.find((c) => c.id === columnId)?.name ?? "la primera columna"}</b>.
+        </p>
+
         <form action={createContentPieceAction} onSubmit={onClose}>
+          <input type="hidden" name="column_id" value={columnId} />
           <div className={styles.field}>
             <label>Hero</label>
             <select name="brand_id" required className={styles.inp}>

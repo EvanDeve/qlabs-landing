@@ -14,9 +14,11 @@ export default async function PipelinePage({
   const { brand, owner, priority } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: agencyClients }, { data: staffMembers }, piecesQuery] = await Promise.all([
+  const [{ data: agencyClients }, { data: staffMembers }, { data: columns }, piecesQuery] =
+    await Promise.all([
     supabase.from("agency_clients").select("id, name").order("name"),
     supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
+    supabase.from("content_columns").select("*").order("position", { ascending: true }),
     (() => {
       let query = supabase.from("content_pieces").select("*").order("created_at", { ascending: false });
       if (brand) query = query.eq("brand_id", brand);
@@ -79,7 +81,12 @@ export default async function PipelinePage({
         </div>
       </form>
 
-      <KanbanBoard pieces={contentPieces ?? []} brands={brands} staff={staff} />
+      <KanbanBoard
+        pieces={contentPieces ?? []}
+        columns={columns ?? []}
+        brands={brands}
+        staff={staff}
+      />
     </div>
   );
 }

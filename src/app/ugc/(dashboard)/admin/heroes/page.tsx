@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { deleteHeroAction } from "@/lib/actions/heroes";
-import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import NewHeroButton from "@/components/ugc/admin/NewHeroButton";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
@@ -27,15 +26,19 @@ export default async function HeroesPage() {
   const clientIds = (clients ?? []).map((c) => c.id);
 
   const { data: contentPieces } = clientIds.length
-    ? await supabase.from("content_pieces").select("brand_id, stage, publish_date").in("brand_id", clientIds)
+    ? await supabase.from("content_pieces").select("brand_id, column_id, publish_date").in("brand_id", clientIds)
     : { data: [] };
+
+  // Qué columna significa "publicado" lo dice su bandera is_done, no el nombre.
+  const { data: columns } = await supabase.from("content_columns").select("id, name, is_done");
+  const columnById = new Map((columns ?? []).map((c) => [c.id, c]));
 
   const latestStageByBrandId = new Map<string, string>();
   const nextPublishByBrandId = new Map<string, string>();
   const activeCountByBrandId = new Map<string, number>();
   for (const piece of contentPieces ?? []) {
-    if (piece.stage !== "publicado") {
-      latestStageByBrandId.set(piece.brand_id, piece.stage);
+    if (!columnById.get(piece.column_id)?.is_done) {
+      latestStageByBrandId.set(piece.brand_id, piece.column_id);
       activeCountByBrandId.set(piece.brand_id, (activeCountByBrandId.get(piece.brand_id) ?? 0) + 1);
     }
     if (piece.publish_date && new Date(piece.publish_date) >= new Date()) {
@@ -77,7 +80,7 @@ export default async function HeroesPage() {
                   <span className={styles.tag}>
                     {activeCount} pieza{activeCount === 1 ? "" : "s"} activa{activeCount === 1 ? "" : "s"}
                   </span>
-                  {stage && <span className={styles.tag}>{CONTENT_STAGE_LABEL[stage as keyof typeof CONTENT_STAGE_LABEL]}</span>}
+                  {stage && <span className={styles.tag}>{columnById.get(stage)?.name ?? "—"}</span>}
                 </div>
 
                 {primaryContact && (

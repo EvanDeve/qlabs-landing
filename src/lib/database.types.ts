@@ -35,20 +35,18 @@ export type StaffRole =
   | "qa"
   | "community"
   | "ventas";
-export type ContentStage =
-  | "pendiente"
-  | "estrategia"
-  | "guion"
-  | "aprobacion_guion"
-  | "grabacion"
-  | "edicion"
-  | "qa"
-  | "revision_cliente"
-  | "programado"
-  | "publicado";
+// Nota: no hay enum de etapas. Las columnas del pipeline —tanto el del admin
+// (`content_columns`) como el del creador (`creator_task_columns`)— son filas
+// configurables, porque un enum de Postgres no se puede extender en runtime.
+// Lo que antes se preguntaba por nombre ("¿es 'publicado'?") ahora se pregunta
+// por significado: las banderas is_done / is_pending_approval.
 export type ContentApproval = "pendiente" | "correccion" | "revisado";
 export type ContentPriority = "baja" | "media" | "alta";
 export type ContentPlatform = "instagram" | "tiktok" | "reels";
+
+// Nota: el tablero del creador NO tiene enum de etapas. Sus columnas son filas
+// de `creator_task_columns` para que cada creador arme las suyas — un enum de
+// Postgres no se puede extender en runtime. Ver 20260727100000.
 export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega";
 export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";
@@ -406,13 +404,39 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["agency_clients"]["Insert"]>;
         Relationships: [];
       };
+      content_columns: {
+        Row: {
+          id: string;
+          name: string;
+          color: string;
+          position: number;
+          sop_code: string | null;
+          owner_role: string | null;
+          is_done: boolean;
+          is_pending_approval: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          color?: string;
+          position?: number;
+          sop_code?: string | null;
+          owner_role?: string | null;
+          is_done?: boolean;
+          is_pending_approval?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["content_columns"]["Insert"]>;
+        Relationships: [];
+      };
       content_pieces: {
         Row: {
           id: string;
           brand_id: string;
           title: string;
           code: string;
-          stage: ContentStage;
+          column_id: string;
           approval: ContentApproval;
           owner_id: string | null;
           priority: ContentPriority;
@@ -431,7 +455,7 @@ export interface Database {
           brand_id: string;
           title: string;
           code: string;
-          stage?: ContentStage;
+          column_id: string;
           approval?: ContentApproval;
           owner_id?: string | null;
           priority?: ContentPriority;
@@ -446,6 +470,84 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["content_pieces"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_transcriptions: {
+        Row: {
+          id: string;
+          creator_id: string;
+          source_url: string;
+          source_type: string;
+          title: string | null;
+          status: "pending" | "processing" | "done" | "error";
+          segments: { timestamp: string; text: string }[] | null;
+          error_message: string | null;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          source_url: string;
+          source_type?: string;
+          title?: string | null;
+          status?: "pending" | "processing" | "done" | "error";
+          segments?: { timestamp: string; text: string }[] | null;
+          error_message?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_transcriptions"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_task_columns: {
+        Row: {
+          id: string;
+          creator_id: string;
+          name: string;
+          color: string;
+          position: number;
+          is_done: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          name: string;
+          color?: string;
+          position?: number;
+          is_done?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_task_columns"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_tasks: {
+        Row: {
+          id: string;
+          creator_id: string;
+          title: string;
+          column_id: string;
+          notes: string | null;
+          platform: ContentPlatform | null;
+          due_date: string | null;
+          position: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          title: string;
+          column_id: string;
+          notes?: string | null;
+          platform?: ContentPlatform | null;
+          due_date?: string | null;
+          position?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_tasks"]["Insert"]>;
         Relationships: [];
       };
       calendar_events: {
@@ -575,7 +677,6 @@ export interface Database {
       campaign_usage_duration: CampaignUsageDuration;
       application_status: ApplicationStatus;
       staff_role: StaffRole;
-      content_stage: ContentStage;
       content_approval: ContentApproval;
       content_priority: ContentPriority;
       content_platform: ContentPlatform;

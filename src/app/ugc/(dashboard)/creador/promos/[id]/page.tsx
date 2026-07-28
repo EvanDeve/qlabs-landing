@@ -58,7 +58,7 @@ export default async function PromoDetailPage({
     <div>
       {/* Botón, no link de texto: es la salida principal de esta página. */}
       <Link
-        href="/ugc/creador"
+        href="/ugc/creador/promos"
         className={`${styles.btn} ${styles.btnGhost}`}
         style={{ marginBottom: "16px" }}
       >

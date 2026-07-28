@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Database } from "@/lib/database.types";
@@ -14,6 +14,31 @@ import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 // archivo de estilos sigue siendo la fuente compartida real.
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+
+// La preferencia de menú encogido se recuerda entre sesiones: quien trabaja
+// todo el día acá no quiere volver a encogerlo en cada carga.
+//
+// Se lee con useSyncExternalStore y no con useState+useEffect por dos razones:
+// el servidor no puede saber qué eligió este usuario (con useState se rompe la
+// hidratación), y setear estado dentro de un efecto dispara un render en
+// cascada. `getServerSnapshot` devuelve false, así que el HTML del servidor
+// siempre sale expandido y el cliente ajusta en el primer commit.
+const SIDEBAR_KEY = "qos:sidebar-collapsed";
+// localStorage no avisa cambios en la MISMA pestaña —el evento `storage` solo
+// llega a las otras—, así que se emite uno propio.
+const SIDEBAR_EVENT = "qos:sidebar-change";
+
+function subscribeSidebar(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(SIDEBAR_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(SIDEBAR_EVENT, onChange);
+  };
+}
+
+const getSidebarSnapshot = () => localStorage.getItem(SIDEBAR_KEY) === "1";
+const getSidebarServerSnapshot = () => false;
 
 export type QosNavItem = {
   href: string;
@@ -42,6 +67,16 @@ export default function QosShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const collapsed = useSyncExternalStore(
+    subscribeSidebar,
+    getSidebarSnapshot,
+    getSidebarServerSnapshot
+  );
+
+  function toggleSidebar() {
+    localStorage.setItem(SIDEBAR_KEY, collapsed ? "0" : "1");
+    window.dispatchEvent(new Event(SIDEBAR_EVENT));
+  }
 
   const activeItem =
     navItems.find((item) => pathname === item.href) ??
@@ -72,12 +107,23 @@ export default function QosShell({
   return (
     <div className={styles.qosRoot} id="qos-root">
       {mobileOpen && <div className={styles.sbScrim} onClick={() => setMobileOpen(false)} />}
-      <div className={styles.app}>
+      <div className={`${styles.app} ${collapsed ? styles.appCollapsed : ""}`}>
         <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
           <div className={styles.sbBrand}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/favicon-logo.png" alt="Q Labs" className={styles.qMark} style={{ objectFit: "cover" }} />
             <div className={styles.sub}>Centro de Mando</div>
           </div>
+
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className={styles.sbToggle}
+            title={collapsed ? "Expandir menú" : "Encoger menú"}
+            aria-label={collapsed ? "Expandir menú" : "Encoger menú"}
+          >
+            <QosIcon name={collapsed ? "chevR" : "chevL"} size={14} />
+          </button>
 
           <nav className={styles.sbNav} aria-label="Navegación principal">
             {groups.map((g, gi) => (
@@ -91,6 +137,7 @@ export default function QosShell({
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
                       className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
+                      title={collapsed ? item.label : undefined}
                     >
                       <QosIcon name={item.icon} size={18} className={styles.navIc} />
                       <span>{item.label}</span>

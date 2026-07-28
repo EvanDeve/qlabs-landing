@@ -53,7 +53,11 @@ export async function applyToCampaignAction(
     };
   }
 
+  // El feed dejó de vivir en /ugc/creador (ahora es el Resumen): hay que
+  // revalidar las dos, porque aplicar cambia el estado de la tarjeta en el feed
+  // y también los números del home.
   revalidatePath("/ugc/creador");
+  revalidatePath("/ugc/creador/promos");
   revalidatePath("/ugc/creador/aplicaciones");
 
   const { data: campaign } = await supabase

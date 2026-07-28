@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import type { Database } from "@/lib/database.types";
-import { updateContentPieceAction, updateContentPieceStageAction, deleteContentPieceAction } from "@/lib/actions/content-pieces";
-import { CONTENT_STAGE_LABEL, CONTENT_STAGE_SOP, nextContentStage } from "@/lib/ugc/content-stage";
+import { updateContentPieceAction, updateContentPieceColumnAction, deleteContentPieceAction } from "@/lib/actions/content-pieces";
+import { nextColumn, type ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import type { StaffOption } from "./KanbanBoard";
@@ -13,27 +13,29 @@ type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
 
 export default function ContentPieceDrawer({
   piece,
+  columns,
   brandName,
   staff,
   onClose,
   onDeleted,
 }: {
   piece: ContentPiece;
+  columns: ContentColumn[];
   brandName: string;
   staff: StaffOption[];
   onClose: () => void;
   onDeleted: () => void;
 }) {
-  const [stage, setStage] = useState(piece.stage);
+  const [columnId, setColumnId] = useState(piece.column_id);
   const [isPending, startTransition] = useTransition();
-  const sop = CONTENT_STAGE_SOP[stage];
-  const upcoming = nextContentStage(stage);
+  const current = columns.find((c) => c.id === columnId);
+  const upcoming = nextColumn(columns, columnId);
 
   function handleAdvance() {
     if (!upcoming) return;
     startTransition(async () => {
-      await updateContentPieceStageAction(piece.id, upcoming);
-      setStage(upcoming);
+      await updateContentPieceColumnAction(piece.id, upcoming.id);
+      setColumnId(upcoming.id);
     });
   }
 
@@ -59,7 +61,7 @@ export default function ContentPieceDrawer({
         <div className={styles.drawerBody}>
           <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-              <span className={styles.sopTag}>{CONTENT_STAGE_LABEL[stage]}</span>
+              <span className={styles.sopTag}>{current?.name ?? "Sin columna"}</span>
               {upcoming && (
                 <button
                   type="button"
@@ -67,13 +69,14 @@ export default function ContentPieceDrawer({
                   disabled={isPending}
                   className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
                 >
-                  Avanzar a {CONTENT_STAGE_LABEL[upcoming]} <QosIcon name="chevR" size={13} />
+                  Avanzar a {upcoming.name} <QosIcon name="chevR" size={13} />
                 </button>
               )}
             </div>
-            {sop.sopCode && (
+            {current?.sop_code && (
               <p style={{ marginTop: "8px", fontSize: "11.5px", color: "var(--ink-3)" }}>
-                {sop.sopCode} · Responsable: {sop.ownerRole}
+                {current.sop_code}
+                {current.owner_role ? ` · Responsable: ${current.owner_role}` : ""}
               </p>
             )}
           </div>

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { toggleCalendarMonthAction } from "@/lib/actions/heroes";
-import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "./qos.module.css";
@@ -32,6 +31,7 @@ export default async function AdminDashboardPage() {
     { data: staffMembers },
     { data: calendarEvents },
     { data: calendarMonths },
+    { data: contentColumns },
   ] = await Promise.all([
     supabase.from("agency_clients").select("*"),
     supabase.from("content_pieces").select("*").order("publish_date", { ascending: true }),
@@ -42,6 +42,7 @@ export default async function AdminDashboardPage() {
       .gte("starts_at", now.toISOString())
       .lte("starts_at", in7Days.toISOString()),
     supabase.from("hero_calendar_months").select("hero_id, status").eq("month", monthKey),
+    supabase.from("content_columns").select("*").order("position", { ascending: true }),
   ]);
 
   const brandNameByProfileId = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
@@ -53,7 +54,17 @@ export default async function AdminDashboardPage() {
   const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
 
   const pieces = contentPieces ?? [];
-  const activePieces = pieces.filter((p) => p.stage !== "publicado");
+  const columns = contentColumns ?? [];
+  const columnById = new Map(columns.map((c) => [c.id, c]));
+  // Qué cuenta como publicado y qué como pendiente de aprobación lo declara la
+  // columna, NO su nombre: el equipo puede renombrarlas y estas cuentas —de las
+  // que salen meta, ritmo y riesgo del Pase de servicio— tienen que seguir
+  // dando lo mismo.
+  const doneColumnIds = new Set(columns.filter((c) => c.is_done).map((c) => c.id));
+  const approvalColumnIds = new Set(
+    columns.filter((c) => c.is_pending_approval).map((c) => c.id)
+  );
+  const activePieces = pieces.filter((p) => !doneColumnIds.has(p.column_id));
 
   const heroesManaged = agencyClients ?? [];
 
@@ -64,7 +75,7 @@ export default async function AdminDashboardPage() {
     pieces.filter(
       (p) =>
         p.brand_id === heroId &&
-        p.stage === "publicado" &&
+        doneColumnIds.has(p.column_id) &&
         p.publish_date &&
         new Date(p.publish_date) >= monthStart &&
         new Date(p.publish_date) < monthEnd
@@ -128,7 +139,7 @@ export default async function AdminDashboardPage() {
 
   const overduePieces = activePieces.filter((p) => p.publish_date && new Date(p.publish_date) < now);
   const pendingApprovalPieces = activePieces.filter(
-    (p) => p.stage === "aprobacion_guion" || p.stage === "revision_cliente"
+    (p) => approvalColumnIds.has(p.column_id)
   );
   const publishingThisWeekPieces = pieces.filter(
     (p) => p.publish_date && new Date(p.publish_date) >= now && new Date(p.publish_date) <= in7Days
@@ -278,7 +289,7 @@ export default async function AdminDashboardPage() {
                     </div>
                   </div>
                   <div className={styles.attnRight}>
-                    <span className={styles.tag}>{CONTENT_STAGE_LABEL[piece.stage]}</span>
+                    <span className={styles.tag}>{columnById.get(piece.column_id)?.name ?? "—"}</span>
                     <QosIcon name="chevR" size={16} />
                   </div>
                 </Link>

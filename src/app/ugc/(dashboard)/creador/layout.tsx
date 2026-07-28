@@ -3,7 +3,10 @@ import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
 import { displayHandle } from "@/lib/ugc/handles";
 
 const NAV_ITEMS: QosNavItem[] = [
-  { href: "/ugc/creador", label: "Feed de promos", icon: "megaphone" },
+  { href: "/ugc/creador", label: "Resumen", icon: "grid" },
+  { href: "/ugc/creador/pipeline", label: "Mi pipeline", icon: "columns" },
+  { href: "/ugc/creador/transcripcion", label: "Transcripción", icon: "doc" },
+  { href: "/ugc/creador/promos", label: "Feed de promos", icon: "megaphone" },
   { href: "/ugc/creador/book", label: "Mi book", icon: "book" },
   { href: "/ugc/creador/aplicaciones", label: "Mis aplicaciones", icon: "clock" },
   { href: "/ugc/creador/perfil", label: "Perfil", icon: "users" },

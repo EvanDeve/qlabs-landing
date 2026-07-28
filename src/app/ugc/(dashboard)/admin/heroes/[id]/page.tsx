@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { updateHeroProfileAction } from "@/lib/actions/heroes";
-import { CONTENT_STAGE_LABEL } from "@/lib/ugc/content-stage";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import HeroLogoField from "@/components/ugc/admin/HeroLogoField";
 import HeroContactsField from "@/components/ugc/admin/HeroContactsField";
@@ -27,12 +26,16 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
 
   const { data: contentPieces } = await supabase
     .from("content_pieces")
-    .select("id, code, title, stage, publish_date")
+    .select("id, code, title, column_id, publish_date")
     .eq("brand_id", id)
     .order("created_at", { ascending: false });
 
-  const activeCount = (contentPieces ?? []).filter((p) => p.stage !== "publicado").length;
-  const publishedCount = (contentPieces ?? []).filter((p) => p.stage === "publicado").length;
+  // "Publicado" lo declara la columna (is_done), no su nombre: son
+  // renombrables y estos contadores tienen que seguir siendo correctos.
+  const { data: columns } = await supabase.from("content_columns").select("id, name, is_done");
+  const columnById = new Map((columns ?? []).map((c) => [c.id, c]));
+  const activeCount = (contentPieces ?? []).filter((p) => !columnById.get(p.column_id)?.is_done).length;
+  const publishedCount = (contentPieces ?? []).filter((p) => columnById.get(p.column_id)?.is_done).length;
 
   return (
     <div>
@@ -248,7 +251,7 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
                   {piece.title}
                 </div>
               </div>
-              <span className={styles.tag}>{CONTENT_STAGE_LABEL[piece.stage]}</span>
+              <span className={styles.tag}>{columnById.get(piece.column_id)?.name ?? "—"}</span>
             </div>
           ))
         ) : (
