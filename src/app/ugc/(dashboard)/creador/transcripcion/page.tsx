@@ -4,8 +4,9 @@ import TranscriptionTool from "@/components/ugc/creador/TranscriptionTool";
 export const dynamic = "force-dynamic";
 
 // Sin encabezado propio: el título ya lo pone la topbar del shell, y esta
-// página es un espacio de trabajo a pantalla completa —dos paneles que ocupan
-// el alto disponible—, no una página de contenido que se scrollea.
+// página es un espacio de trabajo a pantalla completa —fuentes, transcripción
+// y guion ocupando el alto disponible—, no una página de contenido que se
+// scrollea.
 export default async function TranscripcionPage() {
   const supabase = await createClient();
   const {

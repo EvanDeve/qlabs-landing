@@ -2225,8 +2225,20 @@
 }
 .wsPanelMain {
   flex: 1;
-  border-right: none;
   background: var(--bg);
+}
+/* Tercer panel: el guion mejorado. Es hermano de la transcripción y no una
+   pestaña adentro de ella, porque el trabajo real acá es leer el original
+   mientras se edita el nuevo — con pestañas habría que ir y volver. */
+.wsPanelScript {
+  flex: 1;
+  background: var(--surface);
+}
+/* El borde derecho lo pone cada panel y lo cierra el de al lado, así que el
+   último no lleva. Antes estaba fijo en `.wsPanelMain`, que dejó de ser el
+   último cuando se sumó el guion. */
+.workspace > .wsPanel:last-child {
+  border-right: none;
 }
 .wsPanelCollapsed {
   width: 0;
@@ -2418,8 +2430,38 @@
   font-size: 13px;
 }
 
+/* ---- Guion mejorado (tercer panel) ---- */
+/* El guion se edita en un textarea desnudo y no en una caja con borde: se
+   quiere que se lea como un documento, no como un formulario. El borde del
+   panel ya delimita el área. */
+.wsScriptArea {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ink);
+  padding: 20px 24px;
+  white-space: pre-wrap;
+}
+.wsScriptArea::placeholder {
+  color: var(--ink-3);
+}
+/* Aviso de "tenés cambios sin guardar". Va en la cabecera del panel, al lado
+   de los botones, que es donde el creador ya está mirando cuando edita. */
+.wsScriptDirty {
+  font-size: 11.5px;
+  color: var(--warn);
+  font-weight: 600;
+}
+
 @media (max-width: 860px) {
-  /* Dos paneles lado a lado no entran en un teléfono: se apilan y el
+  /* Los paneles lado a lado no entran en un teléfono: se apilan y el
      espacio deja de pelear con el alto de la ventana. */
   .main:has(.workspace) .content {
     flex: none;

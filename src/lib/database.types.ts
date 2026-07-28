@@ -483,6 +483,8 @@ export interface Database {
           status: "pending" | "processing" | "done" | "error";
           segments: { timestamp: string; text: string }[] | null;
           error_message: string | null;
+          improved_script: string | null;
+          improved_script_at: string | null;
           created_at: string;
           completed_at: string | null;
         };
@@ -496,6 +498,8 @@ export interface Database {
           status?: "pending" | "processing" | "done" | "error";
           segments?: { timestamp: string; text: string }[] | null;
           error_message?: string | null;
+          improved_script?: string | null;
+          improved_script_at?: string | null;
           created_at?: string;
           completed_at?: string | null;
         };
