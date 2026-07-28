@@ -8,7 +8,7 @@ import BrandAvatar from "@/components/ugc/BrandAvatar";
 import { APPLICATION_STATUS_LABEL } from "@/lib/ugc/application-status";
 import { CAMPAIGN_STATUS_LABEL } from "@/lib/ugc/campaign-status";
 import styles from "../qos.module.css";
-import { displayHandle } from "@/lib/ugc/handles";
+import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +60,9 @@ export default async function AdminMarketplacePage() {
         </div>
         {(creatorProfiles ?? []).map((creator) => {
           const account = accountProfileById.get(creator.profile_id);
+          // El handle es lo que arma la URL del media-kit. Puede venir vacío o
+          // solo con "@" en filas viejas, y ahí el link caería en un 404.
+          const slug = handleSlug(creator.handle);
           return (
             <div key={creator.profile_id} className={styles.attnItem} style={{ cursor: "default" }}>
               <div className={styles.attnBody}>
@@ -71,16 +74,32 @@ export default async function AdminMarketplacePage() {
                   {creator.followers_count.toLocaleString("es-CR")} seguidores
                 </div>
               </div>
-              <form action={setCreatorVerifiedAction}>
-                <input type="hidden" name="profile_id" value={creator.profile_id} />
-                <input type="hidden" name="verified" value={(!creator.verified).toString()} />
-                <button
-                  type="submit"
-                  className={`${styles.btn} ${styles.btnSm} ${creator.verified ? styles.btnGhost : styles.btnPrimary}`}
-                >
-                  {creator.verified ? "Quitar verificación" : "Verificar"}
-                </button>
-              </form>
+              <div className={styles.attnRight}>
+                {slug && (
+                  // Abre el perfil público, que es donde vive el book. Sirve
+                  // también con el creador SIN verificar —`creator_public_profiles`
+                  // no filtra por `verified`—, que es justo cuando hace falta:
+                  // hay que ver el material antes de decidir si se verifica.
+                  <a
+                    href={`/ugc/creadores/${slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                  >
+                    Ver book
+                  </a>
+                )}
+                <form action={setCreatorVerifiedAction}>
+                  <input type="hidden" name="profile_id" value={creator.profile_id} />
+                  <input type="hidden" name="verified" value={(!creator.verified).toString()} />
+                  <button
+                    type="submit"
+                    className={`${styles.btn} ${styles.btnSm} ${creator.verified ? styles.btnGhost : styles.btnPrimary}`}
+                  >
+                    {creator.verified ? "Quitar verificación" : "Verificar"}
+                  </button>
+                </form>
+              </div>
             </div>
           );
         })}
