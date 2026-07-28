@@ -28,8 +28,11 @@ export async function POST(request: Request) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "creator") {
-    return NextResponse.json({ error: "Solo para cuentas de creador." }, { status: 403 });
+  // Igual que la transcripción: el equipo trabaja sobre su propio material. La
+  // fila se sigue filtrando por `creator_id = auth.uid()` más abajo, así que un
+  // admin no puede generar un guion sobre la transcripción de un creador.
+  if (profile?.role !== "creator" && profile?.role !== "admin") {
+    return NextResponse.json({ error: "Solo para cuentas de creador o del equipo." }, { status: 403 });
   }
 
   if (!process.env.GEMINI_API_KEY) {

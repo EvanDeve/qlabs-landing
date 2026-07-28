@@ -44,6 +44,12 @@ export default async function AdminLayout({
     },
     { href: "/ugc/admin/calendario", label: "Calendario", icon: "calendar", group: "Operación" },
     { href: "/ugc/admin/heroes", label: "Heroes", icon: "users", group: "Operación", count: heroes?.length ?? 0 },
+
+    // Misma herramienta que la del creador, sobre el material propio del
+    // equipo. No da acceso a las transcripciones de los creadores: la policy
+    // filtra por `creator_id = auth.uid()` para todos por igual.
+    { href: "/ugc/admin/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
+
     { href: "/ugc/admin/equipo", label: "Equipo", icon: "briefcase", group: "Sistema" },
     { href: "/ugc/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
     {

@@ -42,8 +42,12 @@ export async function POST(request: Request) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "creator") {
-    return NextResponse.json({ error: "Solo para cuentas de creador." }, { status: 403 });
+  // El equipo de Q Labs también transcribe material propio. No abre nada: la
+  // fila se crea con `creator_id = auth.uid()` y la policy sigue siendo
+  // `creator_id = auth.uid()`, así que cada quien ve solo lo suyo y un admin
+  // NO ve las transcripciones de los creadores.
+  if (profile?.role !== "creator" && profile?.role !== "admin") {
+    return NextResponse.json({ error: "Solo para cuentas de creador o del equipo." }, { status: 403 });
   }
 
   if (!process.env.GEMINI_API_KEY) {

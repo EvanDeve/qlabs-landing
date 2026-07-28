@@ -2,14 +2,25 @@ import { requireRole } from "@/lib/auth/require-role";
 import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
 import { displayHandle } from "@/lib/ugc/handles";
 
+// Los grupos se arman por el ORDEN de este array: el shell corta un grupo
+// nuevo cada vez que cambia el `group`, así que items del mismo grupo tienen
+// que ir seguidos. Separarlos crearía dos encabezados con el mismo nombre.
+//
+// El criterio es qué está haciendo el creador, no qué tipo de pantalla es:
+// "Mi trabajo" es lo propio de todos los días, "Herramientas" lo que usa para
+// producir, "Marketplace" lo que lo conecta con marcas, y "Mi cuenta" lo que
+// las marcas ven de él.
 const NAV_ITEMS: QosNavItem[] = [
-  { href: "/ugc/creador", label: "Resumen", icon: "grid" },
-  { href: "/ugc/creador/pipeline", label: "Mi pipeline", icon: "columns" },
-  { href: "/ugc/creador/transcripcion", label: "Transcripción", icon: "doc" },
-  { href: "/ugc/creador/promos", label: "Feed de promos", icon: "megaphone" },
-  { href: "/ugc/creador/book", label: "Mi book", icon: "book" },
-  { href: "/ugc/creador/aplicaciones", label: "Mis aplicaciones", icon: "clock" },
-  { href: "/ugc/creador/perfil", label: "Perfil", icon: "users" },
+  { href: "/ugc/creador", label: "Resumen", icon: "grid", group: "Mi trabajo" },
+  { href: "/ugc/creador/pipeline", label: "Mi pipeline", icon: "columns", group: "Mi trabajo" },
+
+  { href: "/ugc/creador/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
+
+  { href: "/ugc/creador/promos", label: "Feed de promos", icon: "megaphone", group: "Marketplace" },
+  { href: "/ugc/creador/aplicaciones", label: "Mis aplicaciones", icon: "clock", group: "Marketplace" },
+
+  { href: "/ugc/creador/book", label: "Mi book", icon: "book", group: "Mi cuenta" },
+  { href: "/ugc/creador/perfil", label: "Perfil", icon: "users", group: "Mi cuenta" },
 ];
 
 export default async function CreadorLayout({
