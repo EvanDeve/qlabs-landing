@@ -113,9 +113,10 @@ export function esArchivoAceptado(nombre: string, tipoDeclarado?: string | null)
   return ext in MIME_POR_EXT;
 }
 
-export function pesoLegible(bytes: number): string {
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
+// `pesoLegible` vive ahora en `@/lib/ugc/uploads`, junto al resto de los
+// helpers de subida. Este módulo lo importa el route handler, y uploads.ts
+// trae el client de navegador de Supabase: mantenerlos separados evita
+// arrastrar código de cliente al servidor.
 
 export const TRANSCRIPTION_PROMPT = `Transcribí el audio de este video al español, palabra por palabra.
 

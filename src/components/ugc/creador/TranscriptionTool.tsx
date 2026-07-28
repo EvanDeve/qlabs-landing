@@ -2,17 +2,16 @@
 
 import { useRef, useState } from "react";
 import type { Database } from "@/lib/database.types";
-import { createClient } from "@/lib/supabase/client";
 import { deleteTranscriptionAction } from "@/lib/actions/transcriptions";
 import {
   segmentsToPlainText,
   segmentsToTimestampedText,
   esArchivoAceptado,
-  pesoLegible,
   MAX_TRANSCRIPTION_FILE_BYTES,
   TRANSCRIPTION_BUCKET,
   type TranscriptionSegment,
 } from "@/lib/ugc/transcription";
+import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -132,23 +131,16 @@ export default function TranscriptionTool({ previas }: { previas: Fila[] }) {
     setActivaId(null);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Se venció la sesión. Volvé a entrar.");
-
       // Sube DIRECTO a Supabase Storage, sin pasar por el servidor: en Vercel
       // el body de una función tiene un tope de ~4.5 MB y un video no entra.
-      // La carpeta lleva el uuid del creador, que es lo que exige la policy.
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "mp4";
-      const storagePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
-
-      const { error: upErr } = await supabase.storage
-        .from(TRANSCRIPTION_BUCKET)
-        .upload(storagePath, file, { contentType: file.type || undefined });
-
-      if (upErr) throw new Error(`No se pudo subir el archivo: ${upErr.message}`);
+      // El helper arma la ruta bajo el uuid del creador, que es lo que exige
+      // la policy del bucket.
+      const storagePath = await subirArchivoDirecto({
+        bucket: TRANSCRIPTION_BUCKET,
+        file,
+        maxBytes: MAX_TRANSCRIPTION_FILE_BYTES,
+        extFallback: "mp4",
+      });
 
       setEstado("procesando");
       const data = await pedirTranscripcion({ storagePath, fileName: file.name });

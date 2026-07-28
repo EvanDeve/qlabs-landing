@@ -1,17 +1,18 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import {
-  PORTFOLIO_BUCKET,
-  PORTFOLIO_CATEGORIES,
-  MAX_PORTFOLIO_FILE_BYTES,
-} from "@/lib/ugc/portfolio";
+import { PORTFOLIO_BUCKET, PORTFOLIO_CATEGORIES } from "@/lib/ugc/portfolio";
 
 export type UploadPortfolioItemState = { error: string } | null;
 
+/**
+ * El archivo NO viaja por acá: el navegador lo sube directo a Supabase Storage
+ * (ver `@/lib/ugc/uploads`) y este action recibe solo `storage_path`. Mandarlo
+ * por el Server Action chocaba con el tope de body de ~4.5 MB de Vercel, así
+ * que el book andaba en local y fallaba en producción.
+ */
 export async function uploadPortfolioItemAction(
   _prevState: UploadPortfolioItemState,
   formData: FormData
@@ -25,27 +26,18 @@ export async function uploadPortfolioItemAction(
     redirect("/ugc/login");
   }
 
-  const file = formData.get("file");
+  const storagePath = String(formData.get("storage_path") ?? "").trim();
+  const mediaType = String(formData.get("media_type") ?? "");
   const category = String(formData.get("category") ?? "ugc");
   const caption = String(formData.get("caption") ?? "").trim() || null;
   const viewsRaw = formData.get("views");
   const views = viewsRaw && Number(viewsRaw) > 0 ? Number(viewsRaw) : null;
 
-  if (!(file instanceof File) || file.size === 0) {
+  if (!storagePath) {
     return { error: "Elegí un archivo para subir." };
   }
 
-  if (file.size > MAX_PORTFOLIO_FILE_BYTES) {
-    return { error: "El archivo pesa más de 25MB." };
-  }
-
-  const mediaType = file.type.startsWith("video/")
-    ? "video"
-    : file.type.startsWith("image/")
-      ? "image"
-      : null;
-
-  if (!mediaType) {
+  if (mediaType !== "video" && mediaType !== "image") {
     return { error: "Solo se aceptan imágenes o videos." };
   }
 
@@ -53,15 +45,22 @@ export async function uploadPortfolioItemAction(
     return { error: "Categoría inválida." };
   }
 
-  const extension = file.name.includes(".") ? file.name.split(".").pop() : mediaType === "video" ? "mp4" : "jpg";
-  const storagePath = `${user.id}/${randomUUID()}.${extension}`;
+  // La ruta la arma el navegador. La policy de storage ya impide escribir
+  // fuera de la carpeta propia, pero el chequeo acá evita que se registre una
+  // pieza apuntando a la carpeta de otro creador.
+  if (!storagePath.startsWith(`${user.id}/`) || storagePath.includes("..")) {
+    return { error: "El archivo subido no es válido." };
+  }
 
-  const { error: uploadError } = await supabase.storage
+  // Que el objeto exista: si la subida se cortó, sin esto quedaría una pieza
+  // en el book con la imagen rota.
+  const nombre = storagePath.slice(user.id.length + 1);
+  const { data: encontrados } = await supabase.storage
     .from(PORTFOLIO_BUCKET)
-    .upload(storagePath, file, { contentType: file.type });
+    .list(user.id, { search: nombre });
 
-  if (uploadError) {
-    return { error: "No se pudo subir el archivo. Intentá de nuevo." };
+  if (!encontrados?.some((o) => o.name === nombre)) {
+    return { error: "No se encontró el archivo subido. Probá de nuevo." };
   }
 
   const { data: existing } = await supabase

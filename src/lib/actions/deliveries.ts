@@ -1,14 +1,21 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendTransactionalEmail, getUserEmail } from "@/lib/email/resend";
-import { DELIVERIES_BUCKET, MAX_DELIVERY_FILE_BYTES } from "@/lib/ugc/deliveries";
+import { DELIVERIES_BUCKET } from "@/lib/ugc/deliveries";
 
 export type SubmitDeliveryState = { error: string } | null;
 
+/**
+ * El archivo NO viaja por acá: el navegador lo sube directo a Supabase Storage
+ * (ver `@/lib/ugc/uploads`) y este action recibe solo `storage_path`. Mandarlo
+ * por el Server Action chocaba con el tope de body de ~4.5 MB de Vercel, así
+ * que la entrega andaba en local y fallaba en producción — y es justo el paso
+ * por el que pasa el pago del creador.
+ */
 export async function submitDeliveryAction(
   _prevState: SubmitDeliveryState,
   formData: FormData
@@ -24,7 +31,7 @@ export async function submitDeliveryAction(
 
   const applicationId = String(formData.get("application_id") ?? "");
   const note = String(formData.get("note") ?? "").trim() || null;
-  const file = formData.get("file");
+  const storagePath = String(formData.get("storage_path") ?? "").trim() || null;
   const externalUrl = String(formData.get("external_url") ?? "").trim() || null;
 
   if (!applicationId) {
@@ -42,8 +49,7 @@ export async function submitDeliveryAction(
     return { error: "No podés entregar en esta aplicación." };
   }
 
-  const hasFile = file instanceof File && file.size > 0;
-  if (!hasFile && !externalUrl) {
+  if (!storagePath && !externalUrl) {
     return { error: "Subí un archivo, pegá un link, o ambos." };
   }
 
@@ -55,22 +61,25 @@ export async function submitDeliveryAction(
     }
   }
 
-  let storagePath: string | null = null;
-
-  if (hasFile) {
-    const uploadedFile = file as File;
-    if (uploadedFile.size > MAX_DELIVERY_FILE_BYTES) {
-      return { error: "El archivo pesa más de 200MB." };
+  if (storagePath) {
+    // La ruta la arma el navegador, así que no se le cree sin chequear. La
+    // policy de storage ya impide escribir en la carpeta de otra aplicación,
+    // pero nada le impediría a un creador mandar acá la ruta de OTRA entrega
+    // suya y colgarla de esta aplicación.
+    if (!storagePath.startsWith(`${applicationId}/`) || storagePath.includes("..")) {
+      return { error: "El archivo subido no corresponde a esta entrega." };
     }
-    const extension = uploadedFile.name.includes(".") ? uploadedFile.name.split(".").pop() : "bin";
-    storagePath = `${applicationId}/${randomUUID()}.${extension}`;
 
-    const { error: uploadError } = await supabase.storage
+    // Que el objeto exista de verdad: si la subida se cortó a mitad, sin este
+    // chequeo quedaría una entrega registrada apuntando a un archivo que no
+    // está, y la marca vería un botón de descarga roto.
+    const nombre = storagePath.slice(applicationId.length + 1);
+    const { data: encontrados } = await supabase.storage
       .from(DELIVERIES_BUCKET)
-      .upload(storagePath, uploadedFile, { contentType: uploadedFile.type });
+      .list(applicationId, { search: nombre });
 
-    if (uploadError) {
-      return { error: "No se pudo subir el archivo. Intentá de nuevo." };
+    if (!encontrados?.some((o) => o.name === nombre)) {
+      return { error: "No se encontró el archivo subido. Probá de nuevo." };
     }
   }
 
@@ -90,7 +99,11 @@ export async function submitDeliveryAction(
 
   if (insertError) {
     if (storagePath) {
-      await supabase.storage.from(DELIVERIES_BUCKET).remove([storagePath]);
+      // Con service role a propósito: el bucket `deliveries` no tiene policy de
+      // DELETE para el creador —y no debe tenerla, o podría borrar la pieza ya
+      // entregada después de que la marca la aprobó—. Con la sesión del usuario
+      // este remove no fallaba: no hacía nada, y el archivo quedaba huérfano.
+      await createAdminClient().storage.from(DELIVERIES_BUCKET).remove([storagePath]);
     }
     return { error: "No se pudo guardar la entrega. Intentá de nuevo." };
   }
