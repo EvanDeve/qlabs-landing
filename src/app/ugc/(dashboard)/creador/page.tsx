@@ -191,12 +191,29 @@ export default async function CreadorHomePage() {
         ))}
       </div>
 
-      <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
-        <section className={styles.card}>
+      {/* `alignItems: start` es lo que impide que "Requiere tu atención" se
+          estire hasta la altura de "Mi pipeline". Sin eso, un creador al día
+          —una sola línea de texto al lado de cinco etapas— ve media pantalla
+          de tarjeta vacía, que es justo lo contrario de lo que el estado
+          "todo tranquilo" debería transmitir. Cada tarjeta mide lo suyo. */}
+      <div
+        style={{
+          display: "grid",
+          gap: "16px",
+          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+          alignItems: "start",
+        }}
+      >
+        {/* `card` sola no trae padding: lo pone `cardPad`, y `sectionHead`
+            está pensado para vivir DENTRO de ese padding. Al colgar el
+            encabezado directo de la tarjeta, el título quedaba literalmente
+            en la esquina. Se arma como en el dashboard de admin: las dos
+            clases juntas en la tarjeta y el contenido adentro. */}
+        <section className={`${styles.card} ${styles.cardPad}`}>
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionHeadBig}>Requiere tu atención</h2>
           </div>
-          <div className={styles.cardPad} style={{ paddingTop: 0 }}>
+          <div>
             {atencion.length > 0 ? (
               atencion.map((a, i) => (
                 <Link
@@ -221,21 +238,25 @@ export default async function CreadorHomePage() {
                 </Link>
               ))
             ) : (
-              <p style={{ color: "var(--ink-2)", fontSize: "13.5px", padding: "12px 0" }}>
-                Todo al día. Nada vencido ni por vencer.
-              </p>
+              <div className={styles.empty}>Todo al día. Nada vencido ni por vencer.</div>
             )}
           </div>
         </section>
 
-        <section className={styles.card}>
+        <section className={`${styles.card} ${styles.cardPad}`}>
           <div className={styles.sectionHead}>
             <h2>Mi pipeline</h2>
-            <Link href="/ugc/creador/pipeline" className={styles.sectionHeadAct}>
+            {/* `sectionHeadAct` solo empuja a la derecha (margin-left:auto);
+                no tiene color ni peso, así que sola se veía texto negro
+                cualquiera. `linkMore` es la que lo hace parecer accionable. */}
+            <Link
+              href="/ugc/creador/pipeline"
+              className={`${styles.sectionHeadAct} ${styles.linkMore}`}
+            >
               Ver tablero
             </Link>
           </div>
-          <div className={styles.cardPad} style={{ paddingTop: 0 }}>
+          <div>
             {tareas.length > 0 ? (
               columnas.map((col) => {
                 const n = tareas.filter((t) => t.column_id === col.id).length;
@@ -260,26 +281,29 @@ export default async function CreadorHomePage() {
                 );
               })
             ) : (
-              <p style={{ color: "var(--ink-2)", fontSize: "13.5px", padding: "12px 0" }}>
+              <div className={styles.empty}>
                 Todavía no tenés tareas.{" "}
                 <Link href="/ugc/creador/pipeline" style={{ color: "var(--b-600)", fontWeight: 600 }}>
                   Armá tu tablero
                 </Link>
                 .
-              </p>
+              </div>
             )}
           </div>
         </section>
       </div>
 
-      <section className={styles.card} style={{ marginTop: "16px" }}>
+      <section className={`${styles.card} ${styles.cardPad}`} style={{ marginTop: "16px" }}>
         <div className={styles.sectionHead}>
           <h2>Entregas en curso</h2>
-          <Link href="/ugc/creador/aplicaciones" className={styles.sectionHeadAct}>
+          <Link
+            href="/ugc/creador/aplicaciones"
+            className={`${styles.sectionHeadAct} ${styles.linkMore}`}
+          >
             Ver todas
           </Link>
         </div>
-        <div className={styles.cardPad} style={{ paddingTop: 0 }}>
+        <div>
           {entregas.length > 0 ? (
             entregas.map((e, i) => (
               <div
@@ -317,13 +341,13 @@ export default async function CreadorHomePage() {
               </div>
             ))
           ) : (
-            <p style={{ color: "var(--ink-2)", fontSize: "13.5px", padding: "12px 0" }}>
+            <div className={styles.empty}>
               No tenés entregas en curso.{" "}
               <Link href="/ugc/creador/promos" style={{ color: "var(--b-600)", fontWeight: 600 }}>
                 Mirá las promos abiertas
               </Link>
               .
-            </p>
+            </div>
           )}
         </div>
       </section>

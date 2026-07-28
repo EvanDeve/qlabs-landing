@@ -1883,6 +1883,19 @@
     grid-template-columns: 1fr;
   }
 }
+/* Con CUATRO KPIs, tres columnas dejan el cuarto solo en una segunda fila y
+   estirado a todo el ancho. Se ve en /ugc/creador entre 900 y 1140px, que es
+   el ancho de una laptop a media pantalla. Las pantallas de tres KPIs
+   (/ugc/marca, el book del creador) sí quieren las tres columnas, así que la
+   regla solo entra cuando existe una cuarta tarjeta.
+   El piso de 561px no es de adorno: `:has()` pesa más que `.kpiRow` a secas,
+   y sin acotar le ganaría a la regla de una sola columna de más abajo — en un
+   teléfono los KPIs se quedarían en dos columnas en vez de apilarse. */
+@media (min-width: 561px) and (max-width: 1140px) {
+  .kpiRow:has(> :nth-child(4)) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 @media (max-width: 900px) {
   .app {
     grid-template-columns: 1fr;
