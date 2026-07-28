@@ -476,8 +476,9 @@ export interface Database {
         Row: {
           id: string;
           creator_id: string;
-          source_url: string;
+          source_url: string | null;
           source_type: string;
+          file_name: string | null;
           title: string | null;
           status: "pending" | "processing" | "done" | "error";
           segments: { timestamp: string; text: string }[] | null;
@@ -488,8 +489,9 @@ export interface Database {
         Insert: {
           id?: string;
           creator_id: string;
-          source_url: string;
+          source_url?: string | null;
           source_type?: string;
+          file_name?: string | null;
           title?: string | null;
           status?: "pending" | "processing" | "done" | "error";
           segments?: { timestamp: string; text: string }[] | null;

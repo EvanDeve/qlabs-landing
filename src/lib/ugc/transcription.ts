@@ -67,6 +67,56 @@ export function segmentsToTimestampedText(segments: TranscriptionSegment[]): str
   return segments.map((s) => `[${s.timestamp}] ${s.text}`).join("\n");
 }
 
+export const TRANSCRIPTION_BUCKET = "transcription-uploads";
+
+/**
+ * Tope de subida. Son 20 MB porque es lo que Gemini acepta como dato inline en
+ * una sola llamada; más que eso obligaría a usar su API de archivos, que suma
+ * una subida y una espera aparte, y no vale la pena para el material de acá:
+ * un Reel o un TikTok de 15 a 60 segundos pesa bastante menos.
+ */
+export const MAX_TRANSCRIPTION_FILE_BYTES = 20 * 1024 * 1024;
+
+export const TIPOS_ACEPTADOS = [
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/x-matroska",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/wav",
+  "audio/ogg",
+];
+
+/** Extensión → MIME. Algunos navegadores mandan el `type` vacío. */
+const MIME_POR_EXT: Record<string, string> = {
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  mkv: "video/x-matroska",
+  m4v: "video/mp4",
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+};
+
+export function mimeDeArchivo(nombre: string, tipoDeclarado?: string | null): string {
+  if (tipoDeclarado && TIPOS_ACEPTADOS.includes(tipoDeclarado)) return tipoDeclarado;
+  const ext = nombre.split(".").pop()?.toLowerCase() ?? "";
+  return MIME_POR_EXT[ext] ?? "video/mp4";
+}
+
+export function esArchivoAceptado(nombre: string, tipoDeclarado?: string | null): boolean {
+  if (tipoDeclarado && TIPOS_ACEPTADOS.includes(tipoDeclarado)) return true;
+  const ext = nombre.split(".").pop()?.toLowerCase() ?? "";
+  return ext in MIME_POR_EXT;
+}
+
+export function pesoLegible(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 export const TRANSCRIPTION_PROMPT = `Transcribí el audio de este video al español, palabra por palabra.
 
 Reglas:
@@ -85,14 +135,21 @@ Ejemplo del formato esperado:
  * Traduce los errores de Gemini a algo accionable. El mensaje crudo suele ser
  * un stack de la API que no le dice nada a un creador.
  */
-export function mensajeDeError(err: unknown, sourceType: SourceType): string {
+export function mensajeDeError(err: unknown, sourceType: SourceType | "upload"): string {
   const raw = err instanceof Error ? err.message : String(err);
 
+  if (/SIN_AUDIO/.test(raw)) {
+    return "El video no tiene audio hablado para transcribir.";
+  }
+  // Instagram y TikTok bloquean el acceso desde afuera: no es un fallo nuestro
+  // y no hay forma de sortearlo desde el servidor. La salida real es subir el
+  // archivo, así que el mensaje manda para allá en vez de dejar al creador
+  // reintentando algo que nunca va a andar.
   if (sourceType === "instagram") {
-    return "Instagram no deja leer los videos desde afuera. Descargá el video y volvé a intentar con un link de YouTube, o pegá el texto a mano.";
+    return "Instagram no deja leer sus videos desde afuera. Descargá el video y subilo con el botón «Subir archivo» — así sí funciona.";
   }
   if (sourceType === "tiktok") {
-    return "TikTok no siempre deja leer el video desde su link. Si falla, probá subiéndolo a YouTube como no listado.";
+    return "TikTok no deja leer sus videos desde afuera. Descargá el video y subilo con el botón «Subir archivo» — así sí funciona.";
   }
   if (/quota|rate limit|429/i.test(raw)) {
     return "Se alcanzó el límite de transcripciones por ahora. Probá de nuevo en unos minutos.";
@@ -100,8 +157,8 @@ export function mensajeDeError(err: unknown, sourceType: SourceType): string {
   if (/not found|404|unavailable|private/i.test(raw)) {
     return "No se pudo acceder al video. Fijate que el link sea público y que no esté borrado.";
   }
-  if (/SIN_AUDIO/.test(raw)) {
-    return "El video no tiene audio hablado para transcribir.";
+  if (sourceType === "upload") {
+    return "No se pudo transcribir el archivo. Fijate que sea un video o audio válido y volvé a intentar.";
   }
   return "No se pudo transcribir el video. Revisá que el link sea correcto y volvé a intentar.";
 }

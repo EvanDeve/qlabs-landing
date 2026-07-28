@@ -2332,6 +2332,36 @@
   flex-shrink: 0;
 }
 
+/* Borrar una fuente. Aparece solo al pasar el mouse por su fila: siempre
+   visible convierte cada elemento de la lista en una trampa, y ya pasó en el
+   book del creador que un borrar permanente sobre cada miniatura terminara en
+   una pieza borrada sin querer.
+   Prefijo .qosRoot obligatorio, si no el reset de button se lo come. */
+.qosRoot .wsSourceDel {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  color: var(--ink-3);
+  opacity: 0;
+  transition: var(--t-fast);
+  flex-shrink: 0;
+}
+.wsSource:hover .wsSourceDel {
+  opacity: 1;
+}
+.qosRoot .wsSourceDel:hover {
+  background: var(--risk-bg);
+  color: var(--risk);
+}
+/* En pantalla táctil no hay hover: ahí se muestra siempre. */
+@media (hover: none) {
+  .qosRoot .wsSourceDel {
+    opacity: 1;
+  }
+}
+
 /* ---- Segmentos de la transcripción ---- */
 .wsSegment {
   display: flex;

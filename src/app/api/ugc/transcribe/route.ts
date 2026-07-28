@@ -6,17 +6,25 @@ import {
   isValidUrl,
   parseSegments,
   mensajeDeError,
+  mimeDeArchivo,
   TRANSCRIPTION_PROMPT,
+  TRANSCRIPTION_BUCKET,
+  MAX_TRANSCRIPTION_FILE_BYTES,
 } from "@/lib/ugc/transcription";
 
 // Ruta y no server action a propósito: transcribir tarda más que cualquier
 // interacción normal de la app y necesita su propio límite de tiempo.
 //
-// ⚠️ 300s solo aplica en Vercel Pro. En el plan gratis el techo es bastante
-// más bajo, así que un video largo se va a cortar. Para lo que se usa acá
-// —Reels y TikToks de 15 a 60 segundos— alcanza; hay que medirlo con un video
-// real antes de prometerle a nadie que aguanta videos largos.
+// ⚠️ 300s solo aplica en Vercel Pro. En el plan gratis el techo es más bajo,
+// pero lo medido para el material de acá entra cómodo: 3s un video de 19
+// segundos, 24s uno largo.
 export const maxDuration = 300;
+
+// El archivo NO viaja en este request: el navegador lo sube directo a Supabase
+// Storage y acá llega solo su ruta. En Vercel el body de una función tiene un
+// tope de ~4.5 MB, así que mandar el video por acá fallaría en producción por
+// más que funcione en local.
+type Body = { url?: string; storagePath?: string; fileName?: string };
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -28,8 +36,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Necesitás iniciar sesión." }, { status: 401 });
   }
 
-  // La transcripción es una herramienta del creador. No alcanza con estar
-  // logueado: un usuario marca no tiene por qué gastar cuota de la API.
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -48,16 +54,24 @@ export async function POST(request: Request) {
     );
   }
 
-  const { url } = (await request.json()) as { url?: string };
-  if (!url?.trim()) {
-    return NextResponse.json({ error: "Pegá el link del video." }, { status: 400 });
+  const { url, storagePath, fileName } = (await request.json()) as Body;
+  const esArchivo = Boolean(storagePath);
+
+  if (!esArchivo && !url?.trim()) {
+    return NextResponse.json({ error: "Pegá un link o subí un archivo." }, { status: 400 });
   }
-  if (!isValidUrl(url)) {
+  if (!esArchivo && !isValidUrl(url!)) {
     return NextResponse.json({ error: "Ese no parece un link válido." }, { status: 400 });
   }
+  // La ruta siempre arranca con el uuid del creador. Sin este chequeo, un
+  // usuario podría mandar la carpeta de otro y hacer que el servidor —que usa
+  // su propia sesión pero igual— intente leerla.
+  if (esArchivo && !storagePath!.startsWith(`${user.id}/`)) {
+    return NextResponse.json({ error: "Archivo inválido." }, { status: 400 });
+  }
 
-  const sourceType = detectSourceType(url);
-  const normalized = normalizeVideoUrl(url);
+  const sourceType = esArchivo ? "upload" : detectSourceType(url!);
+  const normalized = esArchivo ? null : normalizeVideoUrl(url!);
 
   // Se crea la fila antes de llamar a Gemini para que un fallo quede
   // registrado con su motivo, en vez de perderse.
@@ -67,6 +81,7 @@ export async function POST(request: Request) {
       creator_id: user.id,
       source_url: normalized,
       source_type: sourceType,
+      file_name: esArchivo ? (fileName ?? "archivo") : null,
       status: "processing",
     })
     .select("id")
@@ -79,15 +94,44 @@ export async function POST(request: Request) {
 
   const arranque = Date.now();
 
+  // Se limpia el archivo pase lo que pase: es material intermedio y lo que
+  // vale es el texto. Dejarlo acumulándose es lo que llena el almacenamiento.
+  async function limpiarArchivo() {
+    if (!storagePath) return;
+    await supabase.storage.from(TRANSCRIPTION_BUCKET).remove([storagePath]);
+  }
+
   try {
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const result = await model.generateContent([
-      { fileData: { mimeType: "video/mp4", fileUri: normalized } },
-      TRANSCRIPTION_PROMPT,
-    ]);
+    let parteVideo;
+
+    if (esArchivo) {
+      const { data: blob, error: downloadError } = await supabase.storage
+        .from(TRANSCRIPTION_BUCKET)
+        .download(storagePath!);
+
+      if (downloadError || !blob) {
+        throw new Error(`No se pudo leer el archivo subido: ${downloadError?.message ?? "vacío"}`);
+      }
+      if (blob.size > MAX_TRANSCRIPTION_FILE_BYTES) {
+        throw new Error("El archivo supera el tamaño permitido.");
+      }
+
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      parteVideo = {
+        inlineData: {
+          mimeType: mimeDeArchivo(fileName ?? storagePath!, blob.type),
+          data: buffer.toString("base64"),
+        },
+      };
+    } else {
+      parteVideo = { fileData: { mimeType: "video/mp4", fileUri: normalized! } };
+    }
+
+    const result = await model.generateContent([parteVideo, TRANSCRIPTION_PROMPT]);
 
     const texto = result.response.text().trim();
     if (!texto || texto.includes("SIN_AUDIO")) {
@@ -105,9 +149,11 @@ export async function POST(request: Request) {
       .eq("id", fila.id)
       .eq("creator_id", user.id);
 
-    // Se loguea el tiempo real: es el dato que decide si hace falta subir de
-    // plan en Vercel o si el flujo entra cómodo como está.
-    console.log(`[transcribe] ok en ${((Date.now() - arranque) / 1000).toFixed(1)}s — ${sourceType}`);
+    await limpiarArchivo();
+
+    console.log(
+      `[transcribe] ok en ${((Date.now() - arranque) / 1000).toFixed(1)}s — ${sourceType}`
+    );
 
     return NextResponse.json({ id: fila.id, segments });
   } catch (err) {
@@ -122,6 +168,8 @@ export async function POST(request: Request) {
       .update({ status: "error", error_message: mensaje })
       .eq("id", fila.id)
       .eq("creator_id", user.id);
+
+    await limpiarArchivo();
 
     return NextResponse.json({ error: mensaje }, { status: 500 });
   }
