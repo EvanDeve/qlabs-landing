@@ -50,6 +50,8 @@ export type ContentPlatform = "instagram" | "tiktok" | "reels";
 export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega";
 export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";
+export type WaDirection = "out" | "in";
+export type WaMessageStatus = "queued" | "sent" | "failed" | "received";
 
 export interface Database {
   public: {
@@ -360,6 +362,10 @@ export interface Database {
           staff_role: StaffRole;
           color: string;
           active: boolean;
+          phone_e164: string | null;
+          wa_opt_in: boolean;
+          wa_opt_in_at: string | null;
+          reminder_hour: number;
           created_at: string;
         };
         Insert: {
@@ -367,9 +373,41 @@ export interface Database {
           staff_role: StaffRole;
           color?: string;
           active?: boolean;
+          phone_e164?: string | null;
+          wa_opt_in?: boolean;
+          wa_opt_in_at?: string | null;
+          reminder_hour?: number;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["staff_members"]["Insert"]>;
+        Relationships: [];
+      };
+      wa_messages: {
+        Row: {
+          id: string;
+          profile_id: string;
+          direction: WaDirection;
+          body: string;
+          template_name: string | null;
+          provider_sid: string | null;
+          status: WaMessageStatus;
+          error: string | null;
+          dedupe_key: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          direction: WaDirection;
+          body: string;
+          template_name?: string | null;
+          provider_sid?: string | null;
+          status?: WaMessageStatus;
+          error?: string | null;
+          dedupe_key?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["wa_messages"]["Insert"]>;
         Relationships: [];
       };
       agency_clients: {

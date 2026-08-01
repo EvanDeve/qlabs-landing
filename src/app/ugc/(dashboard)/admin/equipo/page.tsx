@@ -1,8 +1,11 @@
+import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import { upsertStaffMemberAction, setStaffActiveAction, deleteStaffMemberAction } from "@/lib/actions/staff";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
+import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import InviteStaffForm from "@/components/ugc/admin/InviteStaffForm";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
+import StaffWhatsAppRow from "@/components/ugc/admin/StaffWhatsAppRow";
 import type { StaffRole } from "@/lib/database.types";
 import styles from "../qos.module.css";
 
@@ -13,9 +16,14 @@ const STAFF_ROLES = Object.keys(STAFF_ROLE_LABEL) as StaffRole[];
 export default async function EquipoPage() {
   const supabase = await createClient();
 
-  const [{ data: adminProfiles }, { data: staffMembers }] = await Promise.all([
+  const [{ data: adminProfiles }, { data: staffMembers }, { data: waMessages }] = await Promise.all([
     supabase.from("profiles").select("id, display_name").eq("role", "admin"),
     supabase.from("staff_members").select("*").order("created_at", { ascending: true }),
+    supabase
+      .from("wa_messages")
+      .select("id, profile_id, direction, body, status, error, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20),
   ]);
 
   const staffByProfileId = new Map((staffMembers ?? []).map((s) => [s.profile_id, s]));
@@ -54,6 +62,60 @@ export default async function EquipoPage() {
             </ConfirmDeleteButton>
           </div>
         ))}
+      </div>
+
+      <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
+        <div className={styles.sectionHead}>
+          <h2>Agente de WhatsApp</h2>
+        </div>
+        <p style={{ fontSize: "12px", color: "var(--ink-3)", marginBottom: "8px" }}>
+          Cada mañana, a la hora que elija cada quien, le llega por WhatsApp lo que tiene atrasado, lo de hoy y lo de
+          los próximos 3 días — sale del Pipeline y del Calendario. Si no hay nada pendiente, no se manda nada.
+        </p>
+        <p style={{ fontSize: "12px", color: "var(--ink-3)", marginBottom: "16px" }}>
+          Guardar el número no activa nada: la casilla es el consentimiento y la tiene que dar la persona.
+        </p>
+
+        {(staffMembers ?? []).map((staff) => (
+          <StaffWhatsAppRow
+            key={staff.profile_id}
+            profileId={staff.profile_id}
+            nombre={profileById.get(staff.profile_id)?.display_name ?? "Sin nombre"}
+            rol={STAFF_ROLE_LABEL[staff.staff_role]}
+            color={staff.color}
+            telefono={staff.phone_e164}
+            optIn={staff.wa_opt_in}
+            reminderHour={staff.reminder_hour}
+          />
+        ))}
+
+        {(waMessages ?? []).length > 0 && (
+          <div style={{ marginTop: "24px", borderTop: "1px solid var(--line)", paddingTop: "16px" }}>
+            <div className={styles.sectionHead}>
+              <h2>Últimos mensajes</h2>
+            </div>
+            {(waMessages ?? []).map((msg) => (
+              <div key={msg.id} className={styles.attnItem} style={{ cursor: "default" }}>
+                <span
+                  className={styles.dot}
+                  style={{
+                    background: msg.status === "failed" ? "var(--risk)" : msg.direction === "in" ? "var(--ok)" : "var(--accent)",
+                    width: "8px",
+                    height: "8px",
+                  }}
+                />
+                <div className={styles.attnBody}>
+                  <div className={styles.attnTitle}>{msg.error ?? msg.body}</div>
+                  <div className={styles.attnMeta}>
+                    {profileById.get(msg.profile_id)?.display_name ?? "Sin nombre"} ·{" "}
+                    {msg.direction === "in" ? "recibido" : msg.status} ·{" "}
+                    {formatInTimeZone(new Date(msg.created_at), COSTA_RICA_TZ, "dd/MM HH:mm")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: unassignedAdmins.length > 0 ? "20px" : 0 }}>
