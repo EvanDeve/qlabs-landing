@@ -12,8 +12,31 @@ export const runtime = "nodejs";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-/** La URL tiene que ser EXACTAMENTE la registrada en Twilio: entra en la firma. */
-const WEBHOOK_URL = `${SITE_URL}/api/qos/agente/webhook`;
+const RUTA = "/api/qos/agente/webhook";
+
+/**
+ * Las URLs contra las que se prueba la firma.
+ *
+ * Twilio calcula el HMAC sobre la URL EXACTA que tiene configurada, así que
+ * cualquier diferencia —un `www` de más, una barra final, http vs https— hace
+ * que todo se rechace con 403 y sin ninguna pista de por qué. Este dominio
+ * tiene las dos formas (qlabsmethod.com redirige a www con 308), o sea que era
+ * cuestión de tiempo.
+ *
+ * Por eso se prueban dos: la configurada en NEXT_PUBLIC_SITE_URL y la que se
+ * deduce del request real. No afloja la seguridad — las dos siguen exigiendo un
+ * HMAC válido hecho con el auth token, que es el secreto. Lo único que se
+ * elimina es que una diferencia de configuración rompa el webhook en silencio.
+ */
+function urlsPosibles(request: Request): string[] {
+  const configurada = `${SITE_URL.replace(/\/$/, "")}${RUTA}`;
+
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") ?? "https";
+  const delRequest = host ? `${proto}://${host}${RUTA}` : null;
+
+  return [...new Set([configurada, delRequest].filter((u): u is string => Boolean(u)))];
+}
 
 /** Palabras de baja. Se chequean antes que nada, sin pasar por el LLM. */
 const BAJAS = ["salir", "stop", "baja", "parar", "cancelar"];
@@ -29,7 +52,8 @@ export async function POST(request: Request) {
 
   // Antes de mirar el contenido. Sin firma válida esto es un desconocido
   // diciendo ser del equipo, y el webhook escribe en el tablero.
-  if (!firmaValida({ url: WEBHOOK_URL, params, firma: request.headers.get("x-twilio-signature"), authToken })) {
+  const firma = request.headers.get("x-twilio-signature");
+  if (!urlsPosibles(request).some((url) => firmaValida({ url, params, firma, authToken }))) {
     console.warn("[agente/webhook] firma inválida — descartado");
     return NextResponse.json({ error: "firma inválida" }, { status: 403 });
   }
