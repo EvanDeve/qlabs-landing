@@ -4,7 +4,8 @@ import { pedirleAGemini, type TurnoPrevio } from "@/lib/ugc/agente";
  * McLovin contestándole a alguien que NO es del equipo.
  *
  * Es un agente distinto del interno y comparte con él lo mínimo: ni ve la
- * agenda de nadie, ni tiene acciones, ni puede tocar el tablero. Solo habla.
+ * agenda de nadie, ni tiene acciones, ni puede tocar el tablero. Habla, y lleva
+ * a agendar.
  *
  * La diferencia de fondo con el interno es de honestidad. Adentro, el pedido
  * explícito fue que no se sienta un bot, y funciona porque todos saben que del
@@ -12,6 +13,10 @@ import { pedirleAGemini, type TurnoPrevio } from "@/lib/ugc/agente";
  * ser estilo y pasa a ser engaño: la persona no tiene forma de saberlo. Por eso
  * acá McLovin es cordial pero no finge ser un empleado, y si le preguntan, lo
  * dice sin vueltas.
+ *
+ * Para qué está: que quien escriba entienda qué es Q Labs y termine agendando
+ * una reunión. NO cierra tratos ni cotiza — lleva a la reunión, que es donde eso
+ * pasa con una persona de verdad.
  */
 
 /**
@@ -30,20 +35,45 @@ LO QUE SOS
 CÓMO ESCRIBÍS
 - Español de Costa Rica, voseo. Cordial y breve, sin solemnidad.
 - Sin viñetas, sin negritas, sin emojis decorativos. Dos o tres líneas alcanzan.
+- Una pregunta por mensaje, no tres. Esto es un chat, no un formulario.
 
 LO QUE NUNCA HACÉS
 - Inventar precios, plazos, promociones, casos de éxito ni servicios que no
   estén escritos abajo. Si no está, no existe.
-- Prometer que alguien va a llamar, ni a una hora ni en un plazo. Podés decir
-  que le pasás el mensaje al equipo, porque eso sí es cierto.
+- Cotizar ni cerrar nada. Para eso está la reunión.
+- Prometer que alguien va a llamar, ni a una hora ni en un plazo.
 - Pedir datos de tarjeta, contraseñas ni nada por el estilo.
-- Cerrar un trato ni dar por confirmado nada. No vendés: orientás y tomás el
-  mensaje.
+- Insistir. Si dicen que no les interesa, agradecé y cortá ahí.
 
 SI TE PREGUNTAN ALGO QUE NO SABÉS
-Decí que no lo tenés y que se lo pasás al equipo. Preguntale el nombre y de qué
-negocio es, así quien le escriba después ya llega con contexto.
+Decí que no lo tenés y que en la reunión se lo responden. Preguntale el nombre y
+de qué negocio es, así quien lo atienda ya llega con contexto.
 `.trim();
+
+/** Qué hacer con el link de agenda, según haya o no. */
+function reglasDeAgenda(link: string): string {
+  if (!link.trim()) {
+    return `
+CÓMO SE SIGUE
+No tenés link de agenda. Cuando la persona quiera avanzar —pide precios, pregunta
+cómo empezar o quiere hablar con alguien— pedile el nombre y de qué negocio es, y
+decile que el equipo le escribe por acá. No inventes un link ni un horario.`.trim();
+  }
+
+  return `
+CÓMO SE SIGUE
+Tu objetivo es que agende una reunión. El link es: ${link.trim()}
+
+- Mandalo cuando la persona muestre interés real: pregunta precios, cómo
+  empezar, si le sirve a su negocio, o pide hablar con alguien.
+- Mandalo UNA vez. Si ya lo mandaste, no lo repitas en cada mensaje: si no
+  agendó, seguí conversando y resolvele la duda que lo está frenando.
+- No lo mandes de entrada ni a alguien que solo hizo una pregunta suelta.
+  Contestá primero lo que preguntó; el link va después, cuando tenga sentido.
+- Antes o junto con el link, preguntale el nombre y de qué negocio es.
+- Es la persona la que agenda ahí, con los horarios libres que aparezcan. Vos no
+  agendás ni confirmás horarios.`.trim();
+}
 
 /**
  * Texto de arranque para el panel.
@@ -69,8 +99,53 @@ También tenemos UGC·CRC, un marketplace donde negocios costarricenses contrata
 creadores de contenido verificados. Está en qlabsmethod.com/ugc.
 `.trim();
 
+/** Lo mismo, para el campo de cómo lleva la conversación. */
+export const GUION_ARRANQUE = `
+Con quien escribe, andá en este orden:
+
+Primero entendé de qué negocio es y qué lo trajo. Un restaurante que no da abasto
+con los mensajes de Instagram no necesita lo mismo que un hotel que quiere verse
+mejor que la competencia.
+
+Contale solo la parte de Q Labs que le sirve a lo que te contó. No recites los
+tres servicios si preguntó por uno.
+
+Cuando veas interés real, llevalo a la reunión. Ahí se ve el caso concreto y se
+habla de números; por chat no.
+
+Si te dice que solo está viendo, dejale claro que puede escribir cuando quiera y
+cortá ahí. No insistas.
+`.trim();
+
 /** Tope de mensajes por número y por día. Ver hablaDemasiado(). */
 export const MAX_MENSAJES_DIA = 20;
+
+export type CerebroPublico = {
+  nombre: string;
+  sobreQlabs: string;
+  guionPublico: string;
+  linkAgenda: string;
+};
+
+/**
+ * El prompt completo que lee McLovin cuando le escribe alguien de afuera.
+ *
+ * Está separado de responderPublico() para que el panel pueda mostrarlo tal
+ * cual. Editar el cerebro a ciegas es adivinar: si alguien va a tunear cómo
+ * habla el agente con potenciales clientes, tiene que poder leer exactamente lo
+ * que el agente lee.
+ */
+export function armarCerebroPublico(cerebro: CerebroPublico): string {
+  return [
+    `Te llamás ${cerebro.nombre} y contestás el WhatsApp de Q Labs.`,
+    REGLAS_PUBLICAS,
+    `ESTO ES TODO LO QUE SABÉS DE Q LABS. No hay nada más:\n${cerebro.sobreQlabs.trim()}`,
+    cerebro.guionPublico.trim() ? `CÓMO LLEVÁS LA CONVERSACIÓN\n${cerebro.guionPublico.trim()}` : "",
+    reglasDeAgenda(cerebro.linkAgenda),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
 
 /**
  * Lo que se le contesta a alguien de afuera.
@@ -81,25 +156,19 @@ export const MAX_MENSAJES_DIA = 20;
  * esperando, y quedarse callado es peor que un "ahorita te contestamos".
  */
 export async function responderPublico(opciones: {
-  nombre: string;
-  sobreQlabs: string;
+  cerebro: CerebroPublico;
   historial: TurnoPrevio[];
   mensaje: string;
 }): Promise<string | null> {
-  const { nombre, sobreQlabs, historial, mensaje } = opciones;
-  if (!sobreQlabs.trim()) return null;
+  const { cerebro, historial, mensaje } = opciones;
+  if (!cerebro.sobreQlabs.trim()) return null;
 
   const conversacion = historial
     .map((t) => `${t.quien === "agente" ? "VOS" : "PERSONA"}: ${t.texto}`)
     .join("\n");
 
   const texto = await pedirleAGemini(
-    `Te llamás ${nombre} y contestás el WhatsApp de Q Labs.
-
-${REGLAS_PUBLICAS}
-
-ESTO ES TODO LO QUE SABÉS DE Q LABS. No hay nada más:
-${sobreQlabs.trim()}
+    `${armarCerebroPublico(cerebro)}
 
 ${conversacion ? `LO QUE SE DIJERON ANTES:\n${conversacion}\n\n` : ""}MENSAJE NUEVO: ${mensaje}
 

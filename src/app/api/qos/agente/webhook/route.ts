@@ -233,8 +233,12 @@ async function atenderDesconocido(
     .map((m) => ({ quien: m.direction === "in" ? "persona" : "agente", texto: m.body }));
 
   const respuesta = await responderPublico({
-    nombre: ajustes.nombre,
-    sobreQlabs: ajustes.sobreQlabs,
+    cerebro: {
+      nombre: ajustes.nombre,
+      sobreQlabs: ajustes.sobreQlabs,
+      guionPublico: ajustes.guionPublico,
+      linkAgenda: ajustes.linkAgenda,
+    },
     historial,
     mensaje: texto,
   });

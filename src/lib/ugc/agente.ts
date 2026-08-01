@@ -61,6 +61,10 @@ export type AjustesAgente = {
   responderDesconocidos: boolean;
   /** Vacío = no contestar afuera aunque el switch esté prendido. */
   sobreQlabs: string;
+  /** Cómo lleva la conversación con alguien de afuera. */
+  guionPublico: string;
+  /** Dónde agenda la persona (Calendly). Vacío = no ofrece agenda. */
+  linkAgenda: string;
 };
 
 export const AJUSTES_POR_DEFECTO: AjustesAgente = {
@@ -69,6 +73,8 @@ export const AJUSTES_POR_DEFECTO: AjustesAgente = {
   instrucciones: "",
   responderDesconocidos: false,
   sobreQlabs: "",
+  guionPublico: "",
+  linkAgenda: "",
 };
 
 /**
@@ -80,7 +86,7 @@ export const AJUSTES_POR_DEFECTO: AjustesAgente = {
 export async function getAjustesAgente(supabase: SupabaseClient<Database>): Promise<AjustesAgente> {
   const { data, error } = await supabase
     .from("agent_settings")
-    .select("nombre, persona, instrucciones, responder_desconocidos, sobre_qlabs")
+    .select("nombre, persona, instrucciones, responder_desconocidos, sobre_qlabs, guion_publico, link_agenda")
     .eq("id", true)
     .maybeSingle();
 
@@ -97,11 +103,18 @@ export async function getAjustesAgente(supabase: SupabaseClient<Database>): Prom
     // exactamente el fallo que no queremos.
     responderDesconocidos: data.responder_desconocidos,
     sobreQlabs: data.sobre_qlabs,
+    guionPublico: data.guion_publico,
+    linkAgenda: data.link_agenda,
   };
 }
 
-/** Núcleo fijo + capa editable, en ese orden. */
-function armarPersona(ajustes: AjustesAgente): string {
+/**
+ * Núcleo fijo + capa editable, en ese orden.
+ *
+ * Se exporta para que el panel pueda mostrar el prompt tal cual: editar el
+ * cerebro a ciegas es adivinar.
+ */
+export function armarPersona(ajustes: AjustesAgente): string {
   const persona = ajustes.persona.trim() || PERSONA_SEED;
   const extra = ajustes.instrucciones.trim();
 

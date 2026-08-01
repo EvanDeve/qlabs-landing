@@ -1,8 +1,8 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
-import { AJUSTES_POR_DEFECTO, PERSONA_SEED } from "@/lib/ugc/agente";
-import { SOBRE_QLABS_ARRANQUE } from "@/lib/ugc/agente-publico";
+import { AJUSTES_POR_DEFECTO, PERSONA_SEED, armarPersona } from "@/lib/ugc/agente";
+import { SOBRE_QLABS_ARRANQUE, GUION_ARRANQUE, armarCerebroPublico } from "@/lib/ugc/agente-publico";
 import McLovinForm from "@/components/ugc/admin/McLovinForm";
 import type { WaActionStatus } from "@/lib/database.types";
 import styles from "../qos.module.css";
@@ -50,13 +50,43 @@ function describirAccion(kind: string, payload: Record<string, unknown>): string
   return kind;
 }
 
+/** Un prompt tal cual lo lee el modelo, plegado para que no tape la página. */
+function Prompt({ titulo, texto, vacio }: { titulo: string; texto: string | null; vacio?: string }) {
+  return (
+    <details style={{ marginBottom: "10px" }}>
+      <summary style={{ cursor: "pointer", fontSize: "13px", fontWeight: 700 }}>{titulo}</summary>
+      {texto === null ? (
+        <p style={{ marginTop: "10px", fontSize: "12px", color: "var(--ink-3)" }}>{vacio}</p>
+      ) : (
+        <pre
+          style={{
+            marginTop: "10px",
+            padding: "14px",
+            background: "var(--surface-3)",
+            borderRadius: "10px",
+            fontSize: "12px",
+            lineHeight: 1.6,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          {texto}
+        </pre>
+      )}
+    </details>
+  );
+}
+
 export default async function McLovinPage() {
   const supabase = await createClient();
 
   const [{ data: ajustes }, { data: acciones }, { data: publicos }] = await Promise.all([
     supabase
       .from("agent_settings")
-      .select("nombre, persona, instrucciones, sobre_qlabs, responder_desconocidos")
+      .select(
+        "nombre, persona, instrucciones, sobre_qlabs, guion_publico, link_agenda, responder_desconocidos"
+      )
       .eq("id", true)
       .maybeSingle(),
     supabase
@@ -79,6 +109,18 @@ export default async function McLovinPage() {
 
   const nombre = ajustes?.nombre ?? AJUSTES_POR_DEFECTO.nombre;
 
+  // Lo mismo que arma el webhook, para poder mostrarlo tal cual.
+  const cerebro = {
+    ...AJUSTES_POR_DEFECTO,
+    nombre,
+    persona: ajustes?.persona ?? "",
+    instrucciones: ajustes?.instrucciones ?? "",
+    sobreQlabs: ajustes?.sobre_qlabs ?? "",
+    guionPublico: ajustes?.guion_publico ?? "",
+    linkAgenda: ajustes?.link_agenda ?? "",
+    responderDesconocidos: ajustes?.responder_desconocidos ?? false,
+  };
+
   // Cuántas personas distintas escribieron, no cuántos mensajes: dos números
   // que escribieron una vez cada uno importan más que uno que escribió veinte.
   const numerosDistintos = new Set((publicos ?? []).map((m) => m.phone_e164)).size;
@@ -99,9 +141,12 @@ export default async function McLovinPage() {
           persona={ajustes?.persona ?? ""}
           instrucciones={ajustes?.instrucciones ?? ""}
           sobreQlabs={ajustes?.sobre_qlabs ?? ""}
+          guionPublico={ajustes?.guion_publico ?? ""}
+          linkAgenda={ajustes?.link_agenda ?? ""}
           responderDesconocidos={ajustes?.responder_desconocidos ?? false}
           personaPorDefecto={PERSONA_SEED}
           sobreQlabsArranque={SOBRE_QLABS_ARRANQUE}
+          guionArranque={GUION_ARRANQUE}
         />
 
         <p
@@ -114,9 +159,38 @@ export default async function McLovinPage() {
           }}
         >
           Lo que escribas acá cambia cómo habla, no lo que puede hacer. Que no invente clientes ni fechas, que solo
-          toque pendientes de quien le escribe y que no pueda crear nada sin que se lo confirmen está en el código y no
-          se apaga desde esta pantalla.
+          toque pendientes de quien le escribe, que no pueda crear nada sin que se lo confirmen y que no cotice ni
+          cierre tratos con nadie de afuera está en el código y no se apaga desde esta pantalla.
         </p>
+      </div>
+
+      {/* Editar campos sueltos y no ver el resultado es tunear a ciegas. Acá
+          está el texto exacto que recibe el modelo, con lo editable y lo fijo
+          juntos, que es como lo lee. */}
+      <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
+        <div className={styles.sectionHead}>
+          <h2>El cerebro armado</h2>
+        </div>
+        <p style={{ fontSize: "12px", color: "var(--ink-3)", marginBottom: "16px" }}>
+          Esto es literalmente lo que lee {nombre} antes de cada mensaje. Incluye las reglas fijas que no se editan
+          desde arriba. Se actualiza cuando guardás.
+        </p>
+
+        <Prompt titulo="Cuando le escribe el equipo" texto={armarPersona(cerebro)} />
+        <Prompt
+          titulo="Cuando le escribe alguien de afuera"
+          texto={
+            cerebro.sobreQlabs.trim()
+              ? armarCerebroPublico({
+                  nombre: cerebro.nombre,
+                  sobreQlabs: cerebro.sobreQlabs,
+                  guionPublico: cerebro.guionPublico,
+                  linkAgenda: cerebro.linkAgenda,
+                })
+              : null
+          }
+          vacio="Sin nada cargado en “Qué sabe de Q Labs”, no le contesta a nadie de afuera."
+        />
       </div>
 
       <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>

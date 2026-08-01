@@ -430,6 +430,9 @@ export interface Database {
           // prendido. Ver la migración 20260802100000.
           responder_desconocidos: boolean;
           sobre_qlabs: string;
+          guion_publico: string;
+          /** Vacío o una URL https. Ver el check de la migración 20260802100000. */
+          link_agenda: string;
           updated_at: string;
           updated_by: string | null;
         };
@@ -440,6 +443,8 @@ export interface Database {
           instrucciones?: string;
           responder_desconocidos?: boolean;
           sobre_qlabs?: string;
+          guion_publico?: string;
+          link_agenda?: string;
           updated_at?: string;
           updated_by?: string | null;
         };

@@ -30,12 +30,21 @@ export async function saveAgentSettingsAction(
   const persona = String(formData.get("persona") ?? "").trim();
   const instrucciones = String(formData.get("instrucciones") ?? "").trim();
   const sobreQlabs = String(formData.get("sobre_qlabs") ?? "").trim();
+  const guionPublico = String(formData.get("guion_publico") ?? "").trim();
+  const linkAgenda = String(formData.get("link_agenda") ?? "").trim();
   const responderDesconocidos = formData.get("responder_desconocidos") === "on";
 
   if (!nombre) return { error: "El nombre no puede quedar vacío." };
   if (nombre.length > MAX_NOMBRE) return { error: `El nombre no puede pasar de ${MAX_NOMBRE} caracteres.` };
-  if ([persona, instrucciones, sobreQlabs].some((t) => t.length > MAX_TEXTO)) {
+  if ([persona, instrucciones, sobreQlabs, guionPublico].some((t) => t.length > MAX_TEXTO)) {
     return { error: `Cada texto puede tener hasta ${MAX_TEXTO} caracteres.` };
+  }
+
+  // Un "calendly.com/q-labs" sin esquema no es clickeable en WhatsApp, y el
+  // agente lo mandaría igual: nadie se enteraría hasta que alguien no pudiera
+  // agendar. La base tiene el mismo check; este es para que el error se vea acá.
+  if (linkAgenda && !/^https:\/\/[^\s]+$/.test(linkAgenda)) {
+    return { error: "El link tiene que empezar con https:// y no llevar espacios." };
   }
 
   // El interruptor no se puede prender sin haber escrito qué decir. Es el mismo
@@ -58,6 +67,8 @@ export async function saveAgentSettingsAction(
       persona,
       instrucciones,
       sobre_qlabs: sobreQlabs,
+      guion_publico: guionPublico,
+      link_agenda: linkAgenda,
       responder_desconocidos: responderDesconocidos,
       updated_at: new Date().toISOString(),
       updated_by: user.id,
