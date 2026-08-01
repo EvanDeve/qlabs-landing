@@ -181,10 +181,12 @@ async function aplicarAccion(
       }
       // Reprogramar toca la fecha que originó el aviso, no las dos: el campo
       // viene del ítem, no de lo que el modelo haya querido elegir.
-      const cuando = `${accion.fecha}T15:00:00Z`;
+      // Va el día pelado: las columnas son `date`, sin hora que inventar.
       const { error } = await admin
         .from("content_pieces")
-        .update(item.ref.campo === "publish_date" ? { publish_date: cuando } : { record_date: cuando })
+        .update(
+          item.ref.campo === "publish_date" ? { publish_date: accion.fecha } : { record_date: accion.fecha }
+        )
         .eq("id", pieza.id);
       return !error;
     }

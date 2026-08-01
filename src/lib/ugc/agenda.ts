@@ -1,7 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, ContentPriority } from "@/lib/database.types";
-import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
+import { COSTA_RICA_TZ, diaCR, sumarDias } from "@/lib/ugc/calendar";
 
 /**
  * Qué le toca a un miembro del equipo y para cuándo.
@@ -28,8 +28,20 @@ export type AgendaItem = {
   titulo: string;
   /** Nombre del Hero. Los eventos pueden no tener uno (una reunión interna). */
   heroe: string | null;
-  /** ISO. La hora solo importa en los eventos; las piezas se muestran por día. */
+  /**
+   * Un día suelto ('2026-08-01') si viene de una pieza, un instante ISO si
+   * viene de un evento. Son cosas distintas y por eso está `conHora`.
+   */
   fecha: string;
+  /**
+   * Si es false, la fecha NO tiene hora y no hay que inventarle una.
+   *
+   * Una pieza se publica "el 1 de agosto", sin hora — el formulario ni siquiera
+   * la pide. Un evento del calendario sí ocurre a una hora concreta. Mostrar
+   * "18:00" en una pieza sería mostrar el artefacto de la conversión, no un
+   * dato que alguien cargó.
+   */
+  conHora: boolean;
   accion: "Publicar" | "Grabar" | "Reunión" | "Entrega";
   prioridad: ContentPriority | null;
 };
@@ -54,15 +66,6 @@ export const DIAS_PROXIMAS = 3;
 export const DIAS_VENCIDAS = 30;
 
 const PRIORIDAD_PESO: Record<ContentPriority, number> = { alta: 0, media: 1, baja: 2 };
-
-/** El día calendario en Costa Rica, no en UTC. Ver el comentario de clasificar(). */
-function diaCR(fecha: string | Date): string {
-  return formatInTimeZone(typeof fecha === "string" ? new Date(fecha) : fecha, COSTA_RICA_TZ, "yyyy-MM-dd");
-}
-
-function sumarDias(desde: Date, dias: number): Date {
-  return new Date(desde.getTime() + dias * 24 * 60 * 60 * 1000);
-}
 
 export async function getStaffAgenda(
   supabase: SupabaseClient<Database>,
@@ -122,6 +125,7 @@ export async function getStaffAgenda(
         titulo: p.title,
         heroe,
         fecha: p.record_date,
+        conHora: false,
         accion: "Grabar",
         prioridad: p.priority,
       });
@@ -133,6 +137,7 @@ export async function getStaffAgenda(
         titulo: p.title,
         heroe,
         fecha: p.publish_date,
+        conHora: false,
         accion: "Publicar",
         prioridad: p.priority,
       });
@@ -146,6 +151,7 @@ export async function getStaffAgenda(
       titulo: e.title,
       heroe: e.brand_id ? heroePorId.get(e.brand_id) ?? null : null,
       fecha: e.starts_at,
+      conHora: true,
       accion: e.type === "grabacion" ? "Grabar" : e.type === "publicacion" ? "Publicar" : e.type === "entrega" ? "Entrega" : "Reunión",
       prioridad: null,
     });
@@ -187,9 +193,27 @@ export function clasificar(
   return agenda;
 }
 
+/**
+ * Ordena primero por día de CR y recién después por hora.
+ *
+ * No se pueden restar los instantes directamente: en la misma lista conviven
+ * días sueltos ('2026-08-01', que como instante es la medianoche UTC = las 18:00
+ * del día anterior en CR) e instantes reales de eventos. Restarlos pondría una
+ * pieza del día 1 antes que un evento del día 31.
+ */
 function porFechaYPrioridad(a: AgendaItem, b: AgendaItem): number {
-  const dif = new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
-  if (dif !== 0) return dif;
+  const porDia = diaCR(a.fecha).localeCompare(diaCR(b.fecha));
+  if (porDia !== 0) return porDia;
+
+  // Dentro del mismo día, lo que tiene hora se ordena por hora. Una pieza (sin
+  // hora) va primero: es del día entero, no de un momento.
+  if (a.conHora && b.conHora) {
+    const dif = new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+    if (dif !== 0) return dif;
+  } else if (a.conHora !== b.conHora) {
+    return a.conHora ? 1 : -1;
+  }
+
   return (a.prioridad ? PRIORIDAD_PESO[a.prioridad] : 1) - (b.prioridad ? PRIORIDAD_PESO[b.prioridad] : 1);
 }
 
@@ -202,10 +226,11 @@ export function itemsDeAgenda(agenda: Agenda): AgendaItem[] {
   return [...agenda.vencidas, ...agenda.hoy, ...agenda.proximas];
 }
 
-function describir(item: AgendaItem, conHora = false): string {
+function describir(item: AgendaItem, mostrarHora = false): string {
   const partes = [`${item.accion} ${item.titulo}`];
   if (item.heroe) partes.push(`(${item.heroe})`);
-  if (conHora) partes.push(formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm"));
+  // `item.conHora` manda: una pieza no tiene hora y ponerle una sería inventarla.
+  if (mostrarHora && item.conHora) partes.push(formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm"));
   return partes.join(" ");
 }
 

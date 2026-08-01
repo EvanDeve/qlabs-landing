@@ -14,6 +14,7 @@ import type { Database } from "@/lib/database.types";
 import { updateContentPieceColumnAction } from "@/lib/actions/content-pieces";
 import type { ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import { diaCR, diaCorto } from "@/lib/ugc/calendar";
 import ContentPieceDrawer from "./ContentPieceDrawer";
 import NewContentPieceModal from "./NewContentPieceModal";
 import ContentColumnModal from "./ContentColumnModal";
@@ -237,7 +238,12 @@ function Card({
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: piece.id });
   // Una pieza en una columna de "terminado" ya no está atrasada, por más que
   // la fecha de publicación haya pasado.
-  const isOverdue = piece.publish_date && new Date(piece.publish_date) < new Date() && !isDone;
+  //
+  // Se compara el DÍA de Costa Rica, no el instante: `new Date(publish_date) <
+  // new Date()` marcaba como atrasada una pieza que vencía HOY, porque el día
+  // suelto se interpreta como medianoche UTC y eso ya pasó desde las 18:00 del
+  // día anterior en CR.
+  const isOverdue = piece.publish_date && diaCR(piece.publish_date) < diaCR(new Date()) && !isDone;
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 10 }
@@ -267,9 +273,7 @@ function Card({
       <div className={styles.kcFoot}>
         <span className={`${styles.kcDue} ${isOverdue ? styles.kcDueLate : ""}`}>
           <QosIcon name="clock" size={12} />
-          {piece.publish_date
-            ? new Date(piece.publish_date).toLocaleDateString("es-CR", { day: "numeric", month: "short" })
-            : "—"}
+          {piece.publish_date ? diaCorto(piece.publish_date) : "—"}
         </span>
         {owner && (
           <span

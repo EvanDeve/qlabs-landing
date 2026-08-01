@@ -9,7 +9,7 @@ import {
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import CalendarView from "@/components/ugc/admin/CalendarView";
-import { COSTA_RICA_TZ, type CalendarItem } from "@/lib/ugc/calendar";
+import { COSTA_RICA_TZ, diaCR, type CalendarItem } from "@/lib/ugc/calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -54,11 +54,15 @@ export default async function CalendarioPage({
         .select("*")
         .gte("starts_at", rangeStartUtc)
         .lte("starts_at", rangeEndUtc),
+      // Las fechas de las piezas son columnas `date`: se filtran con días
+      // sueltos, no con instantes UTC. Mandarles un timestamp haría que
+      // Postgres lo truncara a día en la zona de la sesión, que es justo la
+      // clase de conversión implícita que causó el corrimiento de un día.
       supabase
         .from("content_pieces")
         .select("id, title, brand_id, publish_date, record_date")
         .or(
-          `and(publish_date.gte.${rangeStartUtc},publish_date.lte.${rangeEndUtc}),and(record_date.gte.${rangeStartUtc},record_date.lte.${rangeEndUtc})`
+          `and(publish_date.gte.${gridDays[0]},publish_date.lte.${gridDays[gridDays.length - 1]}),and(record_date.gte.${gridDays[0]},record_date.lte.${gridDays[gridDays.length - 1]})`
         ),
     ]);
 
@@ -85,7 +89,7 @@ export default async function CalendarioPage({
   }
 
   for (const piece of contentPieces ?? []) {
-    if (piece.publish_date && piece.publish_date >= rangeStartUtc && piece.publish_date <= rangeEndUtc) {
+    if (piece.publish_date && piece.publish_date >= gridDays[0] && piece.publish_date <= gridDays[gridDays.length - 1]) {
       items.push({
         id: `piece-publish-${piece.id}`,
         type: "publicacion",
@@ -97,7 +101,7 @@ export default async function CalendarioPage({
         contentPieceId: piece.id,
       });
     }
-    if (piece.record_date && piece.record_date >= rangeStartUtc && piece.record_date <= rangeEndUtc) {
+    if (piece.record_date && piece.record_date >= gridDays[0] && piece.record_date <= gridDays[gridDays.length - 1]) {
       items.push({
         id: `piece-record-${piece.id}`,
         type: "grabacion",
@@ -113,11 +117,14 @@ export default async function CalendarioPage({
 
   const itemsByDay: Record<string, CalendarItem[]> = {};
   for (const item of items) {
-    const key = formatInTimeZone(new Date(item.date), COSTA_RICA_TZ, "yyyy-MM-dd");
+    // diaCR devuelve tal cual los días sueltos de las piezas y traduce a CR los
+    // instantes de los eventos. Pasar un día por formatInTimeZone lo leería
+    // como medianoche UTC y lo pondría en la casilla del día anterior.
+    const key = diaCR(item.date);
     (itemsByDay[key] ??= []).push(item);
   }
   for (const key of Object.keys(itemsByDay)) {
-    itemsByDay[key].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    itemsByDay[key].sort((a, b) => a.date.localeCompare(b.date));
   }
 
   const brands = (agencyClients ?? []).map((c) => ({ id: c.id, name: c.name }));

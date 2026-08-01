@@ -473,12 +473,15 @@ export interface Database {
           id: string;
           brand_id: string;
           title: string;
-          code: string;
+          code: string | null;
           column_id: string;
           approval: ContentApproval;
           owner_id: string | null;
           priority: ContentPriority;
           platform: ContentPlatform;
+          // Columnas `date`, no timestamptz: llegan como 'yyyy-MM-dd' sin hora
+          // ni zona. Ver la migración 20260801000000 — pasarlas por `new Date()`
+          // y compararlas como instantes es exactamente el bug que arregló.
           publish_date: string | null;
           record_date: string | null;
           drive_url: string | null;
@@ -492,7 +495,7 @@ export interface Database {
           id?: string;
           brand_id: string;
           title: string;
-          code: string;
+          code?: string | null;
           column_id: string;
           approval?: ContentApproval;
           owner_id?: string | null;

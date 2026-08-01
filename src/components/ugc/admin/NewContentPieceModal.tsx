@@ -48,8 +48,8 @@ export default function NewContentPieceModal({
           </div>
 
           <div className={styles.field}>
-            <label>Código</label>
-            <input name="code" required placeholder="LB-042" className={styles.inp} />
+            <label>Código (opcional)</label>
+            <input name="code" placeholder="LB-042" className={styles.inp} />
           </div>
 
           <div className={styles.field}>

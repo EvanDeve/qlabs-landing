@@ -19,6 +19,8 @@ function item(parcial: Partial<AgendaItem> & { fecha: string }): AgendaItem {
     ref: parcial.ref ?? { kind: "event", eventId: "e1" },
     titulo: parcial.titulo ?? "Algo",
     heroe: parcial.heroe ?? null,
+    // Por defecto un evento, que sí tiene hora. Las piezas van con conHora:false.
+    conHora: parcial.conHora ?? true,
     accion: parcial.accion ?? "Reunión",
     prioridad: parcial.prioridad ?? null,
     fecha: parcial.fecha,
@@ -160,8 +162,8 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "Reel de brunch",
             brand_id: "h1",
-            record_date: "2026-08-02T15:00:00Z",
-            publish_date: "2026-08-04T15:00:00Z",
+            record_date: "2026-08-02",
+            publish_date: "2026-08-04",
             priority: "alta",
           },
         ],
@@ -178,6 +180,28 @@ describe("getStaffAgenda", () => {
     // Cada ítem apunta a su campo: es lo que después deja reprogramar el
     // correcto de los dos desde el chat.
     expect(agenda.hoy[0].ref).toEqual({ kind: "piece", pieceId: "p1", campo: "record_date" });
+  });
+
+  // El bug del corrimiento de un día, visto desde el agente: una pieza para
+  // mañana no puede aparecer como de hoy en el WhatsApp.
+  it("una pieza con fecha de mañana NO cae en hoy", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        // Columna `date`: llega como día suelto, sin hora ni zona.
+        content_pieces: [
+          { id: "p1", title: "Reel", brand_id: null, record_date: null, publish_date: "2026-08-03", priority: "media" },
+        ],
+        calendar_events: [],
+        agency_clients: [],
+      }),
+      "staff-1",
+      new Date("2026-08-02T23:00:00Z") // 17:00 en CR del día 2
+    );
+
+    expect(agenda.hoy).toHaveLength(0);
+    expect(agenda.proximas.map((i) => i.titulo)).toEqual(["Reel"]);
+    // Y no se le inventa una hora que nadie cargó.
+    expect(agenda.proximas[0].conHora).toBe(false);
   });
 
   it("ignora las piezas sin fecha: no hay nada que recordar", async () => {

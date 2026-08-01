@@ -1,5 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
-import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
+import { COSTA_RICA_TZ, diaCR } from "@/lib/ugc/calendar";
 import { type Agenda, type AgendaItem, itemsDeAgenda, resumenDeterminista } from "@/lib/ugc/agenda";
 
 /**
@@ -31,9 +31,12 @@ LO QUE NUNCA HACÉS
 
 /** Un ítem tal como se lo mostramos al modelo: con número, nunca con UUID. */
 function lineaDeItem(item: AgendaItem, indice: number, hoyCR: string): string {
-  const dia = formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "yyyy-MM-dd");
-  const hora = formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm");
-  const cuando = dia === hoyCR ? `hoy ${hora}` : dia;
+  const dia = diaCR(item.fecha);
+  // La hora solo si el ítem la tiene de verdad (un evento). Una pieza se
+  // publica "el 1 de agosto" y no a una hora: si le pasáramos una inventada,
+  // el modelo la repetiría en el mensaje como si alguien la hubiera puesto.
+  const hora = item.conHora ? ` ${formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm")}` : "";
+  const cuando = dia === hoyCR ? `hoy${hora}` : `${dia}${hora}`;
   const prioridad = item.prioridad === "alta" ? " [prioridad alta]" : "";
   return `${indice + 1}. ${item.accion} "${item.titulo}"${item.heroe ? ` — ${item.heroe}` : ""} — ${cuando}${prioridad}`;
 }

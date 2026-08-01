@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { deleteHeroAction } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import { diaCR } from "@/lib/ugc/calendar";
 import NewHeroButton from "@/components/ugc/admin/NewHeroButton";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import styles from "../qos.module.css";
@@ -41,7 +42,9 @@ export default async function HeroesPage() {
       latestStageByBrandId.set(piece.brand_id, piece.column_id);
       activeCountByBrandId.set(piece.brand_id, (activeCountByBrandId.get(piece.brand_id) ?? 0) + 1);
     }
-    if (piece.publish_date && new Date(piece.publish_date) >= new Date()) {
+    // Día de CR, no instante: comparando instantes, una pieza que publica HOY
+    // se descartaba como pasada desde las 18:00 del día anterior.
+    if (piece.publish_date && diaCR(piece.publish_date) >= diaCR(new Date())) {
       const current = nextPublishByBrandId.get(piece.brand_id);
       if (!current || piece.publish_date < current) nextPublishByBrandId.set(piece.brand_id, piece.publish_date);
     }

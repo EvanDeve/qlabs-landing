@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { toggleCalendarMonthAction } from "@/lib/actions/heroes";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
 import styles from "./qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -16,14 +17,22 @@ export default async function AdminDashboardPage() {
   const supabase = await createClient();
 
   const now = new Date();
-  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const in7Days = sumarDias(now, 7);
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const dayOfMonth = now.getDate();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  // Todo se compara como día de Costa Rica en 'yyyy-MM-dd'.
+  //
+  // Antes esto usaba `new Date(...)` y `now.getFullYear()/getMonth()/getDate()`,
+  // que devuelven la fecha de la ZONA DEL SERVIDOR — en Vercel, UTC. Entre las
+  // 18:00 y la medianoche de Costa Rica el servidor ya está en el día
+  // siguiente, así que el dashboard mostraba el mes y las piezas atrasadas
+  // corridos un día todas las tardes. Ver la migración 20260801000000.
+  const hoyCR = diaCR(now);
+  const en7DiasCR = diaCR(in7Days);
+  const mesCR = hoyCR.slice(0, 7);
+  const dayOfMonth = Number(hoyCR.slice(8, 10));
+  const daysInMonth = new Date(Date.UTC(Number(hoyCR.slice(0, 4)), Number(hoyCR.slice(5, 7)), 0)).getUTCDate();
   const monthFraction = dayOfMonth / daysInMonth;
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const monthKey = `${mesCR}-01`;
 
   const [
     { data: agencyClients },
@@ -77,8 +86,7 @@ export default async function AdminDashboardPage() {
         p.brand_id === heroId &&
         doneColumnIds.has(p.column_id) &&
         p.publish_date &&
-        new Date(p.publish_date) >= monthStart &&
-        new Date(p.publish_date) < monthEnd
+        diaCR(p.publish_date).slice(0, 7) === mesCR
     ).length;
 
   const heroStats = heroesManaged.map((hero) => {
@@ -137,12 +145,12 @@ export default async function AdminDashboardPage() {
     },
   ].filter((b) => b.heroes.length > 0);
 
-  const overduePieces = activePieces.filter((p) => p.publish_date && new Date(p.publish_date) < now);
+  const overduePieces = activePieces.filter((p) => p.publish_date && diaCR(p.publish_date) < hoyCR);
   const pendingApprovalPieces = activePieces.filter(
     (p) => approvalColumnIds.has(p.column_id)
   );
   const publishingThisWeekPieces = pieces.filter(
-    (p) => p.publish_date && new Date(p.publish_date) >= now && new Date(p.publish_date) <= in7Days
+    (p) => p.publish_date && diaCR(p.publish_date) >= hoyCR && diaCR(p.publish_date) <= en7DiasCR
   );
 
   const kpis = [
@@ -158,17 +166,18 @@ export default async function AdminDashboardPage() {
       .filter((p) => !overduePieces.includes(p))
       .map((p) => ({ piece: p, reason: "Esperando aprobación del cliente", late: false })),
   ].sort((a, b) => {
-    const aDate = a.piece.publish_date ? new Date(a.piece.publish_date).getTime() : Infinity;
-    const bDate = b.piece.publish_date ? new Date(b.piece.publish_date).getTime() : Infinity;
-    return aDate - bDate;
+    // Las piezas sin fecha van al final: no hay nada que se les esté venciendo.
+    const aDate = a.piece.publish_date ? diaCR(a.piece.publish_date) : "9999-12-31";
+    const bDate = b.piece.publish_date ? diaCR(b.piece.publish_date) : "9999-12-31";
+    return aDate.localeCompare(bDate);
   });
 
   const weekAgendaItems = [
     ...pieces
-      .filter((p) => p.publish_date && new Date(p.publish_date) >= now && new Date(p.publish_date) <= in7Days)
+      .filter((p) => p.publish_date && diaCR(p.publish_date) >= hoyCR && diaCR(p.publish_date) <= en7DiasCR)
       .map((p) => ({ date: p.publish_date as string, title: p.title, type: "Publicación", brandId: p.brand_id })),
     ...pieces
-      .filter((p) => p.record_date && new Date(p.record_date) >= now && new Date(p.record_date) <= in7Days)
+      .filter((p) => p.record_date && diaCR(p.record_date) >= hoyCR && diaCR(p.record_date) <= en7DiasCR)
       .map((p) => ({ date: p.record_date as string, title: p.title, type: "Grabación", brandId: p.brand_id })),
     ...(calendarEvents ?? []).map((e) => ({
       date: e.starts_at,
@@ -176,7 +185,9 @@ export default async function AdminDashboardPage() {
       type: e.type,
       brandId: e.brand_id,
     })),
-  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Conviven días sueltos (piezas) e instantes (eventos): se ordena por día
+    // de CR, nunca restando los instantes.
+  ].sort((a, b) => diaCR(a.date).localeCompare(diaCR(b.date)));
 
   const teamLoad = (staffMembers ?? []).map((staff) => {
     const count = activePieces.filter((p) => p.owner_id === staff.profile_id).length;
@@ -384,7 +395,7 @@ export default async function AdminDashboardPage() {
               weekAgendaItems.map((item, i) => (
                 <div key={i} className={styles.weekRow}>
                   <div className={styles.weekWhen}>
-                    {new Date(item.date).toLocaleDateString("es-CR", { day: "numeric", month: "short" })}
+                    {diaCorto(item.date)}
                   </div>
                   <span className={styles.weekType} style={{ background: "#6d54f3" }} />
                   <div className={styles.weekBody}>

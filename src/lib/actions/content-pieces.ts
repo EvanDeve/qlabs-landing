@@ -32,12 +32,14 @@ export async function createContentPieceAction(formData: FormData) {
     columnId = primera?.id ?? "";
   }
 
-  if (!brandId || !title || !code || !columnId) return;
+  // El código dejó de ser obligatorio: pedirlo siempre solo lograba que se
+  // inventaran códigos de relleno para poder crear la pieza.
+  if (!brandId || !title || !columnId) return;
 
   await supabase.from("content_pieces").insert({
     brand_id: brandId,
     title,
-    code,
+    code: code || null,
     column_id: columnId,
     platform,
     priority,
