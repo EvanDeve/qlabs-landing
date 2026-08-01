@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { firmaValida } from "@/lib/whatsapp/firma";
 import { sendWhatsAppFreeform, normalizarTelefonoCR } from "@/lib/whatsapp/twilio";
@@ -12,7 +12,12 @@ import {
   type PropuestaPieza,
   type TurnoPrevio,
 } from "@/lib/ugc/agente";
-import { responderPublico, hablaDemasiado } from "@/lib/ugc/agente-publico";
+import {
+  responderPublico,
+  hablaDemasiado,
+  partirEnMensajes,
+  demoraDeEscritura,
+} from "@/lib/ugc/agente-publico";
 import { CONTACTO_WA_NUEVO } from "@/lib/ugc/admin-alerts";
 import { diaCR } from "@/lib/ugc/calendar";
 import type { AgendaItem } from "@/lib/ugc/agenda";
@@ -21,6 +26,11 @@ import type { WaActionKind } from "@/lib/database.types";
 // Lo que Twilio golpea cuando alguien del equipo le contesta al agente.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// El trabajo de after() —redactar, esperar y mandar hasta dos mensajes— corre
+// después de responderle a Twilio, pero sigue contando contra la duración de la
+// función. Con el tope por defecto de 10 s, una respuesta larga partida en dos
+// se cortaría a la mitad y el segundo mensaje nunca saldría.
+export const maxDuration = 60;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -232,35 +242,50 @@ async function atenderDesconocido(
     .reverse()
     .map((m) => ({ quien: m.direction === "in" ? "persona" : "agente", texto: m.body }));
 
-  const respuesta = await responderPublico({
-    cerebro: {
-      nombre: ajustes.nombre,
-      sobreQlabs: ajustes.sobreQlabs,
-      guionPublico: ajustes.guionPublico,
-      linkAgenda: ajustes.linkAgenda,
-    },
-    historial,
-    mensaje: texto,
-  });
+  // De acá en adelante nada tiene que hacer esperar a Twilio: la respuesta al
+  // webhook sale ya, y redactar y mandar ocurre después. Sin esto, la demora que
+  // hace que el agente no conteste en tres segundos competiría con el timeout de
+  // 15 s de Twilio, y un Gemini lento se traduciría en un 11200.
+  after(async () => {
+    const respuesta = await responderPublico({
+      cerebro: {
+        nombre: ajustes.nombre,
+        sobreQlabs: ajustes.sobreQlabs,
+        guionPublico: ajustes.guionPublico,
+        linkAgenda: ajustes.linkAgenda,
+      },
+      historial,
+      mensaje: texto,
+    });
 
-  // null = no hay nada cargado sobre Q Labs. Callarse es correcto: un agente sin
-  // información contestando igual improvisa, y lo que improvise queda dicho en
-  // nombre de la agencia.
-  if (!respuesta) {
-    console.warn("[agente/webhook] responder_desconocidos está prendido pero sobre_qlabs está vacío");
-    return;
-  }
+    // null = no hay nada cargado sobre Q Labs. Callarse es correcto: un agente
+    // sin información contestando igual improvisa, y lo que improvise queda
+    // dicho en nombre de la agencia.
+    if (!respuesta) {
+      console.warn("[agente/webhook] responder_desconocidos está prendido pero sobre_qlabs está vacío");
+      return;
+    }
 
-  const envio = await sendWhatsAppFreeform(telefono, respuesta);
-  await admin.from("wa_public_messages").insert({
-    phone_e164: telefono,
-    direction: "out",
-    body: respuesta,
-    provider_sid: envio.ok ? envio.sid : null,
-    status: envio.ok ? "sent" : "failed",
-    error: envio.ok ? null : envio.error,
+    for (const parte of partirEnMensajes(respuesta)) {
+      await esperar(demoraDeEscritura(parte));
+
+      const envio = await sendWhatsAppFreeform(telefono, parte);
+      await admin.from("wa_public_messages").insert({
+        phone_e164: telefono,
+        direction: "out",
+        body: parte,
+        provider_sid: envio.ok ? envio.sid : null,
+        status: envio.ok ? "sent" : "failed",
+        error: envio.ok ? null : envio.error,
+      });
+
+      // Si el primero no salió, el segundo llegaría suelto y sin contexto.
+      if (!envio.ok) break;
+    }
   });
 }
+
+const esperar = (ms: number) => new Promise((listo) => setTimeout(listo, ms));
 
 /**
  * Le avisa al equipo que hay alguien nuevo escribiendo.

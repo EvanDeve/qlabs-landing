@@ -3,6 +3,8 @@ import {
   responderPublico,
   armarCerebroPublico,
   hablaDemasiado,
+  demoraDeEscritura,
+  partirEnMensajes,
   MAX_MENSAJES_DIA,
   SOBRE_QLABS_ARRANQUE,
   GUION_ARRANQUE,
@@ -130,5 +132,79 @@ describe("textos de arranque", () => {
   it("el guion lleva a la reunión y frena la insistencia", () => {
     expect(GUION_ARRANQUE).toMatch(/reuni[óo]n/i);
     expect(GUION_ARRANQUE).toMatch(/no insistas/i);
+  });
+});
+
+// Contestar en tres segundos es lo primero que delata a un sistema, antes que
+// cualquier palabra. Estas dos funciones son todo el ritmo.
+describe("demoraDeEscritura", () => {
+  it("nunca contesta al instante", () => {
+    expect(demoraDeEscritura("ok")).toBeGreaterThanOrEqual(1500);
+  });
+
+  it("tarda más cuando escribe más", () => {
+    const corto = demoraDeEscritura("¡Hola! ¿En qué te ayudo?");
+    const largo = demoraDeEscritura("x".repeat(140));
+
+    expect(largo).toBeGreaterThan(corto);
+  });
+
+  // Del otro lado hay alguien esperando: pasado cierto punto, hacerlo esperar
+  // de verdad es peor que sonar a bot.
+  it("tiene techo", () => {
+    expect(demoraDeEscritura("x".repeat(5000))).toBeLessThanOrEqual(8000);
+  });
+});
+
+describe("partirEnMensajes", () => {
+  it("no parte un mensaje corto, ni aunque tenga renglón en blanco", () => {
+    expect(partirEnMensajes("Hola.\n\n¿En qué te ayudo?")).toHaveLength(1);
+  });
+
+  it("no parte un mensaje largo sin renglón en blanco", () => {
+    expect(partirEnMensajes("x".repeat(400))).toEqual(["x".repeat(400)]);
+  });
+
+  it("parte en dos donde el modelo dejó el renglón en blanco", () => {
+    const a = "y".repeat(120);
+    const b = "z".repeat(120);
+
+    expect(partirEnMensajes(`${a}\n\n${b}`)).toEqual([a, b]);
+  });
+
+  // Tres o más mensajes seguidos dejan de leerse como alguien escribiendo y
+  // pasan a leerse como spam.
+  it("nunca devuelve más de dos", () => {
+    const parrafo = "w".repeat(80);
+
+    expect(partirEnMensajes([parrafo, parrafo, parrafo, parrafo].join("\n\n"))).toHaveLength(2);
+  });
+
+  it("no deja pedazos vacíos", () => {
+    for (const t of ["\n\n" + "q".repeat(200), "q".repeat(200) + "\n\n"]) {
+      expect(partirEnMensajes(t).every((p) => p.trim().length > 0)).toBe(true);
+    }
+  });
+});
+
+// Las reglas nuevas son la mitad de la humanización: sin ellas el modelo cierra
+// todos los mensajes con una pregunta y todos miden lo mismo.
+describe("reglas contra el tono de bot", () => {
+  const prompt = armarCerebroPublico(cerebro());
+
+  it("le prohíbe repetir lo que le acaban de decir", () => {
+    expect(prompt).toMatch(/no aporta nada|acaba de decir/i);
+  });
+
+  it("le prohíbe cerrar siempre con pregunta", () => {
+    expect(prompt).toMatch(/no cierres todos los mensajes con una pregunta/i);
+  });
+
+  it("le prohíbe presentarse sin que le pregunten", () => {
+    expect(prompt).toMatch(/no lo aclares ni te presentes/i);
+  });
+
+  it("sigue prohibiendo los emojis", () => {
+    expect(prompt).toMatch(/sin emojis/i);
   });
 });
