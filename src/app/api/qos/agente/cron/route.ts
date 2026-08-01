@@ -4,8 +4,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { getMiembrosNotificables, enviarRecordatorioDiario } from "@/lib/ugc/recordatorios";
 
-// Corre cada hora y le manda el resumen a los miembros cuya `reminder_hour`
-// coincide con la hora local de Costa Rica en este momento.
+// Le manda el resumen del día a los miembros del equipo.
+//
+// Dos modos, según cada cuánto lo pueda disparar el plan:
+//   - por defecto: solo a quienes tienen `reminder_hour` == la hora actual en
+//     Costa Rica. Requiere una corrida por hora (Vercel Pro o pg_cron).
+//   - ?todos=1: a todos los pendientes, sin mirar la hora. Es lo correcto
+//     cuando hay UN solo disparo diario (plan Hobby): filtrar por hora ahí
+//     dejaría sin recordatorio a todo el que no coincida, en silencio.
+// El dedupe diario de wa_messages garantiza una sola entrega por día en los dos.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -23,12 +30,14 @@ export async function GET(request: Request) {
 
   const now = new Date();
   const horaCR = Number(formatInTimeZone(now, COSTA_RICA_TZ, "H"));
+  const todos = new URL(request.url).searchParams.get("todos") === "1";
 
   // No hay sesión en un cron: va con service-role.
   const admin = createAdminClient();
-  const miembros = (await getMiembrosNotificables(admin)).filter((m) => m.reminderHour === horaCR);
+  const candidatos = await getMiembrosNotificables(admin);
+  const miembros = todos ? candidatos : candidatos.filter((m) => m.reminderHour === horaCR);
 
-  const resumen = { horaCR, evaluados: miembros.length, enviados: 0, salteados: 0, fallidos: 0 };
+  const resumen = { horaCR, todos, evaluados: miembros.length, enviados: 0, salteados: 0, fallidos: 0 };
 
   // En serie y no en paralelo: son menos de diez personas, y así un fallo de
   // Twilio con una no arrastra a las demás ni satura el rate limit.

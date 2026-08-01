@@ -73,7 +73,9 @@ export default async function EquipoPage() {
           los próximos 3 días — sale del Pipeline y del Calendario. Si no hay nada pendiente, no se manda nada.
         </p>
         <p style={{ fontSize: "12px", color: "var(--ink-3)", marginBottom: "16px" }}>
-          Guardar el número no activa nada: la casilla es el consentimiento y la tiene que dar la persona.
+          Guardar el número no activa nada: la casilla es el consentimiento y la tiene que dar la persona. Hoy sale a
+          las 7:00 para todo el equipo — la hora preferida se guarda, pero todavía no se respeta (el plan actual de
+          Vercel permite un solo envío diario).
         </p>
 
         {(staffMembers ?? []).map((staff) => (

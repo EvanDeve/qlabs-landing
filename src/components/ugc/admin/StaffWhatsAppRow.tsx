@@ -65,8 +65,12 @@ export default function StaffWhatsAppRow({
             />
           </div>
 
+          {/* El plan Hobby de Vercel solo permite un disparo diario, así que hoy
+              sale a las 7 para todos. El valor se guarda igual: el día que se
+              pase a Pro o el cron se mueva a Supabase, empieza a respetarse sin
+              tener que volver a preguntarle la hora a nadie. */}
           <div className={styles.field} style={{ marginBottom: 0 }}>
-            <label>Hora</label>
+            <label>Hora preferida</label>
             <select name="reminder_hour" defaultValue={String(reminderHour)} className={styles.inp}>
               {HORAS.map((h) => (
                 <option key={h} value={h}>
