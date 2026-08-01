@@ -52,6 +52,14 @@ export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";
 export type WaDirection = "out" | "in";
 export type WaMessageStatus = "queued" | "sent" | "failed" | "received";
+export type WaActionKind = "mover_pieza" | "marcar_hecho" | "reprogramar" | "crear_pieza";
+export type WaActionStatus =
+  | "propuesta"
+  | "ejecutada"
+  | "descartada"
+  | "vencida"
+  | "reemplazada"
+  | "fallida";
 
 export interface Database {
   public: {
@@ -410,6 +418,86 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["wa_messages"]["Insert"]>;
         Relationships: [];
       };
+      agent_settings: {
+        Row: {
+          id: boolean;
+          nombre: string;
+          // Vacío = usar PERSONA_SEED de src/lib/ugc/agente.ts. Ver la
+          // migración 20260802000000.
+          persona: string;
+          instrucciones: string;
+          // Vacío = no contestarle a nadie de afuera, aunque el switch esté
+          // prendido. Ver la migración 20260802100000.
+          responder_desconocidos: boolean;
+          sobre_qlabs: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: boolean;
+          nombre?: string;
+          persona?: string;
+          instrucciones?: string;
+          responder_desconocidos?: boolean;
+          sobre_qlabs?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["agent_settings"]["Insert"]>;
+        Relationships: [];
+      };
+      wa_agent_actions: {
+        Row: {
+          id: string;
+          profile_id: string;
+          kind: WaActionKind;
+          payload: Record<string, unknown>;
+          status: WaActionStatus;
+          target_table: string | null;
+          target_id: string | null;
+          error: string | null;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          kind: WaActionKind;
+          payload: Record<string, unknown>;
+          status: WaActionStatus;
+          target_table?: string | null;
+          target_id?: string | null;
+          error?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["wa_agent_actions"]["Insert"]>;
+        Relationships: [];
+      };
+      wa_public_messages: {
+        Row: {
+          id: string;
+          phone_e164: string;
+          direction: WaDirection;
+          body: string;
+          provider_sid: string | null;
+          status: WaMessageStatus;
+          error: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          phone_e164: string;
+          direction: WaDirection;
+          body: string;
+          provider_sid?: string | null;
+          status?: WaMessageStatus;
+          error?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["wa_public_messages"]["Insert"]>;
+        Relationships: [];
+      };
       agency_clients: {
         Row: {
           id: string;
@@ -488,6 +576,9 @@ export interface Database {
           script_url: string | null;
           final_url: string | null;
           notes: string | null;
+          // La cargó McLovin desde el chat de WhatsApp, no una persona desde el
+          // tablero. Ver la migración 20260802000000.
+          created_by_agent: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -507,6 +598,7 @@ export interface Database {
           script_url?: string | null;
           final_url?: string | null;
           notes?: string | null;
+          created_by_agent?: boolean;
           created_at?: string;
           updated_at?: string;
         };

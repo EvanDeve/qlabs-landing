@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { getStaffAgenda, contarAgenda } from "@/lib/ugc/agenda";
-import { redactarNudge } from "@/lib/ugc/agente";
+import { redactarNudge, getAjustesAgente } from "@/lib/ugc/agente";
 import { sendWhatsAppTemplate, sendWhatsAppFreeform } from "@/lib/whatsapp/twilio";
 
 /**
@@ -122,7 +122,11 @@ export async function enviarRecordatorioDiario(
   const contentSid = process.env.TWILIO_REMINDER_CONTENT_SID;
   const usaTextoLibre = abierta || !contentSid;
 
-  const mensaje = await redactarNudge(agenda, miembro.nombre, usaTextoLibre, now);
+  // La personalidad sale de agent_settings, igual que en la conversación: el
+  // recordatorio de la mañana y las respuestas del webhook tienen que sonar a
+  // la misma persona.
+  const ajustes = await getAjustesAgente(admin);
+  const mensaje = await redactarNudge(agenda, miembro.nombre, usaTextoLibre, now, ajustes);
 
   // La fila se inserta ANTES de llamar a Twilio: es el candado de exactly-once.
   // Si el cron se dispara dos veces (Vercel reintenta ante timeout o 5xx), el

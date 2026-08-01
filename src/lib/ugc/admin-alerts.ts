@@ -6,6 +6,9 @@ const MARKETPLACE_URL = `${SITE_URL}/ugc/admin/marketplace`;
 
 export const VERIFICATION_PENDING = "verification_pending";
 
+/** Alguien de afuera escribió por primera vez al WhatsApp del negocio. */
+export const CONTACTO_WA_NUEVO = "contacto_wa_nuevo";
+
 export type PendingVerification = {
   profileId: string;
   role: "creator" | "brand";

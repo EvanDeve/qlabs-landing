@@ -1,0 +1,189 @@
+import { formatInTimeZone } from "date-fns-tz";
+import { createClient } from "@/lib/supabase/server";
+import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
+import { AJUSTES_POR_DEFECTO, PERSONA_SEED } from "@/lib/ugc/agente";
+import { SOBRE_QLABS_ARRANQUE } from "@/lib/ugc/agente-publico";
+import McLovinForm from "@/components/ugc/admin/McLovinForm";
+import type { WaActionStatus } from "@/lib/database.types";
+import styles from "../qos.module.css";
+
+export const dynamic = "force-dynamic";
+
+const ESTADO_LABEL: Record<WaActionStatus, string> = {
+  propuesta: "esperando confirmación",
+  ejecutada: "hecho",
+  descartada: "le dijeron que no",
+  vencida: "se venció sin respuesta",
+  reemplazada: "le corrigieron los datos",
+  fallida: "falló",
+};
+
+const ESTADO_COLOR: Record<WaActionStatus, string> = {
+  propuesta: "var(--warn, #E8A33D)",
+  ejecutada: "var(--ok)",
+  descartada: "var(--ink-3)",
+  vencida: "var(--ink-3)",
+  reemplazada: "var(--ink-3)",
+  fallida: "var(--risk)",
+};
+
+/**
+ * Qué hizo, en una línea.
+ *
+ * El payload no tiene una forma única —una propuesta guarda la pieza entera,
+ * una edición guarda la acción más el título del ítem— así que se lee con
+ * cuidado y se cae con gracia: una fila vieja de un formato que ya cambiamos
+ * tiene que seguir listándose, no romper la página.
+ */
+function describirAccion(kind: string, payload: Record<string, unknown>): string {
+  if (kind === "crear_pieza") {
+    const tipo = payload.tipo === "grabar" ? "Grabar" : "Publicar";
+    return `Crear "${payload.titulo ?? "sin título"}" — ${payload.cliente ?? "sin cliente"} — ${tipo} el ${payload.fecha ?? "?"}`;
+  }
+
+  const accion = (payload.accion ?? {}) as Record<string, unknown>;
+  const titulo = typeof payload.titulo === "string" ? `"${payload.titulo}"` : "un pendiente";
+
+  if (kind === "mover_pieza") return `Mover ${titulo} a ${accion.columna ?? "otra columna"}`;
+  if (kind === "marcar_hecho") return `Marcar ${titulo} como hecho`;
+  if (kind === "reprogramar") return `Reprogramar ${titulo} para el ${accion.fecha ?? "?"}`;
+  return kind;
+}
+
+export default async function McLovinPage() {
+  const supabase = await createClient();
+
+  const [{ data: ajustes }, { data: acciones }, { data: publicos }] = await Promise.all([
+    supabase
+      .from("agent_settings")
+      .select("nombre, persona, instrucciones, sobre_qlabs, responder_desconocidos")
+      .eq("id", true)
+      .maybeSingle(),
+    supabase
+      .from("wa_agent_actions")
+      .select("id, profile_id, kind, payload, status, error, created_at")
+      .order("created_at", { ascending: false })
+      .limit(25),
+    supabase
+      .from("wa_public_messages")
+      .select("id, phone_e164, direction, body, status, error, created_at")
+      .order("created_at", { ascending: false })
+      .limit(30),
+  ]);
+
+  const profileIds = [...new Set((acciones ?? []).map((a) => a.profile_id))];
+  const { data: perfiles } = profileIds.length
+    ? await supabase.from("profiles").select("id, display_name").in("id", profileIds)
+    : { data: [] };
+  const nombrePorId = new Map((perfiles ?? []).map((p) => [p.id, p.display_name]));
+
+  const nombre = ajustes?.nombre ?? AJUSTES_POR_DEFECTO.nombre;
+
+  // Cuántas personas distintas escribieron, no cuántos mensajes: dos números
+  // que escribieron una vez cada uno importan más que uno que escribió veinte.
+  const numerosDistintos = new Set((publicos ?? []).map((m) => m.phone_e164)).size;
+
+  return (
+    <div>
+      <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
+        <div className={styles.sectionHead}>
+          <h2>Personalidad</h2>
+        </div>
+        <p style={{ fontSize: "12px", color: "var(--ink-3)", marginBottom: "16px" }}>
+          Esto es lo que {nombre} lee antes de escribir cualquier mensaje — el recordatorio de la mañana y las
+          respuestas del chat salen de acá. Se aplica al toque, sin redeployar.
+        </p>
+
+        <McLovinForm
+          nombre={nombre}
+          persona={ajustes?.persona ?? ""}
+          instrucciones={ajustes?.instrucciones ?? ""}
+          sobreQlabs={ajustes?.sobre_qlabs ?? ""}
+          responderDesconocidos={ajustes?.responder_desconocidos ?? false}
+          personaPorDefecto={PERSONA_SEED}
+          sobreQlabsArranque={SOBRE_QLABS_ARRANQUE}
+        />
+
+        <p
+          style={{
+            marginTop: "20px",
+            paddingTop: "16px",
+            borderTop: "1px solid var(--line)",
+            fontSize: "12px",
+            color: "var(--ink-3)",
+          }}
+        >
+          Lo que escribas acá cambia cómo habla, no lo que puede hacer. Que no invente clientes ni fechas, que solo
+          toque pendientes de quien le escribe y que no pueda crear nada sin que se lo confirmen está en el código y no
+          se apaga desde esta pantalla.
+        </p>
+      </div>
+
+      <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
+        <div className={styles.sectionHead}>
+          <h2>Gente de afuera ({numerosDistintos})</h2>
+        </div>
+        <p style={{ fontSize: "12px", color: "var(--ink-3)", marginBottom: "16px" }}>
+          Todo lo que escribe alguien que no es del equipo queda acá, conteste {nombre} o no.
+        </p>
+
+        {(publicos ?? []).length === 0 ? (
+          <p style={{ fontSize: "13px", color: "var(--ink-3)" }}>Todavía no escribió nadie de afuera.</p>
+        ) : (
+          (publicos ?? []).map((msg) => (
+            <div key={msg.id} className={styles.attnItem} style={{ cursor: "default" }}>
+              <span
+                className={styles.dot}
+                style={{
+                  background:
+                    msg.status === "failed" ? "var(--risk)" : msg.direction === "in" ? "var(--ok)" : "var(--accent)",
+                  width: "8px",
+                  height: "8px",
+                }}
+              />
+              <div className={styles.attnBody}>
+                <div className={styles.attnTitle}>{msg.error ?? msg.body}</div>
+                <div className={styles.attnMeta}>
+                  {msg.phone_e164} · {msg.direction === "in" ? "escribió" : `contestó ${nombre}`} ·{" "}
+                  {formatInTimeZone(new Date(msg.created_at), COSTA_RICA_TZ, "dd/MM HH:mm")}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className={`${styles.card} ${styles.cardPad}`}>
+        <div className={styles.sectionHead}>
+          <h2>Lo que hizo</h2>
+        </div>
+        <p style={{ fontSize: "12px", color: "var(--ink-3)", marginBottom: "16px" }}>
+          Cada vez que {nombre} toca el tablero desde una conversación queda registrado acá, con quién se lo pidió.
+        </p>
+
+        {(acciones ?? []).length === 0 ? (
+          <p style={{ fontSize: "13px", color: "var(--ink-3)" }}>Todavía no tocó nada.</p>
+        ) : (
+          (acciones ?? []).map((accion) => (
+            <div key={accion.id} className={styles.attnItem} style={{ cursor: "default" }}>
+              <span
+                className={styles.dot}
+                style={{ background: ESTADO_COLOR[accion.status], width: "8px", height: "8px" }}
+              />
+              <div className={styles.attnBody}>
+                <div className={styles.attnTitle}>
+                  {describirAccion(accion.kind, accion.payload as Record<string, unknown>)}
+                </div>
+                <div className={styles.attnMeta}>
+                  {nombrePorId.get(accion.profile_id) ?? "Sin nombre"} · {ESTADO_LABEL[accion.status]}
+                  {accion.error ? ` (${accion.error})` : ""} ·{" "}
+                  {formatInTimeZone(new Date(accion.created_at), COSTA_RICA_TZ, "dd/MM HH:mm")}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

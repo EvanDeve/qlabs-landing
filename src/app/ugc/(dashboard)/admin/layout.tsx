@@ -51,6 +51,10 @@ export default async function AdminLayout({
     { href: "/ugc/admin/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
 
     { href: "/ugc/admin/equipo", label: "Equipo", icon: "briefcase", group: "Sistema" },
+    // Va pegado a Equipo y no en Herramientas: los grupos del sidebar se cortan
+    // por orden del array, así que un item de "Sistema" separado de los otros
+    // abriría un segundo encabezado "Sistema" más abajo.
+    { href: "/ugc/admin/mclovin", label: "McLovin", icon: "chat", group: "Sistema" },
     { href: "/ugc/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
     {
       href: "/ugc/admin/disputas",

@@ -269,6 +269,14 @@ function Card({
       <div className={styles.kcMid}>
         <span className={`${styles.prio} ${styles[PRIO_CLASS[piece.priority]]}`}>{piece.priority}</span>
         <span className={styles.tag}>{piece.platform}</span>
+        {/* Una pieza que nadie cargó a mano tiene que decirlo. Va el origen y
+            no el nombre del agente: el nombre se edita desde /ugc/admin/mclovin
+            y acá quedaría desactualizado sin que nadie se entere. */}
+        {piece.created_by_agent && (
+          <span className={styles.tag} title="Se anotó por WhatsApp, no desde el tablero">
+            <QosIcon name="chat" size={11} /> WhatsApp
+          </span>
+        )}
       </div>
       <div className={styles.kcFoot}>
         <span className={`${styles.kcDue} ${isOverdue ? styles.kcDueLate : ""}`}>

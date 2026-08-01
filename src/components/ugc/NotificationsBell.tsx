@@ -45,6 +45,14 @@ function describe(notification: Notification): { text: string; href: string } {
     };
   }
 
+  if (notification.type === "contacto_wa_nuevo") {
+    const preview = String(payload.preview ?? "").trim();
+    return {
+      text: `Escribió un número nuevo al WhatsApp${preview ? `: “${preview}”` : ""}`,
+      href: "/ugc/admin/mclovin",
+    };
+  }
+
   if (notification.type === "verification_pending") {
     const name = String(payload.subject_name ?? "Alguien");
     const roleLabel = payload.subject_role === "brand" ? "marca" : "creador";
