@@ -2,8 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "//": "13:00 UTC = 7:00 de Costa Rica (UTC-6, sin horario de verano).",
-      "//2": "Una vez al día porque el plan Hobby no admite más: una expresión por hora hace FALLAR el deploy entero, no se degrada sola. Por eso va con ?todos=1 — con un solo disparo, filtrar por la hora de cada quien dejaría sin recordatorio a todo el que no tenga las 7. Para volver a la hora por persona: pasar a Pro y usar '0 * * * *' sin el ?todos=1, o mover el disparo a pg_cron en Supabase.",
       "path": "/api/qos/agente/cron?todos=1",
       "schedule": "0 13 * * *"
     }

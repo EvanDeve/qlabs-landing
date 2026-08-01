@@ -13,6 +13,12 @@ import { getMiembrosNotificables, enviarRecordatorioDiario } from "@/lib/ugc/rec
 //     cuando hay UN solo disparo diario (plan Hobby): filtrar por hora ahí
 //     dejaría sin recordatorio a todo el que no coincida, en silencio.
 // El dedupe diario de wa_messages garantiza una sola entrega por día en los dos.
+//
+// Hoy `vercel.json` lo dispara una vez, 13:00 UTC = 7:00 CR, con ?todos=1.
+// ⚠️ Ese archivo NO admite comentarios: el schema de Vercel rechaza cualquier
+// propiedad de más y el deploy entero falla. Por eso la explicación vive acá.
+// Para volver a la hora por persona: pasar a Pro y usar '0 * * * *' sin el
+// ?todos=1, o mover el disparo a pg_cron en Supabase.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
