@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { firmaValida } from "@/lib/whatsapp/firma";
 import {
   validarAccion,
+  resolverCliente,
   describirPropuesta,
   esValidaParaConfirmar,
   fechaEnRango,
@@ -167,7 +168,7 @@ describe("validarAccion — proponer una pieza nueva", () => {
   // La falla que más importa: una pieza creada para el cliente equivocado no se
   // ve rota, se ve como trabajo real de otra cuenta.
   it("descarta un cliente que no existe", () => {
-    for (const cliente of ["Zona", "El Bar de la Esquina", "", "Zonna Escazú"]) {
+    for (const cliente of ["El Bar de la Esquina", "", "Sodalacosecha"]) {
       expect(validarAccion({ tipo: "proponer_pieza", pieza: { ...pieza, cliente } }, ctx())).toEqual({
         tipo: "ninguna",
       });
@@ -254,6 +255,39 @@ describe("validarAccion — confirmar y descartar", () => {
     );
 
     expect(accion).toEqual({ tipo: "confirmar" });
+  });
+});
+
+// Contra los nombres que hay de verdad en la base: "Zonna Gastrobar",
+// "La Árboleda", "Entrecote". Nadie escribe eso por WhatsApp.
+describe("resolverCliente", () => {
+  const REALES = ["Zonna Gastrobar", "La Árboleda", "La Bontá", "La Maremmana", "Entrecote", "Kosta Asiatika"];
+
+  it("resuelve el nombre corto que usa la gente", () => {
+    expect(resolverCliente("Zonna", REALES)).toBe("Zonna Gastrobar");
+    expect(resolverCliente("entrecot", REALES)).toBe("Entrecote");
+  });
+
+  it("no se traba con las tildes", () => {
+    expect(resolverCliente("la arboleda", REALES)).toBe("La Árboleda");
+    expect(resolverCliente("La Bonta", REALES)).toBe("La Bontá");
+  });
+
+  it("acepta el nombre completo tal cual", () => {
+    expect(resolverCliente("Kosta Asiatika", REALES)).toBe("Kosta Asiatika");
+    expect(resolverCliente("  ZONNA GASTROBAR  ", REALES)).toBe("Zonna Gastrobar");
+  });
+
+  // Lo importante: la ambigüedad termina en una pregunta, nunca en una pieza
+  // cargada al cliente equivocado.
+  it("devuelve null si hay más de un candidato", () => {
+    expect(resolverCliente("La", REALES)).toBeNull();
+  });
+
+  it("devuelve null si no se parece a ninguno", () => {
+    expect(resolverCliente("El Bar de la Esquina", REALES)).toBeNull();
+    expect(resolverCliente("", REALES)).toBeNull();
+    expect(resolverCliente("   ", REALES)).toBeNull();
   });
 });
 

@@ -442,7 +442,7 @@ function validarPropuesta(valor: unknown, ctx: ContextoValidacion): PropuestaPie
   if (titulo.length < 3 || titulo.length > 120) return null;
 
   if (typeof p.cliente !== "string") return null;
-  const cliente = ctx.clientes.find((c) => c.toLowerCase() === p.cliente!.toString().trim().toLowerCase());
+  const cliente = resolverCliente(p.cliente, ctx.clientes);
   if (!cliente) return null;
 
   if (typeof p.fecha !== "string" || !FORMATO_DIA.test(p.fecha)) return null;
@@ -451,6 +451,44 @@ function validarPropuesta(valor: unknown, ctx: ContextoValidacion): PropuestaPie
   if (p.tipo !== "grabar" && p.tipo !== "publicar") return null;
 
   return { titulo, cliente, fecha: p.fecha, tipo: p.tipo };
+}
+
+/** Sin tildes, sin mayúsculas, sin espacios de más. Para comparar, nunca para guardar. */
+function normalizar(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * De cómo alguien nombra un cliente al nombre con el que está cargado.
+ *
+ * El match exacto no alcanza contra los datos reales: en la base están "Zonna
+ * Gastrobar", "La Árboleda" y "Entrecote", y nadie escribe eso por WhatsApp —
+ * escribe "Zonna", "la arboleda", "entrecot". Con match exacto el agente
+ * preguntaría cuál cliente es en casi todos los mensajes útiles.
+ *
+ * Por eso hay un segundo intento por coincidencia parcial, pero SOLO si deja un
+ * único candidato. Con "la" hay tres (Árboleda, Bontá, Maremmana) y devuelve
+ * null: preferimos que pregunte a que elija. La ambigüedad tiene que terminar en
+ * una pregunta, nunca en una pieza cargada al cliente equivocado.
+ */
+export function resolverCliente(entrada: string, clientes: string[]): string | null {
+  const buscado = normalizar(entrada);
+  if (!buscado) return null;
+
+  const exacto = clientes.find((c) => normalizar(c) === buscado);
+  if (exacto) return exacto;
+
+  const candidatos = clientes.filter((c) => {
+    const nombre = normalizar(c);
+    return nombre.includes(buscado) || buscado.includes(nombre);
+  });
+
+  return candidatos.length === 1 ? candidatos[0] : null;
 }
 
 /**
