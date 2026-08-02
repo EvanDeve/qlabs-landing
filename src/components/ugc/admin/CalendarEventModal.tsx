@@ -41,6 +41,25 @@ export default function CalendarEventModal({
           </button>
         </div>
 
+        {/* De dónde salió. Va el origen y no el nombre del agente: ese se edita
+            desde /ugc/admin/mclovin y acá quedaría desactualizado sin que nadie
+            se entere. Mismo criterio que la tarjeta del pipeline. */}
+        {item?.createdByAgent && (
+          <p
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginBottom: "14px",
+              fontSize: "12px",
+              color: "var(--ink-3)",
+            }}
+          >
+            <QosIcon name="chat" size={12} />
+            Se anotó por WhatsApp, no desde el calendario
+          </p>
+        )}
+
         {isDerived && item ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <p style={{ fontSize: "13px", color: "var(--ink-2)" }}>

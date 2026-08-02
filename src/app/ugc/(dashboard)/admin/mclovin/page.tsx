@@ -36,9 +36,14 @@ const ESTADO_COLOR: Record<WaActionStatus, string> = {
  * tiene que seguir listándose, no romper la página.
  */
 function describirAccion(kind: string, payload: Record<string, unknown>): string {
-  if (kind === "crear_pieza") {
-    const tipo = payload.tipo === "grabar" ? "Grabar" : "Publicar";
-    return `Crear "${payload.titulo ?? "sin título"}" — ${payload.cliente ?? "sin cliente"} — ${tipo} el ${payload.fecha ?? "?"}`;
+  // Las dos ramas de crear comparten payload. 'crear_pieza' sigue apareciendo
+  // en filas viejas que fueron grabaciones, de cuando todo era una tarjeta del
+  // tablero (ver 20260802400000): por eso el destino se lee de `tipo` y no del
+  // kind, que en esas filas diría lo que se hizo entonces, no lo que hoy haría.
+  if (kind === "crear_pieza" || kind === "crear_evento") {
+    const esGrabacion = payload.tipo === "grabar";
+    const destino = esGrabacion ? "Grabar" : "Publicar";
+    return `Crear "${payload.titulo ?? "sin título"}" — ${payload.cliente ?? "sin cliente"} — ${destino} el ${payload.fecha ?? "?"}`;
   }
 
   const accion = (payload.accion ?? {}) as Record<string, unknown>;

@@ -85,6 +85,7 @@ export default async function CalendarioPage({
       brandId: event.brand_id,
       brandName: event.brand_id ? brandNameById.get(event.brand_id) ?? null : null,
       brandLogoUrl: event.brand_id ? brandLogoById.get(event.brand_id) ?? null : null,
+      createdByAgent: event.created_by_agent,
       responsibleName: event.responsible_id ? staffNameById.get(event.responsible_id) ?? null : null,
       contentPieceId: event.content_piece_id,
     });
@@ -100,6 +101,7 @@ export default async function CalendarioPage({
         brandId: piece.brand_id,
         brandName: brandNameById.get(piece.brand_id) ?? null,
         brandLogoUrl: brandLogoById.get(piece.brand_id) ?? null,
+        createdByAgent: false,
         responsibleName: null,
         contentPieceId: piece.id,
       });
@@ -113,6 +115,7 @@ export default async function CalendarioPage({
         brandId: piece.brand_id,
         brandName: brandNameById.get(piece.brand_id) ?? null,
         brandLogoUrl: brandLogoById.get(piece.brand_id) ?? null,
+        createdByAgent: false,
         responsibleName: null,
         contentPieceId: piece.id,
       });

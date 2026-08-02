@@ -52,7 +52,15 @@ export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";
 export type WaDirection = "out" | "in";
 export type WaMessageStatus = "queued" | "sent" | "failed" | "received";
-export type WaActionKind = "mover_pieza" | "marcar_hecho" | "reprogramar" | "crear_pieza";
+export type WaActionKind =
+  | "mover_pieza"
+  | "marcar_hecho"
+  | "reprogramar"
+  // Crear tiene dos destinos: un video va al tablero, una jornada de grabación
+  // al calendario. Las filas viejas conservan 'crear_pieza' aunque hayan sido
+  // grabaciones — ver 20260802400000.
+  | "crear_pieza"
+  | "crear_evento";
 export type WaActionStatus =
   | "propuesta"
   | "ejecutada"
@@ -704,6 +712,7 @@ export interface Database {
           starts_at: string;
           responsible_id: string | null;
           status: CalendarEventStatus;
+          created_by_agent: boolean;
           created_at: string;
         };
         Insert: {
@@ -715,6 +724,7 @@ export interface Database {
           starts_at: string;
           responsible_id?: string | null;
           status?: CalendarEventStatus;
+          created_by_agent?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["calendar_events"]["Insert"]>;

@@ -66,6 +66,8 @@ export type CalendarItem = {
   brandId: string | null;
   brandName: string | null;
   brandLogoUrl: string | null;
+  /** Solo los eventos propios lo traen; los derivados de una pieza van en false. */
+  createdByAgent: boolean;
   responsibleName: string | null;
   contentPieceId: string | null;
 };

@@ -412,6 +412,10 @@ function kindDe(accion: AccionAgente): WaActionKind {
   if (accion.tipo === "mover_pieza" || accion.tipo === "marcar_hecho" || accion.tipo === "reprogramar") {
     return accion.tipo;
   }
+  // Una propuesta sabe su destino por `tipo`; el resto de los casos que caen
+  // acá (confirmar, descartar, ninguna) se registran solo cuando fallan y no
+  // tienen destino propio, así que quedan como 'crear_pieza'.
+  if (accion.tipo === "proponer_pieza" && accion.pieza.tipo === "grabar") return "crear_evento";
   return "crear_pieza";
 }
 
@@ -455,7 +459,16 @@ async function registrar(
  */
 async function abrirPropuesta(admin: Admin, ctx: Contexto, pieza: PropuestaPieza): Promise<boolean> {
   if (ctx.propuesta) await cerrarPropuesta(admin, ctx, "reemplazada");
-  const id = await registrar(admin, ctx.profileId, "crear_pieza", pieza as unknown as Record<string, unknown>, "propuesta");
+  // El kind se decide acá, en la propuesta, y no al ejecutarla: el destino ya
+  // está definido por `tipo` y así la bitácora dice desde el primer registro
+  // qué se iba a crear, aunque la persona nunca conteste.
+  const id = await registrar(
+    admin,
+    ctx.profileId,
+    pieza.tipo === "grabar" ? "crear_evento" : "crear_pieza",
+    pieza as unknown as Record<string, unknown>,
+    "propuesta"
+  );
   return id !== null;
 }
 
@@ -565,6 +578,7 @@ async function crearGrabacionConfirmada(
       // pidió, para que le aparezca en su propia agenda.
       responsible_id: ctx.profileId,
       status: "programado",
+      created_by_agent: true,
       // Sin pieza asociada a propósito: la FK es `on delete cascade`, así que
       // apuntar a una pieza haría que borrarla se llevara puesta la jornada de
       // grabación, que no depende de ningún video en particular.
