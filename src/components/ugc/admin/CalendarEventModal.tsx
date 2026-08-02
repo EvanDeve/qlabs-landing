@@ -64,6 +64,7 @@ export default function CalendarEventModal({
               <label>Tipo</label>
               <select name="type" defaultValue={item?.type ?? "reunion"} className={styles.inp}>
                 <option value="reunion">Reunión</option>
+                <option value="guion">Guion</option>
                 <option value="entrega">Entrega</option>
                 <option value="grabacion">Grabación</option>
                 <option value="publicacion">Publicación</option>

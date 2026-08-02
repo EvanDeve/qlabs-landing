@@ -47,7 +47,7 @@ export type ContentPlatform = "instagram" | "tiktok" | "reels";
 // Nota: el tablero del creador NO tiene enum de etapas. Sus columnas son filas
 // de `creator_task_columns` para que cada creador arme las suyas — un enum de
 // Postgres no se puede extender en runtime. Ver 20260727100000.
-export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega";
+export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega" | "guion";
 export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";
 export type WaDirection = "out" | "in";

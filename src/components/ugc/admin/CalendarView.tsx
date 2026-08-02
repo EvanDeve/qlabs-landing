@@ -7,6 +7,7 @@ import { es } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
 import type { CalendarItem } from "@/lib/ugc/calendar";
 import { CALENDAR_EVENT_TYPE_LABEL, CALENDAR_EVENT_TYPE_DOT, CALENDAR_EVENT_TYPE_BG, COSTA_RICA_TZ } from "@/lib/ugc/calendar";
+import BrandAvatar from "@/components/ugc/BrandAvatar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CalendarEventModal from "./CalendarEventModal";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -165,8 +166,30 @@ function MonthGrid({
                       color: CALENDAR_EVENT_TYPE_DOT[item.type],
                       borderLeft: `3px solid ${CALENDAR_EVENT_TYPE_DOT[item.type]}`,
                     }}
+                    // El color del chip dice el TIPO de evento, no de quién es.
+                    // Con un mes entero de grabaciones todos salen del mismo
+                    // azul, así que el Hero hay que poder leerlo aparte: va el
+                    // logo, y el tooltip con marca + tipo + título para cuando
+                    // el texto se corta con ellipsis.
+                    title={[item.brandName, CALENDAR_EVENT_TYPE_LABEL[item.type], item.title]
+                      .filter(Boolean)
+                      .join(" · ")}
                   >
-                    {item.title}
+                    {item.brandName && (
+                      <BrandAvatar
+                        name={item.brandName}
+                        logoUrl={item.brandLogoUrl}
+                        size={14}
+                        width={item.brandLogoUrl ? 22 : 14}
+                        radius={4}
+                        fit="contain"
+                      />
+                    )}
+                    <span
+                      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    >
+                      {item.title}
+                    </span>
                   </button>
                 ))}
                 {items.length > 3 && (
@@ -222,7 +245,29 @@ function AgendaColumns({
                     </div>
                     <div style={{ marginTop: "4px", fontSize: "13px", fontWeight: 600 }}>{item.title}</div>
                     {item.brandName && (
-                      <div style={{ fontSize: "11.5px", color: "var(--ink-2)" }}>{item.brandName}</div>
+                      // Acá el Hero ya venía en texto, pero sin logo no se
+                      // reconoce de un vistazo. Va más grande que en la grilla
+                      // del mes porque la columna de agenda tiene lugar.
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          marginTop: "3px",
+                          fontSize: "11.5px",
+                          color: "var(--ink-2)",
+                        }}
+                      >
+                        <BrandAvatar
+                          name={item.brandName}
+                          logoUrl={item.brandLogoUrl}
+                          size={18}
+                          width={item.brandLogoUrl ? 32 : 18}
+                          radius={5}
+                          fit="contain"
+                        />
+                        {item.brandName}
+                      </div>
                     )}
                   </button>
                 ))

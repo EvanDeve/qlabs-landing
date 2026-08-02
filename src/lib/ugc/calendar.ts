@@ -48,6 +48,7 @@ export type CalendarItem = {
   date: string;
   brandId: string | null;
   brandName: string | null;
+  brandLogoUrl: string | null;
   responsibleName: string | null;
   contentPieceId: string | null;
 };
@@ -57,6 +58,7 @@ export const CALENDAR_EVENT_TYPE_LABEL: Record<CalendarEventType, string> = {
   grabacion: "Grabación",
   reunion: "Reunión",
   entrega: "Entrega",
+  guion: "Guion",
 };
 
 export const CALENDAR_EVENT_TYPE_DOT: Record<CalendarEventType, string> = {
@@ -64,6 +66,9 @@ export const CALENDAR_EVENT_TYPE_DOT: Record<CalendarEventType, string> = {
   grabacion: "var(--st-grab)",
   reunion: "var(--st-estr)",
   entrega: "var(--st-aprob)",
+  // El mismo violeta que usaba la columna "Guion" del Kanban, para que el
+  // equipo lo reconozca ahora que el hito vive acá.
+  guion: "var(--st-guion)",
 };
 
 export const CALENDAR_EVENT_TYPE_BG: Record<CalendarEventType, string> = {
@@ -71,4 +76,5 @@ export const CALENDAR_EVENT_TYPE_BG: Record<CalendarEventType, string> = {
   grabacion: "rgba(31,154,201,.12)",
   reunion: "rgba(109,84,243,.12)",
   entrega: "rgba(192,116,20,.12)",
+  guion: "rgba(155,108,240,.12)",
 };

@@ -47,7 +47,7 @@ export default async function CalendarioPage({
 
   const [{ data: agencyClients }, { data: staffMembers }, { data: calendarEvents }, { data: contentPieces }] =
     await Promise.all([
-      supabase.from("agency_clients").select("id, name"),
+      supabase.from("agency_clients").select("id, name, logo_url"),
       supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
       supabase
         .from("calendar_events")
@@ -72,6 +72,7 @@ export default async function CalendarioPage({
     : { data: [] };
   const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
   const brandNameById = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
+  const brandLogoById = new Map((agencyClients ?? []).map((c) => [c.id, c.logo_url]));
 
   const items: CalendarItem[] = [];
 
@@ -83,6 +84,7 @@ export default async function CalendarioPage({
       date: event.starts_at,
       brandId: event.brand_id,
       brandName: event.brand_id ? brandNameById.get(event.brand_id) ?? null : null,
+      brandLogoUrl: event.brand_id ? brandLogoById.get(event.brand_id) ?? null : null,
       responsibleName: event.responsible_id ? staffNameById.get(event.responsible_id) ?? null : null,
       contentPieceId: event.content_piece_id,
     });
@@ -97,6 +99,7 @@ export default async function CalendarioPage({
         date: piece.publish_date,
         brandId: piece.brand_id,
         brandName: brandNameById.get(piece.brand_id) ?? null,
+        brandLogoUrl: brandLogoById.get(piece.brand_id) ?? null,
         responsibleName: null,
         contentPieceId: piece.id,
       });
@@ -109,6 +112,7 @@ export default async function CalendarioPage({
         date: piece.record_date,
         brandId: piece.brand_id,
         brandName: brandNameById.get(piece.brand_id) ?? null,
+        brandLogoUrl: brandLogoById.get(piece.brand_id) ?? null,
         responsibleName: null,
         contentPieceId: piece.id,
       });
