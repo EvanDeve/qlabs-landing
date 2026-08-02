@@ -88,15 +88,12 @@ export default function NewContentPieceModal({
             </select>
           </div>
 
-          <div style={{ display: "flex", gap: "12px" }}>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Grabación</label>
-              <input type="date" name="record_date" className={styles.inp} />
-            </div>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Publicación</label>
-              <input type="date" name="publish_date" className={styles.inp} />
-            </div>
+          {/* Solo fecha de publicación. La grabación se planea una vez al mes
+              para todos los videos a la vez, así que no es un dato de la pieza
+              sino un hito: vive en el calendario como evento tipo Grabación. */}
+          <div className={styles.field}>
+            <label>Publicación</label>
+            <input type="date" name="publish_date" className={styles.inp} />
           </div>
 
           <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>

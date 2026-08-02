@@ -309,9 +309,14 @@ CLIENTES DE LA AGENCIA: ${clientes.length ? clientes.join(", ") : "(ninguno carg
 
 ${conversacion ? `LO QUE SE DIJERON ANTES:\n${conversacion}\n` : ""}${bloquePropuesta ? `${bloquePropuesta}\n\n` : ""}MENSAJE NUEVO DE ${nombre.toUpperCase()}: ${mensaje}
 
-Contestale. Si de lo que dice se desprende que hay que tocar el tablero, elegí
-UNA acción; si no, "ninguna". Nunca inventes un número de pendiente que no esté
-arriba. Si no estás seguro de a cuál se refiere, no ejecutes nada y preguntale.
+Contestale. Si de lo que dice se desprende que hay que tocar el tablero o el
+calendario, elegí UNA acción; si no, "ninguna". Nunca inventes un número de
+pendiente que no esté arriba. Si no estás seguro de a cuál se refiere, no
+ejecutes nada y preguntale.
+
+Con "tipo":"publicar" anotás un video en el tablero; con "tipo":"grabar" anotás
+una jornada de grabación en el calendario. Las grabaciones se planean una vez al
+mes para varios videos a la vez, así que no son una tarjeta del tablero.
 
 Si te pide anotar algo nuevo, NO lo creás en el acto: proponelo con
 "proponer_pieza" y escribile una línea corta preguntándole si va así. NO repitas

@@ -298,20 +298,24 @@ function Card({
         )}
       </div>
       <div className={styles.kcFoot}>
-        {/* Las dos fechas, no solo la de publicación: la grabación se planea una
-            vez al mes, así que saber a qué jornada pertenece una pieza es lo
-            primero que se mira en el tablero. Se muestran ambas siempre —con
-            "—" cuando faltan— para que una pieza sin fecha de grabación se note
-            en vez de desaparecer.
+        {/* La publicación va siempre —con "—" cuando falta, para que una pieza
+            sin fecha se note en vez de desaparecer—; la grabación SOLO si la
+            pieza tiene una.
+
+            Los videos ya no llevan fecha de grabación: esa se planea una vez al
+            mes y vive en el calendario como evento. Pero McLovin todavía puede
+            crear una pieza con record_date desde WhatsApp, y esconderla dejaría
+            un compromiso sin ninguna señal en el tablero.
 
             El rojo de atrasada va solo en publicación: una grabación con fecha
-            pasada normalmente ya ocurrió (la pieza está en Edición o más
-            adelante), así que pintarla de rojo sería ruido permanente. */}
+            pasada normalmente ya ocurrió, así que pintarla sería ruido fijo. */}
         <span className={styles.kcDates}>
-          <span className={styles.kcDate} title="Grabación">
-            <QosIcon name="film" size={12} />
-            {piece.record_date ? diaCorto(piece.record_date) : "—"}
-          </span>
+          {piece.record_date && (
+            <span className={styles.kcDate} title="Grabación">
+              <QosIcon name="film" size={12} />
+              {diaCorto(piece.record_date)}
+            </span>
+          )}
           <span className={`${styles.kcDate} ${isOverdue ? styles.kcDueLate : ""}`} title="Publicación">
             <QosIcon name="clock" size={12} />
             {piece.publish_date ? diaCorto(piece.publish_date) : "—"}

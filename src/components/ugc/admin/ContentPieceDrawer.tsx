@@ -124,15 +124,18 @@ export default function ContentPieceDrawer({
               </select>
             </div>
 
-            <div style={{ display: "flex", gap: "12px" }}>
-              <div className={styles.field} style={{ flex: 1 }}>
-                <label>Grabación</label>
-                <input type="date" name="record_date" defaultValue={piece.record_date?.slice(0, 10) ?? ""} className={styles.inp} />
-              </div>
-              <div className={styles.field} style={{ flex: 1 }}>
-                <label>Publicación</label>
-                <input type="date" name="publish_date" defaultValue={piece.publish_date?.slice(0, 10) ?? ""} className={styles.inp} />
-              </div>
+            {/* Solo publicación: la grabación es un hito mensual del calendario,
+                no un dato de cada pieza. Ver el comentario en NewContentPieceModal.
+
+                record_date viaja igual como hidden con el valor que ya tenía. Sin
+                esto, guardar cualquier pieza la dejaría en null —el server action
+                lee el campo del formulario y lo ausente vale ""— y una pieza vieja
+                perdería su fecha en silencio al tocarle cualquier otra cosa. */}
+            <input type="hidden" name="record_date" value={piece.record_date?.slice(0, 10) ?? ""} />
+
+            <div className={styles.field}>
+              <label>Publicación</label>
+              <input type="date" name="publish_date" defaultValue={piece.publish_date?.slice(0, 10) ?? ""} className={styles.inp} />
             </div>
 
             <div className={styles.field}>

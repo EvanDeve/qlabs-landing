@@ -1,5 +1,7 @@
 import { NextResponse, after } from "next/server";
+import { fromZonedTime } from "date-fns-tz";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { firmaValida } from "@/lib/whatsapp/firma";
 import { sendWhatsAppFreeform, normalizarTelefonoCR } from "@/lib/whatsapp/twilio";
 import { getStaffAgenda, itemsDeAgenda } from "@/lib/ugc/agenda";
@@ -478,10 +480,25 @@ async function crearPiezaConfirmada(admin: Admin, ctx: Contexto): Promise<boolea
   if (!propuesta) return false;
 
   const cliente = ctx.clientes.find((c) => c.name === propuesta.pieza.cliente);
+  if (!cliente) return false;
+
+  // Una grabación no es una pieza del tablero: es un hito que ocurre un día.
+  // Se planea una vez al mes para todos los videos a la vez, así que no tiene
+  // sentido como tarjeta —cruzaría el pipeline entero sin producirse ella
+  // misma— y por eso los videos ya no llevan fecha de grabación. Va al
+  // calendario, que es donde viven los hitos.
+  //
+  // Sigue apareciendo en la agenda de quien la anotó: getStaffAgenda lee
+  // calendar_events por responsible_id + status 'programado' igual que lee las
+  // piezas por owner_id.
+  if (propuesta.pieza.tipo === "grabar") {
+    return await crearGrabacionConfirmada(admin, ctx, propuesta.id, cliente.id, propuesta.pieza);
+  }
+
   // La primera columna del tablero es donde entra lo que recién se anota: el
   // orden lo define el equipo y `position` ya viene ordenada de la consulta.
   const primera = ctx.columnas[0];
-  if (!cliente || !primera) return false;
+  if (!primera) return false;
 
   const { data: pieza, error } = await admin
     .from("content_pieces")
@@ -493,20 +510,12 @@ async function crearPiezaConfirmada(admin: Admin, ctx: Contexto): Promise<boolea
       // agenda, que es la razón por la que la anotó desde el chat.
       owner_id: ctx.profileId,
       created_by_agent: true,
-      ...(propuesta.pieza.tipo === "grabar"
-        ? { record_date: propuesta.pieza.fecha }
-        : { publish_date: propuesta.pieza.fecha }),
+      publish_date: propuesta.pieza.fecha,
     })
     .select("id")
     .single();
 
-  if (error || !pieza) {
-    await admin
-      .from("wa_agent_actions")
-      .update({ status: "fallida", error: error?.message ?? "no se pudo crear", resolved_at: new Date().toISOString() })
-      .eq("id", propuesta.id);
-    return false;
-  }
+  if (error || !pieza) return await marcarPropuestaFallida(admin, propuesta.id, error?.message);
 
   await admin
     .from("wa_agent_actions")
@@ -519,6 +528,76 @@ async function crearPiezaConfirmada(admin: Admin, ctx: Contexto): Promise<boolea
     .eq("id", propuesta.id);
 
   return true;
+}
+
+/**
+ * La hora que se le pone a una grabación anotada por WhatsApp.
+ *
+ * `calendar_events.starts_at` es un instante, no un día: por eso esa columna no
+ * se convirtió a `date` en 20260801000000, a diferencia de las fechas de las
+ * piezas. Pero por chat nadie dicta la hora —se dice "el jueves"—, así que hay
+ * que elegir una. Son las 9am de Costa Rica, el mismo valor de arranque que usó
+ * la migración que movió las grabaciones de agosto al calendario, y se edita
+ * desde el calendario como cualquier otro evento.
+ */
+const HORA_GRABACION_CR = "09:00:00";
+
+async function crearGrabacionConfirmada(
+  admin: Admin,
+  ctx: Contexto,
+  propuestaId: string,
+  brandId: string,
+  pieza: PropuestaPieza
+): Promise<boolean> {
+  // fromZonedTime interpreta el día+hora EN Costa Rica y devuelve el instante.
+  // Un `new Date("2026-08-05T09:00:00")` lo leería en la zona del servidor, que
+  // en Vercel es UTC, y la grabación quedaría a las 3am hora de acá.
+  const startsAt = fromZonedTime(`${pieza.fecha} ${HORA_GRABACION_CR}`, COSTA_RICA_TZ).toISOString();
+
+  const { data: evento, error } = await admin
+    .from("calendar_events")
+    .insert({
+      type: "grabacion",
+      brand_id: brandId,
+      title: pieza.titulo,
+      starts_at: startsAt,
+      // Mismo criterio que owner_id en una pieza: queda a nombre de quien la
+      // pidió, para que le aparezca en su propia agenda.
+      responsible_id: ctx.profileId,
+      status: "programado",
+      // Sin pieza asociada a propósito: la FK es `on delete cascade`, así que
+      // apuntar a una pieza haría que borrarla se llevara puesta la jornada de
+      // grabación, que no depende de ningún video en particular.
+      content_piece_id: null,
+    })
+    .select("id")
+    .single();
+
+  if (error || !evento) return await marcarPropuestaFallida(admin, propuestaId, error?.message);
+
+  await admin
+    .from("wa_agent_actions")
+    .update({
+      status: "ejecutada",
+      target_table: "calendar_events",
+      target_id: evento.id,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", propuestaId);
+
+  return true;
+}
+
+async function marcarPropuestaFallida(admin: Admin, propuestaId: string, mensaje?: string): Promise<boolean> {
+  await admin
+    .from("wa_agent_actions")
+    .update({
+      status: "fallida",
+      error: mensaje ?? "no se pudo crear",
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", propuestaId);
+  return false;
 }
 
 /** Las tres acciones que caen sobre algo que ya existía en la agenda. */
