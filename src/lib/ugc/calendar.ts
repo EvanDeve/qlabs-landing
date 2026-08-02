@@ -24,6 +24,23 @@ export function diaCR(fecha: string | Date): string {
   return formatInTimeZone(typeof fecha === "string" ? new Date(fecha) : fecha, COSTA_RICA_TZ, "yyyy-MM-dd");
 }
 
+/**
+ * La hora en Costa Rica, o null si la fecha no tiene hora.
+ *
+ * Contraparte de diaCR y con el mismo criterio: un día suelto ('2026-08-04',
+ * columnas `date`) NO es un instante y no tiene hora que mostrar. Formatearlo
+ * igual lo leería como medianoche UTC y devolvería "18:00" —las 18:00 del día
+ * anterior en CR—, una hora que nadie eligió y que parece un dato real.
+ *
+ * Se usa en la agenda: las publicaciones salen de content_pieces.publish_date,
+ * que es un día; las reuniones y grabaciones salen de calendar_events.starts_at,
+ * que sí ocurren a una hora concreta.
+ */
+export function horaCR(fecha: string | Date): string | null {
+  if (typeof fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null;
+  return formatInTimeZone(typeof fecha === "string" ? new Date(fecha) : fecha, COSTA_RICA_TZ, "HH:mm");
+}
+
 /** Suma (o resta, con negativo) días a un instante. */
 export function sumarDias(desde: Date, dias: number): Date {
   return new Date(desde.getTime() + dias * 24 * 60 * 60 * 1000);

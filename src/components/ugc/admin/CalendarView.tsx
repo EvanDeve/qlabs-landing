@@ -4,9 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { addDays, addMonths, format } from "date-fns";
 import { es } from "date-fns/locale";
-import { formatInTimeZone } from "date-fns-tz";
 import type { CalendarItem } from "@/lib/ugc/calendar";
-import { CALENDAR_EVENT_TYPE_LABEL, CALENDAR_EVENT_TYPE_DOT, CALENDAR_EVENT_TYPE_BG, COSTA_RICA_TZ } from "@/lib/ugc/calendar";
+import { CALENDAR_EVENT_TYPE_LABEL, CALENDAR_EVENT_TYPE_DOT, CALENDAR_EVENT_TYPE_BG, horaCR } from "@/lib/ugc/calendar";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CalendarEventModal from "./CalendarEventModal";
@@ -185,10 +184,17 @@ function MonthGrid({
                         fit="contain"
                       />
                     )}
+                    {/* En la grilla del mes manda el Hero, no el título: el
+                        color del chip ya dice el tipo, así que un título como
+                        "GRABACION-AGOSTO" repite lo que se ve y esconde lo
+                        único que distingue dos eventos del mismo día. El
+                        título completo sigue en el tooltip y en el detalle.
+                        Los eventos sin marca —una reunión interna— caen al
+                        título, que ahí sí es lo que los identifica. */}
                     <span
                       style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                     >
-                      {item.title}
+                      {item.brandName ?? item.title}
                     </span>
                   </button>
                 ))}
@@ -239,7 +245,12 @@ function AgendaColumns({
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span className={styles.dot} style={{ background: CALENDAR_EVENT_TYPE_DOT[item.type] }} />
                       <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--ink-2)" }}>
-                        {formatInTimeZone(new Date(item.date), COSTA_RICA_TZ, "HH:mm")} ·{" "}
+                        {/* horaCR devuelve null para los días sueltos: una
+                            publicación sale de content_pieces.publish_date, que
+                            es un `date` y no tiene hora. Antes se formateaba
+                            igual y mostraba "18:00" —medianoche UTC leída en
+                            CR—, que parecía una hora de verdad. */}
+                        {horaCR(item.date) ? `${horaCR(item.date)} · ` : ""}
                         {CALENDAR_EVENT_TYPE_LABEL[item.type]}
                       </span>
                     </div>
