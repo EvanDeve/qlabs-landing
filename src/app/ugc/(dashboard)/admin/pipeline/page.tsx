@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import KanbanBoard from "@/components/ugc/admin/KanbanBoard";
+import PipelineFilters from "@/components/ugc/admin/PipelineFilters";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import type { ContentPriority } from "@/lib/database.types";
-import styles from "../qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function PipelinePage({
 
   const [{ data: agencyClients }, { data: staffMembers }, { data: columns }, piecesQuery] =
     await Promise.all([
-    supabase.from("agency_clients").select("id, name").order("name"),
+    supabase.from("agency_clients").select("id, name, logo_url").order("name"),
     supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
     supabase.from("content_columns").select("*").order("position", { ascending: true }),
     (() => {
@@ -36,7 +36,11 @@ export default async function PipelinePage({
     : { data: [] };
   const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
 
-  const brands = (agencyClients ?? []).map((c) => ({ id: c.id, name: c.name }));
+  const brands = (agencyClients ?? []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    logoUrl: c.logo_url,
+  }));
   const staff = (staffMembers ?? []).map((s) => ({
     id: s.profile_id,
     name: staffNameById.get(s.profile_id) ?? "Sin nombre",
@@ -46,40 +50,14 @@ export default async function PipelinePage({
 
   return (
     <div>
-      <form className={styles.pipeToolbar} method="get">
-        <select name="brand" defaultValue={brand ?? ""} className={styles.selectInp}>
-          <option value="">Todos los Heroes</option>
-          {brands.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-
-        <select name="owner" defaultValue={owner ?? ""} className={styles.selectInp}>
-          <option value="">Todos los responsables</option>
-          {staff.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-
-        <select name="priority" defaultValue={priority ?? ""} className={styles.selectInp}>
-          <option value="">Toda prioridad</option>
-          <option value="alta">Alta</option>
-          <option value="media">Media</option>
-          <option value="baja">Baja</option>
-        </select>
-
-        <button type="submit" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}>
-          Filtrar
-        </button>
-
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
-          <span className={styles.chip}>{contentPieces?.length ?? 0} piezas en flujo</span>
-        </div>
-      </form>
+      <PipelineFilters
+        brands={brands}
+        staff={staff}
+        brand={brand}
+        owner={owner}
+        priority={priority}
+        count={contentPieces?.length ?? 0}
+      />
 
       <KanbanBoard
         pieces={contentPieces ?? []}

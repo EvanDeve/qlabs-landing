@@ -1156,6 +1156,26 @@
   font-weight: 600;
   color: var(--ink-2);
 }
+/* Grupo de las dos fechas (grabación + publicación) en la tarjeta del pipeline.
+   No reusa .kcDue porque esa lleva `margin-left:auto` y la comparten el tablero
+   del creador y CreatorTaskBoard, donde la fecha sí va sola contra la derecha.
+   Acá el margen va en el grupo: las fechas quedan a la izquierda y el avatar
+   del responsable se empuja al extremo. */
+.kcDates {
+  margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.kcDate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
 .kcDueLate {
   color: var(--risk);
 }

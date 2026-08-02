@@ -40,19 +40,30 @@ export default function BrandAvatar({
   logoUrl,
   size = 40,
   radius = 12,
+  width,
+  fit = "cover",
 }: {
   name: string;
   logoUrl?: string | null;
   size?: number;
   radius?: number;
+  /** Ancho propio, para cajas rectangulares. Por defecto la caja es cuadrada. */
+  width?: number;
+  /**
+   * "cover" llena la caja y recorta lo que sobra — bien para logos cuadrados.
+   * "contain" muestra el logo entero — necesario para wordmarks horizontales,
+   * que en una caja cuadrada con cover quedan como una mancha ilegible.
+   */
+  fit?: "cover" | "contain";
 }) {
   const label = name || "Marca";
+  const boxWidth = width ?? size;
   return (
     <div
       aria-hidden
       style={{
         position: "relative",
-        width: size,
+        width: boxWidth,
         height: size,
         flexShrink: 0,
         borderRadius: radius,
@@ -80,7 +91,7 @@ export default function BrandAvatar({
             inset: 0,
             width: "100%",
             height: "100%",
-            objectFit: "cover",
+            objectFit: fit,
             display: "block",
           }}
         />

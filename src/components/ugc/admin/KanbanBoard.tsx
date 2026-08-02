@@ -15,13 +15,16 @@ import { updateContentPieceColumnAction } from "@/lib/actions/content-pieces";
 import type { ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { diaCR, diaCorto } from "@/lib/ugc/calendar";
+import BrandAvatar from "@/components/ugc/BrandAvatar";
 import ContentPieceDrawer from "./ContentPieceDrawer";
 import NewContentPieceModal from "./NewContentPieceModal";
 import ContentColumnModal from "./ContentColumnModal";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
-export type BrandOption = { id: string; name: string };
+// logoUrl es opcional: NewContentPieceModal usa este mismo tipo solo para
+// llenar un <select> y no necesita el logo.
+export type BrandOption = { id: string; name: string; logoUrl?: string | null };
 export type StaffOption = { id: string; name: string; role: string; color: string };
 
 export default function KanbanBoard({
@@ -55,7 +58,7 @@ export default function KanbanBoard({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const brandNameById = useMemo(() => new Map(brands.map((b) => [b.id, b.name])), [brands]);
+  const brandById = useMemo(() => new Map(brands.map((b) => [b.id, b])), [brands]);
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
 
   function handleDragEnd(event: DragEndEvent) {
@@ -102,7 +105,7 @@ export default function KanbanBoard({
               key={column.id}
               column={column}
               pieces={localPieces.filter((p) => p.column_id === column.id)}
-              brandNameById={brandNameById}
+              brandById={brandById}
               staffById={staffById}
               onSelect={setSelectedPiece}
               onAdd={setCreatingInColumn}
@@ -116,7 +119,7 @@ export default function KanbanBoard({
         <ContentPieceDrawer
           piece={selectedPiece}
           columns={columns}
-          brandName={brandNameById.get(selectedPiece.brand_id) ?? ""}
+          brandName={brandById.get(selectedPiece.brand_id)?.name ?? ""}
           staff={staff}
           onClose={() => setSelectedPiece(null)}
           onDeleted={() => {
@@ -160,7 +163,7 @@ export default function KanbanBoard({
 function Column({
   column,
   pieces,
-  brandNameById,
+  brandById,
   staffById,
   onSelect,
   onAdd,
@@ -168,7 +171,7 @@ function Column({
 }: {
   column: ContentColumn;
   pieces: ContentPiece[];
-  brandNameById: Map<string, string>;
+  brandById: Map<string, BrandOption>;
   staffById: Map<string, StaffOption>;
   onSelect: (piece: ContentPiece) => void;
   onAdd: (columnId: string) => void;
@@ -210,7 +213,7 @@ function Column({
             key={piece.id}
             piece={piece}
             isDone={column.is_done}
-            brandName={brandNameById.get(piece.brand_id) ?? ""}
+            brand={brandById.get(piece.brand_id)}
             owner={piece.owner_id ? staffById.get(piece.owner_id) : undefined}
             onSelect={onSelect}
           />
@@ -225,13 +228,13 @@ const PRIO_CLASS: Record<string, string> = { alta: "prioAlta", media: "prioMedia
 function Card({
   piece,
   isDone,
-  brandName,
+  brand,
   owner,
   onSelect,
 }: {
   piece: ContentPiece;
   isDone: boolean;
-  brandName: string;
+  brand?: BrandOption;
   owner?: StaffOption;
   onSelect: (piece: ContentPiece) => void;
 }) {
@@ -259,9 +262,25 @@ function Card({
       className={`${styles.kcard} ${isDragging ? styles.kcardDragging : ""}`}
     >
       <div className={styles.kcTop}>
+        {/* El logo reemplaza al punto de color que había antes: ese punto era
+            var(--b-500) fijo, o sea idéntico en todas las marcas, así que no
+            distinguía nada. BrandAvatar cae a las iniciales sobre un degradado
+            derivado del nombre cuando el Hero no subió logo — nunca queda un
+            hueco, y la misma marca siempre se ve igual. */}
         <span className={styles.kcHero}>
-          <span className={styles.dot} style={{ background: "var(--b-500)" }} />
-          {brandName}
+          {/* Caja ancha con "contain": los logos de los Heroes son wordmarks
+              horizontales (Dulce Chilena, Snowty), y en un cuadrado con cover
+              quedaban como una mancha. Sin logo, BrandAvatar cae a iniciales
+              sobre un degradado derivado del nombre. */}
+          <BrandAvatar
+            name={brand?.name ?? ""}
+            logoUrl={brand?.logoUrl}
+            size={22}
+            width={brand?.logoUrl ? 44 : 22}
+            radius={6}
+            fit="contain"
+          />
+          {brand?.name ?? ""}
         </span>
         <span className={styles.kcNum}>{piece.code}</span>
       </div>
@@ -279,9 +298,24 @@ function Card({
         )}
       </div>
       <div className={styles.kcFoot}>
-        <span className={`${styles.kcDue} ${isOverdue ? styles.kcDueLate : ""}`}>
-          <QosIcon name="clock" size={12} />
-          {piece.publish_date ? diaCorto(piece.publish_date) : "—"}
+        {/* Las dos fechas, no solo la de publicación: la grabación se planea una
+            vez al mes, así que saber a qué jornada pertenece una pieza es lo
+            primero que se mira en el tablero. Se muestran ambas siempre —con
+            "—" cuando faltan— para que una pieza sin fecha de grabación se note
+            en vez de desaparecer.
+
+            El rojo de atrasada va solo en publicación: una grabación con fecha
+            pasada normalmente ya ocurrió (la pieza está en Edición o más
+            adelante), así que pintarla de rojo sería ruido permanente. */}
+        <span className={styles.kcDates}>
+          <span className={styles.kcDate} title="Grabación">
+            <QosIcon name="film" size={12} />
+            {piece.record_date ? diaCorto(piece.record_date) : "—"}
+          </span>
+          <span className={`${styles.kcDate} ${isOverdue ? styles.kcDueLate : ""}`} title="Publicación">
+            <QosIcon name="clock" size={12} />
+            {piece.publish_date ? diaCorto(piece.publish_date) : "—"}
+          </span>
         </span>
         {owner && (
           <span
