@@ -1288,7 +1288,10 @@
   gap: 5px;
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 6px;
+  /* Más alto que los 3px que tenía: la celda del día también es clickeable
+     (abre "Nuevo evento"), así que errarle al chip por dos píxeles abría el
+     formulario de crear y parecía que el evento no respondía. */
+  padding: 5px 7px;
   border-radius: 6px;
   margin-bottom: 3px;
   cursor: pointer;
@@ -1297,6 +1300,20 @@
   text-overflow: ellipsis;
   width: 100%;
   text-align: left;
+  transition: var(--t-fast);
+}
+/* El chip no se veía clickeable: mismo fondo quieto pasara lo que pasara.
+   El anillo va en `currentColor` —que el chip define inline con el color de su
+   tipo— así que cada evento se resalta en su propio color sin repetir acá la
+   tabla de tipos. */
+.calEv:hover {
+  box-shadow:
+    inset 0 0 0 1.5px currentColor,
+    0 2px 6px rgba(10, 11, 16, 0.1);
+  transform: translateY(-1px);
+}
+.calEv:active {
+  transform: translateY(0);
 }
 .agendaCol {
   background: var(--surface);
