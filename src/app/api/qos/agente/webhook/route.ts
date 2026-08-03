@@ -649,7 +649,7 @@ async function escribirEdicion(
   if (item.ref.kind === "piece") {
     const { data: pieza } = await admin
       .from("content_pieces")
-      .select("id")
+      .select("id, column_id")
       .eq("id", item.ref.pieceId)
       .eq("owner_id", ctx.profileId)
       .maybeSingle();
@@ -664,7 +664,16 @@ async function escribirEdicion(
     if (accion.tipo === "marcar_hecho") {
       // "Hecho" en el tablero de la agencia es la columna marcada is_done, no
       // un estado aparte. Si nadie la marcó, no hay a dónde mover.
-      const terminada = ctx.columnas.find((c) => c.is_done);
+      //
+      // Pero hay MÁS DE UNA: el tablero corre dos carriles, el del guion (que
+      // cierra en "Guiones finalizados") y el del video (que cierra en
+      // "Publicado"). Se busca la primera is_done de la columna actual en
+      // adelante; con un find() sobre todo el tablero, dar por hecho un video
+      // que estaba en "Terminado" lo mandaba PARA ATRÁS, a la de guiones.
+      const actual = ctx.columnas.findIndex((c) => c.id === pieza.column_id);
+      const terminada =
+        ctx.columnas.slice(actual >= 0 ? actual : 0).find((c) => c.is_done) ??
+        [...ctx.columnas].reverse().find((c) => c.is_done);
       if (!terminada) return false;
       const { error } = await admin.from("content_pieces").update({ column_id: terminada.id }).eq("id", pieza.id);
       return !error;

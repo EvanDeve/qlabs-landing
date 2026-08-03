@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   clasificar,
   getStaffAgenda,
+  itemsDeAgenda,
   resumenDeterminista,
   contarAgenda,
   DIAS_PROXIMAS,
+  MAX_SIN_FECHA,
   type AgendaItem,
 } from "@/lib/ugc/agenda";
 
@@ -13,7 +15,7 @@ import {
 // pantalla — es la zona horaria, porque en local suele coincidir con la de
 // Costa Rica y todo parece andar.
 
-function item(parcial: Partial<AgendaItem> & { fecha: string }): AgendaItem {
+function item(parcial: Partial<AgendaItem> & { fecha: string | null }): AgendaItem {
   return {
     key: parcial.key ?? `k-${parcial.fecha}`,
     ref: parcial.ref ?? { kind: "event", eventId: "e1" },
@@ -22,10 +24,13 @@ function item(parcial: Partial<AgendaItem> & { fecha: string }): AgendaItem {
     // Por defecto un evento, que sí tiene hora. Las piezas van con conHora:false.
     conHora: parcial.conHora ?? true,
     accion: parcial.accion ?? "Reunión",
+    columna: parcial.columna ?? null,
     prioridad: parcial.prioridad ?? null,
     fecha: parcial.fecha,
   };
 }
+
+const VACIA = { vencidas: [], hoy: [], proximas: [], sinFecha: [], sinFechaOmitidas: 0 };
 
 const RANGO = { hoy: "2026-08-02", desde: "2026-07-03", hasta: "2026-08-05" };
 
@@ -130,7 +135,22 @@ describe("resumenDeterminista", () => {
   });
 
   it("no inventa nada cuando no hay pendientes", () => {
-    expect(resumenDeterminista({ vencidas: [], hoy: [], proximas: [] })).toBe("Sin pendientes.");
+    expect(resumenDeterminista(VACIA)).toBe("Sin pendientes.");
+  });
+
+  it("las sin fecha van al final y con el total, no con lo que se alcanzó a listar", () => {
+    const items = Array.from({ length: 8 }, (_, i) =>
+      item({ key: `s${i}`, titulo: `Guion ${i}`, fecha: null, accion: null, columna: "Guiones" })
+    );
+    items.push(item({ key: "hoy", titulo: "Reel", accion: "Publicar", fecha: "2026-08-02T15:00:00Z" }));
+
+    const texto = resumenDeterminista(clasificar(items, RANGO));
+
+    // El recorte se avisa: 8 sin fecha, 5 sobreviven al slice, 3 se nombran.
+    expect(texto).toContain("Sin fecha (8)");
+    expect(texto).toContain("y 5 más");
+    expect(texto.indexOf("Hoy (1)")).toBeLessThan(texto.indexOf("Sin fecha"));
+    expect(texto).not.toMatch(/[\r\n\t]/);
   });
 });
 
@@ -204,11 +224,89 @@ describe("getStaffAgenda", () => {
     expect(agenda.proximas[0].conHora).toBe(false);
   });
 
-  it("ignora las piezas sin fecha: no hay nada que recordar", async () => {
+  // Antes se caían de la agenda y el agente le contestaba "no tenés nada" a
+  // quien tenía veinte tarjetas suyas en el tablero, solo que sin fechar.
+  it("una pieza sin ninguna fecha va al bloque sin fecha, con su columna", async () => {
     const agenda = await getStaffAgenda(
       stubSupabase({
         content_pieces: [
-          { id: "p1", title: "Sin fechas", brand_id: null, record_date: null, publish_date: null, priority: "media" },
+          {
+            id: "p1",
+            title: "GUION-AGOSTO",
+            brand_id: "h1",
+            record_date: null,
+            publish_date: null,
+            priority: "alta",
+            content_columns: { name: "Guiones", is_done: false },
+          },
+        ],
+        calendar_events: [],
+        agency_clients: [{ id: "h1", name: "Zonna" }],
+      }),
+      "staff-1",
+      AHORA
+    );
+
+    expect(agenda.vencidas.concat(agenda.hoy, agenda.proximas)).toHaveLength(0);
+    expect(agenda.sinFecha.map((i) => i.titulo)).toEqual(["GUION-AGOSTO"]);
+    expect(agenda.sinFecha[0].columna).toBe("Guiones");
+    // Sin fecha no hay verbo: inventarle "Publicar" sería inventar el compromiso.
+    expect(agenda.sinFecha[0].accion).toBeNull();
+    // Pero sí apunta a publish_date, que es la fecha que se le puede poner
+    // desde el chat con "reprogramar".
+    expect(agenda.sinFecha[0].ref).toEqual({ kind: "piece", pieceId: "p1", campo: "publish_date" });
+    expect(contarAgenda(agenda)).toBe(1);
+  });
+
+  // El tope existe para que el mensaje no se convierta en un inventario. Lo que
+  // no se puede es recortar en silencio: el número que se dice es el total.
+  it("recorta las sin fecha a MAX_SIN_FECHA y cuenta las que dejó afuera", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        content_pieces: Array.from({ length: MAX_SIN_FECHA + 4 }, (_, i) => ({
+          id: `p${i}`,
+          title: `Pieza ${i}`,
+          brand_id: null,
+          record_date: null,
+          publish_date: null,
+          priority: "baja",
+          content_columns: { name: "Terminado", is_done: false },
+        })),
+        calendar_events: [],
+        agency_clients: [],
+      }),
+      "staff-1",
+      AHORA
+    );
+
+    expect(agenda.sinFecha).toHaveLength(MAX_SIN_FECHA);
+    expect(agenda.sinFechaOmitidas).toBe(4);
+  });
+
+  // Si la numeración del prompt y la de la validación se desalinean, el modelo
+  // dice "moví el 6" y el webhook mueve otra cosa. Las sin fecha van al final.
+  it("las sin fecha se numeran después de todo lo que tiene fecha", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        content_pieces: [
+          {
+            id: "p1",
+            title: "Sin fecha",
+            brand_id: null,
+            record_date: null,
+            publish_date: null,
+            priority: "alta",
+            content_columns: { name: "Guiones", is_done: false },
+          },
+          {
+            id: "p2",
+            title: "Con fecha",
+            brand_id: null,
+            record_date: null,
+            publish_date: "2026-08-02",
+            priority: "baja",
+            content_columns: { name: "Por editar", is_done: false },
+          },
         ],
         calendar_events: [],
         agency_clients: [],
@@ -217,7 +315,7 @@ describe("getStaffAgenda", () => {
       AHORA
     );
 
-    expect(contarAgenda(agenda)).toBe(0);
+    expect(itemsDeAgenda(agenda).map((i) => i.titulo)).toEqual(["Con fecha", "Sin fecha"]);
   });
 
   it("trae los eventos del calendario con su tipo traducido a una acción", async () => {

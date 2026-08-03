@@ -31,8 +31,11 @@ export type AgendaItem = {
   /**
    * Un día suelto ('2026-08-01') si viene de una pieza, un instante ISO si
    * viene de un evento. Son cosas distintas y por eso está `conHora`.
+   *
+   * `null` es una pieza asignada a la que nadie le puso fecha todavía: existe
+   * el trabajo, no el compromiso. Va al bloque `sinFecha`.
    */
-  fecha: string;
+  fecha: string | null;
   /**
    * Si es false, la fecha NO tiene hora y no hay que inventarle una.
    *
@@ -42,7 +45,15 @@ export type AgendaItem = {
    * dato que alguien cargó.
    */
   conHora: boolean;
-  accion: "Publicar" | "Grabar" | "Reunión" | "Entrega";
+  /**
+   * Qué hay que hacer y para cuándo. `null` cuando no hay fecha: sin día no hay
+   * ni "grabar" ni "publicar", solo una tarjeta parada en una columna. Es null
+   * exactamente cuando `fecha` es null, y obliga a que quien la muestre elija
+   * otra forma de nombrarla en vez de inventarle un verbo.
+   */
+  accion: "Publicar" | "Grabar" | "Reunión" | "Entrega" | null;
+  /** Columna del tablero donde está parada. Los eventos no tienen. */
+  columna: string | null;
   prioridad: ContentPriority | null;
 };
 
@@ -50,6 +61,10 @@ export type Agenda = {
   vencidas: AgendaItem[];
   hoy: AgendaItem[];
   proximas: AgendaItem[];
+  /** Trabajo asignado sin fecha, recortado a MAX_SIN_FECHA. */
+  sinFecha: AgendaItem[];
+  /** Cuántas quedaron afuera del recorte, para poder decir "y N más". */
+  sinFechaOmitidas: number;
 };
 
 /** Cuántos días hacia adelante entran en "lo que se viene". */
@@ -64,6 +79,20 @@ export const DIAS_PROXIMAS = 3;
  * ignorar el canal. Ese caso es del tablero, no del agente.
  */
 export const DIAS_VENCIDAS = 30;
+
+/**
+ * Cuántas piezas sin fecha se nombran, como mucho.
+ *
+ * Sin tope, alguien con medio tablero sin fechar recibe una lista de veinte
+ * ítems todos los días —y el resto de la agenda, que sí tiene fecha, queda
+ * sepultado abajo—. Las que no entran se cuentan aparte y se dicen como "y N
+ * más": el recorte se avisa, nunca se esconde.
+ *
+ * El tope también protege la numeración: el modelo actúa sobre ítems por
+ * número, así que la lista que se le muestra y la que se valida tienen que ser
+ * la misma. Por eso el corte vive acá y no en el texto.
+ */
+export const MAX_SIN_FECHA = 5;
 
 const PRIORIDAD_PESO: Record<ContentPriority, number> = { alta: 0, media: 1, baja: 2 };
 
@@ -91,7 +120,7 @@ export async function getStaffAgenda(
       // Se pregunta por la BANDERA, nunca por el nombre de la columna: el
       // equipo puede renombrarlas y buscar por texto se rompería en silencio
       // (ver el comentario largo de 20260727200000_content_columns.sql).
-      .select("id, title, brand_id, publish_date, record_date, priority, content_columns!inner(is_done)")
+      .select("id, title, brand_id, publish_date, record_date, priority, content_columns!inner(name, is_done)")
       .eq("owner_id", profileId)
       .eq("content_columns.is_done", false),
     supabase
@@ -116,6 +145,10 @@ export async function getStaffAgenda(
 
   for (const p of piezas ?? []) {
     const heroe = p.brand_id ? heroePorId.get(p.brand_id) ?? null : null;
+    // El !inner devuelve la fila relacionada; el tipo generado no distingue
+    // uno-a-uno de uno-a-muchos y la deja como array en algunos casos.
+    const columna = (Array.isArray(p.content_columns) ? p.content_columns[0] : p.content_columns)?.name ?? null;
+
     // Las dos fechas de una pieza son dos compromisos distintos con dos
     // fechas distintas, así que van como dos ítems.
     if (p.record_date) {
@@ -127,6 +160,7 @@ export async function getStaffAgenda(
         fecha: p.record_date,
         conHora: false,
         accion: "Grabar",
+        columna,
         prioridad: p.priority,
       });
     }
@@ -139,6 +173,27 @@ export async function getStaffAgenda(
         fecha: p.publish_date,
         conHora: false,
         accion: "Publicar",
+        columna,
+        prioridad: p.priority,
+      });
+    }
+
+    // Sin ninguna de las dos fechas la pieza no desaparece: es trabajo que
+    // alguien tiene asignado igual. Antes se caía de la agenda y el agente
+    // contestaba "no tenés nada" a quien tenía el tablero lleno.
+    //
+    // Apunta a publish_date porque es la fecha que se le puede poner desde el
+    // chat: la grabación se planea aparte, como evento del calendario.
+    if (!p.record_date && !p.publish_date) {
+      items.push({
+        key: `piece-sinfecha-${p.id}`,
+        ref: { kind: "piece", pieceId: p.id, campo: "publish_date" },
+        titulo: p.title,
+        heroe,
+        fecha: null,
+        conHora: false,
+        accion: null,
+        columna,
         prioridad: p.priority,
       });
     }
@@ -153,6 +208,7 @@ export async function getStaffAgenda(
       fecha: e.starts_at,
       conHora: true,
       accion: e.type === "grabacion" ? "Grabar" : e.type === "publicacion" ? "Publicar" : e.type === "entrega" ? "Entrega" : "Reunión",
+      columna: null,
       prioridad: null,
     });
   }
@@ -174,9 +230,14 @@ export function clasificar(
   items: AgendaItem[],
   rango: { hoy: string; desde: string; hasta: string }
 ): Agenda {
-  const agenda: Agenda = { vencidas: [], hoy: [], proximas: [] };
+  const agenda: Agenda = { vencidas: [], hoy: [], proximas: [], sinFecha: [], sinFechaOmitidas: 0 };
 
   for (const item of items) {
+    // Sin fecha no hay ventana que aplicar: no está ni atrasado ni por venir.
+    if (item.fecha === null) {
+      agenda.sinFecha.push(item);
+      continue;
+    }
     const dia = diaCR(item.fecha);
     if (dia < rango.desde || dia > rango.hasta) continue;
     if (dia < rango.hoy) agenda.vencidas.push(item);
@@ -190,6 +251,17 @@ export function clasificar(
   agenda.hoy.sort(porFechaYPrioridad);
   agenda.proximas.sort(porFechaYPrioridad);
 
+  // Las sin fecha no tienen por dónde ordenarse cronológicamente: manda la
+  // prioridad y, a igual prioridad, el título — que es estable, así que la
+  // misma persona ve la misma lista todos los días y no una rotación al azar.
+  agenda.sinFecha.sort(
+    (a, b) =>
+      (a.prioridad ? PRIORIDAD_PESO[a.prioridad] : 1) - (b.prioridad ? PRIORIDAD_PESO[b.prioridad] : 1) ||
+      a.titulo.localeCompare(b.titulo)
+  );
+  agenda.sinFechaOmitidas = Math.max(0, agenda.sinFecha.length - MAX_SIN_FECHA);
+  agenda.sinFecha = agenda.sinFecha.slice(0, MAX_SIN_FECHA);
+
   return agenda;
 }
 
@@ -202,6 +274,9 @@ export function clasificar(
  * pieza del día 1 antes que un evento del día 31.
  */
 function porFechaYPrioridad(a: AgendaItem, b: AgendaItem): number {
+  // Solo se llama sobre los tres bloques con fecha; las sin fecha se ordenan
+  // aparte en clasificar().
+  if (!a.fecha || !b.fecha) return 0;
   const porDia = diaCR(a.fecha).localeCompare(diaCR(b.fecha));
   if (porDia !== 0) return porDia;
 
@@ -218,19 +293,30 @@ function porFechaYPrioridad(a: AgendaItem, b: AgendaItem): number {
 }
 
 export function contarAgenda(agenda: Agenda): number {
-  return agenda.vencidas.length + agenda.hoy.length + agenda.proximas.length;
+  return agenda.vencidas.length + agenda.hoy.length + agenda.proximas.length + agenda.sinFecha.length;
 }
 
-/** Todos los ítems en una lista, para validar contra qué puede actuar el agente. */
+/**
+ * Todos los ítems en una lista, para validar contra qué puede actuar el agente.
+ *
+ * El orden importa: es el mismo con el que se numeran en el prompt, así que
+ * cualquier bloque nuevo va al final y nunca en el medio.
+ */
 export function itemsDeAgenda(agenda: Agenda): AgendaItem[] {
-  return [...agenda.vencidas, ...agenda.hoy, ...agenda.proximas];
+  return [...agenda.vencidas, ...agenda.hoy, ...agenda.proximas, ...agenda.sinFecha];
 }
 
 function describir(item: AgendaItem, mostrarHora = false): string {
-  const partes = [`${item.accion} ${item.titulo}`];
+  // Sin fecha no hay acción: decir "Publicar X" cuando nadie decidió cuándo se
+  // publica sería inventar un compromiso. Se nombra por dónde está parada.
+  const encabezado = item.accion ? `${item.accion} ${item.titulo}` : item.titulo;
+  const partes = [encabezado];
   if (item.heroe) partes.push(`(${item.heroe})`);
+  if (!item.fecha && item.columna) partes.push(`en ${item.columna}`);
   // `item.conHora` manda: una pieza no tiene hora y ponerle una sería inventarla.
-  if (mostrarHora && item.conHora) partes.push(formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm"));
+  if (mostrarHora && item.conHora && item.fecha) {
+    partes.push(formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm"));
+  }
   return partes.join(" ");
 }
 
@@ -255,6 +341,13 @@ export function resumenDeterminista(agenda: Agenda, maxItems = 3): string {
   }
   if (agenda.proximas.length) {
     bloques.push(`Próximos ${DIAS_PROXIMAS} días: ${agenda.proximas.length}`);
+  }
+  // Último a propósito: lo que tiene fecha manda, esto es el fondo del canasto.
+  if (agenda.sinFecha.length) {
+    const total = agenda.sinFecha.length + agenda.sinFechaOmitidas;
+    const nombres = agenda.sinFecha.slice(0, maxItems).map((i) => describir(i));
+    const resto = total - nombres.length;
+    bloques.push(`Sin fecha (${total}): ${nombres.join("; ")}${resto > 0 ? ` y ${resto} más` : ""}`);
   }
 
   return bloques.join(". ") || "Sin pendientes.";

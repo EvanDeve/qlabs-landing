@@ -130,14 +130,24 @@ export function armarPersona(ajustes: AjustesAgente): string {
 
 /** Un ítem tal como se lo mostramos al modelo: con número, nunca con UUID. */
 function lineaDeItem(item: AgendaItem, indice: number, hoyCR: string): string {
+  const heroe = item.heroe ? ` — ${item.heroe}` : "";
+  const prioridad = item.prioridad === "alta" ? " [prioridad alta]" : "";
+
+  // Sin fecha no hay verbo ni día: es una tarjeta parada en una columna. Se
+  // dice así, porque decir "Publicar X — sin fecha" le sugiere al modelo un
+  // compromiso que nadie tomó.
+  if (!item.fecha) {
+    const donde = item.columna ? ` — en ${item.columna}` : "";
+    return `${indice + 1}. "${item.titulo}"${heroe}${donde} — SIN FECHA${prioridad}`;
+  }
+
   const dia = diaCR(item.fecha);
   // La hora solo si el ítem la tiene de verdad (un evento). Una pieza se
   // publica "el 1 de agosto" y no a una hora: si le pasáramos una inventada,
   // el modelo la repetiría en el mensaje como si alguien la hubiera puesto.
   const hora = item.conHora ? ` ${formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm")}` : "";
   const cuando = dia === hoyCR ? `hoy${hora}` : `${dia}${hora}`;
-  const prioridad = item.prioridad === "alta" ? " [prioridad alta]" : "";
-  return `${indice + 1}. ${item.accion} "${item.titulo}"${item.heroe ? ` — ${item.heroe}` : ""} — ${cuando}${prioridad}`;
+  return `${indice + 1}. ${item.accion} "${item.titulo}"${heroe} — ${cuando}${prioridad}`;
 }
 
 function describirAgenda(agenda: Agenda, hoyCR: string): string {
@@ -145,10 +155,19 @@ function describirAgenda(agenda: Agenda, hoyCR: string): string {
   const enBloque = (titulo: string, lista: AgendaItem[]) =>
     lista.length ? `${titulo}:\n${lista.map((i) => lineaDeItem(i, items.indexOf(i), hoyCR)).join("\n")}` : "";
 
+  // El aviso del recorte va pegado al bloque: si se omite, el modelo lee cinco
+  // ítems y contesta "tenés cinco cosas", que es falso.
+  const sinFecha = enBloque("SIN FECHA (trabajo asignado que nadie fechó)", agenda.sinFecha);
+  const conOmitidas =
+    sinFecha && agenda.sinFechaOmitidas > 0
+      ? `${sinFecha}\n(y ${agenda.sinFechaOmitidas} más sin fecha que no se listan acá)`
+      : sinFecha;
+
   return [
     enBloque("ATRASADO", agenda.vencidas),
     enBloque("HOY", agenda.hoy),
     enBloque("PRÓXIMOS DÍAS", agenda.proximas),
+    conOmitidas,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -208,6 +227,9 @@ ESTO ES LO QUE TIENE PENDIENTE:
 ${describirAgenda(agenda, hoyCR)}
 
 Escribile un mensaje corto. Arrancá por lo atrasado si hay algo atrasado.
+Lo de SIN FECHA va al final y en bloque ("tenés N sin fecha"), nunca uno por
+uno: no está atrasado, solo falta decidir cuándo. Si es lo ÚNICO que tiene,
+preguntale para cuándo lo deja.
 ${formato}
 Cerrá con una pregunta concreta sobre lo más urgente, para que pueda contestarte.
 Devolvé SOLO el mensaje, sin comillas ni explicación.`,
@@ -313,6 +335,11 @@ Contestale. Si de lo que dice se desprende que hay que tocar el tablero o el
 calendario, elegí UNA acción; si no, "ninguna". Nunca inventes un número de
 pendiente que no esté arriba. Si no estás seguro de a cuál se refiere, no
 ejecutes nada y preguntale.
+
+Los ítems marcados SIN FECHA son trabajo suyo que nadie fechó. No están
+atrasados: no los trates como tales. Si te dice cuándo va uno, ponele la fecha
+con "reprogramar". Si la lista dice que hay más sin fecha de las que ves, decí
+el total, no inventes los nombres que faltan.
 
 Con "tipo":"publicar" anotás un video en el tablero; con "tipo":"grabar" anotás
 una jornada de grabación en el calendario. Las grabaciones se planean una vez al
