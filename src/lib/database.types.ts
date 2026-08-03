@@ -782,11 +782,26 @@ export interface Database {
         };
         Relationships: [];
       };
+      // staff_members sin los datos de contacto. La lee cualquiera del equipo;
+      // la tabla de atrás es solo de directores.
+      staff_directory: {
+        Row: {
+          profile_id: string;
+          staff_role: StaffRole;
+          color: string;
+          active: boolean;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       current_app_role: {
         Args: Record<string, never>;
         Returns: AppRole | null;
+      };
+      is_director: {
+        Args: Record<string, never>;
+        Returns: boolean;
       };
       public_marketplace_stats: {
         Args: Record<string, never>;

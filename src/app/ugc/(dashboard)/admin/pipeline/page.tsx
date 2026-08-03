@@ -17,7 +17,10 @@ export default async function PipelinePage({
   const [{ data: agencyClients }, { data: staffMembers }, { data: columns }, piecesQuery] =
     await Promise.all([
     supabase.from("agency_clients").select("id, name, logo_url").order("name"),
-    supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
+    // staff_directory y no staff_members: la tabla quedó cerrada a
+    // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
+    // expone solo lo que el tablero necesita para pintar responsables.
+    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true),
     supabase.from("content_columns").select("*").order("position", { ascending: true }),
     (() => {
       let query = supabase.from("content_pieces").select("*").order("created_at", { ascending: false });

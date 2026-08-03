@@ -13,9 +13,10 @@ const MAX_TEXTO = 4000;
  * Guarda la personalidad del agente.
  *
  * La escritura va con el cliente de sesión, no con el service-role: la policy
- * `agent_settings_update_admin` es la que autoriza, así que un no-admin que
- * llegara a invocar esta acción no escribe nada. Con service-role tendríamos que
- * reimplementar el chequeo de rol acá y confiar en no habernos olvidado.
+ * `agent_settings_update_director` es la que autoriza, así que alguien del
+ * equipo que no sea director y llegara a invocar esta acción no escribe nada.
+ * Con service-role tendríamos que reimplementar el chequeo de rol acá y confiar
+ * en no habernos olvidado.
  *
  * Lo que se guarda es solo la capa editable. Las reglas que impiden que el
  * agente invente clientes o prometa trabajo viven en REGLAS_FIJAS

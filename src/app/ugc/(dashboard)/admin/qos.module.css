@@ -2518,3 +2518,333 @@
     border-bottom-width: 0;
   }
 }
+
+/* ============================================================
+   CHAT — las conversaciones de McLovin
+   ============================================================
+   Geometría de WhatsApp (dos paneles, burbujas con cola, hora adentro,
+   separadores por día) con la paleta de Q·OS. El verde original en medio del
+   panel violeta se leería como una captura pegada y no como una pantalla del
+   producto. Reusa .workspace/.wsPanel/.wsHead/.wsBody del taller de
+   transcripción: es el mismo esqueleto de dos columnas a pantalla completa. */
+
+.chatList {
+  width: 340px;
+}
+
+.chatFiltros {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.chatBuscar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  color: var(--ink-3);
+}
+.chatBuscar input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--ink);
+}
+.chatTabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.chatTab {
+  flex: 1;
+  padding: 5px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  border-radius: var(--r-sm);
+  transition: var(--t-fast);
+}
+.chatTab:hover {
+  background: var(--b-50);
+  color: var(--b-600);
+}
+.qosRoot .chatTabOn {
+  background: var(--b-100);
+  color: var(--b-600);
+}
+
+/* ---- Lista de conversaciones ---- */
+
+.chatRow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 13px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-2);
+  transition: var(--t-fast);
+}
+.chatRow:hover {
+  background: var(--surface-2);
+}
+.qosRoot .chatRowOn {
+  background: var(--b-50);
+}
+.chatRowTexto {
+  flex: 1;
+  /* Sin esto el nombre largo estira la fila en vez de recortarse. */
+  min-width: 0;
+}
+.chatRowTop,
+.chatRowBottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chatRowBottom {
+  margin-top: 2px;
+}
+.chatRowNombre {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chatRowHora {
+  font-size: 11px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+.chatRowPreview {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chatVacioLista {
+  padding: 22px 16px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  line-height: 1.6;
+}
+
+/* ---- Avatares y etiquetas ---- */
+
+.chatAvatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.2px;
+}
+/* El color dice de qué lado está la persona, igual que la etiqueta: el equipo
+   en el violeta del panel, la gente de afuera en el ámbar de "atención". */
+.chatAvatarEquipo {
+  background: linear-gradient(135deg, var(--b-400), var(--b-600));
+}
+.chatAvatarExterno {
+  background: linear-gradient(135deg, #f2a03d, #d97706);
+}
+
+.chatTag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+.chatTagEquipo {
+  background: var(--b-50);
+  color: var(--b-600);
+}
+.chatTagExterno {
+  background: #fdf1e0;
+  color: #b45309;
+}
+
+/* ---- El hilo ---- */
+
+.chatPane {
+  background: var(--surface-2);
+}
+.chatSub {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chatHilo {
+  padding: 16px 18px 8px;
+}
+
+.chatDia {
+  display: flex;
+  justify-content: center;
+  margin: 14px 0;
+}
+.chatDia span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-full);
+  padding: 3px 12px;
+}
+
+.chatFila {
+  display: flex;
+  margin-bottom: 7px;
+}
+.chatFilaPropio {
+  justify-content: flex-end;
+}
+
+.chatBurbuja {
+  position: relative;
+  max-width: min(560px, 78%);
+  padding: 8px 11px 6px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--sh-sm);
+  /* La cola va en la esquina de arriba del lado de quien habla, como en
+     WhatsApp: es lo que hace que dos burbujas seguidas se lean como una
+     conversación y no como una lista. */
+  border-top-left-radius: 3px;
+}
+.chatBurbujaPropia {
+  background: var(--b-500);
+  border-color: var(--b-500);
+  color: #fff;
+  border-top-left-radius: var(--r-md);
+  border-top-right-radius: 3px;
+}
+.chatBurbujaFallo {
+  background: var(--risk-bg);
+  border-color: var(--risk-line);
+  color: var(--ink);
+}
+
+.chatCuerpo {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.5;
+  /* Los mensajes traen saltos de línea de verdad y URLs largas sin espacios. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chatMeta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+.chatBurbujaPropia .chatMeta {
+  color: rgba(255, 255, 255, 0.75);
+}
+.chatTildes {
+  display: inline-flex;
+  /* Los dos tildes montados, como los de WhatsApp. */
+  margin-left: -4px;
+}
+.chatTildes > :last-child {
+  margin-left: -7px;
+}
+.chatPlantilla {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.22);
+}
+.chatError {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--risk);
+}
+
+.chatPie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 11.5px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.chatVacio {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+/* La flecha de volver solo tiene sentido cuando la lista está escondida. */
+.chatVolver {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  /* Un chat de dos paneles no entra en un teléfono: se ve la lista, o el hilo.
+     Es lo mismo que hace WhatsApp Web al angostarse. */
+  .chatList {
+    width: 100%;
+  }
+  .chatListConAbierto {
+    display: none;
+  }
+  /* Y al revés: sin hilo abierto, la lista se queda con toda la pantalla en
+     vez de compartirla con un "elegí una conversación" que sobra. */
+  .chatPaneVacio {
+    display: none;
+  }
+  .chatVolver {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    margin-left: -4px;
+    border-radius: var(--r-sm);
+    color: var(--ink-2);
+    flex-shrink: 0;
+  }
+  .chatBurbuja {
+    max-width: 86%;
+  }
+}

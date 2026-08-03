@@ -1,5 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
-import { createClient } from "@/lib/supabase/server";
+import { requireDirector } from "@/lib/auth/require-director";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { AJUSTES_POR_DEFECTO, PERSONA_SEED, armarPersona } from "@/lib/ugc/agente";
 import { SOBRE_QLABS_ARRANQUE, GUION_ARRANQUE, armarCerebroPublico } from "@/lib/ugc/agente-publico";
@@ -84,7 +84,9 @@ function Prompt({ titulo, texto, vacio }: { titulo: string; texto: string | null
 }
 
 export default async function McLovinPage() {
-  const supabase = await createClient();
+  // Ruta de Sistema: solo directores. La RLS igual no le devolvería
+  // las filas a nadie más, pero rebotar es mejor que una página vacía.
+  const { supabase } = await requireDirector();
 
   const [{ data: ajustes }, { data: acciones }, { data: publicos }] = await Promise.all([
     supabase

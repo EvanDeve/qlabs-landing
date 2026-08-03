@@ -44,7 +44,10 @@ export default async function AdminDashboardPage() {
   ] = await Promise.all([
     supabase.from("agency_clients").select("*"),
     supabase.from("content_pieces").select("*").order("publish_date", { ascending: true }),
-    supabase.from("staff_members").select("profile_id, staff_role, color").eq("active", true),
+    // staff_directory y no staff_members: la tabla quedó cerrada a
+    // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
+    // expone solo lo que el tablero necesita para pintar responsables.
+    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true),
     supabase
       .from("calendar_events")
       .select("*")

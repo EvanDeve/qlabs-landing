@@ -1,5 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
-import { createClient } from "@/lib/supabase/server";
+import { requireDirector } from "@/lib/auth/require-director";
 import { upsertStaffMemberAction, setStaffActiveAction, deleteStaffMemberAction } from "@/lib/actions/staff";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
 const STAFF_ROLES = Object.keys(STAFF_ROLE_LABEL) as StaffRole[];
 
 export default async function EquipoPage() {
-  const supabase = await createClient();
+  // Ruta de Sistema: solo directores. La RLS igual no le devolvería
+  // las filas a nadie más, pero rebotar es mejor que una página vacía.
+  const { supabase } = await requireDirector();
 
   const [{ data: adminProfiles }, { data: staffMembers }, { data: waMessages }] = await Promise.all([
     supabase.from("profiles").select("id, display_name").eq("role", "admin"),

@@ -18,7 +18,7 @@ export default async function AdminLayout({
         .order("created_at", { ascending: false })
         .limit(15),
       supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single(),
-      supabase.from("staff_members").select("staff_role").eq("profile_id", user.id).maybeSingle(),
+      supabase.from("staff_members").select("staff_role, active").eq("profile_id", user.id).maybeSingle(),
       // Piezas activas = las que NO están en una columna marcada como
       // "publicadas". Se pregunta por la bandera y no por el nombre: el equipo
       // puede renombrar sus columnas.
@@ -26,12 +26,19 @@ export default async function AdminLayout({
       supabase.from("agency_clients").select("id"),
     ]);
 
+  // El grupo Sistema es solo de directores: ahí viven los teléfonos del
+  // equipo, las conversaciones de WhatsApp y el cerebro del agente. Esto solo
+  // arma el menú — quien pegue la URL igual rebota (requireDirector) y la RLS
+  // no le devuelve las filas (is_director, migración 20260803000000).
+  const director = staffMember?.staff_role === "director" && staffMember.active;
+
   // Las disputas van con contador en el nav: si nadie las ve, quedan abiertas
   // indefinidamente y ese es justo el problema que vinieron a resolver.
-  const { count: disputasAbiertas } = await supabase
-    .from("applications")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "disputed");
+  // Solo se cuenta si el item se va a mostrar: para el resto del equipo la
+  // consulta sería trabajo tirado a la basura.
+  const { count: disputasAbiertas } = director
+    ? await supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "disputed")
+    : { count: 0 };
 
   const navItems: QosNavItem[] = [
     { href: "/ugc/admin", label: "Dashboard", icon: "grid", group: "Operación" },
@@ -50,19 +57,26 @@ export default async function AdminLayout({
     // filtra por `creator_id = auth.uid()` para todos por igual.
     { href: "/ugc/admin/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
 
-    { href: "/ugc/admin/equipo", label: "Equipo", icon: "briefcase", group: "Sistema" },
-    // Va pegado a Equipo y no en Herramientas: los grupos del sidebar se cortan
-    // por orden del array, así que un item de "Sistema" separado de los otros
-    // abriría un segundo encabezado "Sistema" más abajo.
-    { href: "/ugc/admin/mclovin", label: "McLovin", icon: "chat", group: "Sistema" },
-    { href: "/ugc/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
-    {
-      href: "/ugc/admin/disputas",
-      label: "Disputas",
-      icon: "megaphone",
-      group: "Sistema",
-      count: disputasAbiertas ?? 0,
-    },
+    // Los grupos del sidebar se cortan por orden del array: todo lo de
+    // "Sistema" va junto y al final, o aparecería un segundo encabezado
+    // "Sistema" más abajo.
+    ...(director
+      ? ([
+          { href: "/ugc/admin/equipo", label: "Equipo", icon: "briefcase", group: "Sistema" },
+          // McLovin lleva la chispa y no el globo de chat: el globo ahora es
+          // del Chat, y dos items pegados con el mismo icono no se distinguen.
+          { href: "/ugc/admin/mclovin", label: "McLovin", icon: "sparkle", group: "Sistema" },
+          { href: "/ugc/admin/chat", label: "Chat", icon: "chat", group: "Sistema" },
+          { href: "/ugc/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
+          {
+            href: "/ugc/admin/disputas",
+            label: "Disputas",
+            icon: "megaphone",
+            group: "Sistema",
+            count: disputasAbiertas ?? 0,
+          },
+        ] satisfies QosNavItem[])
+      : []),
   ];
 
   return (

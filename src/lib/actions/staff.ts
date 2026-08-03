@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { soyDirector } from "@/lib/auth/require-director";
 import { normalizarTelefonoCR } from "@/lib/whatsapp/twilio";
 import { enviarRecordatorioDiario } from "@/lib/ugc/recordatorios";
 import type { StaffRole } from "@/lib/database.types";
@@ -25,6 +26,10 @@ export async function inviteStaffAction(
   if (!email || !displayName || !staffRole) {
     return { error: "Nombre, email y rol son obligatorios." };
   }
+
+  // Lo que sigue corre con service-role y crea una cuenta: la RLS no lo frena,
+  // así que el permiso se chequea acá.
+  if (!(await soyDirector())) return { error: "Solo un director puede invitar gente al equipo." };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const admin = createAdminClient();
@@ -73,6 +78,10 @@ export async function upsertStaffMemberAction(formData: FormData) {
 // de prueba, no para desactivar a alguien temporalmente (para eso está
 // setStaffActiveAction).
 export async function deleteStaffMemberAction(profileId: string) {
+  // Borra un auth.users con service-role. Sin este chequeo, cualquiera con
+  // sesión podía invocar el action y dejar al equipo sin una cuenta.
+  if (!(await soyDirector())) return;
+
   const admin = createAdminClient();
   await admin.auth.admin.deleteUser(profileId);
 
@@ -83,7 +92,7 @@ export type WhatsAppSettingsState = { error: string } | { message: string } | nu
 
 /**
  * Guarda el teléfono, el consentimiento y la hora del recordatorio de un
- * miembro. Va con el cliente de sesión a propósito: `staff_members_all_admin`
+ * miembro. Va con el cliente de sesión a propósito: `staff_members_all_director`
  * es la que decide si esto puede escribir, y así no hay una segunda copia de
  * esa regla en el código.
  */
@@ -156,9 +165,8 @@ export async function testReminderAction(
   if (!user) return { error: "Sesión vencida." };
 
   // Acá sí hace falta el chequeo explícito: lo que sigue corre con el cliente
-  // service-role, que se saltea RLS.
-  const { data: quienLlama } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (quienLlama?.role !== "admin") return { error: "Solo el equipo puede hacer esto." };
+  // service-role, que se saltea RLS. Y manda un WhatsApp de verdad.
+  if (!(await soyDirector())) return { error: "Solo un director puede mandar recordatorios." };
 
   const profileId = String(formData.get("profile_id") ?? "");
   if (!profileId) return { error: "Falta el colaborador." };

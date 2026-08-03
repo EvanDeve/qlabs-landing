@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireDirector } from "@/lib/auth/require-director";
 import {
   setCreatorVerifiedAction,
   setBrandVerifiedAction,
@@ -13,7 +13,9 @@ import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 export const dynamic = "force-dynamic";
 
 export default async function AdminMarketplacePage() {
-  const supabase = await createClient();
+  // Ruta de Sistema: solo directores. La RLS igual no le devolvería
+  // las filas a nadie más, pero rebotar es mejor que una página vacía.
+  const { supabase } = await requireDirector();
 
   const [{ data: creatorProfiles }, { data: campaigns }, { data: applications }, { data: allBrands }] =
     await Promise.all([
