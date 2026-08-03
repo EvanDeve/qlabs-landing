@@ -119,7 +119,7 @@ export default function KanbanBoard({
         <ContentPieceDrawer
           piece={selectedPiece}
           columns={columns}
-          brandName={brandById.get(selectedPiece.brand_id)?.name ?? ""}
+          brands={brands}
           staff={staff}
           onClose={() => setSelectedPiece(null)}
           onDeleted={() => {

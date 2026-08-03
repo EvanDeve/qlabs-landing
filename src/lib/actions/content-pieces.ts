@@ -103,6 +103,10 @@ export async function updateContentPieceAction(formData: FormData) {
     .eq("id", pieceId)
     .single();
 
+  // El Hero se puede corregir desde el drawer. Si el campo no viene (formulario
+  // viejo o recorte de otro origen) se deja el que ya tenía: mandar null acá
+  // rompería la pieza, brand_id es NOT NULL.
+  const brandId = String(formData.get("brand_id") ?? "").trim() || null;
   const ownerId = String(formData.get("owner_id") ?? "") || null;
   const priority = String(formData.get("priority") ?? "media") as ContentPriority;
   const platform = String(formData.get("platform") ?? "instagram") as ContentPlatform;
@@ -117,6 +121,7 @@ export async function updateContentPieceAction(formData: FormData) {
   await supabase
     .from("content_pieces")
     .update({
+      ...(brandId ? { brand_id: brandId } : {}),
       owner_id: ownerId,
       priority,
       platform,
@@ -132,5 +137,11 @@ export async function updateContentPieceAction(formData: FormData) {
 
   revalidatePath("/ugc/admin/pipeline");
   revalidatePath("/ugc/admin");
+  // El calendario muestra las piezas por fecha de publicación: si acá se movió
+  // la fecha, su caché también quedó vieja.
+  revalidatePath("/ugc/admin/calendario");
+  // Los dos expedientes: la pieza sale de uno y entra en el otro cuando se
+  // corrige el Hero.
   if (current?.brand_id) revalidatePath(`/ugc/admin/heroes/${current.brand_id}`);
+  if (brandId && brandId !== current?.brand_id) revalidatePath(`/ugc/admin/heroes/${brandId}`);
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { Database } from "@/lib/database.types";
 import { updateContentPieceAction, updateContentPieceColumnAction, deleteContentPieceAction } from "@/lib/actions/content-pieces";
 import { nextColumn, type ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
-import type { StaffOption } from "./KanbanBoard";
+import type { BrandOption, StaffOption } from "./KanbanBoard";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
@@ -14,22 +14,50 @@ type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
 export default function ContentPieceDrawer({
   piece,
   columns,
-  brandName,
+  brands,
   staff,
   onClose,
   onDeleted,
 }: {
   piece: ContentPiece;
   columns: ContentColumn[];
-  brandName: string;
+  brands: BrandOption[];
   staff: StaffOption[];
   onClose: () => void;
   onDeleted: () => void;
 }) {
   const [columnId, setColumnId] = useState(piece.column_id);
+  // El Hero vive en estado y no solo en el <select> para que el encabezado del
+  // drawer diga la marca elegida apenas se cambia, y no la que tenía al abrir.
+  const [brandId, setBrandId] = useState(piece.brand_id);
   const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
+  const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
   const current = columns.find((c) => c.id === columnId);
   const upcoming = nextColumn(columns, columnId);
+
+  useEffect(() => {
+    if (!saved) return;
+    const t = setTimeout(() => setSaved(false), 2000);
+    return () => clearTimeout(t);
+  }, [saved]);
+
+  /**
+   * El form se manda a mano en vez de con <form action={...}>.
+   *
+   * Con `action`, React 19 hace form.reset() cuando la acción termina, y el
+   * reset deja el <select> de Hero en su primera opción —o sea, en una marca
+   * que nadie eligió— mientras el drawer sigue mostrando la correcta. Ahí un
+   * segundo "Guardar" mandaba la pieza a esa marca sin que se notara.
+   */
+  function handleSave(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      await updateContentPieceAction(formData);
+      setSaved(true);
+    });
+  }
 
   function handleAdvance() {
     if (!upcoming) return;
@@ -81,8 +109,27 @@ export default function ContentPieceDrawer({
             )}
           </div>
 
-          <form action={updateContentPieceAction}>
+          <form onSubmit={handleSave}>
             <input type="hidden" name="id" value={piece.id} />
+
+            {/* El Hero se puede corregir después de crear la pieza: antes
+                quedaba fijo y una pieza cargada en la marca equivocada solo se
+                arreglaba borrándola y volviéndola a crear. */}
+            <div className={styles.field}>
+              <label>Hero</label>
+              <select
+                name="brand_id"
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+                className={styles.inp}
+              >
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className={styles.field}>
               <label>Responsable</label>
@@ -138,20 +185,15 @@ export default function ContentPieceDrawer({
               <input type="date" name="publish_date" defaultValue={piece.publish_date?.slice(0, 10) ?? ""} className={styles.inp} />
             </div>
 
-            <div className={styles.field}>
-              <label>Link Drive</label>
-              <input name="drive_url" defaultValue={piece.drive_url ?? ""} className={styles.inp} />
-            </div>
-
-            <div className={styles.field}>
-              <label>Link guion</label>
-              <input name="script_url" defaultValue={piece.script_url ?? ""} className={styles.inp} />
-            </div>
-
-            <div className={styles.field}>
-              <label>Link video final</label>
-              <input name="final_url" defaultValue={piece.final_url ?? ""} className={styles.inp} />
-            </div>
+            <LinkField
+              label="Link Drive"
+              name="drive_url"
+              value={piece.drive_url}
+              icon="drive"
+              placeholder="https://drive.google.com/..."
+            />
+            <LinkField label="Link guion" name="script_url" value={piece.script_url} icon="doc" />
+            <LinkField label="Link video final" name="final_url" value={piece.final_url} icon="play" />
 
             <div className={styles.field}>
               <label>Apuntes</label>
@@ -159,8 +201,11 @@ export default function ContentPieceDrawer({
             </div>
 
             <div style={{ display: "flex", gap: "10px" }}>
-              <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-                Guardar
+              {/* El drawer no se cierra al guardar, así que sin este aviso no
+                  había ninguna señal de que el cambio entró. */}
+              <button type="submit" disabled={isPending} className={`${styles.btn} ${styles.btnPrimary}`}>
+                {isPending ? "Guardando…" : saved ? "Guardado" : "Guardar"}
+                {saved && !isPending && <QosIcon name="check" size={15} />}
               </button>
               <ConfirmDeleteButton
                 action={handleDelete}
@@ -175,4 +220,122 @@ export default function ContentPieceDrawer({
       </aside>
     </div>
   );
+}
+
+/**
+ * Campo de link con dos botones: abrir en otra pestaña y copiar al portapapeles.
+ *
+ * El valor vive en estado —y no suelto en un input no controlado— para que los
+ * botones sirvan sobre lo que se acaba de pegar, sin tener que guardar primero.
+ */
+function LinkField({
+  label,
+  name,
+  value: initialValue,
+  icon,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  value: string | null;
+  icon: string;
+  placeholder?: string;
+}) {
+  const [value, setValue] = useState(initialValue ?? "");
+  const [copied, setCopied] = useState(false);
+  const href = hrefDeLink(value);
+
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1600);
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(href ?? value.trim());
+      setCopied(true);
+    } catch {
+      // Sin permiso de portapapeles (o fuera de HTTPS) queda al menos el texto
+      // seleccionado para copiarlo a mano.
+      document.getElementById(`link-${name}`)?.focus();
+      (document.getElementById(`link-${name}`) as HTMLInputElement | null)?.select();
+    }
+  }
+
+  return (
+    <div className={styles.field}>
+      <label htmlFor={`link-${name}`} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <QosIcon name={icon} size={13} />
+        {label}
+      </label>
+      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+        <input
+          id={`link-${name}`}
+          name={name}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          className={styles.inp}
+          style={{ flex: 1, minWidth: 0 }}
+        />
+        <button
+          type="button"
+          onClick={handleCopy}
+          disabled={!value.trim()}
+          className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+          style={{ padding: "8px 10px", opacity: value.trim() ? 1 : 0.4 }}
+          title={copied ? "Copiado" : `Copiar ${label.toLowerCase()}`}
+          aria-label={`Copiar ${label.toLowerCase()}`}
+        >
+          <QosIcon name={copied ? "check" : "copy"} size={15} />
+        </button>
+        {/* Un <a> y no un botón: así se puede abrir con clic del medio o
+            Cmd+clic, como cualquier link. Sin URL queda como span apagado —un
+            ancla sin href no es clickeable ni recibe foco. */}
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className={`${styles.btn} ${styles.btnSoft} ${styles.btnSm}`}
+            style={{ padding: "8px 10px" }}
+            title={`Abrir ${label.toLowerCase()} en otra pestaña`}
+            aria-label={`Abrir ${label.toLowerCase()} en otra pestaña`}
+          >
+            <QosIcon name="external" size={15} />
+          </a>
+        ) : (
+          <span
+            className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+            style={{ padding: "8px 10px", opacity: 0.4 }}
+            title="Pegá un link para poder abrirlo"
+            aria-hidden
+          >
+            <QosIcon name="external" size={15} />
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * URL para abrir en otra pestaña, o null si no hay nada que abrir.
+ *
+ * Un link pegado como "drive.google.com/..." sin esquema se leería como ruta
+ * relativa y llevaría a /ugc/admin/drive.google.com — de ahí el https:// de
+ * relleno. Se descartan esquemas raros (javascript:, data:) para no meter un
+ * link ejecutable en el drawer.
+ */
+function hrefDeLink(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  const conEsquema = /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`;
+  try {
+    const url = new URL(conEsquema);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
 }
