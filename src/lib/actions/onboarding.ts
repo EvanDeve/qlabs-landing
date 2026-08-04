@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { normalizarUrl } from "@/lib/ugc/url";
 import { ROLE_DASHBOARD } from "@/lib/ugc/roles";
 import { notifyAdminsOfPendingVerification } from "@/lib/ugc/admin-alerts";
 
@@ -116,7 +117,7 @@ export async function completeOnboardingAction(
   } else {
     const brandName = String(formData.get("brand_name") ?? "").trim();
     const industry = String(formData.get("industry") ?? "").trim() || null;
-    const website = String(formData.get("website") ?? "").trim() || null;
+    const website = normalizarUrl(String(formData.get("website") ?? ""));
     const description = String(formData.get("description") ?? "").trim() || null;
     // La zona se pide desde que el registro es un wizard: el creador la ve en
     // el detalle de cada promo, así que llegaba vacía justo donde importa.

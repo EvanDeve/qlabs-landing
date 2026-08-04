@@ -131,12 +131,19 @@ export default function BrandProfileEditForm({ initial }: { initial: BrandProfil
         </div>
         <div className={styles.field}>
           <label htmlFor="website">Sitio web</label>
+          {/* type="text" y no "url" a propósito. Con type="url", un sitio
+              guardado sin esquema —"negocio.cr", que es como lo escribe
+              cualquiera— dejaba el formulario ENTERO inválido: el navegador
+              bloqueaba el envío sin mostrar nada y "Guardar cambios" no hacía
+              absolutamente nada, para siempre. El esquema lo pone el servidor
+              con normalizarUrl(). */}
           <input
             id="website"
             name="website"
-            type="url"
+            type="text"
+            inputMode="url"
             defaultValue={initial.website ?? ""}
-            placeholder="https://..."
+            placeholder="cafeteriaelroble.cr"
             className={styles.inp}
           />
         </div>

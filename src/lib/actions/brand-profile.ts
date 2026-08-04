@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { normalizarUrl } from "@/lib/ugc/url";
 import { BRAND_LOGO_BUCKET, MAX_BRAND_LOGO_FILE_BYTES } from "@/lib/ugc/brand-logos";
 
 // `ok` existe para que el formulario pueda cantar "guardado": antes la acción
@@ -25,7 +26,10 @@ export async function updateBrandProfileAction(
 
   const brandName = String(formData.get("brand_name") ?? "").trim();
   const industry = String(formData.get("industry") ?? "").trim() || null;
-  const website = String(formData.get("website") ?? "").trim() || null;
+  // Se normaliza al guardar: sin esto, un "negocio.cr" sin esquema deja el
+  // <input type="url"> del propio formulario en inválido y el guardado siguiente
+  // no llega nunca a dispararse. Ver normalizarUrl().
+  const website = normalizarUrl(String(formData.get("website") ?? ""));
   const instagramHandle = String(formData.get("instagram_handle") ?? "").trim() || null;
   const description = String(formData.get("description") ?? "").trim() || null;
   const location = String(formData.get("location") ?? "").trim() || null;
