@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { AVATAR_BUCKET, MAX_AVATAR_FILE_BYTES } from "@/lib/ugc/avatars";
 import { parseLanguages } from "@/lib/ugc/languages";
 
-export type UpdateCreatorProfileDetailsState = { error: string } | null;
+// Ver el comentario gemelo en brand-profile.ts: `ok` es lo que deja avisar
+// que el guardado entró.
+export type UpdateCreatorProfileDetailsState = { error: string } | { ok: true } | null;
 
 export async function updateCreatorProfileDetailsAction(
   _prevState: UpdateCreatorProfileDetailsState,
@@ -126,5 +128,5 @@ export async function updateCreatorProfileDetailsAction(
     revalidatePath(`/ugc/creadores/${creatorProfile.handle}`);
   }
 
-  return null;
+  return { ok: true };
 }

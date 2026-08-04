@@ -6,7 +6,16 @@ import { createClient } from "@/lib/supabase/server";
 import { DELIVERABLE_TYPES } from "@/lib/ugc/deliverables";
 import { isUsageScope, isUsageDuration } from "@/lib/ugc/usage-rights";
 
-export type CampaignActionState = { error: string } | null;
+/**
+ * Resultado de crear una campaña.
+ *
+ * La acción NO redirige: devuelve el desenlace y el cliente decide. Con
+ * redirect() adentro, el código que limpia el borrador del navegador nunca
+ * llegaba a correr —la navegación corta la ejecución— y el formulario volvía a
+ * ofrecer "recuperamos lo que estabas escribiendo" sobre una campaña que ya
+ * había entrado.
+ */
+export type CampaignActionState = { error: string } | { ok: true } | null;
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -19,10 +28,7 @@ async function isBrandVerified(supabase: Client, userId: string) {
   return data?.verified === true;
 }
 
-export async function createCampaignAction(
-  _prevState: CampaignActionState,
-  formData: FormData
-): Promise<CampaignActionState> {
+export async function createCampaignAction(formData: FormData): Promise<CampaignActionState> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -99,10 +105,10 @@ export async function createCampaignAction(
 
   revalidatePath("/ugc/marca");
   revalidatePath("/ugc/marca/ugc");
-  redirect("/ugc/marca/ugc");
+  return { ok: true };
 }
 
-export async function publishCampaignAction(formData: FormData) {
+export async function publishCampaignAction(formData: FormData): Promise<CampaignActionState> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -113,20 +119,31 @@ export async function publishCampaignAction(formData: FormData) {
   }
 
   const campaignId = String(formData.get("campaign_id") ?? "");
-  if (!campaignId) return;
+  if (!campaignId) return { error: "No encontramos la campaña." };
 
   // Publicar un borrador pasa por el mismo gate: RLS lo rechazaría igual, pero
   // se corta antes para no dejar la impresión de que "no pasó nada".
+  //
+  // Antes esto devolvía void y la pantalla no cambiaba en nada: el botón se
+  // apretaba, no pasaba nada, y no había forma de saber por qué.
   if (!(await isBrandVerified(supabase, user.id))) {
-    return;
+    return {
+      error: "Tu negocio todavía está en revisión, así que aún no podés publicar campañas.",
+    };
   }
 
-  await supabase
+  const { error } = await supabase
     .from("campaigns")
     .update({ status: "published", published_at: new Date().toISOString() })
     .eq("id", campaignId)
     .eq("brand_id", user.id);
 
+  if (error) {
+    return { error: "No se pudo publicar la campaña. Intentá de nuevo." };
+  }
+
   revalidatePath("/ugc/marca");
   revalidatePath("/ugc/marca/ugc");
+  revalidatePath(`/ugc/marca/campanas/${campaignId}`);
+  return { ok: true };
 }

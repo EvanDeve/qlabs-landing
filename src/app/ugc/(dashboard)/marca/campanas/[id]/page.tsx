@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { publishCampaignAction } from "@/lib/actions/campaigns";
-import { updateApplicationStatusAction } from "@/lib/actions/applications";
+import PublishCampaignButton from "@/components/ugc/marca/PublishCampaignButton";
+import ApplicantDecisionButtons from "@/components/ugc/marca/ApplicantDecisionButtons";
 import ApproveWithRatingForm from "@/components/ugc/marca/ApproveWithRatingForm";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
@@ -108,14 +108,7 @@ export default async function CampaignDetailPage({
               {campaign.deadline_days ? ` · ${campaign.deadline_days} días` : ""}
             </div>
           </div>
-          {campaign.status === "draft" && (
-            <form action={publishCampaignAction}>
-              <input type="hidden" name="campaign_id" value={campaign.id} />
-              <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-                Publicar
-              </button>
-            </form>
-          )}
+          {campaign.status === "draft" && <PublishCampaignButton campaignId={campaign.id} />}
         </div>
 
         <p style={{ marginTop: "16px", color: "var(--ink-2)" }}>{campaign.brief}</p>
@@ -228,24 +221,15 @@ export default async function CampaignDetailPage({
                 )}
 
                 {(app.status === "pending" || app.status === "reviewing") && (
-                  <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
-                    <form action={updateApplicationStatusAction}>
-                      <input type="hidden" name="application_id" value={app.id} />
-                      <input type="hidden" name="campaign_id" value={campaign.id} />
-                      <input type="hidden" name="status" value="accepted" />
-                      <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-                        Aceptar
-                      </button>
-                    </form>
-                    <form action={updateApplicationStatusAction}>
-                      <input type="hidden" name="application_id" value={app.id} />
-                      <input type="hidden" name="campaign_id" value={campaign.id} />
-                      <input type="hidden" name="status" value="rejected" />
-                      <button type="submit" className={`${styles.btn} ${styles.btnGhost}`}>
-                        Rechazar
-                      </button>
-                    </form>
-                  </div>
+                  <ApplicantDecisionButtons
+                    applicationId={app.id}
+                    campaignId={campaign.id}
+                    creatorName={
+                      creatorProfile?.handle
+                        ? displayHandle(creatorProfile.handle)
+                        : (profile?.display_name ?? "el creador")
+                    }
+                  />
                 )}
 
                 {(app.status === "delivered" || app.status === "approved") &&

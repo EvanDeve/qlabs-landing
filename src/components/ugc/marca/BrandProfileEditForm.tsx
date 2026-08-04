@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { updateBrandProfileAction, type UpdateBrandProfileState } from "@/lib/actions/brand-profile";
+import { useToast } from "@/components/ugc/Toaster";
 import ImageCropModal from "@/components/ugc/ImageCropModal";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -21,6 +22,14 @@ export default function BrandProfileEditForm({ initial }: { initial: BrandProfil
     updateBrandProfileAction,
     null
   );
+
+  const toast = useToast();
+
+  // Guardar y que no pase nada visible era la queja: el perfil se actualizaba
+  // pero la pantalla se quedaba igual.
+  useEffect(() => {
+    if (state && "ok" in state) toast("Perfil guardado.");
+  }, [state, toast]);
 
   // Estado espejado solo para la vista previa en vivo.
   const [logoPreview, setLogoPreview] = useState<string | null>(initial.logo_url);
@@ -154,7 +163,7 @@ export default function BrandProfileEditForm({ initial }: { initial: BrandProfil
           />
         </div>
 
-        {state?.error && <div className={styles.formError}>{state.error}</div>}
+        {state && "error" in state && <div className={styles.formError}>{state.error}</div>}
 
         <button type="submit" disabled={pending} className={`${styles.btn} ${styles.btnPrimary}`}>
           {pending ? "Guardando…" : "Guardar cambios"}

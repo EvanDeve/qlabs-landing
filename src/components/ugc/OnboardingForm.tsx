@@ -5,10 +5,12 @@ import {
   completeOnboardingAction,
   type OnboardingActionState,
 } from "@/lib/actions/onboarding";
+import BrandAvatar from "@/components/ugc/BrandAvatar";
 
 type Role = "creator" | "brand";
 
 const CREATOR_STEPS = ["Tu @", "Redes", "Sobre vos", "Alcance"] as const;
+const BRAND_STEPS = ["Tu negocio", "Rubro y zona", "Detalles"] as const;
 
 const inputCls =
   "w-full rounded-xl border border-line bg-lavender px-4 py-3.5 text-sm text-ink outline-none transition focus:border-violet focus:bg-white";
@@ -26,7 +28,7 @@ export default function OnboardingForm({
     return <RolePicker initial={initialRole} onPick={setRole} />;
   }
   if (role === "brand") {
-    return <BrandForm />;
+    return <BrandWizard />;
   }
   return <CreatorWizard />;
 }
@@ -387,43 +389,251 @@ function ProfilePreview({
   );
 }
 
-/* ---------------- Registro de marca (una sola pantalla) ---------------- */
-function BrandForm() {
+/* ---------------- Wizard de negocio ----------------
+   Mismo patrón que el del creador —pasos cortos + preview en vivo— y no por
+   simetría: el negocio llenaba un formulario plano sin ver nunca cómo iba a
+   aparecer del otro lado, que es justo lo que decide si un creador aplica. */
+function BrandWizard() {
   const [state, formAction, pending] = useActionState<OnboardingActionState, FormData>(
     completeOnboardingAction,
     null
   );
+  const [step, setStep] = useState(0);
+  const [brandName, setBrandName] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [website, setWebsite] = useState("");
+
+  const last = BRAND_STEPS.length - 1;
+  const canContinue = brandName.trim().length > 0;
+
+  // Envío manual por el mismo motivo que el wizard del creador: sin `action`
+  // en el <form>, ningún Enter ni autocompletado puede mandarlo antes de tiempo.
+  const submit = () => {
+    if (!canContinue || pending) return;
+    const fd = new FormData();
+    fd.set("role", "brand");
+    fd.set("brand_name", brandName);
+    fd.set("industry", industry);
+    fd.set("location", location);
+    fd.set("description", description);
+    fd.set("website", website);
+    startTransition(() => formAction(fd));
+  };
 
   return (
-    <form
-      action={formAction}
-      className="w-full max-w-md rounded-[22px] border border-line bg-white p-7 shadow-[0_30px_70px_-40px_rgba(11,11,18,0.35)] sm:p-9"
-    >
-      <input type="hidden" name="role" value="brand" />
-      <h2 className="text-2xl font-extrabold tracking-tight text-ink">Datos de tu negocio</h2>
-      <p className="mt-1.5 text-sm text-ink-soft">Con esto las campañas que publiques se ven profesionales.</p>
-
-      <div className="mt-6 flex flex-col gap-3">
-        <input name="brand_name" required placeholder="Nombre del negocio *" className={inputCls} />
-        <input name="industry" placeholder="Industria (ej. Restaurante)" className={inputCls} />
-        <input name="website" placeholder="Sitio web (opcional)" className={inputCls} />
-        <textarea
-          name="description"
-          rows={3}
-          placeholder="Contanos qué hace tu negocio…"
-          className={`${inputCls} resize-none`}
-        />
-      </div>
-
-      {state && "error" in state && <p className="mt-3 text-sm text-coral">{state.error}</p>}
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-6 w-full rounded-xl bg-violet py-3.5 text-sm font-bold text-white shadow-[0_10px_26px_-10px_rgba(112,92,246,0.7)] transition hover:bg-violet-deep disabled:opacity-60"
+    <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[1fr_320px]">
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || e.target instanceof HTMLTextAreaElement) return;
+          e.preventDefault();
+          if (step < last) {
+            if (canContinue) setStep((s) => s + 1);
+          } else {
+            submit();
+          }
+        }}
+        className="min-w-0 rounded-[22px] border border-line bg-white p-7 shadow-[0_30px_70px_-40px_rgba(11,11,18,0.35)] sm:p-9"
       >
-        {pending ? "Creando tu perfil…" : "Entrar a mi panel"}
-      </button>
-    </form>
+        <div className="mb-2 flex items-center gap-1.5">
+          {BRAND_STEPS.map((s, i) => (
+            <div
+              key={s}
+              className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
+                i <= step ? "bg-violet" : "bg-lavender-deep"
+              }`}
+            />
+          ))}
+        </div>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+          Paso {step + 1} de {BRAND_STEPS.length}
+        </p>
+
+        <div key={step} className="onb-step-in mt-4 min-h-[210px]">
+          {step === 0 && (
+            <>
+              <h2 className="text-2xl font-extrabold tracking-tight text-ink">Tu negocio</h2>
+              <p className="mt-1.5 text-sm text-ink-soft">
+                Es el nombre con el que te van a ver los creadores. Lo demás lo podés completar
+                después.
+              </p>
+              <input
+                autoFocus
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder="Nombre del negocio"
+                className={`mt-5 ${inputCls}`}
+              />
+            </>
+          )}
+          {step === 1 && (
+            <>
+              <h2 className="text-2xl font-extrabold tracking-tight text-ink">Qué hacés y dónde</h2>
+              <p className="mt-1.5 text-sm text-ink-soft">
+                Opcional — ayuda a que te apliquen creadores de tu zona.
+              </p>
+              <div className="mt-5 flex flex-col gap-3">
+                <input
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  placeholder="Industria (ej. Restaurante)"
+                  className={inputCls}
+                />
+                <input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Zona (ej. Escazú)"
+                  className={inputCls}
+                />
+              </div>
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <h2 className="text-2xl font-extrabold tracking-tight text-ink">Contanos más</h2>
+              <p className="mt-1.5 text-sm text-ink-soft">
+                Opcional — esto es lo que lee un creador antes de aplicar.
+              </p>
+              <div className="mt-5 flex flex-col gap-3">
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Contanos qué hace tu negocio…"
+                  className={`${inputCls} resize-none`}
+                />
+                <input
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="Sitio web (opcional)"
+                  className={inputCls}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {state && "error" in state && <p className="mt-3 text-sm text-coral">{state.error}</p>}
+
+        <div className="mt-6 flex items-center justify-between gap-3">
+          {step > 0 ? (
+            <button
+              type="button"
+              onClick={() => setStep((s) => s - 1)}
+              className="rounded-pill px-4 py-3 text-sm font-bold text-ink-soft transition hover:text-ink"
+            >
+              ← Atrás
+            </button>
+          ) : (
+            <span />
+          )}
+
+          {step < last ? (
+            <button
+              type="button"
+              disabled={step === 0 && !canContinue}
+              onClick={() => setStep((s) => s + 1)}
+              className="rounded-xl bg-violet px-7 py-3 text-sm font-bold text-white shadow-[0_10px_26px_-10px_rgba(112,92,246,0.7)] transition hover:bg-violet-deep disabled:opacity-50"
+            >
+              {step === 0 ? "Continuar" : "Siguiente"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={submit}
+              disabled={pending || !canContinue}
+              className="rounded-xl bg-violet px-7 py-3 text-sm font-bold text-white shadow-[0_10px_26px_-10px_rgba(112,92,246,0.7)] transition hover:bg-violet-deep disabled:opacity-50"
+            >
+              {pending ? "Creando tu perfil…" : "Entrar a mi panel"}
+            </button>
+          )}
+        </div>
+
+        {step > 0 && step < last && (
+          <button
+            type="button"
+            onClick={() => setStep(last)}
+            className="mt-4 block w-full text-center text-xs font-semibold text-ink-soft transition hover:text-ink"
+          >
+            Saltar al final — lo completo después
+          </button>
+        )}
+      </form>
+
+      <aside className="order-first lg:order-last lg:sticky lg:top-6 h-fit min-w-0">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-soft">
+          Así te ven los creadores
+        </p>
+        <BrandPreview
+          brandName={brandName}
+          industry={industry}
+          location={location}
+          description={description}
+          website={website}
+        />
+      </aside>
+    </div>
+  );
+}
+
+function BrandPreview({
+  brandName,
+  industry,
+  location,
+  description,
+  website,
+}: {
+  brandName: string;
+  industry: string;
+  location: string;
+  description: string;
+  website: string;
+}) {
+  const nombre = brandName.trim();
+  const vacio = !nombre && !industry && !location && !description && !website;
+
+  return (
+    <div className="overflow-hidden rounded-card border border-line bg-white">
+      <div className="h-16 bg-gradient-to-br from-violet via-periwinkle to-violet-deep" />
+      <div className="px-5 pb-5">
+        {/* Las mismas iniciales sobre degradado que ve el equipo en el tablero:
+            el negocio todavía no subió logo y BrandAvatar deriva el color del
+            nombre, así que la cara es la misma acá y en producción. */}
+        <div className="-mt-8 w-fit rounded-2xl ring-4 ring-white">
+          <BrandAvatar name={nombre || "?"} size={64} radius={14} />
+        </div>
+        <h3 className={`mt-3 text-lg font-extrabold ${nombre ? "text-ink" : "text-ink-soft/50"}`}>
+          {nombre || "Tu negocio"}
+        </h3>
+        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-soft">
+          {industry && (
+            <span>
+              <i className="fa-solid fa-store" aria-hidden /> {industry}
+            </span>
+          )}
+          {location && (
+            <span>
+              <i className="fa-solid fa-location-dot" aria-hidden /> {location}
+            </span>
+          )}
+        </div>
+        {description && <p className="mt-3 text-xs leading-relaxed text-ink-soft">{description}</p>}
+        {website && (
+          <p className="mt-3 inline-flex items-center gap-1.5 rounded-pill border border-line px-3 py-1 text-xs font-bold text-ink">
+            <i className="fa-solid fa-link" aria-hidden /> {website}
+          </p>
+        )}
+        <p className="mt-4 inline-flex items-center gap-1.5 rounded-pill bg-lavender px-2.5 py-1 text-[11px] font-semibold text-violet-deep">
+          <i className="fa-solid fa-clock" aria-hidden /> Verificación en revisión
+        </p>
+        {vacio && (
+          <p className="mt-3 text-xs text-ink-soft/60">
+            Tu ficha se va llenando mientras completás los pasos ✨
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

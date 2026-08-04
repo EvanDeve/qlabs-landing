@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   updateCreatorProfileDetailsAction,
   type UpdateCreatorProfileDetailsState,
@@ -8,6 +8,7 @@ import {
 import { LANGUAGE_OPTIONS, languageLabel } from "@/lib/ugc/languages";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 import ImageCropModal from "@/components/ugc/ImageCropModal";
+import { useToast } from "@/components/ugc/Toaster";
 
 type Skill = { name: string; level: number };
 type PastBrand = { category: string; brand_name: string };
@@ -38,6 +39,13 @@ export default function CreatorProfileEditForm({
     updateCreatorProfileDetailsAction,
     null
   );
+
+  const toast = useToast();
+
+  // Mismo motivo que en el perfil de la marca: guardar no daba ninguna señal.
+  useEffect(() => {
+    if (state && "ok" in state) toast("Perfil guardado.");
+  }, [state, toast]);
 
   // Campos que alimentan el preview en vivo
   const [avatarPreview, setAvatarPreview] = useState<string | null>(initialProfile.avatar_url);
@@ -346,7 +354,7 @@ export default function CreatorProfileEditForm({
           </div>
         </section>
 
-        {state?.error && <p className="text-sm text-coral">{state.error}</p>}
+        {state && "error" in state && <p className="text-sm text-coral">{state.error}</p>}
 
         <button
           type="submit"

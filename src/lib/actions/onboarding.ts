@@ -118,6 +118,9 @@ export async function completeOnboardingAction(
     const industry = String(formData.get("industry") ?? "").trim() || null;
     const website = String(formData.get("website") ?? "").trim() || null;
     const description = String(formData.get("description") ?? "").trim() || null;
+    // La zona se pide desde que el registro es un wizard: el creador la ve en
+    // el detalle de cada promo, así que llegaba vacía justo donde importa.
+    const location = String(formData.get("location") ?? "").trim() || null;
 
     if (!brandName) {
       return { error: "El nombre de la marca es obligatorio." };
@@ -152,6 +155,7 @@ export async function completeOnboardingAction(
       industry,
       website,
       description,
+      location,
     });
 
     if (brandError) {

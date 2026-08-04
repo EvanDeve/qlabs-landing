@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_LOGO_BUCKET, MAX_BRAND_LOGO_FILE_BYTES } from "@/lib/ugc/brand-logos";
 
-export type UpdateBrandProfileState = { error: string } | null;
+// `ok` existe para que el formulario pueda cantar "guardado": antes la acción
+// devolvía null tanto al guardar bien como al no hacer nada, así que la
+// pantalla no tenía forma de distinguirlos.
+export type UpdateBrandProfileState = { error: string } | { ok: true } | null;
 
 export async function updateBrandProfileAction(
   _prevState: UpdateBrandProfileState,
@@ -83,5 +86,5 @@ export async function updateBrandProfileAction(
   revalidatePath("/ugc/marca/perfil");
   revalidatePath("/ugc/creador");
   revalidatePath("/ugc");
-  return null;
+  return { ok: true };
 }

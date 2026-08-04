@@ -2954,3 +2954,69 @@
     max-width: 86%;
   }
 }
+
+/* ---------- Avisos (toasts) ----------
+   Abajo a la derecha y por encima de todo, incluidos el drawer del pipeline
+   (z-index 40) y su overlay: un aviso tapado por el panel que lo disparó no
+   sirve de nada. `pointer-events: none` en el contenedor para no comerse
+   clics en la esquina de la pantalla mientras el aviso está visible.
+
+   Los colores van literales y NO como var(--ok-bg): los tokens de este módulo
+   viven bajo .qosRoot y el aviso se monta en la raíz del layout, fuera de ese
+   contenedor. Con var() saldría sin fondo ni borde. Los valores son los
+   mismos de --ok-bg/--ok-line/--risk-bg/--risk-line de arriba. */
+.toastWrap {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  min-width: 220px;
+  max-width: min(360px, calc(100vw - 36px));
+  padding: 12px 16px;
+  border-radius: 11px;
+  border: 1px solid #dad8ea;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(26, 23, 48, 0.16);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1a1730;
+  animation: toastIn 180ms ease-out;
+}
+
+.toastOk {
+  border-color: #bfe8d5;
+  background: #e4f6ee;
+  color: #0f7a51;
+}
+
+.toastErr {
+  border-color: #f6c6ca;
+  background: #fce9ea;
+  color: #a8323c;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Quien pidió menos movimiento igual tiene que ver el aviso: se apaga el
+   desplazamiento, no la aparición. */
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

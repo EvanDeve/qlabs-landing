@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import Toaster from "@/components/ugc/Toaster";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +18,9 @@ export default async function DashboardLayout({
     redirect("/ugc/login");
   }
 
-  return <div className="min-h-screen bg-white text-ink">{children}</div>;
+  return (
+    <Toaster>
+      <div className="min-h-screen bg-white text-ink">{children}</div>
+    </Toaster>
+  );
 }
