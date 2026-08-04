@@ -147,7 +147,15 @@ function lineaDeItem(item: AgendaItem, indice: number, hoyCR: string): string {
   // el modelo la repetiría en el mensaje como si alguien la hubiera puesto.
   const hora = item.conHora ? ` ${formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm")}` : "";
   const cuando = dia === hoyCR ? `hoy${hora}` : `${dia}${hora}`;
-  return `${indice + 1}. ${item.accion} "${item.titulo}"${heroe} — ${cuando}${prioridad}`;
+
+  // La marca de riesgo dice el ESTADO, no la fecha: el bloque (ATRASADO / HOY /
+  // PRÓXIMOS DÍAS) ya dice cuándo. Sin ella, "Publicar X — 5 ago" se lee igual
+  // esté el video listo o sin editar, que es justo lo que había que separar.
+  const riesgo = item.enRiesgo
+    ? ` ⚠ SIN TERMINAR — sigue en "${item.columna ?? "el tablero"}"`
+    : "";
+
+  return `${indice + 1}. ${item.accion} "${item.titulo}"${heroe} — ${cuando}${prioridad}${riesgo}`;
 }
 
 function describirAgenda(agenda: Agenda, hoyCR: string): string {
@@ -227,6 +235,10 @@ ESTO ES LO QUE TIENE PENDIENTE:
 ${describirAgenda(agenda, hoyCR)}
 
 Escribile un mensaje corto. Arrancá por lo atrasado si hay algo atrasado.
+Los ítems marcados con ⚠ SIN TERMINAR son los más importantes después de lo
+atrasado: la fecha de publicación está encima y el video todavía está en esa
+columna. Nombralos diciendo en qué columna siguen, para que se entienda qué
+falta. Si no hay ninguno, no menciones el tema — no inventes urgencia.
 Lo de SIN FECHA va al final y en bloque ("tenés N sin fecha"), nunca uno por
 uno: no está atrasado, solo falta decidir cuándo. Si es lo ÚNICO que tiene,
 preguntale para cuándo lo deja.

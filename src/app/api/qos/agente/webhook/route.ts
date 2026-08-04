@@ -118,7 +118,11 @@ export async function POST(request: Request) {
   const [{ data: perfil }, { data: columnas }, { data: clientes }, { data: previos }, ajustes] = await Promise.all([
     admin.from("profiles").select("display_name").eq("id", miembro.profile_id).maybeSingle(),
     admin.from("content_columns").select("id, name, is_done").order("position"),
-    admin.from("agency_clients").select("id, name").order("name"),
+    // Sin los archivados: esta lista es la de Heroes que McLovin puede nombrar
+    // al crear una pieza, y no se le carga trabajo nuevo a un cliente que se
+    // fue. Si alguien igual dicta ese nombre, el agente no lo va a encontrar y
+    // va a preguntar — que es la salida correcta.
+    admin.from("agency_clients").select("id, name").eq("archived", false).order("name"),
     admin
       .from("wa_messages")
       .select("direction, body")

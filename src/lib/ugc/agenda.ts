@@ -1,7 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, ContentPriority } from "@/lib/database.types";
-import { COSTA_RICA_TZ, diaCR, sumarDias } from "@/lib/ugc/calendar";
+import { COSTA_RICA_TZ, diaCR, sumarDias, DIAS_PUBLICA_PRONTO } from "@/lib/ugc/calendar";
 
 /**
  * Qué le toca a un miembro del equipo y para cuándo.
@@ -55,6 +55,19 @@ export type AgendaItem = {
   /** Columna del tablero donde está parada. Los eventos no tienen. */
   columna: string | null;
   prioridad: ContentPriority | null;
+  /**
+   * La fecha de publicación está encima (o ya pasó) y la pieza TODAVÍA no está
+   * hecha. Es el aviso que el equipo pidió: un video que sigue por editar a dos
+   * días de salir no se destraba solo.
+   *
+   * "Hecha" lo decide la columna con `is_ready` (o `is_done`), nunca su nombre:
+   * el equipo las renombra desde la UI. Ver la migración 20260803120000.
+   *
+   * Solo aplica a la fecha de publicación de una pieza. Una grabación con fecha
+   * próxima no está "sin terminar" —está por hacerse, que es lo normal— y un
+   * evento del calendario no tiene columna que mirar.
+   */
+  enRiesgo: boolean;
 };
 
 export type Agenda = {
@@ -120,7 +133,9 @@ export async function getStaffAgenda(
       // Se pregunta por la BANDERA, nunca por el nombre de la columna: el
       // equipo puede renombrarlas y buscar por texto se rompería en silencio
       // (ver el comentario largo de 20260727200000_content_columns.sql).
-      .select("id, title, brand_id, publish_date, record_date, priority, content_columns!inner(name, is_done)")
+      .select(
+        "id, title, brand_id, publish_date, record_date, priority, content_columns!inner(name, is_done, is_ready)"
+      )
       .eq("owner_id", profileId)
       .eq("content_columns.is_done", false),
     supabase
@@ -137,17 +152,39 @@ export async function getStaffAgenda(
   for (const e of eventos ?? []) if (e.brand_id) brandIds.add(e.brand_id);
 
   const { data: heroes } = brandIds.size
-    ? await supabase.from("agency_clients").select("id, name").in("id", [...brandIds])
+    ? await supabase.from("agency_clients").select("id, name, archived").in("id", [...brandIds])
     : { data: [] };
   const heroePorId = new Map((heroes ?? []).map((h) => [h.id, h.name]));
+
+  // Un Hero archivado no genera recordatorios. El WhatsApp de la mañana es
+  // "esto tenés que hacer hoy", y de un cliente que se fue no hay nada que
+  // hacer — arrastrarlo todos los días es cómo se le enseña a alguien a dejar
+  // de leer el canal.
+  const archivados = new Set((heroes ?? []).filter((h) => h.archived).map((h) => h.id));
 
   const items: AgendaItem[] = [];
 
   for (const p of piezas ?? []) {
+    if (p.brand_id && archivados.has(p.brand_id)) continue;
     const heroe = p.brand_id ? heroePorId.get(p.brand_id) ?? null : null;
     // El !inner devuelve la fila relacionada; el tipo generado no distingue
     // uno-a-uno de uno-a-muchos y la deja como array en algunos casos.
-    const columna = (Array.isArray(p.content_columns) ? p.content_columns[0] : p.content_columns)?.name ?? null;
+    const col = Array.isArray(p.content_columns) ? p.content_columns[0] : p.content_columns;
+    const columna = col?.name ?? null;
+
+    // La pieza está "sin terminar" si su columna no la declara ni lista ni
+    // publicada. El `!inner` ya filtró is_done, así que en la práctica lo que
+    // decide es is_ready — pero se preguntan las dos igual: si mañana la
+    // consulta deja de filtrar, este cálculo tiene que seguir dando bien solo.
+    const sinTerminar = !col?.is_ready && !col?.is_done;
+    // La ventana es DIAS_PUBLICA_PRONTO, la misma que pinta la tarjeta de ámbar
+    // en el tablero: si el WhatsApp avisara con otro plazo, el equipo vería la
+    // tarjeta en ámbar días antes (o después) del mensaje y dejaría de confiar
+    // en los dos. Incluye las ya vencidas, que son el peor caso.
+    const enRiesgo =
+      sinTerminar &&
+      !!p.publish_date &&
+      diaCR(p.publish_date) <= diaCR(sumarDias(now, DIAS_PUBLICA_PRONTO));
 
     // Las dos fechas de una pieza son dos compromisos distintos con dos
     // fechas distintas, así que van como dos ítems.
@@ -162,6 +199,9 @@ export async function getStaffAgenda(
         accion: "Grabar",
         columna,
         prioridad: p.priority,
+        // Una grabación pendiente no está "sin terminar": está por hacerse,
+        // que es lo normal. El aviso es sobre la fecha de publicación.
+        enRiesgo: false,
       });
     }
     if (p.publish_date) {
@@ -175,6 +215,7 @@ export async function getStaffAgenda(
         accion: "Publicar",
         columna,
         prioridad: p.priority,
+        enRiesgo,
       });
     }
 
@@ -195,11 +236,15 @@ export async function getStaffAgenda(
         accion: null,
         columna,
         prioridad: p.priority,
+        // Sin fecha no hay nada encima: el problema de esta pieza es que nadie
+        // la fechó, y eso ya lo dice el bloque SIN FECHA.
+        enRiesgo: false,
       });
     }
   }
 
   for (const e of eventos ?? []) {
+    if (e.brand_id && archivados.has(e.brand_id)) continue;
     items.push({
       key: `event-${e.id}`,
       ref: { kind: "event", eventId: e.id },
@@ -210,6 +255,8 @@ export async function getStaffAgenda(
       accion: e.type === "grabacion" ? "Grabar" : e.type === "publicacion" ? "Publicar" : e.type === "entrega" ? "Entrega" : "Reunión",
       columna: null,
       prioridad: null,
+      // Un evento no tiene columna que mirar: no hay estado de "terminado".
+      enRiesgo: false,
     });
   }
 
@@ -313,6 +360,9 @@ function describir(item: AgendaItem, mostrarHora = false): string {
   const partes = [encabezado];
   if (item.heroe) partes.push(`(${item.heroe})`);
   if (!item.fecha && item.columna) partes.push(`en ${item.columna}`);
+  // El aviso también en el fallback sin LLM: si Gemini se cae, el mensaje sale
+  // igual y la advertencia es justo lo que no puede faltar.
+  if (item.enRiesgo && item.columna) partes.push(`— SIGUE EN ${item.columna.toUpperCase()}`);
   // `item.conHora` manda: una pieza no tiene hora y ponerle una sería inventarla.
   if (mostrarHora && item.conHora && item.fecha) {
     partes.push(formatInTimeZone(new Date(item.fecha), COSTA_RICA_TZ, "HH:mm"));

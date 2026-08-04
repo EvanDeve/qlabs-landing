@@ -26,6 +26,7 @@ function item(parcial: Partial<AgendaItem> & { fecha: string | null }): AgendaIt
     accion: parcial.accion ?? "Reunión",
     columna: parcial.columna ?? null,
     prioridad: parcial.prioridad ?? null,
+    enRiesgo: parcial.enRiesgo ?? false,
     fecha: parcial.fecha,
   };
 }
@@ -353,5 +354,180 @@ describe("getStaffAgenda", () => {
     );
 
     expect(agenda.proximas.map((i) => i.titulo)).toEqual(["Justo dentro"]);
+  });
+
+  // ---- El aviso de "publica pronto y sigue sin terminar" ----
+  // Lo que separa un aviso útil de una alarma que el equipo aprende a ignorar
+  // es exactamente esta distinción, y no se puede ver mirando la pantalla.
+  it("marca en riesgo el video que publica pronto y sigue en una columna sin terminar", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        content_pieces: [
+          {
+            id: "p1",
+            title: "Reel de brunch",
+            brand_id: null,
+            record_date: null,
+            publish_date: "2026-08-04",
+            priority: "media",
+            content_columns: { name: "Por editar", is_done: false, is_ready: false },
+          },
+        ],
+        calendar_events: [],
+        agency_clients: [],
+      }),
+      "staff-1",
+      AHORA
+    );
+
+    expect(agenda.proximas[0].enRiesgo).toBe(true);
+    expect(agenda.proximas[0].columna).toBe("Por editar");
+  });
+
+  it("NO marca en riesgo el video que ya está hecho, por más que publique mañana", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        content_pieces: [
+          {
+            id: "p1",
+            title: "Reel listo",
+            brand_id: null,
+            record_date: null,
+            publish_date: "2026-08-03",
+            priority: "media",
+            // is_ready: el video está editado y aprobado, solo espera la fecha.
+            content_columns: { name: "Terminado", is_done: false, is_ready: true },
+          },
+        ],
+        calendar_events: [],
+        agency_clients: [],
+      }),
+      "staff-1",
+      AHORA
+    );
+
+    expect(agenda.proximas[0].enRiesgo).toBe(false);
+  });
+
+  // Una fecha ya pasada es el peor caso del aviso, no el más leve: sigue sin
+  // terminar Y ya debía haber salido.
+  it("una publicación vencida y sin terminar sale en riesgo", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        content_pieces: [
+          {
+            id: "p1",
+            title: "Debía salir el viernes",
+            brand_id: null,
+            record_date: null,
+            publish_date: "2026-07-31",
+            priority: "media",
+            content_columns: { name: "Por editar", is_done: false, is_ready: false },
+          },
+        ],
+        calendar_events: [],
+        agency_clients: [],
+      }),
+      "staff-1",
+      AHORA
+    );
+
+    expect(agenda.vencidas[0].enRiesgo).toBe(true);
+  });
+
+  // El complemento: si el video está hecho y solo falta apretar publicar, el
+  // problema es otro y el mensaje no tiene que decir "sin terminar".
+  it("una publicación vencida pero ya hecha NO sale en riesgo", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        content_pieces: [
+          {
+            id: "p1",
+            title: "Listo, falta publicarlo",
+            brand_id: null,
+            record_date: null,
+            publish_date: "2026-07-31",
+            priority: "media",
+            content_columns: { name: "Terminado", is_done: false, is_ready: true },
+          },
+        ],
+        calendar_events: [],
+        agency_clients: [],
+      }),
+      "staff-1",
+      AHORA
+    );
+
+    expect(agenda.vencidas[0].enRiesgo).toBe(false);
+  });
+
+  // La grabación de una pieza comparte columna con su publicación. Si el
+  // cálculo no distinguiera el campo, "grabar el jueves" saldría avisado como
+  // "sin terminar" — que no significa nada: todavía no se grabó.
+  it("la grabación de una pieza nunca sale en riesgo", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        content_pieces: [
+          {
+            id: "p1",
+            title: "Reel",
+            brand_id: null,
+            record_date: "2026-08-03",
+            publish_date: "2026-08-04",
+            priority: "media",
+            content_columns: { name: "Por grabar", is_done: false, is_ready: false },
+          },
+        ],
+        calendar_events: [],
+        agency_clients: [],
+      }),
+      "staff-1",
+      AHORA
+    );
+
+    const grabar = itemsDeAgenda(agenda).find((i) => i.accion === "Grabar");
+    const publicar = itemsDeAgenda(agenda).find((i) => i.accion === "Publicar");
+    expect(grabar?.enRiesgo).toBe(false);
+    expect(publicar?.enRiesgo).toBe(true);
+  });
+
+  // Archivar un Hero tiene que sacarlo del WhatsApp de la mañana: es lo que
+  // impide que un cliente que se fue siga generando avisos para siempre.
+  it("ignora las piezas y los eventos de un Hero archivado", async () => {
+    const agenda = await getStaffAgenda(
+      stubSupabase({
+        content_pieces: [
+          {
+            id: "p1",
+            title: "De un cliente que se fue",
+            brand_id: "h1",
+            record_date: null,
+            publish_date: "2026-08-02",
+            priority: "alta",
+            content_columns: { name: "Por editar", is_done: false, is_ready: false },
+          },
+          {
+            id: "p2",
+            title: "De un cliente activo",
+            brand_id: "h2",
+            record_date: null,
+            publish_date: "2026-08-02",
+            priority: "alta",
+            content_columns: { name: "Por editar", is_done: false, is_ready: false },
+          },
+        ],
+        calendar_events: [
+          { id: "e1", title: "Reunión vieja", type: "reunion", brand_id: "h1", starts_at: "2026-08-02T16:00:00Z" },
+        ],
+        agency_clients: [
+          { id: "h1", name: "Se fue", archived: true },
+          { id: "h2", name: "Zonna", archived: false },
+        ],
+      }),
+      "staff-1",
+      AHORA
+    );
+
+    expect(itemsDeAgenda(agenda).map((i) => i.titulo)).toEqual(["De un cliente activo"]);
   });
 });
