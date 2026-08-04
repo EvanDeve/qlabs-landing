@@ -76,6 +76,38 @@ export async function createHeroAction(
   redirect(`/ugc/admin/heroes/${data.id}`);
 }
 
+/**
+ * Archiva o desarchiva un Hero.
+ *
+ * Es la alternativa a `deleteHeroAction` para el caso normal —el cliente dejó
+ * de serlo—, porque el delete arrastra sus piezas por el cascade de
+ * `content_pieces.brand_id`. Acá no se pierde nada: deja de contar y deja de
+ * aparecer donde se elige un Hero.
+ */
+export async function setHeroArchivedAction(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await supabase
+    .from("agency_clients")
+    .update({ archived: formData.get("archived") === "true" })
+    .eq("id", id);
+
+  // Los mismos cuatro lugares que el delete: el Dashboard cambia de KPIs y de
+  // Pase de servicio, y el Pipeline y el Calendario cambian de selects.
+  revalidatePath("/ugc/admin/heroes");
+  revalidatePath(`/ugc/admin/heroes/${id}`);
+  revalidatePath("/ugc/admin/pipeline");
+  revalidatePath("/ugc/admin/calendario");
+  revalidatePath("/ugc/admin");
+}
+
 export async function deleteHeroAction(id: string) {
   const supabase = await createClient();
   await supabase.from("agency_clients").delete().eq("id", id);

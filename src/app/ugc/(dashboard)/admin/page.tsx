@@ -67,7 +67,18 @@ export default async function AdminDashboardPage() {
   const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
   const staffAvatarById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.avatar_url]));
 
-  const pieces = contentPieces ?? [];
+  // ---- Heroes archivados ----
+  // El filtro se aplica UNA vez acá y no en cada cálculo, porque todo lo de
+  // abajo —KPIs, Pase de servicio, atrasadas, agenda de la semana, carga del
+  // equipo— sale de `pieces` y de `heroesManaged`. Filtrar caso por caso es
+  // cómo un número se queda sin actualizar y contradice a los otros tres.
+  //
+  // brandNameByProfileId se arma con TODOS a propósito (arriba): si alguna
+  // pieza archivada se llegara a mostrar, tiene que decir de qué marca es.
+  const archivedHeroIds = new Set(
+    (agencyClients ?? []).filter((c) => c.archived).map((c) => c.id)
+  );
+  const pieces = (contentPieces ?? []).filter((p) => !archivedHeroIds.has(p.brand_id));
   const columns = contentColumns ?? [];
   const columnById = new Map(columns.map((c) => [c.id, c]));
   // Qué cuenta como publicado y qué como pendiente de aprobación lo declara la
@@ -80,7 +91,7 @@ export default async function AdminDashboardPage() {
   );
   const activePieces = pieces.filter((p) => !doneColumnIds.has(p.column_id));
 
-  const heroesManaged = agencyClients ?? [];
+  const heroesManaged = (agencyClients ?? []).filter((c) => !c.archived);
 
   // ---- Pase de servicio: progreso del mes por Hero ----
   const approvedByHeroId = new Map((calendarMonths ?? []).map((r) => [r.hero_id, r.status === "aprobado"]));
@@ -132,21 +143,34 @@ export default async function AdminDashboardPage() {
   const monthName = now.toLocaleDateString("es-CR", { month: "long" });
   const daysLeft = daysInMonth - dayOfMonth;
 
+  // Los tres cuellos de botella cuentan HEROES, no piezas — y comparten lista
+  // con "Requiere tu atención", donde cada fila SÍ es una pieza y el número de
+  // la derecha es una columna del tablero. Con la misma forma visual, un
+  // "Atrasados vs. ritmo · 1" se leía como "un video atrasado".
+  //
+  // Por eso cada etiqueta empieza con "Heroes" y el contador dice la unidad. Y
+  // el de ritmo lleva además el déficit al lado de cada nombre: es un número
+  // proyectado (meta × día del mes − publicados), no una fecha vencida, así que
+  // sin verlo no hay forma de entender por qué ese Hero está en la lista.
   const bottlenecks = [
     {
-      label: "Cero videos publicados este mes",
+      label: "Heroes sin ningún video este mes",
       color: "var(--risk)",
       heroes: withTarget.filter((s) => s.published === 0),
+      detalle: null,
     },
     {
-      label: "Sin calendario aprobado",
+      label: "Heroes sin cronograma aprobado",
       color: "var(--warn)",
       heroes: heroStats.filter((s) => !s.calendarApproved),
+      detalle: null,
     },
     {
-      label: "Atrasados vs. ritmo",
+      label: "Heroes por debajo del ritmo del mes",
       color: "var(--warn)",
       heroes: withTarget.filter((s) => s.published > 0 && s.deficit > 0),
+      detalle: (s: (typeof heroStats)[number]) =>
+        `${s.hero.name} (${s.published}/${s.target}, va ${s.deficit} por debajo)`,
     },
   ].filter((b) => b.heroes.length > 0);
 
@@ -184,12 +208,16 @@ export default async function AdminDashboardPage() {
     ...pieces
       .filter((p) => p.record_date && diaCR(p.record_date) >= hoyCR && diaCR(p.record_date) <= en7DiasCR)
       .map((p) => ({ date: p.record_date as string, title: p.title, type: "Grabación", brandId: p.brand_id })),
-    ...(calendarEvents ?? []).map((e) => ({
-      date: e.starts_at,
-      title: e.title,
-      type: e.type,
-      brandId: e.brand_id,
-    })),
+    // Los eventos de un Hero archivado tampoco: la agenda de la semana es lo
+    // que hay que hacer, y con un cliente que se fue no hay nada que hacer.
+    ...(calendarEvents ?? [])
+      .filter((e) => !e.brand_id || !archivedHeroIds.has(e.brand_id))
+      .map((e) => ({
+        date: e.starts_at,
+        title: e.title,
+        type: e.type,
+        brandId: e.brand_id,
+      })),
     // Conviven días sueltos (piezas) e instantes (eventos): se ordena por día
     // de CR, nunca restando los instantes.
   ].sort((a, b) => diaCR(a.date).localeCompare(diaCR(b.date)));
@@ -288,9 +316,13 @@ export default async function AdminDashboardPage() {
                 <div className={styles.attnBar} style={{ background: b.color }} />
                 <div className={styles.attnBody}>
                   <div className={styles.attnTitle}>{b.label}</div>
-                  <div className={styles.attnMeta}>{b.heroes.map((s) => s.hero.name).join(", ")}</div>
+                  <div className={styles.attnMeta}>
+                    {b.heroes.map((s) => b.detalle?.(s) ?? s.hero.name).join(", ")}
+                  </div>
                 </div>
-                <span className={styles.tag}>{b.heroes.length}</span>
+                <span className={styles.tag}>
+                  {b.heroes.length} {b.heroes.length === 1 ? "Hero" : "Heroes"}
+                </span>
               </div>
             ))}
             {attentionItems.length > 0 ? (

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { updateHeroProfileAction } from "@/lib/actions/heroes";
+import { updateHeroProfileAction, setHeroArchivedAction } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import HeroLogoField from "@/components/ugc/admin/HeroLogoField";
 import HeroContactsField from "@/components/ugc/admin/HeroContactsField";
@@ -42,6 +42,36 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
       <Link href="/ugc/admin/heroes" className={styles.backBtn}>
         <QosIcon name="chevL" size={14} /> Heroes
       </Link>
+
+      {/* Sin este aviso, el expediente de un Hero archivado se ve idéntico al
+          de uno activo y no se entiende por qué no aparece en el Dashboard. */}
+      {client.archived && (
+        <div
+          className={`${styles.card} ${styles.cardPad}`}
+          style={{
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+            background: "var(--warn-bg)",
+            borderColor: "var(--warn-line)",
+          }}
+        >
+          <QosIcon name="alert" size={16} />
+          <span style={{ fontSize: "13px", fontWeight: 600 }}>
+            Hero archivado — no cuenta en el Dashboard ni en el Pase de servicio, y no aparece al
+            crear piezas. Su trabajo se conserva.
+          </span>
+          <form action={setHeroArchivedAction} style={{ marginLeft: "auto" }}>
+            <input type="hidden" name="id" value={client.id} />
+            <input type="hidden" name="archived" value="false" />
+            <button type="submit" className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`}>
+              Reactivar
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className={styles.dossierHd}>
         <div className={styles.dsrRow}>

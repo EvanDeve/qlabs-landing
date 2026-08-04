@@ -22,9 +22,20 @@ export default async function AdminLayout({
       // Piezas activas = las que NO están en una columna marcada como
       // "publicadas". Se pregunta por la bandera y no por el nombre: el equipo
       // puede renombrar sus columnas.
-      supabase.from("content_pieces").select("id, content_columns!inner(is_done)").eq("content_columns.is_done", false),
-      supabase.from("agency_clients").select("id"),
+      supabase
+        .from("content_pieces")
+        .select("id, brand_id, content_columns!inner(is_done)")
+        .eq("content_columns.is_done", false),
+      supabase.from("agency_clients").select("id, archived"),
     ]);
+
+  // Los dos contadores del menú ignoran a los Heroes archivados: el badge de
+  // Pipeline tiene que coincidir con lo que se ve al abrirlo, y el de Heroes
+  // con la lista de activos. Un badge que cuenta de más es un badge que el
+  // equipo deja de mirar.
+  const archivedHeroIds = new Set((heroes ?? []).filter((h) => h.archived).map((h) => h.id));
+  const heroesActivos = (heroes ?? []).filter((h) => !h.archived);
+  const piezasActivas = (activePieces ?? []).filter((p) => !archivedHeroIds.has(p.brand_id));
 
   // El grupo Sistema es solo de directores: ahí viven los teléfonos del
   // equipo, las conversaciones de WhatsApp y el cerebro del agente. Esto solo
@@ -47,10 +58,10 @@ export default async function AdminLayout({
       label: "Pipeline",
       icon: "columns",
       group: "Operación",
-      count: activePieces?.length ?? 0,
+      count: piezasActivas.length,
     },
     { href: "/ugc/admin/calendario", label: "Calendario", icon: "calendar", group: "Operación" },
-    { href: "/ugc/admin/heroes", label: "Heroes", icon: "users", group: "Operación", count: heroes?.length ?? 0 },
+    { href: "/ugc/admin/heroes", label: "Heroes", icon: "users", group: "Operación", count: heroesActivos.length },
 
     // Misma herramienta que la del creador, sobre el material propio del
     // equipo. No da acceso a las transcripciones de los creadores: la policy
