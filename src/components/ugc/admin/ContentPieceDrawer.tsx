@@ -30,6 +30,12 @@ export default function ContentPieceDrawer({
   // El Hero vive en estado y no solo en el <select> para que el encabezado del
   // drawer diga la marca elegida apenas se cambia, y no la que tenía al abrir.
   const [brandId, setBrandId] = useState(piece.brand_id);
+  // Título y código también en estado, por lo mismo: el encabezado los muestra
+  // arriba y KanbanBoard no reabre el drawer con la pieza nueva al revalidar
+  // (selectedPiece es una copia del momento del clic), así que sin esto el
+  // nombre editado no se vería hasta cerrar y volver a entrar.
+  const [title, setTitle] = useState(piece.title);
+  const [code, setCode] = useState(piece.code ?? "");
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
@@ -77,8 +83,8 @@ export default function ContentPieceDrawer({
       <aside className={styles.drawer} onClick={(e) => e.stopPropagation()}>
         <div className={styles.drawerHd}>
           <div>
-            <span className={styles.sopTag}>{piece.code}</span>
-            <h2 style={{ fontSize: "18px", marginTop: "6px" }}>{piece.title}</h2>
+            {code && <span className={styles.sopTag}>{code}</span>}
+            <h2 style={{ fontSize: "18px", marginTop: "6px" }}>{title}</h2>
             <p style={{ fontSize: "13px", color: "var(--ink-2)" }}>{brandName}</p>
           </div>
           <button type="button" onClick={onClose} className={styles.drawerClose}>
@@ -111,6 +117,35 @@ export default function ContentPieceDrawer({
 
           <form onSubmit={handleSave}>
             <input type="hidden" name="id" value={piece.id} />
+
+            {/* El nombre de la tarjeta se corrige acá: antes quedaba fijo desde
+                que se creaba la pieza —o desde lo que entendió McLovin por
+                WhatsApp— y un título mal escrito solo se arreglaba borrando la
+                pieza y volviéndola a crear. */}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <div className={styles.field} style={{ flex: 1 }}>
+                <label htmlFor="piece-title">Título</label>
+                <input
+                  id="piece-title"
+                  name="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  className={styles.inp}
+                />
+              </div>
+              <div className={styles.field} style={{ width: "120px" }}>
+                <label htmlFor="piece-code">Código</label>
+                <input
+                  id="piece-code"
+                  name="code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="LB-042"
+                  className={styles.inp}
+                />
+              </div>
+            </div>
 
             {/* El Hero se puede corregir después de crear la pieza: antes
                 quedaba fijo y una pieza cargada en la marca equivocada solo se
@@ -209,7 +244,7 @@ export default function ContentPieceDrawer({
               </button>
               <ConfirmDeleteButton
                 action={handleDelete}
-                confirmMessage={`¿Borrar la pieza "${piece.title}"? No se puede deshacer.`}
+                confirmMessage={`¿Borrar la pieza "${title}"? No se puede deshacer.`}
                 className={`${styles.btn} ${styles.btnDanger}`}
               >
                 Borrar pieza

@@ -107,6 +107,11 @@ export async function updateContentPieceAction(formData: FormData) {
   // viejo o recorte de otro origen) se deja el que ya tenía: mandar null acá
   // rompería la pieza, brand_id es NOT NULL.
   const brandId = String(formData.get("brand_id") ?? "").trim() || null;
+  // Mismo criterio que brand_id: title es NOT NULL, así que un formulario que
+  // no mande el campo —o que lo mande vacío— deja el que ya tenía en vez de
+  // borrarle el nombre a la pieza. El código sí puede quedar vacío a propósito.
+  const title = String(formData.get("title") ?? "").trim() || null;
+  const codeRaw = formData.get("code");
   const ownerId = String(formData.get("owner_id") ?? "") || null;
   const priority = String(formData.get("priority") ?? "media") as ContentPriority;
   const platform = String(formData.get("platform") ?? "instagram") as ContentPlatform;
@@ -122,6 +127,8 @@ export async function updateContentPieceAction(formData: FormData) {
     .from("content_pieces")
     .update({
       ...(brandId ? { brand_id: brandId } : {}),
+      ...(title ? { title } : {}),
+      ...(codeRaw !== null ? { code: String(codeRaw).trim() || null } : {}),
       owner_id: ownerId,
       priority,
       platform,
