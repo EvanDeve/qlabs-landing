@@ -10,12 +10,14 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import type { Database } from "@/lib/database.types";
+import type { Database, PipelineSection } from "@/lib/database.types";
 import { updateContentPieceColumnAction } from "@/lib/actions/content-pieces";
 import type { ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import { diaCR, diaCorto } from "@/lib/ugc/calendar";
+import { diaCorto, estadoPublicacion } from "@/lib/ugc/calendar";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
+import StaffAvatar from "./StaffAvatar";
+import PipelineFilters, { type FiltrosPipeline } from "./PipelineFilters";
 import ContentPieceDrawer from "./ContentPieceDrawer";
 import NewContentPieceModal from "./NewContentPieceModal";
 import ContentColumnModal from "./ContentColumnModal";
@@ -25,18 +27,37 @@ type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
 // logoUrl es opcional: NewContentPieceModal usa este mismo tipo solo para
 // llenar un <select> y no necesita el logo.
 export type BrandOption = { id: string; name: string; logoUrl?: string | null };
-export type StaffOption = { id: string; name: string; role: string; color: string };
+// avatarUrl es opcional por la misma razón que logoUrl: los modales que solo
+// llenan un <select> de responsables no necesitan la foto.
+export type StaffOption = {
+  id: string;
+  name: string;
+  role: string;
+  color: string;
+  avatarUrl?: string | null;
+};
 
 export default function KanbanBoard({
   pieces,
   columns,
+  seccion,
   brands,
   staff,
+  filtros,
 }: {
   pieces: ContentPiece[];
+  /** TODAS las columnas, no solo las de la sección abierta. */
   columns: ContentColumn[];
+  /** Pestaña abierta; null = "Todo". */
+  seccion: PipelineSection | null;
   brands: BrandOption[];
   staff: StaffOption[];
+  /**
+   * La barra de filtros la dibuja este componente y no la página, para que
+   * "Nueva pieza"/"Nueva columna" —que necesitan el estado de acá— compartan
+   * fila con las pestañas.
+   */
+  filtros: FiltrosPipeline;
 }) {
   const [localPieces, setLocalPieces] = useState(pieces);
   const [selectedPiece, setSelectedPiece] = useState<ContentPiece | null>(null);
@@ -61,6 +82,15 @@ export default function KanbanBoard({
   const brandById = useMemo(() => new Map(brands.map((b) => [b.id, b])), [brands]);
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
 
+  // Solo se filtra lo que se PINTA. `columns` completo sigue viajando al drawer
+  // y al modal de columna: desde la pestaña de Videos tiene que poder mandarse
+  // una pieza a Guiones, y el modal necesita el total real para saber si esta
+  // es la última columna del tablero o la única marcada como publicadas.
+  const visibleColumns = useMemo(
+    () => (seccion ? columns.filter((c) => c.section === seccion) : columns),
+    [columns, seccion]
+  );
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
@@ -78,42 +108,59 @@ export default function KanbanBoard({
 
   return (
     <div>
-      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
-        <button
-          type="button"
-          onClick={() => setCreatingInColumn(columns[0]?.id ?? null)}
-          disabled={columns.length === 0}
-          className={`${styles.btn} ${styles.btnPrimary}`}
-        >
-          <QosIcon name="plus" size={16} />
-          Nueva pieza
-        </button>
-        <button
-          type="button"
-          onClick={() => setColumnModal("nueva")}
-          className={`${styles.btn} ${styles.btnGhost}`}
-        >
-          <QosIcon name="columns" size={16} />
-          Nueva columna
-        </button>
-      </div>
+      <PipelineFilters
+        brands={brands}
+        staff={staff}
+        seccion={seccion}
+        filtros={filtros}
+        acciones={
+          <>
+            <button
+              type="button"
+              onClick={() => setCreatingInColumn(visibleColumns[0]?.id ?? null)}
+              disabled={visibleColumns.length === 0}
+              className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`}
+            >
+              <QosIcon name="plus" size={14} />
+              Nueva pieza
+            </button>
+            <button
+              type="button"
+              onClick={() => setColumnModal("nueva")}
+              className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+            >
+              <QosIcon name="columns" size={14} />
+              Nueva columna
+            </button>
+          </>
+        }
+      />
 
-      <DndContext id="kanban-board" sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className={styles.kanban}>
-          {columns.map((column) => (
-            <Column
-              key={column.id}
-              column={column}
-              pieces={localPieces.filter((p) => p.column_id === column.id)}
-              brandById={brandById}
-              staffById={staffById}
-              onSelect={setSelectedPiece}
-              onAdd={setCreatingInColumn}
-              onEditColumn={setColumnModal}
-            />
-          ))}
-        </div>
-      </DndContext>
+      {visibleColumns.length === 0 ? (
+        // Pasa si alguien borró todas las columnas de la sección. Sin esto el
+        // tablero queda en blanco y parece que se rompió.
+        <p className={styles.empty}>
+          Esta sección no tiene columnas. Creá una con &ldquo;Nueva columna&rdquo; o mirá el tablero
+          completo en &ldquo;Todo&rdquo;.
+        </p>
+      ) : (
+        <DndContext id="kanban-board" sensors={sensors} onDragEnd={handleDragEnd}>
+          <div className={styles.kanban}>
+            {visibleColumns.map((column) => (
+              <Column
+                key={column.id}
+                column={column}
+                pieces={localPieces.filter((p) => p.column_id === column.id)}
+                brandById={brandById}
+                staffById={staffById}
+                onSelect={setSelectedPiece}
+                onAdd={setCreatingInColumn}
+                onEditColumn={setColumnModal}
+              />
+            ))}
+          </div>
+        </DndContext>
+      )}
 
       {selectedPiece && (
         <ContentPieceDrawer
@@ -212,7 +259,12 @@ function Column({
           <Card
             key={piece.id}
             piece={piece}
-            isDone={column.is_done}
+            // is_ready cuenta igual que is_done: una pieza en "Terminado" ya
+            // está hecha y solo espera la fecha, así que pintarla de ámbar decía
+            // "apurate" sobre algo que no tiene nada pendiente. Es la misma
+            // regla que silencia el aviso de McLovin — si el color y el WhatsApp
+            // no coincidieran, uno de los dos sobra.
+            sinApuro={column.is_done || column.is_ready}
             brand={brandById.get(piece.brand_id)}
             owner={piece.owner_id ? staffById.get(piece.owner_id) : undefined}
             onSelect={onSelect}
@@ -227,26 +279,34 @@ const PRIO_CLASS: Record<string, string> = { alta: "prioAlta", media: "prioMedia
 
 function Card({
   piece,
-  isDone,
+  sinApuro,
   brand,
   owner,
   onSelect,
 }: {
   piece: ContentPiece;
-  isDone: boolean;
+  /**
+   * No hay nada que apurar con esta pieza: su columna la declara publicada
+   * (is_done) o ya hecha esperando la fecha (is_ready). Apaga el semáforo.
+   */
+  sinApuro: boolean;
   brand?: BrandOption;
   owner?: StaffOption;
   onSelect: (piece: ContentPiece) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: piece.id });
-  // Una pieza en una columna de "terminado" ya no está atrasada, por más que
-  // la fecha de publicación haya pasado.
+
+  // El semáforo de la tarjeta: rojo si la fecha pasó, ámbar si publica dentro
+  // de los próximos DIAS_PUBLICA_PRONTO días.
   //
-  // Se compara el DÍA de Costa Rica, no el instante: `new Date(publish_date) <
-  // new Date()` marcaba como atrasada una pieza que vencía HOY, porque el día
-  // suelto se interpreta como medianoche UTC y eso ya pasó desde las 18:00 del
-  // día anterior en CR.
-  const isOverdue = piece.publish_date && diaCR(piece.publish_date) < diaCR(new Date()) && !isDone;
+  // Una pieza sin apuro no se pinta nunca: ya salió o ya está hecha, y no hay
+  // nada que reclamar por más que la fecha haya pasado.
+  //
+  // La comparación de días vive en estadoPublicacion() y compara días de Costa
+  // Rica en texto, no instantes: `new Date(publish_date) < new Date()` marcaba
+  // como atrasada una pieza que vencía HOY, porque el día suelto se interpreta
+  // como medianoche UTC y eso ya pasó desde las 18:00 del día anterior en CR.
+  const estado = piece.publish_date && !sinApuro ? estadoPublicacion(piece.publish_date) : "normal";
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 10 }
@@ -259,7 +319,14 @@ function Card({
       {...attributes}
       onClick={() => onSelect(piece)}
       style={style}
-      className={`${styles.kcard} ${isDragging ? styles.kcardDragging : ""}`}
+      className={[
+        styles.kcard,
+        estado === "vencida" ? styles.kcardLate : "",
+        estado === "pronto" ? styles.kcardSoon : "",
+        isDragging ? styles.kcardDragging : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div className={styles.kcTop}>
         {/* El logo reemplaza al punto de color que había antes: ese punto era
@@ -316,20 +383,27 @@ function Card({
               {diaCorto(piece.record_date)}
             </span>
           )}
-          <span className={`${styles.kcDate} ${isOverdue ? styles.kcDueLate : ""}`} title="Publicación">
+          <span
+            className={[
+              styles.kcDate,
+              estado === "vencida" ? styles.kcDueLate : "",
+              estado === "pronto" ? styles.kcDueSoon : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            title={
+              estado === "vencida"
+                ? "Publicación — la fecha ya pasó"
+                : estado === "pronto"
+                  ? "Publicación — sale en los próximos días"
+                  : "Publicación"
+            }
+          >
             <QosIcon name="clock" size={12} />
             {piece.publish_date ? diaCorto(piece.publish_date) : "—"}
           </span>
         </span>
-        {owner && (
-          <span
-            className={styles.avSm}
-            style={{ background: owner.color, display: "grid", placeItems: "center", color: "#fff", fontWeight: 700 }}
-            title={owner.name}
-          >
-            {owner.name.charAt(0).toUpperCase()}
-          </span>
-        )}
+        {owner && <StaffAvatar name={owner.name} avatarUrl={owner.avatarUrl} color={owner.color} />}
       </div>
     </div>
   );

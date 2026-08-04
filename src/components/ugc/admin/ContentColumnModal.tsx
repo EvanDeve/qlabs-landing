@@ -7,7 +7,12 @@ import {
   deleteContentColumnAction,
   type ColumnState,
 } from "@/lib/actions/content-columns";
-import { COLORES_COLUMNA, type ContentColumn } from "@/lib/ugc/content-columns";
+import {
+  COLORES_COLUMNA,
+  SECCIONES_PIPELINE,
+  SECCION_POR_DEFECTO,
+  type ContentColumn,
+} from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -99,6 +104,26 @@ export default function ContentColumnModal({
             </div>
           </div>
 
+          <div className={styles.field}>
+            <label>Sección</label>
+            <select
+              name="section"
+              defaultValue={column?.section ?? SECCION_POR_DEFECTO}
+              className={styles.selectInp}
+              style={{ width: "100%" }}
+            >
+              {SECCIONES_PIPELINE.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <p style={{ fontSize: "12.5px", color: "var(--ink-2)", marginTop: "4px" }}>
+              En qué pestaña del tablero aparece. Las piezas no se mueven: solo cambia dónde se ve
+              la columna.
+            </p>
+          </div>
+
           <div style={{ display: "flex", gap: "12px" }}>
             <div className={styles.field} style={{ flex: 1, minWidth: 0 }}>
               <label>Código SOP (opcional)</label>
@@ -165,9 +190,19 @@ export default function ContentColumnModal({
               />
               Acá se está esperando una aprobación
             </label>
-            <p style={{ fontSize: "12.5px", color: "var(--ink-2)", marginTop: "4px" }}>
+            <p style={{ fontSize: "12.5px", color: "var(--ink-2)", margin: "4px 0 12px" }}>
               Alimenta el KPI &ldquo;Pend. aprobación&rdquo; y la lista de &ldquo;Requiere tu
               atención&rdquo;.
+            </p>
+
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+              <input type="checkbox" name="is_ready" defaultChecked={column?.is_ready ?? false} />
+              Acá la pieza ya está hecha, solo falta la fecha
+            </label>
+            <p style={{ fontSize: "12.5px", color: "var(--ink-2)", marginTop: "4px" }}>
+              Silencia el aviso de McLovin. Sin esto, un video terminado que publica pasado mañana
+              se avisaría por WhatsApp como si estuviera atrasado. <b>No</b> cuenta como publicado —
+              eso es la casilla de arriba.
             </p>
           </div>
 

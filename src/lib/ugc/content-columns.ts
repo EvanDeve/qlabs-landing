@@ -1,6 +1,47 @@
-import type { Database } from "@/lib/database.types";
+import type { Database, PipelineSection } from "@/lib/database.types";
 
 export type ContentColumn = Database["public"]["Tables"]["content_columns"]["Row"];
+
+/**
+ * Las pestañas del tablero. El orden de este array ES el orden en que se
+ * pintan, y "video" va primero porque es donde el equipo pasa el mes: los
+ * guiones se escriben en una tanda de dos o tres días y después esas columnas
+ * quedan quietas.
+ *
+ * Agregar una sección: sumar el valor al check de la migración
+ * 20260803100000 y una entrada acá. No hay ningún otro lugar que enumere las
+ * secciones.
+ */
+export const SECCIONES_PIPELINE: { id: PipelineSection; label: string }[] = [
+  { id: "video", label: "Videos" },
+  { id: "guion", label: "Guiones" },
+];
+
+/** La sección que abre el tablero cuando la URL no dice otra cosa. */
+export const SECCION_POR_DEFECTO: PipelineSection = "video";
+
+/**
+ * Valida el `?seccion=` de la URL. Devuelve null para "Todo" —que es una vista
+ * real, no la ausencia de filtro— y el default cuando el valor no existe, para
+ * que una URL vieja o mal tipeada no muestre un tablero vacío sin explicación.
+ */
+export function parseSeccion(valor: string | undefined): PipelineSection | null {
+  if (valor === "todo") return null;
+  if (SECCIONES_PIPELINE.some((s) => s.id === valor)) return valor as PipelineSection;
+  return SECCION_POR_DEFECTO;
+}
+
+/**
+ * La sección que viene del formulario de columna. A diferencia de parseSeccion,
+ * acá "todo" NO es válido: es una vista del tablero, no un lugar donde una
+ * columna pueda vivir. Cae al default en vez de fallar porque el check de la
+ * base rechazaría el insert con un error de Postgres que nadie puede leer.
+ */
+export function parseSeccionColumna(valor: unknown): PipelineSection {
+  return SECCIONES_PIPELINE.some((s) => s.id === valor)
+    ? (valor as PipelineSection)
+    : SECCION_POR_DEFECTO;
+}
 
 /**
  * Columnas con las que arranca el pipeline de la agencia. Ya NO son un enum:

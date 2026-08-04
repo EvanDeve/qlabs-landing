@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { parseSeccionColumna } from "@/lib/ugc/content-columns";
 
 export type ColumnState = { error: string } | null;
 
@@ -45,6 +46,8 @@ export async function createContentColumnAction(
     owner_role: String(formData.get("owner_role") ?? "").trim() || null,
     is_done: formData.get("is_done") === "on",
     is_pending_approval: formData.get("is_pending_approval") === "on",
+    is_ready: formData.get("is_ready") === "on",
+    section: parseSeccionColumna(formData.get("section")),
     position: (ultima?.position ?? -1) + 1,
   });
 
@@ -93,6 +96,8 @@ export async function updateContentColumnAction(
       owner_role: String(formData.get("owner_role") ?? "").trim() || null,
       is_done: isDone,
       is_pending_approval: formData.get("is_pending_approval") === "on",
+      is_ready: formData.get("is_ready") === "on",
+      section: parseSeccionColumna(formData.get("section")),
     })
     .eq("id", id);
 
