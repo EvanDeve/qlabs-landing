@@ -35,6 +35,12 @@ export type Conversacion = {
   procedencia: Procedencia;
   /** Nombre de la persona, o el número si es alguien de afuera. */
   titulo: string;
+  /**
+   * Foto del miembro del equipo. Los hilos de afuera van siempre en null: de
+   * un número de WhatsApp no tenemos ninguna foto, y la del perfil de WhatsApp
+   * no llega por webhook.
+   */
+  avatarUrl: string | null;
   /** El número, cuando se sabe. Los del equipo pueden no tenerlo cargado. */
   telefono: string | null;
   mensajes: MensajeChat[];
@@ -68,9 +74,10 @@ export async function getConversaciones(
   // Los nombres del equipo en una sola consulta, no una por hilo.
   const profileIds = [...new Set((equipo ?? []).map((m) => m.profile_id))];
   const { data: perfiles } = profileIds.length
-    ? await supabase.from("profiles").select("id, display_name").in("id", profileIds)
+    ? await supabase.from("profiles").select("id, display_name, avatar_url").in("id", profileIds)
     : { data: [] };
   const nombrePorId = new Map((perfiles ?? []).map((p) => [p.id, p.display_name]));
+  const avatarPorId = new Map((perfiles ?? []).map((p) => [p.id, p.avatar_url]));
 
   // El teléfono del equipo sale de staff_members, que también es director-only.
   // Si la consulta no devuelve nada —porque quien mira no es director— el hilo
@@ -97,6 +104,7 @@ export async function getConversaciones(
       id,
       procedencia: "equipo",
       titulo: nombrePorId.get(m.profile_id) ?? "Sin nombre",
+      avatarUrl: avatarPorId.get(m.profile_id) ?? null,
       telefono: telefonoPorId.get(m.profile_id) ?? null,
       mensajes: [],
       ultimoMensaje: mensaje,
@@ -119,6 +127,7 @@ export async function getConversaciones(
       procedencia: "externo",
       // No hay nombre del otro lado: el número ES la identidad del hilo.
       titulo: m.phone_e164,
+      avatarUrl: null,
       telefono: m.phone_e164,
       mensajes: [],
       ultimoMensaje: mensaje,

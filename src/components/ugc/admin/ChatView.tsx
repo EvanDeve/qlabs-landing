@@ -245,7 +245,14 @@ function Avatar({ conversacion }: { conversacion: Conversacion }) {
       }`}
       aria-hidden
     >
-      {iniciales || "?"}
+      {/* La foto tapa las iniciales, no las reemplaza en el markup: el degradado
+          de fondo sigue debajo y se ve mientras la imagen carga. */}
+      {conversacion.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={conversacion.avatarUrl} alt="" className={styles.avImg} />
+      ) : (
+        iniciales || "?"
+      )}
     </span>
   );
 }

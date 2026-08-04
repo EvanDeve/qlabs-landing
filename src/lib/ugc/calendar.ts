@@ -58,6 +58,36 @@ export function diaCorto(fecha: string | Date): string {
   });
 }
 
+/**
+ * Con cuántos días de anticipación una publicación pasa a "publica pronto".
+ *
+ * Vive acá y no en el tablero porque lo comparten el semáforo de las tarjetas y
+ * el aviso de McLovin: si cada uno tuviera su número, la tarjeta podría estar
+ * en ámbar días antes (o después) de que llegue el WhatsApp y el equipo dejaría
+ * de confiar en los dos.
+ */
+export const DIAS_PUBLICA_PRONTO = 3;
+
+export type EstadoPublicacion = "vencida" | "pronto" | "normal";
+
+/**
+ * El semáforo de una fecha de publicación.
+ *
+ * Compara días de Costa Rica en 'yyyy-MM-dd', igual que todo el resto del
+ * módulo — ver el comentario de diaCR. Hoy cuenta como "pronto": una pieza que
+ * sale hoy y todavía está en edición es justamente el caso que hay que ver.
+ *
+ * NO sabe nada de columnas: que una pieza terminada no se pinte lo decide quien
+ * llama, porque la bandera is_done es del tablero y no de la fecha.
+ */
+export function estadoPublicacion(fecha: string | Date, ahora: Date = new Date()): EstadoPublicacion {
+  const dia = diaCR(fecha);
+  const hoy = diaCR(ahora);
+  if (dia < hoy) return "vencida";
+  if (dia <= diaCR(sumarDias(ahora, DIAS_PUBLICA_PRONTO))) return "pronto";
+  return "normal";
+}
+
 export type CalendarItem = {
   id: string;
   type: CalendarEventType;
@@ -69,6 +99,10 @@ export type CalendarItem = {
   /** Solo los eventos propios lo traen; los derivados de una pieza van en false. */
   createdByAgent: boolean;
   responsibleName: string | null;
+  /** Para pintar la cara del responsable; null cuando no subió foto. */
+  responsibleAvatarUrl: string | null;
+  /** El color de staff_members: es el fondo del avatar cuando no hay foto. */
+  responsibleColor: string | null;
   contentPieceId: string | null;
 };
 

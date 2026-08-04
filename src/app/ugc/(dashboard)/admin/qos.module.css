@@ -388,6 +388,16 @@
   flex: 1;
   min-width: 0;
 }
+/* El bloque de usuario cuando lleva a la pantalla de perfil. Sin esto no hay
+   ninguna señal de que se puede tocar y nadie descubre dónde cambiar su foto. */
+.sbUserLink {
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--t-fast);
+}
+.sbUserLink:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
 .sbSignOut {
   display: grid;
   place-items: center;
@@ -992,6 +1002,44 @@
 /* ============================================================
    PIPELINE / KANBAN
    ============================================================ */
+/* Las dos filas de la barra del tablero. Mismo alto y mismo gap para que se
+   lean como un bloque: la primera dice dónde estoy y qué puedo crear, la
+   segunda qué estoy recortando. */
+.pipeBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+/* Empuja su contenido contra la derecha sin necesitar un margin-left:auto
+   suelto en cada lugar donde se usa. */
+.pipeBarEnd {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pipeTabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+/* "o el día", entre el preset y el selector de fecha. Va en minúscula y en gris
+   para leerse como parte del control y no como una etiqueta de campo. */
+.pipeSep {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.pipeCheck {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
 .pipeToolbar {
   display: flex;
   align-items: center;
@@ -1019,7 +1067,10 @@
   border-radius: var(--r-lg);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 230px);
+  /* El 230 estaba calibrado para una barra de control de TRES filas. Ahora son
+     dos, así que las columnas pueden estirarse otros 25px y mostrar una tarjeta
+     más antes de obligar a scrollear dentro de la columna. */
+  max-height: calc(100vh - 205px);
   transition: var(--t-fast);
 }
 .kcolDropHi {
@@ -1178,6 +1229,45 @@
 }
 .kcDueLate {
   color: var(--risk);
+}
+.kcDueSoon {
+  color: var(--warn);
+}
+
+/* Semáforo de la tarjeta.
+   El color va en una barra a la izquierda y un tinte muy suave de fondo, NO en
+   el fondo saturado: una columna con ocho tarjetas rojas macizas es una mancha
+   donde ya no se lee ningún título. La barra se detecta igual de rápido
+   barriendo la columna con el ojo y deja el texto intacto.
+
+   Cada regla repite el box-shadow completo porque `.kcard:hover` reemplaza la
+   propiedad entera: sin repetirlo, pasar el mouse borraría la barra justo
+   cuando la persona está mirando la tarjeta. */
+.kcardSoon {
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+  box-shadow:
+    inset 3px 0 0 var(--warn),
+    var(--sh-sm);
+}
+.kcardSoon:hover {
+  border-color: var(--warn);
+  box-shadow:
+    inset 3px 0 0 var(--warn),
+    var(--sh-md);
+}
+.kcardLate {
+  border-color: var(--risk-line);
+  background: var(--risk-bg);
+  box-shadow:
+    inset 3px 0 0 var(--risk),
+    var(--sh-sm);
+}
+.kcardLate:hover {
+  border-color: var(--risk);
+  box-shadow:
+    inset 3px 0 0 var(--risk),
+    var(--sh-md);
 }
 
 /* ============================================================
@@ -2240,6 +2330,20 @@
   max-width: none;
 }
 
+/* El Kanban a ancho completo.
+   `.content` centra todo en 1400px con 26px de padding, que es lo correcto para
+   una pantalla de lectura pero no para este tablero: en un monitor de 1650px se
+   perdían ~250px de aire a los lados, y cada columna que no entra es una etapa
+   del flujo que hay que ir a buscar scrolleando.
+   Mismo patrón que .workspace de arriba: la página se marca a sí misma y el
+   layout reacciona, en vez de que el layout tenga que conocer cada ruta.
+   Queda algo de padding lateral —no cero— para que las tarjetas no se peguen
+   al borde de la ventana ni al sidebar. */
+.main:has(.pipeWide) .content {
+  max-width: none;
+  padding: 14px 16px;
+}
+
 .workspace {
   display: flex;
   gap: 0;
@@ -2647,11 +2751,13 @@
 /* ---- Avatares y etiquetas ---- */
 
 .chatAvatar {
+  position: relative; /* base para .avImg cuando la persona tiene foto */
   display: grid;
   place-items: center;
   width: 38px;
   height: 38px;
   border-radius: var(--r-full);
+  overflow: hidden;
   flex-shrink: 0;
   font-size: 12.5px;
   font-weight: 700;

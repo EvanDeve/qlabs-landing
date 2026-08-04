@@ -46,6 +46,14 @@ export type QosNavItem = {
   icon: string;
   group?: string;
   count?: number;
+  /**
+   * No se dibuja en el menú, pero sí cuenta para saber en qué página se está.
+   *
+   * Sin esto, una ruta que no está en navItems cae en el fallback por prefijo y
+   * como "/ugc/admin" es prefijo de TODO, la pantalla de perfil se anunciaría
+   * como "Dashboard" y encima dejaría iluminado el item equivocado.
+   */
+  hidden?: boolean;
 };
 
 export default function QosShell({
@@ -54,6 +62,7 @@ export default function QosShell({
   userName,
   userRole,
   userAvatarUrl = null,
+  profileHref,
   section = "Operación",
   children,
 }: {
@@ -62,6 +71,12 @@ export default function QosShell({
   userName: string;
   userRole: string;
   userAvatarUrl?: string | null;
+  /**
+   * Si viene, el bloque de usuario del pie de la sidebar lleva a la pantalla de
+   * perfil. Es opcional porque no todos los lados del producto tienen una: el
+   * creador edita su perfil desde el marketplace y la marca todavía no tiene.
+   */
+  profileHref?: string;
   section?: string;
   children: React.ReactNode;
 }) {
@@ -83,7 +98,7 @@ export default function QosShell({
     [...navItems].sort((a, b) => b.href.length - a.href.length).find((item) => pathname.startsWith(item.href));
 
   const groups: { group: string | undefined; items: QosNavItem[] }[] = [];
-  for (const item of navItems) {
+  for (const item of navItems.filter((i) => !i.hidden)) {
     const last = groups[groups.length - 1];
     if (last && last.group === item.group) {
       last.items.push(item);
@@ -152,22 +167,37 @@ export default function QosShell({
           </nav>
 
           <div className={styles.sbFoot}>
-            <div className={styles.sbUser}>
-              <div className={styles.av}>
-                {userAvatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={userAvatarUrl} alt="" className={styles.avImg} />
-                ) : (
-                  initials
-                )}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div className={styles.uName} title={userName}>
-                  {userName}
-                </div>
-                <div className={styles.uRole}>{userRole}</div>
-              </div>
-            </div>
+            {/* El bloque es <Link> cuando hay pantalla de perfil y <div> cuando
+                no. La cara propia es el lugar donde uno busca cambiar su foto,
+                así que el afinado va acá y no en un item más del menú. */}
+            {(() => {
+              const contenido = (
+                <>
+                  <div className={styles.av}>
+                    {userAvatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={userAvatarUrl} alt="" className={styles.avImg} />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className={styles.uName} title={userName}>
+                      {userName}
+                    </div>
+                    <div className={styles.uRole}>{userRole}</div>
+                  </div>
+                </>
+              );
+
+              return profileHref ? (
+                <Link href={profileHref} className={`${styles.sbUser} ${styles.sbUserLink}`} title="Mi perfil">
+                  {contenido}
+                </Link>
+              ) : (
+                <div className={styles.sbUser}>{contenido}</div>
+              );
+            })()}
             <form action={signOutAction}>
               <button type="submit" className={styles.sbSignOut} title="Cerrar sesión" aria-label="Cerrar sesión">
                 <QosIcon name="logout" size={16} />

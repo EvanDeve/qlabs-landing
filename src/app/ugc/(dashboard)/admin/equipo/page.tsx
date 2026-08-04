@@ -6,6 +6,7 @@ import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import InviteStaffForm from "@/components/ugc/admin/InviteStaffForm";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import StaffWhatsAppRow from "@/components/ugc/admin/StaffWhatsAppRow";
+import StaffAvatar from "@/components/ugc/admin/StaffAvatar";
 import type { StaffRole } from "@/lib/database.types";
 import styles from "../qos.module.css";
 
@@ -19,7 +20,7 @@ export default async function EquipoPage() {
   const { supabase } = await requireDirector();
 
   const [{ data: adminProfiles }, { data: staffMembers }, { data: waMessages }] = await Promise.all([
-    supabase.from("profiles").select("id, display_name").eq("role", "admin"),
+    supabase.from("profiles").select("id, display_name, avatar_url").eq("role", "admin"),
     supabase.from("staff_members").select("*").order("created_at", { ascending: true }),
     supabase
       .from("wa_messages")
@@ -40,7 +41,15 @@ export default async function EquipoPage() {
         </div>
         {(staffMembers ?? []).map((staff) => (
           <div key={staff.profile_id} className={styles.attnItem} style={{ cursor: "default" }}>
-            <span className={styles.dot} style={{ background: staff.color, width: "10px", height: "10px" }} />
+            {/* El punto de color pasó a ser la cara: acá es donde el director
+                revisa quién es quién, y una foto se reconoce más rápido que un
+                color. El color sigue siendo el fondo de quien no subió foto. */}
+            <StaffAvatar
+              name={profileById.get(staff.profile_id)?.display_name ?? ""}
+              avatarUrl={profileById.get(staff.profile_id)?.avatar_url}
+              color={staff.color}
+              size="md"
+            />
             <div className={styles.attnBody}>
               <div className={styles.attnTitle}>{profileById.get(staff.profile_id)?.display_name ?? "Sin nombre"}</div>
               <div className={styles.attnMeta}>{STAFF_ROLE_LABEL[staff.staff_role]}</div>

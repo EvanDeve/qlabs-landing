@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { toggleCalendarMonthAction } from "@/lib/actions/heroes";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import StaffAvatar from "@/components/ugc/admin/StaffAvatar";
 import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
 import styles from "./qos.module.css";
 
@@ -61,9 +62,10 @@ export default async function AdminDashboardPage() {
 
   const staffIds = (staffMembers ?? []).map((s) => s.profile_id);
   const { data: staffAccountProfiles } = staffIds.length
-    ? await supabase.from("profiles").select("id, display_name").in("id", staffIds)
+    ? await supabase.from("profiles").select("id, display_name, avatar_url").in("id", staffIds)
     : { data: [] };
   const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
+  const staffAvatarById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.avatar_url]));
 
   const pieces = contentPieces ?? [];
   const columns = contentColumns ?? [];
@@ -199,6 +201,7 @@ export default async function AdminDashboardPage() {
       name: staffNameById.get(staff.profile_id) ?? "Sin nombre",
       role: STAFF_ROLE_LABEL[staff.staff_role],
       color: staff.color,
+      avatarUrl: staffAvatarById.get(staff.profile_id) ?? null,
       count,
       overloaded: count > OVERLOAD_THRESHOLD,
     };
@@ -422,9 +425,7 @@ export default async function AdminDashboardPage() {
             {teamLoad.map((t) => (
               <div key={t.profileId} className={styles.loadRow}>
                 <div className={styles.lrName}>
-                  <span className={styles.avSm} style={{ background: t.color, display: "grid", placeItems: "center", color: "#fff", fontWeight: 700 }}>
-                    {t.name.charAt(0).toUpperCase()}
-                  </span>
+                  <StaffAvatar name={t.name} avatarUrl={t.avatarUrl} color={t.color} />
                   {t.name}
                 </div>
                 <div className={styles.loadTrack}>

@@ -7,6 +7,7 @@ import { es } from "date-fns/locale";
 import type { CalendarItem } from "@/lib/ugc/calendar";
 import { CALENDAR_EVENT_TYPE_LABEL, CALENDAR_EVENT_TYPE_DOT, CALENDAR_EVENT_TYPE_BG, horaCR } from "@/lib/ugc/calendar";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
+import StaffAvatar from "./StaffAvatar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CalendarEventModal from "./CalendarEventModal";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -278,6 +279,29 @@ function AgendaColumns({
                           fit="contain"
                         />
                         {item.brandName}
+                      </div>
+                    )}
+                    {/* El responsable venía calculado desde hace rato pero no se
+                        pintaba en ningún lado, así que el calendario no decía de
+                        quién era cada cosa. Va solo en la agenda (semana y día):
+                        en la grilla del mes la celda no tiene lugar. */}
+                    {item.responsibleName && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          marginTop: "5px",
+                          fontSize: "11.5px",
+                          color: "var(--ink-2)",
+                        }}
+                      >
+                        <StaffAvatar
+                          name={item.responsibleName}
+                          avatarUrl={item.responsibleAvatarUrl}
+                          color={item.responsibleColor ?? "var(--b-500)"}
+                        />
+                        {item.responsibleName}
                       </div>
                     )}
                   </button>

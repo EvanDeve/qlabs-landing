@@ -63,7 +63,7 @@ export default async function CalendarioPage({
       // clase de conversión implícita que causó el corrimiento de un día.
       supabase
         .from("content_pieces")
-        .select("id, title, brand_id, publish_date, record_date")
+        .select("id, title, brand_id, owner_id, publish_date, record_date")
         .or(
           `and(publish_date.gte.${gridDays[0]},publish_date.lte.${gridDays[gridDays.length - 1]}),and(record_date.gte.${gridDays[0]},record_date.lte.${gridDays[gridDays.length - 1]})`
         ),
@@ -71,9 +71,11 @@ export default async function CalendarioPage({
 
   const staffIds = (staffMembers ?? []).map((s) => s.profile_id);
   const { data: staffAccountProfiles } = staffIds.length
-    ? await supabase.from("profiles").select("id, display_name").in("id", staffIds)
+    ? await supabase.from("profiles").select("id, display_name, avatar_url").in("id", staffIds)
     : { data: [] };
   const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
+  const staffAvatarById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.avatar_url]));
+  const staffColorById = new Map((staffMembers ?? []).map((s) => [s.profile_id, s.color]));
   const brandNameById = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
   const brandLogoById = new Map((agencyClients ?? []).map((c) => [c.id, c.logo_url]));
 
@@ -90,6 +92,8 @@ export default async function CalendarioPage({
       brandLogoUrl: event.brand_id ? brandLogoById.get(event.brand_id) ?? null : null,
       createdByAgent: event.created_by_agent,
       responsibleName: event.responsible_id ? staffNameById.get(event.responsible_id) ?? null : null,
+      responsibleAvatarUrl: event.responsible_id ? staffAvatarById.get(event.responsible_id) ?? null : null,
+      responsibleColor: event.responsible_id ? staffColorById.get(event.responsible_id) ?? null : null,
       contentPieceId: event.content_piece_id,
     });
   }
@@ -105,7 +109,12 @@ export default async function CalendarioPage({
         brandName: brandNameById.get(piece.brand_id) ?? null,
         brandLogoUrl: brandLogoById.get(piece.brand_id) ?? null,
         createdByAgent: false,
-        responsibleName: null,
+        // Antes iba null fijo: la pieza traía dueño pero el calendario no lo
+        // pedía, así que una publicación no decía de quién era. Ahora sale del
+        // mismo owner_id que pinta la tarjeta del Pipeline.
+        responsibleName: piece.owner_id ? staffNameById.get(piece.owner_id) ?? null : null,
+        responsibleAvatarUrl: piece.owner_id ? staffAvatarById.get(piece.owner_id) ?? null : null,
+        responsibleColor: piece.owner_id ? staffColorById.get(piece.owner_id) ?? null : null,
         contentPieceId: piece.id,
       });
     }
@@ -119,7 +128,9 @@ export default async function CalendarioPage({
         brandName: brandNameById.get(piece.brand_id) ?? null,
         brandLogoUrl: brandLogoById.get(piece.brand_id) ?? null,
         createdByAgent: false,
-        responsibleName: null,
+        responsibleName: piece.owner_id ? staffNameById.get(piece.owner_id) ?? null : null,
+        responsibleAvatarUrl: piece.owner_id ? staffAvatarById.get(piece.owner_id) ?? null : null,
+        responsibleColor: piece.owner_id ? staffColorById.get(piece.owner_id) ?? null : null,
         contentPieceId: piece.id,
       });
     }

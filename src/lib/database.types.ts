@@ -47,6 +47,8 @@ export type ContentPlatform = "instagram" | "tiktok" | "reels";
 // Nota: el tablero del creador NO tiene enum de etapas. Sus columnas son filas
 // de `creator_task_columns` para que cada creador arme las suyas — un enum de
 // Postgres no se puede extender en runtime. Ver 20260727100000.
+/** Pestaña del tablero. Ver la migración 20260803100000. */
+export type PipelineSection = "guion" | "video";
 export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega" | "guion";
 export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";
@@ -524,6 +526,8 @@ export interface Database {
           contacts: HeroContact[];
           client_since: string | null;
           monthly_target: number | null;
+          /** Fuera de servicio: ver la migración 20260803110000. */
+          archived: boolean;
           created_at: string;
         };
         Insert: {
@@ -538,6 +542,7 @@ export interface Database {
           contacts?: HeroContact[];
           client_since?: string | null;
           monthly_target?: number | null;
+          archived?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["agency_clients"]["Insert"]>;
@@ -553,6 +558,9 @@ export interface Database {
           owner_role: string | null;
           is_done: boolean;
           is_pending_approval: boolean;
+          /** La pieza ya está hecha y solo espera la fecha. Migración 20260803120000. */
+          is_ready: boolean;
+          section: PipelineSection;
           created_at: string;
         };
         Insert: {
@@ -564,6 +572,8 @@ export interface Database {
           owner_role?: string | null;
           is_done?: boolean;
           is_pending_approval?: boolean;
+          is_ready?: boolean;
+          section?: PipelineSection;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["content_columns"]["Insert"]>;

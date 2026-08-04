@@ -57,6 +57,11 @@ export default async function AdminLayout({
     // filtra por `creator_id = auth.uid()` para todos por igual.
     { href: "/ugc/admin/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
 
+    // No va en el menú: se entra tocando la propia cara en el pie de la
+    // sidebar. Está en la lista para que el título de la barra diga "Mi perfil"
+    // y no herede "Dashboard" por prefijo.
+    { href: "/ugc/admin/perfil", label: "Mi perfil", icon: "users", group: "Herramientas", hidden: true },
+
     // Los grupos del sidebar se cortan por orden del array: todo lo de
     // "Sistema" va junto y al final, o aparecería un segundo encabezado
     // "Sistema" más abajo.
@@ -85,6 +90,7 @@ export default async function AdminLayout({
       notifications={notifications ?? []}
       userName={profile?.display_name ?? "Sin nombre"}
       userAvatarUrl={profile?.avatar_url ?? null}
+      profileHref="/ugc/admin/perfil"
       userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
     >
       {children}
