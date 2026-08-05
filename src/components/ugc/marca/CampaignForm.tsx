@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ugc/Toaster";
+import DesglosePago from "@/components/ugc/DesglosePago";
 import { createCampaignAction, type CampaignActionState } from "@/lib/actions/campaigns";
 import { DELIVERABLE_TYPES, FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import {
@@ -32,6 +33,9 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
   const [qty, setQty] = useState<Record<string, number>>(() =>
     Object.fromEntries(DELIVERABLE_TYPES.map((t) => [t, 0]))
   );
+  // El presupuesto es el único campo de texto controlado: alimenta el
+  // desglose que se dibuja debajo mientras se escribe.
+  const [presupuesto, setPresupuesto] = useState("");
   const [restaurado, setRestaurado] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | null>(null);
 
@@ -69,6 +73,9 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
       }
       const tipo = name.startsWith("qty_") ? name.slice(4) : null;
       if (tipo) cantidades[tipo] = Number(value) || 0;
+      // Controlado: si solo se escribiera el DOM, el próximo render lo pisaría
+      // con el estado vacío y el monto recuperado se borraría solo.
+      if (name === "budget_amount") setPresupuesto(value);
     }
     setQty((prev) => ({ ...prev, ...cantidades }));
     setRestaurado(true);
@@ -165,15 +172,27 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
       />
 
       <div className="grid grid-cols-2 gap-3">
-        <Field
-          label="Presupuesto (₡)"
-          name="budget_amount"
-          type="number"
-          placeholder="150000"
-          required
-        />
+        <label className="flex flex-col gap-1.5 text-left">
+          <span className="text-xs font-bold text-ink">Presupuesto (₡)</span>
+          <input
+            name="budget_amount"
+            type="number"
+            required
+            value={presupuesto}
+            onChange={(e) => setPresupuesto(e.target.value)}
+            placeholder="150000"
+            className="rounded-lg border border-black/10 bg-lavender px-4 py-3 text-sm outline-none focus:border-violet"
+          />
+        </label>
         <Field label="Plazo (días)" name="deadline_days" type="number" placeholder="15" />
       </div>
+
+      {/* El reparto se ve mientras se decide el monto, que es cuando importa:
+          después de publicar, enterarse de cuánto le llega al creador ya no
+          cambia nada. Es el mismo bloque que ve el creador en la promo. */}
+      {Number(presupuesto) > 0 && (
+        <DesglosePago budgetAmount={Number(presupuesto)} audiencia="marca" />
+      )}
 
       <Field
         label="Audiencia objetivo"

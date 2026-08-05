@@ -5,7 +5,7 @@ import ApplyForm from "@/components/ugc/creador/ApplyForm";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
-import { creatorPayout } from "@/lib/ugc/payout";
+import DesglosePago from "@/components/ugc/DesglosePago";
 import { hasUsageRights, usageRightsChips } from "@/lib/ugc/usage-rights";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
@@ -49,7 +49,6 @@ export default async function PromoDetailPage({
   const deliverables = Array.isArray(campaign.deliverables)
     ? (campaign.deliverables as { type: string; qty: number }[])
     : [];
-  const payout = creatorPayout(campaign.budget_amount);
   const usageChips = usageRightsChips(campaign);
   const brandName = brand?.brand_name ?? "Marca";
   const igHandle = brand?.instagram_handle?.replace(/^@/, "");
@@ -77,10 +76,6 @@ export default async function PromoDetailPage({
           </p>
 
           <div className={styles.promoFacts}>
-            <div className={styles.promoFact}>
-              <div className={styles.promoFactLabel}>Lo que cobrás</div>
-              <div className={styles.promoFactValue}>₡{payout.toLocaleString("es-CR")}</div>
-            </div>
             {campaign.deadline_days && (
               <div className={styles.promoFact}>
                 <div className={styles.promoFactLabel}>Plazo</div>
@@ -95,6 +90,20 @@ export default async function PromoDetailPage({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* El desglose reemplaza al dato suelto "Lo que cobrás": ese número
+              solo, sin decir de dónde salía, era el que hacía pensar que la
+              marca había puesto otra cosa o que había un cobro escondido. */}
+          <div style={{ marginTop: "16px" }}>
+            <DesglosePago budgetAmount={campaign.budget_amount} audiencia="creador" />
+            <p style={{ marginTop: "8px", fontSize: "12px", color: "var(--ink-3)" }}>
+              La comisión es cómo se sostiene UGC·CRC. Está en los{" "}
+              <Link href="/legal/terminos#pagos" className={styles.linkMore} target="_blank">
+                Términos
+              </Link>
+              .
+            </p>
           </div>
 
           {campaign.compensation_details && (

@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import UgcTabs from "@/components/ugc/marca/UgcTabs";
+import ChecklistVerificacion from "@/components/ugc/ChecklistVerificacion";
+import { pasosVerificacionMarca } from "@/lib/ugc/verificacion";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,8 @@ export default async function MarcaUgcPanelPage() {
       .select("id, title, status, budget_amount, created_at")
       .eq("brand_id", user!.id)
       .order("created_at", { ascending: false }),
-    supabase.from("brand_profiles").select("verified").eq("profile_id", user!.id).maybeSingle(),
+    // Se piden los campos que mira la checklist, no solo `verified`.
+    supabase.from("brand_profiles").select("*").eq("profile_id", user!.id).maybeSingle(),
   ]);
 
   const campaignIds = (campaigns ?? []).map((c) => c.id);
@@ -94,6 +97,9 @@ export default async function MarcaUgcPanelPage() {
             Todavía no podés publicar campañas — guardalas como borrador y las publicás apenas te
             verifiquemos.
           </p>
+          <ChecklistVerificacion
+            pasos={pasosVerificacionMarca(brandProfile, (campaigns ?? []).length)}
+          />
         </div>
       )}
 

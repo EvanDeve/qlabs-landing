@@ -89,7 +89,7 @@ export default async function MisAplicacionesPage() {
                     <div style={{ fontWeight: 800, color: "var(--ink)" }}>{campaign?.title ?? "Campaña"}</div>
                     {campaign && (
                       <div style={{ marginTop: "4px", fontSize: "13px", color: "var(--ink-3)" }}>
-                        ₡{creatorPayout(campaign.budget_amount).toLocaleString("es-CR")}
+                        ₡{creatorPayout(campaign.budget_amount).toLocaleString("es-CR")} neto
                         {campaign.deadline_days && ` · ${campaign.deadline_days} días para entregar`}
                       </div>
                     )}

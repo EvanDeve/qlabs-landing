@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import BrandProfileEditForm from "@/components/ugc/marca/BrandProfileEditForm";
+import ChecklistVerificacion from "@/components/ugc/ChecklistVerificacion";
+import { pasosVerificacionMarca } from "@/lib/ugc/verificacion";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -10,11 +12,16 @@ export default async function MarcaPerfilPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: brandProfile } = await supabase
-    .from("brand_profiles")
-    .select("*")
-    .eq("profile_id", user!.id)
-    .single();
+  // La cuenta de campañas alimenta el último paso de la checklist: dejar una
+  // lista como borrador es trabajo útil que se puede adelantar sin estar
+  // verificado, y de paso le muestra al equipo qué tipo de campaña va a correr.
+  const [{ data: brandProfile }, { count: campaignCount }] = await Promise.all([
+    supabase.from("brand_profiles").select("*").eq("profile_id", user!.id).single(),
+    supabase
+      .from("campaigns")
+      .select("id", { count: "exact", head: true })
+      .eq("brand_id", user!.id),
+  ]);
 
   return (
     <div style={{ maxWidth: "920px" }}>
@@ -61,9 +68,9 @@ export default async function MarcaPerfilPage() {
           <b style={{ color: "var(--warn)" }}>Tu negocio está en revisión.</b>
           <p style={{ marginTop: "4px", fontSize: "13.5px", color: "var(--ink-2)" }}>
             Verificamos cada negocio antes de que publique, para que los creadores sepan con quién
-            trabajan. Mientras tanto podés dejar tus campañas listas como borrador. Completar este
-            perfil (logo, zona y descripción) acelera la revisión.
+            trabajan. Cuanto más completo esté este perfil, más rápido podemos revisarlo.
           </p>
+          <ChecklistVerificacion pasos={pasosVerificacionMarca(brandProfile, campaignCount ?? 0)} />
         </div>
       )}
 

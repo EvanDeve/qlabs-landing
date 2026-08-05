@@ -101,8 +101,12 @@ export default function CreadorFeedGrid({
               <p className={styles.promoBrief}>{campaign.brief}</p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", fontSize: "12.5px", color: "var(--ink-3)" }}>
-                <span style={{ fontWeight: 700, color: "var(--ink)" }}>
-                  ₡{creatorPayout(campaign.budget_amount).toLocaleString("es-CR")}
+                {/* "neto" al lado del monto: en la tarjeta no cabe el desglose
+                    entero, pero el número pelado es el que hacía dudar. El
+                    detalle de la promo sí muestra las tres cifras. */}
+                <span style={{ fontWeight: 700, color: "var(--ink)" }} title="Ya con la comisión de Q Labs descontada">
+                  ₡{creatorPayout(campaign.budget_amount).toLocaleString("es-CR")}{" "}
+                  <span style={{ fontWeight: 600, color: "var(--ink-3)" }}>neto</span>
                 </span>
                 {campaign.deadline_days && <span>· {campaign.deadline_days} días</span>}
                 {campaign.target_audience && <span>· {campaign.target_audience}</span>}

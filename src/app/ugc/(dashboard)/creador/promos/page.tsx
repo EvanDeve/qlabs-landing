@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import CreadorFeedGrid from "@/components/ugc/creador/CreadorFeedGrid";
+import ChecklistVerificacion from "@/components/ugc/ChecklistVerificacion";
+import { pasosVerificacionCreador } from "@/lib/ugc/verificacion";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -10,14 +12,27 @@ export default async function CreadorFeedPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: campaigns }, { data: myApplications }, { data: creatorProfile }] = await Promise.all([
+  const [
+    { data: campaigns },
+    { data: myApplications },
+    { data: creatorProfile },
+    { data: profile },
+    { count: bookCount },
+  ] = await Promise.all([
     supabase
       .from("campaigns")
       .select("*")
       .eq("status", "published")
       .order("published_at", { ascending: false }),
     supabase.from("applications").select("*").eq("creator_id", user!.id),
-    supabase.from("creator_profiles").select("verified").eq("profile_id", user!.id).single(),
+    supabase.from("creator_profiles").select("*").eq("profile_id", user!.id).single(),
+    // Solo para la checklist de "qué falta para verificarte": si el perfil ya
+    // está verificado, el aviso no se dibuja y estos datos no se usan.
+    supabase.from("profiles").select("bio, city, avatar_url").eq("id", user!.id).maybeSingle(),
+    supabase
+      .from("portfolio_items")
+      .select("id", { count: "exact", head: true })
+      .eq("creator_id", user!.id),
   ]);
 
   const brandIds = [...new Set((campaigns ?? []).map((c) => c.brand_id))];
@@ -70,6 +85,9 @@ export default async function CreadorFeedPage() {
           <p style={{ marginTop: "4px", fontSize: "13.5px", color: "var(--ink-2)" }}>
             Todavía no podés aplicar a promos — mientras esperás, aprovechá para completar tu book y tu perfil.
           </p>
+          <ChecklistVerificacion
+            pasos={pasosVerificacionCreador(creatorProfile, profile, bookCount ?? 0)}
+          />
         </div>
       )}
 

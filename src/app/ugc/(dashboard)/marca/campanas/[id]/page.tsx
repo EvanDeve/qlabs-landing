@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PublishCampaignButton from "@/components/ugc/marca/PublishCampaignButton";
+import DesglosePago from "@/components/ugc/DesglosePago";
 import ApplicantDecisionButtons from "@/components/ugc/marca/ApplicantDecisionButtons";
 import ApproveWithRatingForm from "@/components/ugc/marca/ApproveWithRatingForm";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
@@ -106,6 +107,12 @@ export default async function CampaignDetailPage({
             <div style={{ marginTop: "4px", fontSize: "13.5px", fontWeight: 600, color: "var(--ink-2)" }}>
               ₡{campaign.budget_amount.toLocaleString("es-CR")}
               {campaign.deadline_days ? ` · ${campaign.deadline_days} días` : ""}
+            </div>
+            {/* La marca ve exactamente el mismo desglose que el creador. Que
+                los dos lados lean las mismas tres cifras es el punto: antes
+                cada uno veía un número distinto y ninguno sabía por qué. */}
+            <div style={{ marginTop: "12px", maxWidth: "340px" }}>
+              <DesglosePago budgetAmount={campaign.budget_amount} audiencia="marca" />
             </div>
           </div>
           {campaign.status === "draft" && <PublishCampaignButton campaignId={campaign.id} />}
