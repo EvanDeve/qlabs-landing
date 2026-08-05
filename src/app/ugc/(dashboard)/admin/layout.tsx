@@ -68,6 +68,10 @@ export default async function AdminLayout({
     // filtra por `creator_id = auth.uid()` para todos por igual.
     { href: "/ugc/admin/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
 
+    // El otro extremo del mismo flujo: Transcripción convierte video en guion,
+    // Voz convierte ese guion en audio. Van juntas porque se usan seguidas.
+    { href: "/ugc/admin/voz", label: "Voz", icon: "play", group: "Herramientas" },
+
     // No va en el menú: se entra tocando la propia cara en el pie de la
     // sidebar. Está en la lista para que el título de la barra diga "Mi perfil"
     // y no herede "Dashboard" por prefijo.

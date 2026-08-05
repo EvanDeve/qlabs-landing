@@ -3,8 +3,10 @@ import { formatInTimeZone } from "date-fns-tz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { getMiembrosNotificables, enviarRecordatorioDiario } from "@/lib/ugc/recordatorios";
+import { limpiarVoiceoversVencidos } from "@/lib/ugc/limpieza";
 
-// Le manda el resumen del día a los miembros del equipo.
+// Le manda el resumen del día a los miembros del equipo, y de paso hace la
+// limpieza diaria.
 //
 // Dos modos, según cada cuánto lo pueda disparar el plan:
 //   - por defecto: solo a quienes tienen `reminder_hour` == la hora actual en
@@ -54,5 +56,13 @@ export async function GET(request: Request) {
     else resumen.fallidos++;
   }
 
-  return NextResponse.json(resumen);
+  // La limpieza viaja colgada de este cron y no en una entrada propia de
+  // `vercel.json` por una razón concreta: el plan Hobby da 2 slots de cron, uno
+  // ya está usado por esto mismo, y gastar el último en borrar archivos sería
+  // quedarse sin margen para algo que de verdad lo necesite. Va después de los
+  // recordatorios —lo importante primero— y su fallo no afecta al resumen.
+  // Si algún día aparecen más barridos, se mueven todos a un /api/qos/cron.
+  const limpieza = await limpiarVoiceoversVencidos(admin);
+
+  return NextResponse.json({ ...resumen, limpieza });
 }

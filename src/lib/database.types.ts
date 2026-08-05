@@ -756,6 +756,42 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hero_calendar_months"]["Insert"]>;
         Relationships: [];
       };
+      voiceovers: {
+        Row: {
+          id: string;
+          owner_id: string;
+          text: string;
+          voice_id: string;
+          voice_name: string;
+          model_id: string;
+          char_count: number;
+          source_transcription_id: string | null;
+          storage_path: string | null;
+          bytes: number | null;
+          status: "processing" | "done" | "error";
+          error_message: string | null;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          text: string;
+          voice_id: string;
+          voice_name: string;
+          model_id?: string;
+          char_count: number;
+          source_transcription_id?: string | null;
+          storage_path?: string | null;
+          bytes?: number | null;
+          status?: "processing" | "done" | "error";
+          error_message?: string | null;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["voiceovers"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       creator_public_profiles: {
