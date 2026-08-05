@@ -14,7 +14,6 @@ import type { PasoVerificacion } from "@/components/ugc/ChecklistVerificacion";
  */
 export function pasosVerificacionMarca(
   brand: {
-    brand_name?: string | null;
     industry?: string | null;
     description?: string | null;
     location?: string | null;
@@ -23,9 +22,12 @@ export function pasosVerificacionMarca(
   campaignCount: number
 ): PasoVerificacion[] {
   return [
+    // El nombre NO es un paso: es obligatorio para registrarse, así que
+    // siempre está y solo servía para que la lista arrancara en 0/5 con algo
+    // que ya se había hecho. Un check que nunca puede faltar no informa.
     {
-      texto: "Nombre e industria del negocio",
-      hecho: Boolean(brand?.brand_name?.trim() && brand?.industry?.trim()),
+      texto: "Decí a qué se dedica tu negocio",
+      hecho: Boolean(brand?.industry?.trim()),
       href: "/ugc/marca/perfil",
     },
     {
