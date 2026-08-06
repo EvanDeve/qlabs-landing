@@ -69,3 +69,29 @@ export async function limpiarVoiceoversVencidos(
   console.log(`[limpieza] voiceovers vencidos: ${vencidos.length} filas, ${archivos} audios`);
   return { filas: vencidos.length, archivos };
 }
+
+/**
+ * Barrido diario de Loyalty Loop: vence lo que se pasó de fecha, libera el
+ * stock que quedó tomado sin usarse, y avisa a quien le vence un cupón en 3
+ * días.
+ *
+ * Todo el trabajo pasa adentro de `expirar_loyalty()`, en una sola llamada a la
+ * base. Traerse las filas para decidir acá cuáles vencieron sería el mismo
+ * cálculo hecho dos veces —una en la pantalla del creador y otra acá— con la
+ * chance de que no coincidan.
+ *
+ * Va colgado de este cron y no en una entrada propia de `vercel.json` por lo
+ * mismo que la limpieza de audios: el plan Hobby da 2 slots y uno ya está en
+ * uso. Su fallo no debe arrastrar al resto del cron.
+ */
+export async function expirarLoyalty(admin: SupabaseClient<Database>) {
+  const { data, error } = await admin.rpc("expirar_loyalty");
+
+  if (error) {
+    console.error("[limpieza] falló el barrido de Loyalty Loop:", error.message);
+    return null;
+  }
+
+  console.log("[limpieza] loyalty:", JSON.stringify(data));
+  return data;
+}

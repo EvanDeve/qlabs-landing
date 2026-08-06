@@ -88,6 +88,7 @@ export default async function AdminLayout({
           { href: "/ugc/admin/mclovin", label: "McLovin", icon: "sparkle", group: "Sistema" },
           { href: "/ugc/admin/chat", label: "Chat", icon: "chat", group: "Sistema" },
           { href: "/ugc/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
+          { href: "/ugc/admin/loyalty", label: "Loyalty Loop", icon: "book", group: "Sistema" },
           {
             href: "/ugc/admin/disputas",
             label: "Disputas",

@@ -37,6 +37,7 @@ export default async function MarcaLayout({
       group: "Marketing",
       count: pendingCount ?? 0,
     },
+    { href: "/ugc/marca/loyalty", label: "Loyalty Loop", icon: "sparkle", group: "Marketing" },
     { href: "/ugc/marca/perfil", label: "Perfil del negocio", icon: "briefcase", group: "Cuenta" },
   ];
 

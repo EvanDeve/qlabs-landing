@@ -146,6 +146,19 @@ export async function approveApplicationAction(formData: FormData) {
   const ratingRaw = Number(formData.get("rating"));
   const rating = ratingRaw >= 1 && ratingRaw <= 5 ? ratingRaw : null;
 
+  // El nivel ANTES de aprobar. Aprobar dispara los triggers de Loyalty Loop
+  // (+150 por la entrega, +50 por el 5★), así que es el único momento en que se
+  // puede saber si esta aprobación fue la que hizo subir de nivel: después ya
+  // no hay con qué comparar, porque el nivel no se guarda en ningún lado.
+  const { data: creadorPrevio } = await supabase
+    .from("applications")
+    .select("creator_id")
+    .eq("id", applicationId)
+    .single();
+  const { data: nivelAntes } = creadorPrevio
+    ? await supabase.rpc("creator_level", { p_creator: creadorPrevio.creator_id })
+    : { data: null };
+
   const { data: application } = await supabase
     .from("applications")
     .update({ status: "approved", rating })
@@ -171,6 +184,33 @@ export async function approveApplicationAction(formData: FormData) {
         `Tu entrega en "${campaign.title}" fue aprobada`,
         `<p>La marca aprobó tu entrega en <strong>${campaign.title}</strong>. ¡Buen trabajo!</p>
          <p>La agencia va a coordinar tu pago de ₡${creatorPayout(campaign.budget_amount).toLocaleString("es-CR")}.</p>`
+      );
+    }
+
+    // Subir de nivel es lo único de Loyalty Loop que sale por correo. El resto
+    // —cupón por vencer, canje confirmado— vive en la campana: son cosas que se
+    // miran cuando uno entra, no que justifiquen interrumpir a alguien.
+    const { data: nivelDespues } = await supabase.rpc("creator_level", {
+      p_creator: application.creator_id,
+    });
+
+    if (
+      creatorEmail &&
+      typeof nivelAntes === "number" &&
+      typeof nivelDespues === "number" &&
+      nivelDespues > nivelAntes
+    ) {
+      const { data: nivel } = await supabase
+        .from("level_thresholds")
+        .select("name")
+        .eq("level", nivelDespues)
+        .maybeSingle();
+
+      await sendTransactionalEmail(
+        creatorEmail,
+        `Subiste a ${nivel?.name ?? "un nuevo nivel"} en UGC·CRC`,
+        `<p>Con esta entrega subiste a <strong>${nivel?.name ?? "un nuevo nivel"}</strong>.</p>
+         <p>Entrá a Recompensas para ver qué cupones se te desbloquearon.</p>`
       );
     }
   }

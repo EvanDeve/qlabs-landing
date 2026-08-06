@@ -5,6 +5,11 @@ import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
+// Ojo: "Loyalty Loop" salió de esta lista y pasó a ser un sistema activo, con
+// su propia tarjeta abajo. Acá describía otra cosa —retención de los clientes
+// del restaurante: cumpleaños y referidos— y dejarlo con el mismo nombre que el
+// módulo de cupones para creadores era prometer dos productos distintos con una
+// sola etiqueta.
 const OTHER_SYSTEMS = [
   {
     icon: "columns",
@@ -15,11 +20,6 @@ const OTHER_SYSTEMS = [
     icon: "doc",
     name: "La Vitrina",
     desc: "Página web que convierte, SEO local, Google Business y contenido para redes.",
-  },
-  {
-    icon: "users",
-    name: "Loyalty Loop",
-    desc: "Seguimiento, cumpleaños y referidos para que los clientes regresen.",
   },
   {
     icon: "sparkle",
@@ -41,16 +41,21 @@ export default async function MarcaResumenPage() {
 
   const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user!.id).single();
 
-  const { data: campaigns } = await supabase
-    .from("campaigns")
-    .select("id, status")
-    .eq("brand_id", user!.id);
+  const [{ data: campaigns }, { count: cuponesActivosRaw }] = await Promise.all([
+    supabase.from("campaigns").select("id, status").eq("brand_id", user!.id),
+    supabase
+      .from("coupons")
+      .select("id", { count: "exact", head: true })
+      .eq("brand_id", user!.id)
+      .eq("status", "publicado"),
+  ]);
 
   const campaignIds = (campaigns ?? []).map((c) => c.id);
   const { data: applications } = campaignIds.length
     ? await supabase.from("applications").select("id, status, created_at").in("campaign_id", campaignIds)
     : { data: [] };
 
+  const cuponesActivos = cuponesActivosRaw ?? 0;
   const activeCampaigns = (campaigns ?? []).filter(
     (c) => c.status === "published" || c.status === "in_progress"
   ).length;
@@ -116,6 +121,30 @@ export default async function MarcaResumenPage() {
               {activeCampaigns} campaña{activeCampaigns === 1 ? "" : "s"} activa{activeCampaigns === 1 ? "" : "s"}
             </span>
             <Link href="/ugc/marca/ugc" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}>
+              Abrir panel
+            </Link>
+          </div>
+        </div>
+
+        <div className={`${styles.card} ${styles.cardPad} ${styles.sysCard}`}>
+          <div className={styles.sysHead}>
+            <span className={styles.sysIc}>
+              <QosIcon name="sparkle" size={19} />
+            </span>
+            <h3>Loyalty Loop</h3>
+            <span className={`${styles.riskPill} ${styles.riskOk}`} style={{ marginLeft: "auto" }}>
+              Activo
+            </span>
+          </div>
+          <p className={styles.sysDesc}>
+            Cupones por nivel para creadores verificados: reclaman, llegan a tu local y vos validás
+            el canje con un escaneo.
+          </p>
+          <div className={styles.sysFoot}>
+            <span style={{ fontSize: "12px", color: "var(--ink-3)" }}>
+              {cuponesActivos} cupón{cuponesActivos === 1 ? "" : "es"} activo{cuponesActivos === 1 ? "" : "s"}
+            </span>
+            <Link href="/ugc/marca/loyalty" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}>
               Abrir panel
             </Link>
           </div>

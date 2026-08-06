@@ -69,6 +69,31 @@ function describe(notification: Notification): { text: string; href: string } {
     };
   }
 
+  if (notification.type === "level_up") {
+    const nivel = String(payload.level_name ?? "un nuevo nivel");
+    const emoji = payload.level === 3 ? " 🥇" : payload.level === 4 ? " 💎" : payload.level === 2 ? " 🥈" : "";
+    return {
+      text: `Subiste a ${nivel}${emoji} — mirá qué cupones se te desbloquearon`,
+      href: "/ugc/creador/recompensas",
+    };
+  }
+
+  if (notification.type === "coupon_expiring") {
+    const titulo = String(payload.coupon_title ?? "Tu cupón");
+    return {
+      text: `"${titulo}" vence en 3 días — usalo antes de que se libere el lugar`,
+      href: "/ugc/creador/recompensas",
+    };
+  }
+
+  if (notification.type === "coupon_redeemed") {
+    const titulo = String(payload.coupon_title ?? "un cupón");
+    return {
+      text: `Nuevo canje en tu local: "${titulo}"`,
+      href: "/ugc/marca/loyalty",
+    };
+  }
+
   return { text: notification.type, href: "#" };
 }
 

@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import CuponesGrid, { type CuponVista } from "@/components/ugc/creador/CuponesGrid";
+import RecompensasTabs from "@/components/ugc/creador/RecompensasTabs";
+import type { CuponVista } from "@/components/ugc/creador/CuponesGrid";
+import type { MiCupon } from "@/components/ugc/creador/MisCupones";
 import {
   estadoDeNivel,
   labelAccion,
   qrSvg,
+  diasRestantes,
   fechaCorta,
   fechaLarga,
   EMOJI_NIVEL,
@@ -31,7 +34,10 @@ export default async function RecompensasPage() {
         .select("*")
         .in("status", ["publicado", "agotado"])
         .order("created_at", { ascending: false }),
-      supabase.from("redemptions").select("id, coupon_id, code, status, expires_at"),
+      supabase
+        .from("redemptions")
+        .select("id, coupon_id, code, status, expires_at, redeemed_at")
+        .order("claimed_at", { ascending: false }),
       supabase
         .from("points_events")
         .select("id, action, points, reference_type, reference_id, created_at")
@@ -43,8 +49,19 @@ export default async function RecompensasPage() {
   const escaleraDb: Nivel[] = umbrales ?? [{ level: 1, name: "Bronce", min_points: 0 }];
   const { escalera, actual, siguiente, faltan, progreso } = estadoDeNivel(totalPoints, escaleraDb);
 
+  // Los cupones que reclamé, aunque la marca los haya pausado o ya hayan
+  // vencido: si no, "Mis cupones" mostraría filas sin título. La policy
+  // `coupons_select_reclamados_por_mi` es la que lo permite.
+  const misCouponIds = [...new Set((reclamos ?? []).map((r) => r.coupon_id))];
+  const { data: cuponesReclamados } = misCouponIds.length
+    ? await supabase.from("coupons").select("*").in("id", misCouponIds)
+    : { data: [] };
+
   const listaCupones = cupones ?? [];
-  const brandIds = [...new Set(listaCupones.map((c) => c.brand_id))];
+  const porId = new Map([...listaCupones, ...(cuponesReclamados ?? [])].map((c) => [c.id, c]));
+  const todos = [...porId.values()];
+
+  const brandIds = [...new Set(todos.map((c) => c.brand_id))];
   const couponIds = listaCupones.map((c) => c.id);
 
   // Dos consultas sueltas en vez de un embed anidado: `coupons.brand_id` apunta
@@ -67,11 +84,12 @@ export default async function RecompensasPage() {
 
   // Los QR de lo ya reclamado se generan acá, en el servidor: al recargar la
   // página el código tiene que seguir estando, no depender de haber visto el
-  // modal en su momento.
+  // modal en su momento. Solo para los vigentes — dibujar el QR de un cupón
+  // vencido es invitar a que alguien lo intente igual.
   const qrPorCodigo = new Map(
     await Promise.all(
       (reclamos ?? [])
-        .filter((r) => r.status === "reclamado")
+        .filter((r) => r.status === "reclamado" && new Date(r.expires_at) >= new Date())
         .map(async (r) => [r.code, await qrSvg(r.code)] as const)
     )
   );
@@ -117,6 +135,34 @@ export default async function RecompensasPage() {
             qr: qrPorCodigo.get(reclamo.code) ?? null,
           }
         : null,
+    };
+  });
+
+  // "Mis cupones": el estado no sale solo de `status`. Un reclamo puede seguir
+  // en 'reclamado' y estar vencido de hecho, porque el barrido diario todavía
+  // no pasó. Para el creador eso es un cupón vencido, no uno por usar.
+  const mios: MiCupon[] = (reclamos ?? []).map((r) => {
+    const cupon = porId.get(r.coupon_id);
+    const dias = diasRestantes(r.expires_at);
+    const estado =
+      r.status === "canjeado"
+        ? ("canjeado" as const)
+        : r.status === "expirado" || dias < 0
+          ? ("vencido" as const)
+          : ("por_usar" as const);
+
+    return {
+      id: r.id,
+      code: r.code,
+      title: cupon?.title ?? "Cupón",
+      brandName: marcaDe.get(cupon?.brand_id ?? "")?.brand_name ?? "Marca de UGC·CRC",
+      type: cupon?.type ?? "producto",
+      estado,
+      venceTexto: fechaLarga(r.expires_at),
+      diasRestantes: dias,
+      canjeadoTexto: r.redeemed_at ? fechaLarga(r.redeemed_at) : null,
+      eventLocation: cupon?.event_location ?? null,
+      qr: qrPorCodigo.get(r.code) ?? null,
     };
   });
 
@@ -236,14 +282,7 @@ export default async function RecompensasPage() {
         </span>
       </div>
 
-      {vistas.length === 0 ? (
-        <div className={`${styles.card} ${styles.empty}`}>
-          Todavía no hay cupones publicados. Cuando una marca publique el primero, te va a aparecer
-          acá.
-        </div>
-      ) : (
-        <CuponesGrid cupones={vistas} nivelActual={actual?.level ?? 1} />
-      )}
+      <RecompensasTabs disponibles={vistas} mios={mios} nivelActual={actual?.level ?? 1} />
 
       {/* ── Historial ── */}
       <div className={styles.sectionHead} style={{ marginTop: "34px" }}>

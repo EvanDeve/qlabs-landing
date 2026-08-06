@@ -3,7 +3,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { getMiembrosNotificables, enviarRecordatorioDiario } from "@/lib/ugc/recordatorios";
-import { limpiarVoiceoversVencidos } from "@/lib/ugc/limpieza";
+import { limpiarVoiceoversVencidos, expirarLoyalty } from "@/lib/ugc/limpieza";
 
 // Le manda el resumen del día a los miembros del equipo, y de paso hace la
 // limpieza diaria.
@@ -64,5 +64,10 @@ export async function GET(request: Request) {
   // Si algún día aparecen más barridos, se mueven todos a un /api/qos/cron.
   const limpieza = await limpiarVoiceoversVencidos(admin);
 
-  return NextResponse.json({ ...resumen, limpieza });
+  // Mismo criterio que la limpieza: viaja colgado de este cron porque el plan
+  // Hobby da 2 slots y uno ya está tomado. Vence los reclamos que se pasaron de
+  // fecha, libera el stock que tomaron sin usar, y avisa 3 días antes.
+  const loyalty = await expirarLoyalty(admin);
+
+  return NextResponse.json({ ...resumen, limpieza, loyalty });
 }

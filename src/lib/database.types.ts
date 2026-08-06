@@ -1055,6 +1055,22 @@ export interface Database {
         Args: { p_coupon: string };
         Returns: Database["public"]["Tables"]["redemptions"]["Row"];
       };
+      // Solo la marca dueña del cupón, o admin. Un código ajeno responde
+      // "no encontramos ese código", igual que uno inventado.
+      redeem_coupon: {
+        Args: { p_code: string };
+        Returns: Database["public"]["Tables"]["redemptions"]["Row"];
+      };
+      // Barrido diario. Solo service_role: lo corre el cron, no el usuario.
+      expirar_loyalty: {
+        Args: Record<string, never>;
+        Returns: {
+          reclamos_expirados: number;
+          cupones_vencidos: number;
+          cupones_reabiertos: number;
+          avisos_por_vencer: number;
+        };
+      };
     };
     Enums: {
       app_role: AppRole;
