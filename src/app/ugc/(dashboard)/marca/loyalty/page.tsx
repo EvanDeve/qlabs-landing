@@ -28,7 +28,7 @@ export default async function LoyaltyMarcaPage() {
     ids.length
       ? supabase
           .from("redemptions")
-          .select("id, coupon_id, creator_id, code, status, claimed_at, redeemed_at")
+          .select("id, coupon_id, creator_id, code, status, claimed_at, redeemed_at, expires_at")
           .in("coupon_id", ids)
           .order("claimed_at", { ascending: false })
       : Promise.resolve({ data: [] as never[] }),
@@ -56,8 +56,23 @@ export default async function LoyaltyMarcaPage() {
   const nivelDe = new Map(niveles);
   const tituloDe = new Map(lista.map((c) => [c.id, c.title]));
 
+  // Cuántos creadores tienen un código vivo de cada cupón, y hasta cuándo.
+  // Pausar NO invalida lo ya reclamado —y está bien, esa gente ya se
+  // comprometió— pero la marca tenía que enterarse por las malas: pausaba
+  // creyendo que cortaba el grifo y seguía llegando gente al local.
+  const vigentesDe = new Map<string, { cuantos: number; ultimo: string }>();
+  for (const r of reclamos ?? []) {
+    if (r.status !== "reclamado") continue;
+    const previo = vigentesDe.get(r.coupon_id);
+    vigentesDe.set(r.coupon_id, {
+      cuantos: (previo?.cuantos ?? 0) + 1,
+      ultimo: !previo || r.expires_at > previo.ultimo ? r.expires_at : previo.ultimo,
+    });
+  }
+
   const cuponesVista: CuponMarca[] = lista.map((c) => {
     const stock = stockDe.get(c.id);
+    const vigentes = vigentesDe.get(c.id);
     return {
       id: c.id,
       title: c.title,
@@ -86,6 +101,8 @@ export default async function LoyaltyMarcaPage() {
       eventDateInput: c.event_date
         ? new Date(c.event_date).toLocaleDateString("en-CA", { timeZone: "America/Costa_Rica" })
         : null,
+      reclamosVigentes: vigentes?.cuantos ?? 0,
+      ultimoVence: vigentes ? fechaLarga(vigentes.ultimo) : null,
     };
   });
 

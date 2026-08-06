@@ -51,6 +51,7 @@ export default function CuponesGrid({
   // grilla, así que sin esto no se sabría en qué tarjeta mostrar el error ni
   // qué cupón nombrar en el modal.
   const [ultimo, setUltimo] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState<string | null>(null);
   const [manual, setManual] = useState<ModalQR | null>(null);
   const [descartado, setDescartado] = useState<string | null>(null);
 
@@ -251,17 +252,52 @@ export default function CuponesGrid({
                   <button type="button" disabled className={`${styles.btn} ${styles.btnGhost}`}>
                     Agotado
                   </button>
+                ) : confirmando === c.id ? (
+                  /* Reclamar es irreversible: un canje por creador por cupón, sin
+                     deshacer. Un toque accidental en el celular quemaba la única
+                     oportunidad de esa persona y le descontaba stock a la marca.
+                     La confirmación es in-page y no `window.confirm`, que congela
+                     la automatización del navegador. */
+                  <div
+                    style={{
+                      border: "1px solid var(--line)",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      background: "var(--surface-3)",
+                    }}
+                  >
+                    <p style={{ fontSize: "12.5px", color: "var(--ink-2)", marginBottom: "10px" }}>
+                      Vas a reclamar <b>{c.title}</b>. Tenés <b>{c.vigencia.toLowerCase()}</b> para
+                      usarlo y <b>no se puede reclamar de nuevo</b>.
+                    </p>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <form action={formAction} onSubmit={() => setUltimo(c.id)}>
+                        <input type="hidden" name="coupon_id" value={c.id} />
+                        <button
+                          type="submit"
+                          disabled={pending}
+                          className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
+                        >
+                          {pending && ultimo === c.id ? "Reclamando…" : "Sí, reclamarlo"}
+                        </button>
+                      </form>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmando(null)}
+                        className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <form action={formAction} onSubmit={() => setUltimo(c.id)}>
-                    <input type="hidden" name="coupon_id" value={c.id} />
-                    <button
-                      type="submit"
-                      disabled={pending}
-                      className={`${styles.btn} ${styles.btnPrimary}`}
-                    >
-                      {pending && ultimo === c.id ? "Reclamando…" : "Reclamar cupón"}
-                    </button>
-                  </form>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmando(c.id)}
+                    className={`${styles.btn} ${styles.btnPrimary}`}
+                  >
+                    Reclamar cupón
+                  </button>
                 )}
               </div>
             </div>

@@ -30,6 +30,8 @@ export type CuponMarca = {
   claimValidityDays: number | null;
   /** YYYY-MM-DD para el <input type="date"> de la edición. */
   eventDateInput: string | null;
+  reclamosVigentes: number;
+  ultimoVence: string | null;
 };
 
 export type CanjeFila = {
@@ -207,6 +209,18 @@ function ListaCupones({
                 }}
               >
                 🎟️ {LEYENDA_EVENTO}
+              </div>
+            )}
+
+            {c.reclamosVigentes > 0 && (
+              <div style={{ fontSize: "11.5px", color: "var(--ink-2)", lineHeight: 1.45 }}>
+                {c.reclamosVigentes === 1
+                  ? "1 creador ya tiene su código"
+                  : `${c.reclamosVigentes} creadores ya tienen su código`}
+                {c.ultimoVence && ` — el último vence el ${c.ultimoVence}.`}{" "}
+                {c.status === "pausado"
+                  ? "Pausarlo no se los quita: pueden ir al local igual."
+                  : "Si lo pausás, siguen valiendo."}
               </div>
             )}
 

@@ -58,7 +58,14 @@ export default function MisCupones({ cupones }: { cupones: MiCupon[] }) {
   return (
     <>
       {SECCIONES.map((seccion) => {
-        const items = cupones.filter((c) => c.estado === seccion.estado);
+        // "Para usar" se ordena por vencimiento y no por fecha de reclamo: lo
+        // único que importa en esa pestaña es qué se me vence primero. Las
+        // otras dos secciones son historial, ahí manda lo más reciente.
+        const items = cupones
+          .filter((c) => c.estado === seccion.estado)
+          .sort((a, b) =>
+            seccion.estado === "por_usar" ? a.diasRestantes - b.diasRestantes : 0
+          );
         // Las secciones vacías solo se muestran si es la única forma de
         // explicar que existen; si el creador ya tiene cupones en otra, una
         // tarjeta de "no tenés canjeados" no aporta.

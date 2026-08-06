@@ -45,6 +45,14 @@ export default async function RecompensasPage() {
         .limit(25),
     ]);
 
+  // Las reglas se leen de la base y NO se hardcodean acá: el día que se ajuste
+  // la economía con un UPDATE, esta tabla tiene que cambiar sola o pasa a
+  // mentir. El total de eventos es para no cortar la lista en silencio.
+  const [{ data: reglas }, { count: totalEventos }] = await Promise.all([
+    supabase.from("point_rules").select("*").eq("active", true).order("points", { ascending: false }),
+    supabase.from("points_events").select("id", { count: "exact", head: true }),
+  ]);
+
   const totalPoints = puntos?.total_points ?? 0;
   const escaleraDb: Nivel[] = umbrales ?? [{ level: 1, name: "Bronce", min_points: 0 }];
   const { escalera, actual, siguiente, faltan, progreso } = estadoDeNivel(totalPoints, escaleraDb);
@@ -137,6 +145,16 @@ export default async function RecompensasPage() {
           }
         : null,
     };
+  });
+
+  // El feed pone adelante lo que se puede reclamar hoy. Los bloqueados por
+  // nivel quedan en el medio a propósito —son el motivo para seguir
+  // entregando— y los agotados van al fondo, que es donde estorban menos.
+  const nivelActualNum = actual?.level ?? 1;
+  vistas.sort((a, b) => {
+    const orden = (c: CuponVista) =>
+      c.reclamo ? 1 : c.stockAvailable <= 0 ? 3 : nivelActualNum >= c.minLevel ? 0 : 2;
+    return orden(a) - orden(b);
   });
 
   // "Mis cupones": el estado no sale solo de `status`. Un reclamo puede seguir
@@ -286,11 +304,55 @@ export default async function RecompensasPage() {
 
       <RecompensasTabs disponibles={vistas} mios={mios} nivelActual={actual?.level ?? 1} />
 
+      {/* ── Cómo se ganan puntos ── */}
+      <div className={styles.sectionHead} style={{ marginTop: "34px" }}>
+        <h2 className={styles.sectionHeadBig}>Cómo se ganan puntos</h2>
+        <span style={{ fontSize: "12.5px", color: "var(--ink-3)" }}>
+          El peso está en el trabajo entregado, no en moverse
+        </span>
+      </div>
+      <div className={`${styles.card} ${styles.cardPad}`}>
+        <table className={styles.acctTable}>
+          <thead>
+            <tr>
+              <th>Acción</th>
+              <th style={{ textAlign: "right" }}>Puntos</th>
+              <th>Límite</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(reglas ?? []).map((r) => (
+              <tr key={r.action}>
+                <td>
+                  <b>{labelAccion(r.action)}</b>
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <b style={{ color: "var(--ok)" }}>+{r.points}</b>
+                </td>
+                <td style={{ color: "var(--ink-2)" }}>
+                  {r.once_only
+                    ? "Una sola vez"
+                    : r.monthly_cap
+                      ? `Hasta ${r.monthly_cap} por mes`
+                      : "Sin límite"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p style={{ fontSize: "12px", color: "var(--ink-3)", marginTop: "12px" }}>
+          Los límites mensuales existen para que el nivel refleje trabajo entregado. Lo que pase del
+          tope sigue contando para tu book, pero no suma puntos ese mes.
+        </p>
+      </div>
+
       {/* ── Historial ── */}
       <div className={styles.sectionHead} style={{ marginTop: "34px" }}>
         <h2 className={styles.sectionHeadBig}>Historial de puntos</h2>
         <span style={{ fontSize: "12.5px", color: "var(--ink-3)" }}>
-          Cada punto queda registrado — nada se edita a mano
+          {(totalEventos ?? 0) > 25
+            ? `Mostrando los últimos 25 de ${totalEventos}`
+            : "Cada punto queda registrado — nada se edita a mano"}
         </span>
       </div>
 

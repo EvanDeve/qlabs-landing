@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { CouponStatus, CouponType, Database } from "@/lib/database.types";
+import { COUPON_IMAGE_BUCKET, rutaDeImagen } from "@/lib/ugc/coupon-images";
 
 export type CuponState = { error: string } | { ok: string } | null;
 
@@ -124,7 +125,7 @@ export async function editarCuponAction(
 
   const { data: actual } = await supabase
     .from("coupons")
-    .select("id, type, status, event_date, brand_id")
+    .select("id, type, status, event_date, brand_id, image_url")
     .eq("id", id)
     .eq("brand_id", user.id)
     .maybeSingle();
@@ -203,6 +204,16 @@ export async function editarCuponAction(
     return { error: "No se pudo guardar el cambio. Intentá de nuevo." };
   }
 
+  // La foto anterior se borra DESPUÉS de guardar, y solo si el guardado salió
+  // bien: al revés, un error dejaría el cupón apuntando a un archivo que ya no
+  // está. El 1 GB de Storage es el primer techo del proyecto, así que cada
+  // imagen reemplazada que quede colgada es deuda que después nadie encuentra.
+  const anterior = rutaDeImagen(actual.image_url);
+  const cambioLaFoto = quitarImagen || (imageUrl && imageUrl !== actual.image_url);
+  if (anterior && cambioLaFoto) {
+    await supabase.storage.from(COUPON_IMAGE_BUCKET).remove([anterior]);
+  }
+
   revalidatePath("/ugc/marca/loyalty");
   revalidatePath("/ugc/creador/recompensas");
   return { ok: "Cupón actualizado." };
@@ -240,7 +251,23 @@ export async function borrarCuponAction(formData: FormData) {
   const id = String(formData.get("coupon_id") ?? "");
   if (!id) return;
 
-  await supabase.from("coupons").delete().eq("id", id).eq("brand_id", user.id);
+  // Se lee la imagen antes de borrar la fila: después ya no hay de dónde sacar
+  // la ruta, y el archivo queda ocupando Storage para siempre sin que nada lo
+  // referencie.
+  const { data: cupon } = await supabase
+    .from("coupons")
+    .select("image_url")
+    .eq("id", id)
+    .eq("brand_id", user.id)
+    .maybeSingle();
+
+  const { error } = await supabase.from("coupons").delete().eq("id", id).eq("brand_id", user.id);
+
+  const ruta = rutaDeImagen(cupon?.image_url);
+  if (!error && ruta) {
+    await supabase.storage.from(COUPON_IMAGE_BUCKET).remove([ruta]);
+  }
+
   revalidatePath("/ugc/marca/loyalty");
 }
 

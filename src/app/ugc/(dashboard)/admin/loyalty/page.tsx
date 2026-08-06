@@ -29,6 +29,10 @@ export default async function AdminLoyaltyPage() {
       .limit(60),
   ]);
 
+  const { count: totalReclamos } = await supabase
+    .from("redemptions")
+    .select("id", { count: "exact", head: true });
+
   const escalera: Nivel[] = umbrales ?? [{ level: 1, name: "Bronce", min_points: 0 }];
   const lista = eventos ?? [];
   const canjes = reclamos ?? [];
@@ -200,7 +204,9 @@ export default async function AdminLoyaltyPage() {
 
       <div className={styles.sectionHead} style={{ marginTop: "30px" }}>
         <h2 className={styles.sectionHeadBig}>Registro global de canjes</h2>
-        <span style={{ fontSize: "12.5px", color: "var(--ink-3)" }}>Últimos 60 reclamos</span>
+        <span style={{ fontSize: "12.5px", color: "var(--ink-3)" }}>
+          {(totalReclamos ?? 0) > 60 ? `Mostrando los últimos 60 de ${totalReclamos}` : "Todos los reclamos"}
+        </span>
       </div>
       <div className={`${styles.card} ${styles.cardPad}`}>
         {canjes.length === 0 ? (
