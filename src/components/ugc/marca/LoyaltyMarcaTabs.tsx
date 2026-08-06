@@ -65,11 +65,13 @@ export default function LoyaltyMarcaTabs({
   canjes,
   niveles,
   verificada,
+  nombreMarca,
 }: {
   cupones: CuponMarca[];
   canjes: CanjeFila[];
   niveles: { level: number; name: string }[];
   verificada: boolean;
+  nombreMarca: string;
 }) {
   const [tab, setTab] = useState<Tab>("cupones");
 
@@ -103,7 +105,7 @@ export default function LoyaltyMarcaTabs({
           <CuponForm niveles={niveles} verificada={verificada} />
         </div>
       )}
-      {tab === "validar" && <Validador />}
+      {tab === "validar" && <Validador nombreMarca={nombreMarca} />}
       {tab === "canjes" && <TablaCanjes canjes={canjes} />}
     </div>
   );
@@ -292,7 +294,7 @@ function ListaCupones({
   );
 }
 
-function Validador() {
+function Validador({ nombreMarca }: { nombreMarca: string }) {
   const [busqueda, buscarAction, buscando] = useActionState<BusquedaState, FormData>(
     buscarCodigoAction,
     null
@@ -335,9 +337,12 @@ function Validador() {
           className={styles.card}
           style={{ marginTop: "16px", padding: "14px", borderColor: "var(--risk)" }}
         >
-          <b style={{ color: "var(--risk)" }}>No encontramos ese código.</b>
+          <b style={{ color: "var(--risk)" }}>
+            No encontramos ese código entre los cupones de {nombreMarca}.
+          </b>
           <p style={{ fontSize: "12.5px", color: "var(--ink-2)", marginTop: "4px" }}>
-            Verificá que esté bien digitado o pedile al creador que muestre el QR de nuevo.
+            Puede estar mal digitado, o ser de <b>otro negocio</b>: cada cuenta solo valida los
+            cupones que publicó. Si el cupón es de otro local tuyo, entrá con esa cuenta.
           </p>
         </div>
       )}

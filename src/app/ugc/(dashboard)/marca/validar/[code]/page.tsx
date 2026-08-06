@@ -21,7 +21,16 @@ export default async function ValidarCodigoPage({
 }) {
   const { code } = await params;
   const supabase = await createClient();
-  const reclamo = await buscarReclamoPorCodigo(supabase, decodeURIComponent(code));
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [reclamo, { data: marca }] = await Promise.all([
+    buscarReclamoPorCodigo(supabase, decodeURIComponent(code)),
+    supabase.from("brand_profiles").select("brand_name").eq("profile_id", user!.id).maybeSingle(),
+  ]);
+
+  const nombreMarca = marca?.brand_name ?? "tu negocio";
 
   return (
     <div style={{ maxWidth: "520px" }}>
@@ -34,10 +43,13 @@ export default async function ValidarCodigoPage({
 
       {!reclamo ? (
         <div className={`${styles.card} ${styles.cardPad}`} style={{ borderColor: "var(--risk)" }}>
-          <b style={{ color: "var(--risk)" }}>No encontramos ese código.</b>
+          <b style={{ color: "var(--risk)" }}>
+            No encontramos ese código entre los cupones de {nombreMarca}.
+          </b>
           <p style={{ fontSize: "13px", color: "var(--ink-2)", marginTop: "6px" }}>
-            Puede que esté mal digitado, que sea de otro negocio, o que el QR se haya escaneado mal.
-            Pedile al creador que lo muestre de nuevo.
+            Cada cuenta valida únicamente los cupones que publicó. Si este cupón es de{" "}
+            <b>otro de tus negocios</b>, entrá con esa cuenta y volvé a escanear. Si es de este,
+            revisá que el código esté bien digitado.
           </p>
           <Link
             href="/ugc/marca/loyalty"
