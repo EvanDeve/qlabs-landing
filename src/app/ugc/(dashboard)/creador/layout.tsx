@@ -10,20 +10,43 @@ import { displayHandle } from "@/lib/ugc/handles";
 // "Mi trabajo" es lo propio de todos los días, "Herramientas" lo que usa para
 // producir, "Marketplace" lo que lo conecta con marcas, y "Mi cuenta" lo que
 // las marcas ven de él.
+// `bottom` marca los cuatro que salen a la barra inferior en móvil: lo del día a
+// día. El resto queda detrás de "Más", que abre este mismo menú.
 const NAV_ITEMS: QosNavItem[] = [
-  { href: "/ugc/creador", label: "Resumen", icon: "grid", group: "Mi trabajo" },
-  { href: "/ugc/creador/pipeline", label: "Mi pipeline", icon: "columns", group: "Mi trabajo" },
+  { href: "/ugc/creador", label: "Resumen", icon: "grid", group: "Mi trabajo", bottom: true },
+  {
+    href: "/ugc/creador/pipeline",
+    label: "Mi pipeline",
+    icon: "columns",
+    group: "Mi trabajo",
+    bottom: true,
+    shortLabel: "Pipeline",
+  },
 
   { href: "/ugc/creador/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
 
-  { href: "/ugc/creador/promos", label: "Feed de promos", icon: "megaphone", group: "Marketplace" },
+  {
+    href: "/ugc/creador/promos",
+    label: "Feed de promos",
+    icon: "megaphone",
+    group: "Marketplace",
+    bottom: true,
+    shortLabel: "Promos",
+  },
   { href: "/ugc/creador/aplicaciones", label: "Mis aplicaciones", icon: "clock", group: "Marketplace" },
   // Va en Marketplace y no en "Mi cuenta": los cupones los ponen las marcas de
   // la plataforma, así que es lo mismo que el feed de promos — otra forma de
   // que una marca lo busque.
   { href: "/ugc/creador/recompensas", label: "Recompensas", icon: "sparkle", group: "Marketplace" },
 
-  { href: "/ugc/creador/book", label: "Mi book", icon: "book", group: "Mi cuenta" },
+  {
+    href: "/ugc/creador/book",
+    label: "Mi book",
+    icon: "book",
+    group: "Mi cuenta",
+    bottom: true,
+    shortLabel: "Book",
+  },
   { href: "/ugc/creador/perfil", label: "Perfil", icon: "users", group: "Mi cuenta" },
 ];
 

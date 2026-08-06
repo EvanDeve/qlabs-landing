@@ -9,6 +9,10 @@ import { LANGUAGE_OPTIONS, languageLabel } from "@/lib/ugc/languages";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 import ImageCropModal from "@/components/ugc/ImageCropModal";
 import { useToast } from "@/components/ugc/Toaster";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+// Los botones de esta pantalla eran los únicos del panel hechos con clases
+// sueltas de Tailwind (`rounded-pill`): convivían dos lenguajes de botón en el
+// mismo producto. Van al mismo sistema `.btn` que usa el resto (radio 11px).
 
 type Skill = { name: string; level: number };
 type PastBrand = { category: string; brand_name: string };
@@ -131,14 +135,17 @@ export default function CreatorProfileEditForm({
                   if (file) setCropping(file);
                 }}
               />
+              {/* `btnSoft` y no `btnGhost` para que sea el mismo botón que
+                  "Cambiar logo" en el perfil de la marca: es la misma acción en
+                  la pantalla gemela. */}
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="rounded-pill border border-line px-4 py-2 text-sm font-bold text-ink transition hover:border-violet hover:text-violet"
+                className={`${styles.btn} ${styles.btnSoft}`}
               >
                 {avatarPreview ? "Cambiar foto" : "Subir foto"}
               </button>
-              <p className="mt-1.5 text-xs text-ink-soft">JPG o PNG, hasta 5 MB.</p>
+              <p className={styles.fieldHint}>JPG o PNG, hasta 5 MB.</p>
             </div>
           </div>
 
@@ -216,6 +223,8 @@ export default function CreatorProfileEditForm({
 
           <div className="mt-4 flex flex-col gap-1.5">
             <span className="text-xs font-bold text-ink">Idiomas</span>
+            {/* Mismo componente que los filtros del feed de promos y de
+                recompensas, en vez de un pill propio de esta pantalla. */}
             <div className="flex flex-wrap gap-2">
               {LANGUAGE_OPTIONS.map((lang) => {
                 const on = languages.includes(lang.code);
@@ -225,11 +234,7 @@ export default function CreatorProfileEditForm({
                     type="button"
                     onClick={() => toggleLanguage(lang.code)}
                     aria-pressed={on}
-                    className={`rounded-pill border px-4 py-1.5 text-sm font-bold transition ${
-                      on
-                        ? "border-violet bg-lavender text-violet-deep"
-                        : "border-line bg-white text-ink-soft hover:border-ink"
-                    }`}
+                    className={`${styles.subtab} ${on ? styles.subtabOn : ""}`}
                   >
                     {lang.label}
                   </button>
@@ -283,7 +288,7 @@ export default function CreatorProfileEditForm({
                 <button
                   type="button"
                   onClick={() => setSkills((prev) => prev.filter((_, idx) => idx !== i))}
-                  className="shrink-0 text-sm font-bold text-coral"
+                  className={`shrink-0 ${styles.btn} ${styles.btnGhostDanger} ${styles.btnSm}`}
                 >
                   Quitar
                 </button>
@@ -292,7 +297,7 @@ export default function CreatorProfileEditForm({
             <button
               type="button"
               onClick={() => setSkills((prev) => [...prev, { name: "", level: 3 }])}
-              className="self-start rounded-pill border border-line px-4 py-2 text-sm font-bold text-ink-soft transition hover:border-ink"
+              className={`self-start ${styles.btn} ${styles.btnGhost}`}
             >
               + Agregar habilidad
             </button>
@@ -338,7 +343,7 @@ export default function CreatorProfileEditForm({
                 <button
                   type="button"
                   onClick={() => setPastBrands((prev) => prev.filter((_, idx) => idx !== i))}
-                  className="shrink-0 self-end text-sm font-bold text-coral sm:self-auto"
+                  className={`shrink-0 self-end sm:self-auto ${styles.btn} ${styles.btnGhostDanger} ${styles.btnSm}`}
                 >
                   Quitar
                 </button>
@@ -347,19 +352,19 @@ export default function CreatorProfileEditForm({
             <button
               type="button"
               onClick={() => setPastBrands((prev) => [...prev, { category: "", brand_name: "" }])}
-              className="self-start rounded-pill border border-line px-4 py-2 text-sm font-bold text-ink-soft transition hover:border-ink"
+              className={`self-start ${styles.btn} ${styles.btnGhost}`}
             >
               + Agregar marca
             </button>
           </div>
         </section>
 
-        {state && "error" in state && <p className="text-sm text-coral">{state.error}</p>}
+        {state && "error" in state && <div className={styles.formError}>{state.error}</div>}
 
         <button
           type="submit"
           disabled={pending}
-          className="self-start rounded-pill bg-violet px-8 py-3 text-sm font-bold text-white transition hover:bg-violet-deep disabled:opacity-60"
+          className={`self-start disabled:opacity-60 ${styles.btn} ${styles.btnPrimary}`}
         >
           {pending ? "Guardando..." : "Guardar perfil"}
         </button>
@@ -449,7 +454,7 @@ export default function CreatorProfileEditForm({
           href={`/ugc/creadores/${handleSlug(initialProfile.handle)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 block rounded-pill border border-line bg-white py-2.5 text-center text-sm font-bold text-ink transition hover:border-violet hover:text-violet"
+          className={`mt-3 w-full justify-center ${styles.btn} ${styles.btnGhost}`}
         >
           Ver / compartir mi perfil completo →
         </a>

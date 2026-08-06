@@ -174,7 +174,11 @@ export default async function CreadorHomePage() {
 
       <div className={styles.kpiRow}>
         {kpis.map((kpi, i) => (
-          <div key={kpi.label} className={styles.kpi}>
+          <div
+            key={kpi.label}
+            className={`${styles.kpi} ${styles.kpiAccent}`}
+            style={{ "--kpi-accent": KPI_COLORS[i] } as React.CSSProperties}
+          >
             <div className={styles.kTop}>
               <div
                 className={styles.kIc}

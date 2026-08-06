@@ -65,7 +65,11 @@ export default async function CreatorBookPage() {
 
       <div className={styles.kpiRow} style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
         {stats.map((s) => (
-          <div key={s.label} className={styles.kpi}>
+          <div
+            key={s.label}
+            className={`${styles.kpi} ${styles.kpiAccent}`}
+            style={{ "--kpi-accent": s.color } as React.CSSProperties}
+          >
             <div className={styles.kTop}>
               <div className={styles.kIc} style={{ background: `${s.color}22`, color: s.color }}>
                 <QosIcon name={s.icon} size={16} />

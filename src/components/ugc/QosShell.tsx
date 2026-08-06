@@ -54,6 +54,14 @@ export type QosNavItem = {
    * como "Dashboard" y encima dejaría iluminado el item equivocado.
    */
   hidden?: boolean;
+  /**
+   * Sale a la barra inferior en móvil. Es opt-in por rol: admin tiene 15+
+   * pantallas y elegir cuatro sería arbitrario, así que se queda con el drawer.
+   * Si ningún item la pide, no se dibuja la barra.
+   */
+  bottom?: boolean;
+  /** Solo para la barra inferior, donde "Perfil del negocio" no entra. */
+  shortLabel?: string;
 };
 
 export default function QosShell({
@@ -96,6 +104,11 @@ export default function QosShell({
   const activeItem =
     navItems.find((item) => pathname === item.href) ??
     [...navItems].sort((a, b) => b.href.length - a.href.length).find((item) => pathname.startsWith(item.href));
+
+  const bottomItems = navItems.filter((i) => i.bottom && !i.hidden);
+  // Solo tiene sentido ofrecer "Más" si hay algo que la barra no muestra: la
+  // marca tiene exactamente cuatro pantallas y todas caben, el creador no.
+  const hayMas = navItems.filter((i) => !i.hidden).length > bottomItems.length;
 
   const groups: { group: string | undefined; items: QosNavItem[] }[] = [];
   for (const item of navItems.filter((i) => !i.hidden)) {
@@ -232,6 +245,41 @@ export default function QosShell({
           <main className={styles.content}>{children}</main>
         </div>
       </div>
+
+      {bottomItems.length > 0 && (
+        <nav className={styles.bottomNav} aria-label="Accesos rápidos">
+          {bottomItems.map((item) => {
+            const isActive = activeItem?.href === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`${styles.bnItem} ${isActive ? styles.bnItemActive : ""}`}
+                aria-current={isActive ? "page" : undefined}
+                aria-label={item.label}
+              >
+                <QosIcon name={item.icon} size={20} />
+                <span>{item.shortLabel ?? item.label}</span>
+                {typeof item.count === "number" && item.count > 0 && (
+                  <span className={styles.bnCount}>{item.count}</span>
+                )}
+              </Link>
+            );
+          })}
+          {hayMas && (
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className={styles.bnItem}
+              aria-label="Ver todas las secciones"
+              aria-expanded={mobileOpen}
+            >
+              <QosIcon name="menu" size={20} />
+              <span>Más</span>
+            </button>
+          )}
+        </nav>
+      )}
     </div>
   );
 }

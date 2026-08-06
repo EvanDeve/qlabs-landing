@@ -28,17 +28,34 @@ export default async function MarcaLayout({
         .eq("status", "pending")
     : { count: 0 };
 
+  // Las cuatro pantallas de la marca caben enteras en la barra inferior de
+  // móvil, así que van todas con `bottom` y el shell no dibuja el "Más".
   const navItems: QosNavItem[] = [
-    { href: "/ugc/marca", label: "Resumen", icon: "grid", group: "Centro de Mando" },
+    { href: "/ugc/marca", label: "Resumen", icon: "grid", group: "Centro de Mando", bottom: true },
     {
       href: "/ugc/marca/ugc",
       label: "UGC·CRC",
       icon: "megaphone",
       group: "Marketing",
       count: pendingCount ?? 0,
+      bottom: true,
     },
-    { href: "/ugc/marca/loyalty", label: "Loyalty Loop", icon: "sparkle", group: "Marketing" },
-    { href: "/ugc/marca/perfil", label: "Perfil del negocio", icon: "briefcase", group: "Cuenta" },
+    {
+      href: "/ugc/marca/loyalty",
+      label: "Loyalty Loop",
+      icon: "sparkle",
+      group: "Marketing",
+      bottom: true,
+      shortLabel: "Loyalty",
+    },
+    {
+      href: "/ugc/marca/perfil",
+      label: "Perfil del negocio",
+      icon: "briefcase",
+      group: "Cuenta",
+      bottom: true,
+      shortLabel: "Perfil",
+    },
   ];
 
   return (
