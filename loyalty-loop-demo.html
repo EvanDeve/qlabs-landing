@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loyalty Loop · Demo — Q Labs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0a12;
+  --surface:#14121f;
+  --surface-2:#1c1930;
+  --surface-3:#241f3d;
+  --border:#2e2950;
+  --violet:#7c5cff;
+  --violet-soft:rgba(124,92,255,.14);
+  --indigo:#4f46e5;
+  --text:#eceafb;
+  --text-2:#a49fc7;
+  --text-3:#6f6a94;
+  --success:#34d399;
+  --success-soft:rgba(52,211,153,.12);
+  --warning:#fbbf24;
+  --warning-soft:rgba(251,191,36,.12);
+  --danger:#f87171;
+  --bronce:#cd8b52;
+  --plata:#c3cad8;
+  --oro:#f2c14e;
+  --platino:#a5b4fc;
+  --radius:14px;
+  --radius-sm:9px;
+  --shadow:0 12px 32px rgba(0,0,0,.45);
+  --t-fast:150ms ease;
+  --t-base:250ms ease;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:16px}
+body{
+  font-family:'Outfit',system-ui,sans-serif;
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(124,92,255,.12), transparent 60%),
+    radial-gradient(700px 400px at -10% 110%, rgba(79,70,229,.10), transparent 60%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--violet);outline-offset:2px;border-radius:4px}
+button{font-family:inherit;cursor:pointer}
+
+/* ── Barra demo ── */
+.demo-bar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px 24px;border-bottom:1px solid var(--border);
+  background:rgba(11,10,18,.85);backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:50;
+}
+.demo-logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.02em}
+.demo-logo .q{
+  width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--violet),var(--indigo));
+  font-weight:800;font-size:.95rem;color:#fff;
+}
+.demo-tag{font-size:.68rem;color:var(--text-3);font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+.demo-switch{display:flex;gap:6px;margin-left:auto;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px}
+.demo-switch button{
+  border:none;background:transparent;color:var(--text-2);
+  padding:7px 16px;border-radius:999px;font-size:.85rem;font-weight:500;
+  transition:background var(--t-fast),color var(--t-fast);
+}
+.demo-switch button:hover{color:var(--text)}
+.demo-switch button.active{background:linear-gradient(135deg,var(--violet),var(--indigo));color:#fff;font-weight:600}
+
+.wrap{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
+.view{display:none;animation:fadeIn var(--t-base) forwards}
+.view.active{display:block}
+@media (prefers-reduced-motion:no-preference){
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+}
+
+/* ── Comunes ── */
+.eyebrow{font-size:.7rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--violet);margin-bottom:6px}
+h1{font-size:1.55rem;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--text-2);font-size:.92rem;margin-top:4px;max-width:60ch}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.grid{display:grid;gap:16px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:600;padding:4px 10px;border-radius:999px}
+.pill-success{background:var(--success-soft);color:var(--success)}
+.pill-warning{background:var(--warning-soft);color:var(--warning)}
+.pill-violet{background:var(--violet-soft);color:#b3a1ff}
+.pill-muted{background:rgba(111,106,148,.14);color:var(--text-3)}
+.btn{
+  border:none;border-radius:var(--radius-sm);font-weight:600;font-size:.88rem;
+  padding:11px 18px;transition:transform var(--t-fast),opacity var(--t-fast),background var(--t-fast);
+}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:linear-gradient(135deg,var(--violet),var(--indigo));color:#fff}
+.btn-primary:hover{opacity:.92}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-2)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text-3)}
+.btn-success{background:var(--success);color:#052e21}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:34px 0 16px;flex-wrap:wrap}
+.section-head h2{font-size:1.05rem;font-weight:600}
+.section-head .hint{font-size:.78rem;color:var(--text-3)}
+input[type=text],input[type=number],input[type=date],textarea,select{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);font-family:inherit;
+  font-size:.88rem;padding:11px 13px;transition:border-color var(--t-fast);
+}
+input:focus,textarea:focus,select:focus{border-color:var(--violet);outline:none}
+label{display:block;font-size:.78rem;font-weight:600;color:var(--text-2);margin-bottom:7px}
+.field{margin-bottom:16px}
+.field .note{font-size:.72rem;color:var(--text-3);margin-top:5px}
+
+/* ── Nivel badges ── */
+.lvl{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:700;padding:4px 11px;border-radius:999px;letter-spacing:.03em}
+.lvl::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.lvl-bronce{color:var(--bronce);background:rgba(205,139,82,.13)}
+.lvl-plata{color:var(--plata);background:rgba(195,202,216,.12)}
+.lvl-oro{color:var(--oro);background:rgba(242,193,78,.13)}
+.lvl-platino{color:var(--platino);background:rgba(165,180,252,.13)}
+
+/* ── Creador: hero nivel ── */
+.level-hero{
+  display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;
+  background:linear-gradient(135deg,var(--surface-2),var(--surface));
+  border:1px solid var(--border);border-radius:var(--radius);padding:26px;
+  position:relative;overflow:hidden;
+}
+.level-hero::after{
+  content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,92,255,.22),transparent 70%);pointer-events:none;
+}
+.level-hero .points{font-size:2.35rem;font-weight:800;letter-spacing:-.02em;line-height:1}
+.level-hero .points small{font-size:.85rem;font-weight:500;color:var(--text-2);letter-spacing:0}
+.progress{height:9px;border-radius:999px;background:var(--surface-3);overflow:hidden;margin:14px 0 8px;max-width:420px}
+.progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--violet),var(--indigo));transition:width .6s ease}
+.progress-label{font-size:.78rem;color:var(--text-2)}
+.rank-ladder{display:flex;flex-direction:column;gap:8px;position:relative;z-index:1}
+.rank-ladder .step{display:flex;align-items:center;gap:9px;font-size:.78rem;color:var(--text-3)}
+.rank-ladder .step.done{color:var(--text-2)}
+.rank-ladder .step.current{color:var(--text);font-weight:600}
+.rank-ladder .dot{width:9px;height:9px;border-radius:50%;background:var(--surface-3);flex:none}
+.rank-ladder .done .dot{background:var(--violet)}
+.rank-ladder .current .dot{background:var(--violet);box-shadow:0 0 0 4px var(--violet-soft)}
+
+/* ── Cupones ── */
+.coupons{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.coupon{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;display:flex;flex-direction:column;gap:12px;position:relative;
+  transition:border-color var(--t-fast),transform var(--t-fast);
+}
+.coupon:hover{border-color:#3d3768;transform:translateY(-2px)}
+.coupon.locked{opacity:.62}
+.coupon.locked:hover{transform:none}
+.coupon-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.coupon-brand{display:flex;align-items:center;gap:9px}
+.brand-avatar{
+  width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  font-weight:700;font-size:.8rem;color:#fff;flex:none;
+}
+.coupon-brand .meta{line-height:1.25}
+.coupon-brand .name{font-size:.82rem;font-weight:600}
+.coupon-brand .cat{font-size:.7rem;color:var(--text-3)}
+.coupon h3{font-size:1.02rem;font-weight:600;letter-spacing:-.01em}
+.coupon .desc{font-size:.83rem;color:var(--text-2);line-height:1.5;flex:1}
+.coupon-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:.73rem;color:var(--text-3)}
+.coupon-meta b{color:var(--text-2);font-weight:600}
+.event-note{
+  font-size:.72rem;color:var(--warning);background:var(--warning-soft);
+  border-radius:var(--radius-sm);padding:8px 11px;line-height:1.4;
+}
+.lock-note{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--text-3);font-weight:500}
+.code-box{
+  background:var(--surface-2);border:1px dashed var(--violet);border-radius:var(--radius-sm);
+  padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.code-box code{font-family:ui-monospace,monospace;font-size:.95rem;font-weight:700;letter-spacing:.08em;color:#c9bcff}
+.code-box .exp{font-size:.7rem;color:var(--text-3)}
+
+/* ── Modal QR ── */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(5,4,10,.7);backdrop-filter:blur(4px);
+  display:none;place-items:center;z-index:100;padding:20px;
+}
+.modal-bg.open{display:grid}
+.modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:28px;max-width:380px;width:100%;text-align:center;box-shadow:var(--shadow);
+  animation:fadeIn var(--t-base) forwards;
+}
+.modal h3{font-size:1.1rem;margin-bottom:4px}
+.modal .m-sub{font-size:.83rem;color:var(--text-2);margin-bottom:18px}
+.qr{
+  width:190px;height:190px;margin:0 auto 16px;border-radius:14px;background:#fff;
+  display:grid;place-items:center;padding:14px;
+}
+.modal .m-code{font-family:ui-monospace,monospace;font-size:1.15rem;font-weight:800;letter-spacing:.12em;color:#c9bcff;margin-bottom:6px}
+.modal .m-exp{font-size:.75rem;color:var(--text-3);margin-bottom:20px}
+
+/* ── Marca ── */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin:26px 0 22px;flex-wrap:wrap}
+.tabs button{
+  background:none;border:none;color:var(--text-3);font-size:.88rem;font-weight:500;
+  padding:10px 16px;border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color var(--t-fast);
+}
+.tabs button:hover{color:var(--text-2)}
+.tabs button.active{color:var(--text);border-color:var(--violet);font-weight:600}
+.tab-panel{display:none}
+.tab-panel.active{display:block;animation:fadeIn var(--t-base) forwards}
+.stock-bar{height:6px;border-radius:999px;background:var(--surface-3);overflow:hidden;margin-top:8px}
+.stock-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--violet),var(--indigo))}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{text-align:left;font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);padding:10px 12px;border-bottom:1px solid var(--border)}
+td{padding:13px 12px;border-bottom:1px solid rgba(46,41,80,.5);color:var(--text-2)}
+td b{color:var(--text);font-weight:600}
+tr:last-child td{border-bottom:none}
+.table-card{padding:8px 6px;overflow-x:auto}
+.validate-box{max-width:520px}
+.validate-result{margin-top:18px}
+.creator-chip{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.creator-chip .avatar{
+  width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(135deg,#3b3563,#241f3d);font-weight:700;color:#c9bcff;
+}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.form-grid .full{grid-column:1/-1}
+@media (max-width:720px){
+  .form-grid{grid-template-columns:1fr}
+  .level-hero{grid-template-columns:1fr}
+}
+.fixed-legend{
+  font-size:.76rem;color:var(--warning);background:var(--warning-soft);
+  border-radius:var(--radius-sm);padding:10px 13px;line-height:1.45;margin-bottom:16px;
+}
+.fixed-legend b{font-weight:700}
+.type-fields{display:none}
+.type-fields.show{display:block}
+
+/* KPIs */
+.kpis{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-top:22px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.kpi .n{font-size:1.6rem;font-weight:800;letter-spacing:-.02em}
+.kpi .l{font-size:.74rem;color:var(--text-3);margin-top:3px}
+
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:999px;
+  padding:11px 20px;font-size:.85rem;font-weight:500;opacity:0;pointer-events:none;
+  transition:opacity var(--t-base),transform var(--t-base);z-index:200;box-shadow:var(--shadow);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.empty{color:var(--text-3);font-size:.85rem;padding:26px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="demo-bar">
+  <div class="demo-logo"><span class="q">Q</span> Loyalty Loop <span class="demo-tag">Demo interactivo</span></div>
+  <div class="demo-switch" role="tablist" aria-label="Cambiar de vista">
+    <button class="active" data-view="creador" onclick="switchView('creador',this)">👤 Creador</button>
+    <button data-view="marca" onclick="switchView('marca',this)">🏪 Marca</button>
+    <button data-view="admin" onclick="switchView('admin',this)">🛰️ Admin · Q·OS</button>
+  </div>
+</div>
+
+<!-- ══════════ VISTA CREADOR ══════════ -->
+<main class="wrap view active" id="view-creador">
+  <p class="eyebrow">UGC·CRC · Recompensas</p>
+  <h1>Buenas, Evan 👋</h1>
+  <p class="sub">Acumulás puntos entregando trabajo real. Tu nivel desbloquea cupones exclusivos de las marcas de la plataforma.</p>
+
+  <div class="level-hero" style="margin-top:24px">
+    <div>
+      <span class="lvl lvl-plata">PLATA</span>
+      <div class="points" style="margin-top:12px"><span id="c-points">840</span> <small>puntos</small></div>
+      <div class="progress" aria-hidden="true"><i id="c-progress" style="width:34%"></i></div>
+      <div class="progress-label" id="c-progress-label">Te faltan 660 pts para 🥇 Oro</div>
+    </div>
+    <div class="rank-ladder">
+      <div class="step done"><span class="dot"></span> Bronce · 0 pts</div>
+      <div class="step current"><span class="dot"></span> Plata · 500 pts</div>
+      <div class="step"><span class="dot"></span> Oro · 1,500 pts</div>
+      <div class="step"><span class="dot"></span> Platino · 4,000 pts</div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>Cupones disponibles para vos</h2>
+    <span class="hint">Tu nivel: Plata · Los cupones 🔒 se desbloquean subiendo de nivel</span>
+  </div>
+  <div class="grid coupons" id="c-coupons"></div>
+
+  <div class="section-head">
+    <h2>Historial de puntos</h2>
+    <span class="hint">Cada punto queda registrado — nada se edita a mano</span>
+  </div>
+  <div class="card table-card">
+    <table>
+      <thead><tr><th>Fecha</th><th>Acción</th><th>Referencia</th><th style="text-align:right">Puntos</th></tr></thead>
+      <tbody>
+        <tr><td>02 ago</td><td><b>Entrega aprobada</b></td><td>Reel · Café del Barrio</td><td style="text-align:right"><b style="color:var(--success)">+150</b></td></tr>
+        <tr><td>02 ago</td><td><b>Rating 5★</b></td><td>Café del Barrio</td><td style="text-align:right"><b style="color:var(--success)">+50</b></td></tr>
+        <tr><td>28 jul</td><td>Seleccionado en campaña</td><td>Restaurante La Ceiba</td><td style="text-align:right"><b style="color:var(--success)">+50</b></td></tr>
+        <tr><td>25 jul</td><td>Pieza subida al book</td><td>UGC · Fotografía</td><td style="text-align:right">+10</td></tr>
+        <tr><td>22 jul</td><td>Aplicación a promo</td><td>Hotel Vista Verde</td><td style="text-align:right">+5</td></tr>
+        <tr><td>15 jul</td><td>Perfil completado al 100%</td><td>—</td><td style="text-align:right">+50</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- ══════════ VISTA MARCA ══════════ -->
+<main class="wrap view" id="view-marca">
+  <p class="eyebrow">Centro de Mando · Loyalty Loop</p>
+  <h1>Restaurante La Ceiba</h1>
+  <p class="sub">Creá cupones para atraer creadores, definí quién puede reclamarlos según su nivel, y validá los canjes en tu local con un escaneo.</p>
+
+  <div class="grid kpis">
+    <div class="kpi"><div class="n" id="m-kpi-active">2</div><div class="l">Cupones activos</div></div>
+    <div class="kpi"><div class="n" id="m-kpi-claimed">7</div><div class="l">Reclamos totales</div></div>
+    <div class="kpi"><div class="n" id="m-kpi-redeemed">4</div><div class="l">Canjes confirmados</div></div>
+    <div class="kpi"><div class="n">Oro+</div><div class="l">Nivel top que atraés</div></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="active" onclick="switchTab('cupones',this)">Mis cupones</button>
+    <button onclick="switchTab('nuevo',this)">+ Nuevo cupón</button>
+    <button onclick="switchTab('validar',this)">Validar canje</button>
+    <button onclick="switchTab('canjes',this)">Canjes</button>
+  </div>
+
+  <!-- Tab: mis cupones -->
+  <section class="tab-panel active" id="tab-cupones">
+    <div class="grid coupons">
+      <div class="coupon">
+        <div class="coupon-top">
+          <span class="pill pill-success">Publicado</span>
+          <span class="pill pill-violet">Producto</span>
+        </div>
+        <h3>2x1 en cócteles de autor</h3>
+        <p class="desc">Válido de lunes a jueves. Aplica a toda la carta de mixología.</p>
+        <div class="coupon-meta">
+          <span>Audiencia: <b>Todos</b></span><span>Vigencia: <b>14 días</b></span>
+        </div>
+        <div>
+          <div class="coupon-meta"><span>Stock: <b>14 / 20 disponibles</b></span></div>
+          <div class="stock-bar"><i style="width:30%"></i></div>
+        </div>
+      </div>
+      <div class="coupon">
+        <div class="coupon-top">
+          <span class="pill pill-success">Publicado</span>
+          <span class="pill pill-violet">Evento</span>
+        </div>
+        <h3>Noche de creadores · Aniversario</h3>
+        <p class="desc">Cena de aniversario con música en vivo. Cupo limitado para creadores Oro y Platino.</p>
+        <div class="coupon-meta">
+          <span>Audiencia: <b>Oro o superior</b></span><span>📅 <b>22 ago · 7 pm</b></span>
+        </div>
+        <div>
+          <div class="coupon-meta"><span>Stock: <b>9 / 15 disponibles</b></span></div>
+          <div class="stock-bar"><i style="width:40%"></i></div>
+        </div>
+        <div class="event-note">🎟️ Incluye entrada al evento. El consumo dentro del evento corre por cuenta del creador.</div>
+      </div>
+      <div class="coupon" style="opacity:.7">
+        <div class="coupon-top">
+          <span class="pill pill-muted">Pausado</span>
+          <span class="pill pill-violet">Servicio</span>
+        </div>
+        <h3>Tour de cocina + degustación</h3>
+        <p class="desc">Recorrido por la cocina con el chef y degustación de 3 tiempos.</p>
+        <div class="coupon-meta">
+          <span>Audiencia: <b>Plata o superior</b></span><span>Vigencia: <b>30 días</b></span>
+        </div>
+        <div>
+          <div class="coupon-meta"><span>Stock: <b>5 / 5 disponibles</b></span></div>
+          <div class="stock-bar"><i style="width:0%"></i></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: nuevo cupón -->
+  <section class="tab-panel" id="tab-nuevo">
+    <div class="card" style="max-width:760px">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="f-title">Título del cupón</label>
+          <input type="text" id="f-title" placeholder="Ej: 2x1 en cócteles de autor">
+        </div>
+        <div class="field">
+          <label for="f-type">Tipo</label>
+          <select id="f-type" onchange="toggleEventFields(this.value)">
+            <option value="producto">Producto</option>
+            <option value="servicio">Servicio</option>
+            <option value="evento">Evento</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-aud">¿Quién puede reclamarlo?</label>
+          <select id="f-aud">
+            <option>Todos los creadores</option>
+            <option>Nivel mínimo: Plata</option>
+            <option>Nivel mínimo: Oro</option>
+            <option>Nivel mínimo: Platino</option>
+          </select>
+          <p class="note">Los niveles altos reflejan entregas aprobadas y ratings reales.</p>
+        </div>
+        <div class="field full">
+          <label for="f-desc">Descripción — qué incluye exactamente</label>
+          <textarea id="f-desc" rows="3" placeholder="Contale al creador qué recibe al canjear este cupón"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-stock">Stock (canjes disponibles)</label>
+          <input type="number" id="f-stock" placeholder="20" min="1">
+        </div>
+        <div class="field">
+          <label for="f-vig">Vigencia del reclamo</label>
+          <select id="f-vig">
+            <option>7 días desde el reclamo</option>
+            <option>14 días desde el reclamo</option>
+            <option>30 días desde el reclamo</option>
+            <option>Hasta la fecha del evento</option>
+          </select>
+          <p class="note">Si vence sin usarse, el código expira y el stock se libera.</p>
+        </div>
+        <div class="type-fields full" id="event-fields">
+          <div class="form-grid" style="margin:0">
+            <div class="field">
+              <label for="f-date">Fecha y hora del evento</label>
+              <input type="date" id="f-date">
+            </div>
+            <div class="field">
+              <label for="f-loc">Ubicación</label>
+              <input type="text" id="f-loc" placeholder="Ej: Local principal, Escazú">
+            </div>
+          </div>
+          <div class="fixed-legend">🎟️ <b>Leyenda automática en la ficha:</b> "Incluye entrada al evento. El consumo dentro del evento corre por cuenta del creador." — No es editable.</div>
+        </div>
+        <div class="field full">
+          <label for="f-cond">Condiciones adicionales (opcional)</label>
+          <input type="text" id="f-cond" placeholder="Ej: válido solo de lunes a jueves">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="fakePublish()">Publicar cupón</button>
+        <button class="btn btn-ghost" onclick="toast('Borrador guardado')">Guardar borrador</button>
+      </div>
+      <p class="note" style="margin-top:12px;font-size:.74rem;color:var(--text-3)">Tu negocio está verificado ✓ — tus cupones se publican al instante. Un canje por creador por cupón.</p>
+    </div>
+  </section>
+
+  <!-- Tab: validar -->
+  <section class="tab-panel" id="tab-validar">
+    <div class="card validate-box">
+      <h2 style="font-size:1rem;margin-bottom:6px">Validar un canje</h2>
+      <p class="sub" style="margin-bottom:18px">Escaneá el QR del creador con tu teléfono, o digitá el código corto que te muestra.</p>
+      <div class="field">
+        <label for="v-code">Código del cupón</label>
+        <input type="text" id="v-code" placeholder="QL-XXXX-XX" style="font-family:ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase">
+        <p class="note">💡 En el demo: reclamá un cupón en la vista Creador y pegá aquí el código generado.</p>
+      </div>
+      <button class="btn btn-primary" onclick="validateCode()">Buscar código</button>
+      <div class="validate-result" id="v-result"></div>
+    </div>
+  </section>
+
+  <!-- Tab: canjes -->
+  <section class="tab-panel" id="tab-canjes">
+    <div class="card table-card">
+      <table>
+        <thead><tr><th>Fecha</th><th>Creador</th><th>Nivel</th><th>Cupón</th><th>Estado</th></tr></thead>
+        <tbody id="m-redemptions">
+          <tr><td>03 ago</td><td><b>@valeriacr</b></td><td><span class="lvl lvl-oro">ORO</span></td><td>2x1 en cócteles de autor</td><td><span class="pill pill-success">Canjeado</span></td></tr>
+          <tr><td>01 ago</td><td><b>@marcotico</b></td><td><span class="lvl lvl-plata">PLATA</span></td><td>2x1 en cócteles de autor</td><td><span class="pill pill-success">Canjeado</span></td></tr>
+          <tr><td>30 jul</td><td><b>@anafilms</b></td><td><span class="lvl lvl-platino">PLATINO</span></td><td>Noche de creadores · Aniversario</td><td><span class="pill pill-warning">Reclamado</span></td></tr>
+          <tr><td>29 jul</td><td><b>@davidvlogs</b></td><td><span class="lvl lvl-oro">ORO</span></td><td>Noche de creadores · Aniversario</td><td><span class="pill pill-success">Canjeado</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- ══════════ VISTA ADMIN ══════════ -->
+<main class="wrap view" id="view-admin">
+  <p class="eyebrow">Q·OS · Centro de Mando interno</p>
+  <h1>Loyalty Loop · Tabla de puntos</h1>
+  <p class="sub">Vista de todos los creadores con puntos, nivel y actividad. El ledger es la fuente de verdad: el nivel se calcula, nunca se edita.</p>
+
+  <div class="grid kpis">
+    <div class="kpi"><div class="n">128</div><div class="l">Creadores con puntos</div></div>
+    <div class="kpi"><div class="n">11</div><div class="l">Cupones activos (todas las marcas)</div></div>
+    <div class="kpi"><div class="n">46</div><div class="l">Canjes este mes</div></div>
+    <div class="kpi"><div class="n">3</div><div class="l">Creadores Platino</div></div>
+  </div>
+
+  <div class="section-head">
+    <h2>Todos los creadores</h2>
+    <span class="hint">Click en un creador abriría su historial completo de points_events</span>
+  </div>
+  <div class="card table-card">
+    <table>
+      <thead><tr><th>Creador</th><th>Nivel</th><th style="text-align:right">Puntos</th><th style="text-align:right">Entregas aprobadas</th><th style="text-align:right">Canjes</th><th>Último evento</th></tr></thead>
+      <tbody>
+        <tr><td><b>@anafilms</b></td><td><span class="lvl lvl-platino">PLATINO</span></td><td style="text-align:right"><b>4,320</b></td><td style="text-align:right">17</td><td style="text-align:right">6</td><td>Entrega aprobada · +150</td></tr>
+        <tr><td><b>@valeriacr</b></td><td><span class="lvl lvl-oro">ORO</span></td><td style="text-align:right"><b>2,105</b></td><td style="text-align:right">8</td><td style="text-align:right">4</td><td>Rating 5★ · +50</td></tr>
+        <tr><td><b>@davidvlogs</b></td><td><span class="lvl lvl-oro">ORO</span></td><td style="text-align:right"><b>1,640</b></td><td style="text-align:right">6</td><td style="text-align:right">3</td><td>Canje · Noche de creadores</td></tr>
+        <tr><td><b>@evanmarin</b></td><td><span class="lvl lvl-plata">PLATA</span></td><td style="text-align:right"><b id="a-evan-pts">840</b></td><td style="text-align:right">3</td><td style="text-align:right" id="a-evan-canjes">0</td><td id="a-evan-last">Entrega aprobada · +150</td></tr>
+        <tr><td><b>@marcotico</b></td><td><span class="lvl lvl-plata">PLATA</span></td><td style="text-align:right"><b>615</b></td><td style="text-align:right">2</td><td style="text-align:right">1</td><td>Pieza al book · +10</td></tr>
+        <tr><td><b>@sofiacontent</b></td><td><span class="lvl lvl-bronce">BRONCE</span></td><td style="text-align:right"><b>185</b></td><td style="text-align:right">0</td><td style="text-align:right">0</td><td>Aplicación a promo · +5</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-head">
+    <h2>Registro global de canjes</h2>
+    <span class="hint">Tabla redemptions — auditable por reclamo</span>
+  </div>
+  <div class="card table-card">
+    <table>
+      <thead><tr><th>Fecha</th><th>Marca</th><th>Cupón</th><th>Creador</th><th>Validó</th><th>Estado</th></tr></thead>
+      <tbody id="a-redemptions">
+        <tr><td>03 ago</td><td>Restaurante La Ceiba</td><td>2x1 cócteles</td><td><b>@valeriacr</b></td><td>Staff · barra</td><td><span class="pill pill-success">Canjeado</span></td></tr>
+        <tr><td>02 ago</td><td>Hotel Vista Verde</td><td>Day pass piscina</td><td><b>@anafilms</b></td><td>Recepción</td><td><span class="pill pill-success">Canjeado</span></td></tr>
+        <tr><td>30 jul</td><td>Restaurante La Ceiba</td><td>Noche de creadores</td><td><b>@anafilms</b></td><td>—</td><td><span class="pill pill-warning">Reclamado</span></td></tr>
+        <tr><td>28 jul</td><td>Café del Barrio</td><td>Brunch para dos</td><td><b>@davidvlogs</b></td><td>Staff · caja</td><td><span class="pill pill-success">Canjeado</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal QR -->
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h3 id="modal-title">Cupón reclamado 🎉</h3>
+    <p class="m-sub" id="modal-coupon">—</p>
+    <div class="qr" id="modal-qr"></div>
+    <div class="m-code" id="modal-code">—</div>
+    <p class="m-exp" id="modal-exp">—</p>
+    <button class="btn btn-primary" onclick="closeModal()" style="width:100%">Listo</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Estado del demo (en memoria) ── */
+const state = {
+  creatorLevel: 2, // 1 bronce, 2 plata, 3 oro, 4 platino
+  claims: {},      // couponId -> {code, status}
+  kpi: {claimed: 7, redeemed: 4}
+};
+
+const LEVELS = ["", "Bronce", "Plata", "Oro", "Platino"];
+
+const COUPONS = [
+  {id:"c1", brand:"Restaurante La Ceiba", initials:"RL", color:"linear-gradient(135deg,#7c5cff,#4f46e5)", cat:"Restaurante",
+   type:"Producto", title:"2x1 en cócteles de autor",
+   desc:"Válido de lunes a jueves. Aplica a toda la carta de mixología.",
+   minLevel:1, stock:"14 disponibles", vig:"14 días desde el reclamo", vigDays:14},
+  {id:"c2", brand:"Café del Barrio", initials:"CB", color:"linear-gradient(135deg,#f59e0b,#d97706)", cat:"Cafetería",
+   type:"Servicio", title:"Brunch para dos personas",
+   desc:"Brunch completo para vos y un acompañante, fin de semana incluido.",
+   minLevel:2, stock:"6 disponibles", vig:"14 días desde el reclamo", vigDays:14},
+  {id:"c3", brand:"Restaurante La Ceiba", initials:"RL", color:"linear-gradient(135deg,#7c5cff,#4f46e5)", cat:"Restaurante",
+   type:"Evento", title:"Noche de creadores · Aniversario",
+   desc:"Cena de aniversario con música en vivo. Cupo limitado.",
+   minLevel:3, stock:"9 entradas", vig:"Hasta el 22 ago · 7 pm", vigDays:null, event:true},
+  {id:"c4", brand:"Hotel Vista Verde", initials:"HV", color:"linear-gradient(135deg,#10b981,#059669)", cat:"Hotel",
+   type:"Servicio", title:"Day pass de piscina + almuerzo",
+   desc:"Acceso de día completo a piscina e instalaciones, con almuerzo incluido.",
+   minLevel:4, stock:"3 disponibles", vig:"30 días desde el reclamo", vigDays:30}
+];
+
+/* ── Navegación ── */
+function switchView(name, btn){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  document.getElementById("view-"+name).classList.add("active");
+  document.querySelectorAll(".demo-switch button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  window.scrollTo({top:0});
+}
+function switchTab(name, btn){
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById("tab-"+name).classList.add("active");
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+}
+function toggleEventFields(v){
+  document.getElementById("event-fields").classList.toggle("show", v==="evento");
+}
+
+/* ── Render cupones (vista creador) ── */
+function renderCoupons(){
+  const grid = document.getElementById("c-coupons");
+  grid.innerHTML = "";
+  COUPONS.forEach(c=>{
+    const unlocked = state.creatorLevel >= c.minLevel;
+    const claim = state.claims[c.id];
+    const el = document.createElement("div");
+    el.className = "coupon" + (unlocked ? "" : " locked");
+    let footer = "";
+    if(!unlocked){
+      footer = `<div class="lock-note">🔒 Requiere nivel ${LEVELS[c.minLevel]} — te faltan ${[0,0,500,1500,4000][c.minLevel]-840} pts</div>
+                <button class="btn btn-ghost" disabled>Bloqueado</button>`;
+    } else if(claim && claim.status==="reclamado"){
+      footer = `<div class="code-box"><code>${claim.code}</code><span class="exp">Vence: ${c.vig}</span></div>
+                <button class="btn btn-ghost" onclick="showQR('${c.id}')">Ver QR</button>`;
+    } else if(claim && claim.status==="canjeado"){
+      footer = `<span class="pill pill-success" style="align-self:flex-start">✓ Canjeado</span>`;
+    } else {
+      footer = `<button class="btn btn-primary" onclick="claimCoupon('${c.id}')">Reclamar cupón</button>`;
+    }
+    el.innerHTML = `
+      <div class="coupon-top">
+        <div class="coupon-brand">
+          <div class="brand-avatar" style="background:${c.color}">${c.initials}</div>
+          <div class="meta"><div class="name">${c.brand}</div><div class="cat">${c.cat}</div></div>
+        </div>
+        <span class="pill pill-violet">${c.type}</span>
+      </div>
+      <h3>${c.title}</h3>
+      <p class="desc">${c.desc}</p>
+      <div class="coupon-meta">
+        <span>Audiencia: <b>${c.minLevel===1?"Todos":"Nivel "+LEVELS[c.minLevel]+"+"}</b></span>
+        <span>Stock: <b>${c.stock}</b></span>
+        <span>Vigencia: <b>${c.vig}</b></span>
+      </div>
+      ${c.event ? `<div class="event-note">🎟️ Incluye entrada al evento. El consumo dentro del evento corre por cuenta del creador.</div>` : ""}
+      ${footer}`;
+    grid.appendChild(el);
+  });
+}
+
+/* ── Reclamar → código + QR ── */
+function genCode(){
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const pick = n => Array.from({length:n},()=>chars[Math.floor(Math.random()*chars.length)]).join("");
+  return `QL-${pick(4)}-${pick(2)}`;
+}
+function claimCoupon(id){
+  const code = genCode();
+  state.claims[id] = {code, status:"reclamado"};
+  state.kpi.claimed++;
+  document.getElementById("m-kpi-claimed").textContent = state.kpi.claimed;
+  renderCoupons();
+  showQR(id);
+  toast("Cupón reclamado — stock descontado");
+}
+function showQR(id){
+  const c = COUPONS.find(x=>x.id===id);
+  const claim = state.claims[id];
+  document.getElementById("modal-coupon").textContent = c.title + " · " + c.brand;
+  document.getElementById("modal-code").textContent = claim.code;
+  document.getElementById("modal-exp").textContent = "Mostrá este QR en el local · Vence: " + c.vig;
+  document.getElementById("modal-qr").innerHTML = fakeQR(claim.code);
+  document.getElementById("modal").classList.add("open");
+}
+function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+
+/* QR decorativo determinístico a partir del código */
+function fakeQR(seed){
+  let h = 0; for(const ch of seed) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+  const rand = () => { h = (h*1664525 + 1013904223) >>> 0; return h / 4294967296; };
+  const N = 21, cell = 160/N;
+  let cells = "";
+  const finder = (x,y)=>`
+    <rect x="${x}" y="${y}" width="${cell*7}" height="${cell*7}" fill="#0b0a12"/>
+    <rect x="${x+cell}" y="${y+cell}" width="${cell*5}" height="${cell*5}" fill="#fff"/>
+    <rect x="${x+cell*2}" y="${y+cell*2}" width="${cell*3}" height="${cell*3}" fill="#0b0a12"/>`;
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const inFinder = (r<7&&c<7)||(r<7&&c>=N-7)||(r>=N-7&&c<7);
+    if(!inFinder && rand()>0.52) cells += `<rect x="${c*cell}" y="${r*cell}" width="${cell}" height="${cell}" fill="#0b0a12"/>`;
+  }
+  return `<svg viewBox="0 0 160 160" width="160" height="160" role="img" aria-label="Código QR del cupón">
+    ${cells}${finder(0,0)}${finder(160-cell*7,0)}${finder(0,160-cell*7)}</svg>`;
+}
+
+/* ── Validación (vista marca) ── */
+function validateCode(){
+  const input = document.getElementById("v-code").value.trim().toUpperCase();
+  const box = document.getElementById("v-result");
+  const entry = Object.entries(state.claims).find(([id,cl]) => cl.code === input);
+  if(!input){ box.innerHTML = `<p class="empty">Ingresá un código para buscarlo.</p>`; return; }
+  if(!entry){
+    box.innerHTML = `<div class="card" style="border-color:var(--danger)">
+      <b style="color:var(--danger)">Código no encontrado.</b>
+      <p class="sub" style="margin-top:4px">Verificá que esté bien digitado o pedile al creador que muestre el QR de nuevo.</p></div>`;
+    return;
+  }
+  const [id, claim] = entry;
+  const c = COUPONS.find(x=>x.id===id);
+  if(claim.status === "canjeado"){
+    box.innerHTML = `<div class="card" style="border-color:var(--warning)">
+      <b style="color:var(--warning)">Este código ya fue canjeado.</b>
+      <p class="sub" style="margin-top:4px">Cada código se quema al confirmarse — un solo canje por cupón.</p></div>`;
+    return;
+  }
+  box.innerHTML = `<div class="card" style="border-color:var(--success)">
+    <div class="creator-chip">
+      <div class="avatar">EM</div>
+      <div><b>@evanmarin</b> <span class="lvl lvl-plata" style="margin-left:6px">PLATA</span>
+      <div style="font-size:.78rem;color:var(--text-2);margin-top:2px">${c.title}</div></div>
+    </div>
+    ${c.event ? `<div class="event-note" style="margin-bottom:14px">🎟️ Entrada al evento — el consumo corre por cuenta del creador.</div>`:""}
+    <button class="btn btn-success" style="width:100%" onclick="confirmRedeem('${id}')">✓ Confirmar canje</button>
+  </div>`;
+}
+function confirmRedeem(id){
+  state.claims[id].status = "canjeado";
+  state.kpi.redeemed++;
+  document.getElementById("m-kpi-redeemed").textContent = state.kpi.redeemed;
+  const c = COUPONS.find(x=>x.id===id);
+  const today = new Date().toLocaleDateString("es-CR",{day:"2-digit",month:"short"}).replace(".","");
+  const rowM = `<tr><td>${today}</td><td><b>@evanmarin</b></td><td><span class="lvl lvl-plata">PLATA</span></td><td>${c.title}</td><td><span class="pill pill-success">Canjeado</span></td></tr>`;
+  document.getElementById("m-redemptions").insertAdjacentHTML("afterbegin", rowM);
+  const rowA = `<tr><td>${today}</td><td>${c.brand}</td><td>${c.title}</td><td><b>@evanmarin</b></td><td>Staff · demo</td><td><span class="pill pill-success">Canjeado</span></td></tr>`;
+  document.getElementById("a-redemptions").insertAdjacentHTML("afterbegin", rowA);
+  document.getElementById("a-evan-canjes").textContent = "1";
+  document.getElementById("a-evan-last").textContent = "Canje · " + c.title;
+  document.getElementById("v-result").innerHTML = `<div class="card" style="border-color:var(--success)">
+    <b style="color:var(--success)">Canje confirmado ✓</b>
+    <p class="sub" style="margin-top:4px">Quedó registrado en tus canjes y en el panel admin. El código quedó quemado.</p></div>`;
+  renderCoupons();
+  toast("Canje confirmado y registrado");
+}
+
+function fakePublish(){
+  const t = document.getElementById("f-title").value.trim();
+  toast(t ? `Cupón "${t}" publicado ✓` : "Cupón publicado ✓ (demo)");
+}
+
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove("show"), 2600);
+}
+
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeModal(); });
+renderCoupons();
+</script>
+</body>
+</html>

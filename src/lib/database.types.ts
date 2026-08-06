@@ -24,6 +24,17 @@ export type ApplicationStatus =
   | "cancelled"
   | "disputed";
 export type PortfolioMediaType = "image" | "video";
+// Loyalty Loop. No es un enum de Postgres a propósito: `point_rules.action` es
+// una PK de texto para poder agregar una acción con un INSERT, sin migración.
+// Este union es la lista de las que hay hoy, no un contrato de la base.
+export type PointAction =
+  | "profile_completed"
+  | "book_upload"
+  | "application"
+  | "campaign_selected"
+  | "delivery_approved"
+  | "rating_5"
+  | "rating_4";
 export type HeroContact = { name: string; role?: string; phone?: string; email?: string };
 export type StaffRole =
   | "director"
@@ -792,6 +803,65 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["voiceovers"]["Insert"]>;
         Relationships: [];
       };
+      // Loyalty Loop. `point_rules` y `level_thresholds` son configuración: se
+      // leen para pintar la escalera y la tabla de "cómo se ganan puntos", y
+      // solo admin las escribe.
+      point_rules: {
+        Row: {
+          action: PointAction;
+          points: number;
+          monthly_cap: number | null;
+          once_only: boolean;
+          active: boolean;
+        };
+        Insert: {
+          action: PointAction;
+          points: number;
+          monthly_cap?: number | null;
+          once_only?: boolean;
+          active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["point_rules"]["Insert"]>;
+        Relationships: [];
+      };
+      level_thresholds: {
+        Row: {
+          level: number;
+          name: string;
+          min_points: number;
+        };
+        Insert: {
+          level: number;
+          name: string;
+          min_points: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["level_thresholds"]["Insert"]>;
+        Relationships: [];
+      };
+      // El ledger. No lleva Insert utilizable desde la app: solo se escribe
+      // por los triggers y por `award_points`, que corre con service-role.
+      points_events: {
+        Row: {
+          id: string;
+          creator_id: string;
+          action: PointAction;
+          points: number;
+          reference_type: string | null;
+          reference_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          action: PointAction;
+          points: number;
+          reference_type?: string | null;
+          reference_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["points_events"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       creator_public_profiles: {
@@ -825,6 +895,15 @@ export interface Database {
           brand_verified: boolean;
           deliverable_types: string[] | null;
           published_at: string | null;
+        };
+        Relationships: [];
+      };
+      // Suma del ledger por creador. Corre con security_invoker, así que
+      // devuelve solo lo que la RLS de points_events deja ver.
+      creator_points: {
+        Row: {
+          creator_id: string;
+          total_points: number;
         };
         Relationships: [];
       };
@@ -883,6 +962,11 @@ export interface Database {
           avg_rating: number | null;
           rating_count: number;
         }[];
+      };
+      // El nivel siempre se deriva del ledger; no existe columna que consultar.
+      creator_level: {
+        Args: { p_creator: string };
+        Returns: number;
       };
     };
     Enums: {
