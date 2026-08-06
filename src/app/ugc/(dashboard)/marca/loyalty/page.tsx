@@ -78,6 +78,14 @@ export default async function LoyaltyMarcaPage() {
               : "—",
       eventLocation: c.event_location,
       conditions: c.conditions,
+      imageUrl: c.image_url,
+      claimValidityDays: c.claim_validity_days,
+      // El <input type="date"> quiere YYYY-MM-DD en hora local de Costa Rica.
+      // Cortar el ISO con slice(0,10) daría el día de UTC, que después de las
+      // 6 p.m. es el día siguiente — el evento aparecería corrido un día.
+      eventDateInput: c.event_date
+        ? new Date(c.event_date).toLocaleDateString("en-CA", { timeZone: "America/Costa_Rica" })
+        : null,
     };
   });
 

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría · Loyalty Loop (creador ⇄ marca)</title>
+<style>
+  :root{
+    --brand:#6c5ce7; --brand-600:#5a4bd4; --brand-100:#efeafe;
+    --ink:#14121f; --ink-2:#4a4760; --line:#e7e4f0; --surface:#ffffff;
+    --bg:#f6f5fb; --ok:#16a34a; --ok-bg:#e8f6ee; --warn:#d97706; --warn-bg:#fdf1e0;
+    --err:#dc2626; --err-bg:#fdeaea; --p0:#dc2626; --p1:#d97706; --p2:#2563eb;
+    --radius:16px; --shadow:0 1px 2px rgba(20,18,31,.05),0 8px 28px rgba(20,18,31,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+  header.hero{background:linear-gradient(135deg,#6c5ce7,#8e7bff);color:#fff;padding:56px 0 48px}
+  .kicker{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);
+    padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;margin-bottom:18px}
+  header.hero h1{margin:0 0 12px;font-size:38px;line-height:1.15;font-weight:800;letter-spacing:-.02em}
+  header.hero p{margin:0;font-size:18px;max-width:760px;opacity:.95}
+  .meta{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px}
+  .meta span{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:10px;
+    padding:7px 12px;font-size:13px;font-weight:500}
+  section{padding:44px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:26px;font-weight:800;letter-spacing:-.01em;margin:0 0 6px}
+  h2 .num{color:var(--brand);font-weight:800}
+  .lead{color:var(--ink-2);font-size:16px;margin:0 0 24px;max-width:800px}
+  h3{font-size:19px;font-weight:700;margin:28px 0 12px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .pad{padding:22px 24px}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13.5px;color:var(--ink-2);margin-top:6px}
+  .legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px}
+  .flow{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:14px}
+  .step{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative}
+  .step b{display:block;font-size:14px}
+  .step small{color:var(--ink-2);font-size:12.5px}
+  .step .tag{position:absolute;top:12px;right:12px;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px}
+  .t-ok{background:var(--ok-bg);color:var(--ok)} .t-fx{background:var(--warn-bg);color:var(--warn)}
+  .t-no{background:var(--err-bg);color:var(--err)}
+  .stepno{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--brand-100);color:var(--brand-600);
+    font-size:12px;font-weight:800;align-items:center;justify-content:center;margin-bottom:8px}
+  .finding{border:1px solid var(--line);border-left-width:5px;border-radius:14px;background:#fff;
+    padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .finding.p0{border-left-color:var(--p0)} .finding.p1{border-left-color:var(--p1)} .finding.p2{border-left-color:var(--p2)}
+  .finding .head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .badge{font-size:11.5px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:4px 10px;text-transform:uppercase}
+  .b-p0{background:var(--err-bg);color:var(--p0)} .b-p1{background:var(--warn-bg);color:var(--p1)} .b-p2{background:#e8effd;color:var(--p2)}
+  .finding h4{margin:0;font-size:17px;font-weight:700;flex:1;min-width:220px}
+  .who{font-size:12px;color:var(--ink-2);background:#f2f0f9;border-radius:8px;padding:3px 9px;font-weight:600}
+  .finding p{margin:6px 0}
+  .finding .lbl{font-weight:700;color:var(--ink)}
+  .finding .fix{background:#f6f9f6;border:1px solid #dcefe0;border-radius:10px;padding:12px 14px;margin-top:10px}
+  .finding .fix .lbl{color:var(--ok)}
+  code{background:#f2f0f9;border-radius:6px;padding:1px 6px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .good{background:var(--ok-bg);border:1px solid #cdefd7;border-radius:14px;padding:18px 22px}
+  .good ul{margin:8px 0 0;padding-left:20px} .good li{margin:8px 0}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2);
+    padding:0 12px 10px;border-bottom:1px solid var(--line)}
+  td{padding:11px 12px;border-bottom:1px solid #f0eef7;font-size:14px;vertical-align:top}
+  .num-cell{font-weight:800;color:var(--brand-600)}
+  footer{padding:36px 0 60px;color:var(--ink-2);font-size:14px}
+  @media (max-width:640px){header.hero h1{font-size:28px}h2{font-size:22px}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="kicker">Auditoría interna · 6 de agosto de 2026</span>
+    <h1>Loyalty Loop — auditoría de los dos flujos<br>creador ⇄ marca</h1>
+    <p>El módulo está completo y en producción. Esto es la revisión crítica de lo que se construyó: dónde el flujo se entiende solo, dónde se rompe, y qué conviene arreglar antes de la primera temporada real.</p>
+    <div class="meta">
+      <span>10 hallazgos</span>
+      <span>2 críticos</span>
+      <span>42 tests automatizados verdes</span>
+      <span>Commit <code style="background:rgba(255,255,255,.2);color:#fff">74465c2</code></span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2><span class="num">01</span> &nbsp;Qué se auditó y cómo</h2>
+    <p class="lead">Se recorrieron las dos pantallas del módulo —<b>Recompensas</b> (creador) y <b>Loyalty Loop</b> (marca)— paso por paso contra el código en producción y contra las reglas de negocio del plan. <b>No es una sesión con usuarios reales</b>: es una revisión del sistema construido, hecha por quien lo construyó, buscando a propósito lo que falla.</p>
+    <p class="lead">Los 42 tests automatizados ya cubren que las reglas se cumplan —nadie se salta el nivel, nadie canjea dos veces, nadie escribe el ledger—. Esta auditoría mira lo que los tests no pueden ver: <b>si la persona del otro lado entiende qué está pasando</b> y qué le va a doler cuando esto tenga volumen.</p>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--p0)"></i> P0 — Crítico (pérdida real para el usuario o el negocio)</span>
+      <span><i class="dot" style="background:var(--p1)"></i> P1 — Importante (fricción alta, riesgo operativo)</span>
+      <span><i class="dot" style="background:var(--p2)"></i> P2 — Pulido</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="num">02</span> &nbsp;Mapa de los dos flujos</h2>
+    <p class="lead">Del lado del creador, de ver un cupón a mostrarlo en el local. Del lado de la marca, de crearlo a quemarlo. En ámbar lo que tiene fricción; en rojo lo que puede fallar de verdad.</p>
+
+    <h3>Creador</h3>
+    <div class="flow">
+      <div class="step"><span class="stepno">1</span><b>Entra a Recompensas</b><small>Nivel, puntos y escalera</small><span class="tag t-fx">Fricción</span></div>
+      <div class="step"><span class="stepno">2</span><b>Ve el feed</b><small>Bloqueados con 🔒 y pts faltantes</small><span class="tag t-ok">OK</span></div>
+      <div class="step"><span class="stepno">3</span><b>Reclama</b><small>Un clic, irreversible</small><span class="tag t-no">Riesgo</span></div>
+      <div class="step"><span class="stepno">4</span><b>Recibe el QR</b><small>Modal con código y vencimiento</small><span class="tag t-ok">OK</span></div>
+      <div class="step"><span class="stepno">5</span><b>Mis cupones</b><small>Por usar / canjeados / vencidos</small><span class="tag t-fx">Fricción</span></div>
+      <div class="step"><span class="stepno">6</span><b>Muestra en el local</b><small>QR o código dictado</small><span class="tag t-ok">OK</span></div>
+    </div>
+
+    <h3>Marca</h3>
+    <div class="flow">
+      <div class="step"><span class="stepno">1</span><b>Abre el panel</b><small>3 KPIs + 4 pestañas</small><span class="tag t-ok">OK</span></div>
+      <div class="step"><span class="stepno">2</span><b>Crea el cupón</b><small>Con foto, nivel, stock, vigencia</small><span class="tag t-ok">OK</span></div>
+      <div class="step"><span class="stepno">3</span><b>Publica o pausa</b><small>Gate de verificación en RLS</small><span class="tag t-fx">Fricción</span></div>
+      <div class="step"><span class="stepno">4</span><b>Escanea el QR</b><small>Requiere sesión de la marca</small><span class="tag t-no">Riesgo</span></div>
+      <div class="step"><span class="stepno">5</span><b>Confirma el canje</b><small>Ve al creador antes de quemar</small><span class="tag t-ok">Muy bien</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="num">03</span> &nbsp;Hallazgos priorizados</h2>
+    <p class="lead">Diez puntos, del que más daño hace al de pulido. Cada uno con lo que pasa hoy, a quién afecta y cómo se arregla.</p>
+
+    <div class="finding p0">
+      <div class="head"><span class="badge b-p0">P0</span><h4>Reclamar es un clic, es irreversible, y no avisa</h4><span class="who">Creador</span></div>
+      <p><span class="lbl">Qué pasa:</span> El botón <b>Reclamar cupón</b> ejecuta el reclamo de una. La regla del MVP es <b>un canje por creador por cupón</b>, así que ese clic consume la única oportunidad de esa persona con ese cupón — para siempre. No hay confirmación previa, no hay deshacer, y no hay forma de devolver el lugar.</p>
+      <p><span class="lbl">Impacto:</span> Un toque accidental en el celular quema el cupón y además le descuenta stock a la marca. El creador ve un código que no quería y ya no puede reclamar el que sí quería si era el mismo. Es el único punto del módulo donde el usuario pierde algo sin poder recuperarlo.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Confirmación in-page antes de reclamar (nunca <code>window.confirm</code>) diciendo exactamente lo que se compromete: <i>"Vas a reclamar X. Tenés 14 días para usarlo y no se puede reclamar de nuevo."</i> Alternativa complementaria: permitir <b>soltar</b> un reclamo no usado (pasarlo a <code>expirado</code> a mano), que ya libera stock por el mismo camino que usa el barrido.</p>
+    </div>
+
+    <div class="finding p0">
+      <div class="head"><span class="badge b-p0">P0</span><h4>Quien escanea en el local tiene que ser el dueño de la cuenta</h4><span class="who">Marca · operación</span></div>
+      <p><span class="lbl">Qué pasa:</span> El QR lleva a <code>/ugc/marca/validar/{code}</code>, que está dentro del área protegida: exige sesión con rol <b>marca</b>. En el local, quien atiende la mesa no tiene —ni debería tener— la cuenta del negocio abierta en su celular.</p>
+      <p><span class="lbl">Impacto:</span> El canje se traba en el momento de la verdad, con el creador esperando. La salida práctica va a ser que el dueño preste su sesión, que es peor: esa cuenta puede publicar campañas, ver aplicantes y editar el perfil del negocio.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Es una decisión de producto, no un bug — se descartó antes tener links por local o PIN. Pero conviene reabrirla con una opción acotada: un <b>rol de staff del local</b> que solo pueda validar canjes, o un enlace de validación de un solo uso con vencimiento corto. Mientras tanto, decirlo explícito en el panel: <i>"Validá vos desde tu cuenta"</i>.</p>
+    </div>
+
+    <div class="finding p1">
+      <div class="head"><span class="badge b-p1">P1</span><h4>Ninguna pantalla dice cómo se ganan puntos</h4><span class="who">Creador</span></div>
+      <p><span class="lbl">Qué pasa:</span> La tabla <code>point_rules</code> vive en la base y es legible para cualquiera con sesión, pero <b>no se muestra en ningún lado</b>. El creador ve su total, su nivel y su historial —o sea, lo que ya pasó— pero nunca ve que una entrega aprobada vale +150 ni que un 5★ suma otros 50.</p>
+      <p><span class="lbl">Impacto:</span> El módulo entero se apoya en que el creador quiera subir de nivel. Sin la tabla de puntos a la vista, "te faltan 900 pts para Oro" es un número sin acciones detrás: no sabe si son dos entregas o veinte, y no puede decidir qué hacer.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Un bloque "Cómo se ganan puntos" en Recompensas, leído de <code>point_rules</code> —no hardcodeado, o se desincroniza el día que se ajusten los valores—. Con los topes mensuales visibles, que hoy tampoco se comunican: el creador que sube 6 piezas al book en un mes no entiende por qué la sexta no sumó.</p>
+    </div>
+
+    <div class="finding p1">
+      <div class="head"><span class="badge b-p1">P1</span><h4>El barrido corre una vez al día, y si falta el secreto no corre nunca</h4><span class="who">Operación</span></div>
+      <p><span class="lbl">Qué pasa:</span> Vencer reclamos, liberar stock y avisar "tu cupón vence en 3 días" pasan en un solo barrido diario, colgado del cron de las 7:00 CR. Dos consecuencias: un cupón que vence a las 11 p.m. mantiene su lugar tomado hasta la mañana siguiente, y <b>si <code>CRON_SECRET</code> no está cargado en Vercel el endpoint responde 503 y nada de esto ocurre</b>, en silencio.</p>
+      <p><span class="lbl">Impacto:</span> El desfase de horas es tolerable. Que el cron esté caído no: el stock deja de liberarse, los avisos no salen, y no hay ninguna señal — se descubre cuando una marca pregunta por qué su cupón sigue agotado.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Verificar hoy que <code>CRON_SECRET</code> esté en Vercel (existe en <code>.env.local</code>, que no garantiza nada de producción). Y mostrar en el panel admin la <b>fecha de la última corrida</b> del barrido: un dato viejo se ve de inmediato, un cron caído no.</p>
+    </div>
+
+    <div class="finding p1">
+      <div class="head"><span class="badge b-p1">P1</span><h4>Borrar un cupón deja su foto tirada en Storage</h4><span class="who">Marca · infraestructura</span></div>
+      <p><span class="lbl">Qué pasa:</span> <code>borrarCuponAction</code> borra la fila de <code>coupons</code> y nada más. La imagen subida al bucket <code>coupon-images</code> queda huérfana: ya no la referencia nadie y nadie la va a borrar.</p>
+      <p><span class="lbl">Impacto:</span> El 1 GB de Storage es el primer techo contra el que pega este proyecto —ya está medido—. Cada cupón borrado o editado con foto nueva deja un archivo muerto ocupando lugar. Con 6 marcas no se nota; es exactamente el tipo de goteo que aparece recién cuando molesta.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Borrar el objeto de Storage junto con la fila, y también la imagen anterior cuando se reemplaza en una edición. Si se prefiere no bloquear el borrado por un fallo de Storage, sumar el barrido de huérfanos al cron diario que ya limpia los voiceovers vencidos.</p>
+    </div>
+
+    <div class="finding p1">
+      <div class="head"><span class="badge b-p1">P1</span><h4>Pausar un cupón no explica qué pasa con los códigos ya emitidos</h4><span class="who">Marca</span></div>
+      <p><span class="lbl">Qué pasa:</span> Pausar saca el cupón del feed pero <b>no invalida</b> los códigos que ya se reclamaron — y está bien que sea así, porque esa gente ya se comprometió. Pero la pantalla no lo dice en ningún lado.</p>
+      <p><span class="lbl">Impacto:</span> La marca pausa creyendo que cortó el grifo del todo, y sigue llegando gente al local con códigos válidos. Es una promesa incumplida en la dirección más incómoda: la del negocio que ya no quería seguir dando el beneficio.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Al pausar, mostrar cuántos reclamos siguen vigentes y hasta cuándo: <i>"3 creadores ya tienen su código; el último vence el 20 de agosto."</i> Con eso la marca sabe cuándo termina de verdad su compromiso.</p>
+    </div>
+
+    <div class="finding p2">
+      <div class="head"><span class="badge b-p2">P2</span><h4>"Para usar" no ordena por vencimiento</h4><span class="who">Creador</span></div>
+      <p><span class="lbl">Qué pasa:</span> Los cupones se listan por fecha de reclamo (el más nuevo primero). El que vence mañana puede quedar al final.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Ordenar "Para usar" por <code>expires_at</code> ascendente. Lo urgente arriba, que es la única razón por la que alguien entra a esa pestaña.</p>
+    </div>
+
+    <div class="finding p2">
+      <div class="head"><span class="badge b-p2">P2</span><h4>El feed acumula cupones que ya no sirven</h4><span class="who">Creador</span></div>
+      <p><span class="lbl">Qué pasa:</span> Los agotados quedan en <i>Disponibles</i> con el botón deshabilitado, y los de nivel superior también. Con el tiempo, la primera pantalla del módulo se llena de cosas que no se pueden tocar.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Ordenar por reclamables primero, y mandar los agotados al fondo o a un plegable. Los bloqueados por nivel sí conviene dejarlos visibles: son el motivo para seguir entregando.</p>
+    </div>
+
+    <div class="finding p2">
+      <div class="head"><span class="badge b-p2">P2</span><h4>Listas cortadas sin decir que están cortadas</h4><span class="who">Creador · Admin</span></div>
+      <p><span class="lbl">Qué pasa:</span> El historial de puntos muestra 25 eventos y el registro global del admin 60 reclamos. En los dos casos el corte es mudo: no hay "ver más" ni un total que delate lo que falta.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Mostrar el total real y un "ver más". Un corte silencioso se lee como "esto es todo lo que hay", que es peor que una lista larga.</p>
+    </div>
+
+    <div class="finding p2">
+      <div class="head"><span class="badge b-p2">P2</span><h4>Los datos <code>[PRUEBA]</code> siguen visibles en producción</h4><span class="who">Todos</span></div>
+      <p><span class="lbl">Qué pasa:</span> Los tres cupones de prueba y los 600 puntos inventados de <code>@evanmarin</code> están en la base real. Los cupones los ven las otras dos cuentas de creador.</p>
+      <div class="fix"><span class="lbl">Solución:</span> Borrarlos con el bloque del final de <code>supabase/scripts/cupones-de-prueba.sql</code> antes de que entre alguien de verdad. El prefijo <code>[PRUEBA]</code> los hace evidentes mientras tanto, pero es una curita, no una solución.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="num">04</span> &nbsp;Lo que está bien y conviene no tocar</h2>
+    <p class="lead">Decisiones que ya pagaron su costo y sostienen el resto.</p>
+    <div class="good">
+      <ul>
+        <li><b>El ledger como fuente de verdad.</b> No hay columna de puntos en ningún perfil ni botón para regalarlos, ni siquiera en el admin. Todo total es reproducible desde su historial, y el valor de cada evento queda congelado: ajustar la economía mañana no reescribe el pasado.</li>
+        <li><b>Los puntos los otorgan triggers, no el código de la app.</b> Un punto se gana cuando la fila cambia de estado. Cualquier ruta que se escriba después —admin, disputas— otorga igual, sin que nadie tenga que acordarse.</li>
+        <li><b>Validar es en dos pasos.</b> Buscar, ver quién es, confirmar. Quien atiende puede mirar a la persona antes de quemar el código, en vez de descubrir después que no era.</li>
+        <li><b>Un código ajeno da el mismo error que uno inventado.</b> "No encontramos ese código" en los dos casos: si distinguiera, la pantalla de validación serviría para adivinar códigos de otras marcas probando combinaciones.</li>
+        <li><b>El stock que ve el creador es el real.</b> La vista corre con permisos del dueño justamente para eso; con la configuración intuitiva, cada quien habría contado solo sus propios reclamos y vería lugar libre en un cupón agotado.</li>
+        <li><b>La leyenda de los eventos es fija y no editable.</b> Evita el malentendido caro: llegar a una cena de aniversario creyendo que el consumo iba incluido.</li>
+        <li><b>El estado que ve el creador se calcula con la fecha, no con la columna.</b> Un cupón vencido se ve vencido aunque el barrido todavía no haya pasado.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="num">05</span> &nbsp;Qué medir en la primera temporada</h2>
+    <p class="lead">Los umbrales de nivel viven en la base y se cambian con un <code>UPDATE</code>, sin deploy. Eso solo sirve si hay con qué decidir el cambio.</p>
+    <div class="card pad">
+      <table>
+        <thead><tr><th>Métrica</th><th>Por qué importa</th><th>Señal de alarma</th></tr></thead>
+        <tbody>
+          <tr><td class="num-cell">Reclamos que terminan en canje</td><td>Es la única prueba de que el cupón valía la pena de verdad.</td><td>Debajo del 60 %: el beneficio no justifica el viaje al local.</td></tr>
+          <tr><td class="num-cell">Días entre reclamo y canje</td><td>Dice si la vigencia de 14 días está bien calibrada.</td><td>Si casi todos canjean el mismo día, la vigencia sobra y congela stock.</td></tr>
+          <tr><td class="num-cell">Cupones que vencen sin usarse</td><td>Stock inmovilizado y una promesa que no se cumplió.</td><td>Arriba del 30 %: reclamar es demasiado fácil o el aviso llega tarde.</td></tr>
+          <tr><td class="num-cell">Cuántos creadores llegan a Plata</td><td>Es el primer escalón; si nadie lo cruza, la escalera no arranca.</td><td>Menos de la mitad en una temporada: 500 pts está muy arriba.</td></tr>
+          <tr><td class="num-cell">Tiempo hasta el primer cupón</td><td>Cuánto tarda alguien nuevo en recibir algo del sistema.</td><td>Más de un mes: se va antes de ver el beneficio.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:none">
+  <div class="wrap">
+    <h2><span class="num">06</span> &nbsp;En qué orden lo arreglaría</h2>
+    <div class="card pad">
+      <table>
+        <thead><tr><th style="width:44px">#</th><th>Qué</th><th>Por qué primero</th></tr></thead>
+        <tbody>
+          <tr><td class="num-cell">1</td><td>Confirmación antes de reclamar</td><td>Es lo único que hoy le hace perder algo irrecuperable al usuario, y se arregla en una tarde.</td></tr>
+          <tr><td class="num-cell">2</td><td>Verificar <code>CRON_SECRET</code> en Vercel</td><td>Cinco minutos. Si falta, la mitad de la fase 4 no está corriendo y nadie se enteró.</td></tr>
+          <tr><td class="num-cell">3</td><td>Bloque "Cómo se ganan puntos"</td><td>Sin esto la escalera es un número sin acciones detrás.</td></tr>
+          <tr><td class="num-cell">4</td><td>Borrar los datos <code>[PRUEBA]</code></td><td>Antes de que entre un creador de verdad.</td></tr>
+          <tr><td class="num-cell">5</td><td>Decidir cómo valida el local</td><td>Es de producto, no de código, y define si el módulo funciona en el mostrador.</td></tr>
+          <tr><td class="num-cell">6</td><td>Imágenes huérfanas + orden de las listas</td><td>Goteo y pulido: importan cuando haya volumen, no antes.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Auditoría del módulo Loyalty Loop · UGC·CRC (Q Labs) · 6 de agosto de 2026.<br>
+    Revisión del sistema construido contra las reglas de negocio del plan. No reemplaza una prueba con creadores y marcas reales — que es el siguiente paso.
+  </div>
+</footer>
+
+</body>
+</html>

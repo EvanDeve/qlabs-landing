@@ -18,6 +18,7 @@ export type MiCupon = {
   diasRestantes: number;
   canjeadoTexto: string | null;
   eventLocation: string | null;
+  imageUrl: string | null;
   qr: string | null;
 };
 
@@ -87,6 +88,21 @@ export default function MisCupones({ cupones }: { cupones: MiCupon[] }) {
                       opacity: c.estado === "por_usar" ? 1 : 0.75,
                     }}
                   >
+                    {c.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.imageUrl}
+                        alt=""
+                        style={{
+                          width: "100%",
+                          height: "112px",
+                          objectFit: "cover",
+                          borderRadius: "10px",
+                          border: "1px solid var(--line)",
+                          filter: c.estado === "por_usar" ? "none" : "grayscale(0.8)",
+                        }}
+                      />
+                    )}
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <span
                         className={`${styles.riskPill} ${

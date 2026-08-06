@@ -2,13 +2,12 @@
 
 import { useActionState, useState } from "react";
 import {
-  crearCuponAction,
   cambiarEstadoCuponAction,
   borrarCuponAction,
   canjearAction,
-  type CuponState,
   type CanjeState,
 } from "@/lib/actions/cupones";
+import CuponForm, { type CuponEditable } from "./CuponForm";
 import { buscarCodigoAction, type BusquedaState } from "@/lib/actions/validar";
 import { LABEL_TIPO_CUPON, LEYENDA_EVENTO } from "@/lib/ugc/loyalty";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
@@ -27,6 +26,10 @@ export type CuponMarca = {
   vigencia: string;
   eventLocation: string | null;
   conditions: string | null;
+  imageUrl: string | null;
+  claimValidityDays: number | null;
+  /** YYYY-MM-DD para el <input type="date"> de la edición. */
+  eventDateInput: string | null;
 };
 
 export type CanjeFila = {
@@ -92,15 +95,31 @@ export default function LoyaltyMarcaTabs({
         ))}
       </div>
 
-      {tab === "cupones" && <ListaCupones cupones={cupones} />}
-      {tab === "nuevo" && <FormularioCupon niveles={niveles} verificada={verificada} />}
+      {tab === "cupones" && (
+        <ListaCupones cupones={cupones} niveles={niveles} verificada={verificada} />
+      )}
+      {tab === "nuevo" && (
+        <div className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "760px" }}>
+          <CuponForm niveles={niveles} verificada={verificada} />
+        </div>
+      )}
       {tab === "validar" && <Validador />}
       {tab === "canjes" && <TablaCanjes canjes={canjes} />}
     </div>
   );
 }
 
-function ListaCupones({ cupones }: { cupones: CuponMarca[] }) {
+function ListaCupones({
+  cupones,
+  niveles,
+  verificada,
+}: {
+  cupones: CuponMarca[];
+  niveles: { level: number; name: string }[];
+  verificada: boolean;
+}) {
+  const [editando, setEditando] = useState<CuponEditable | null>(null);
+
   if (cupones.length === 0) {
     return (
       <div className={`${styles.card} ${styles.empty}`}>
@@ -110,6 +129,7 @@ function ListaCupones({ cupones }: { cupones: CuponMarca[] }) {
   }
 
   return (
+    <>
     <div className={styles.cardsGrid}>
       {cupones.map((c) => {
         const usados = c.stockTotal - c.stockAvailable;
@@ -121,6 +141,20 @@ function ListaCupones({ cupones }: { cupones: CuponMarca[] }) {
             className={`${styles.card} ${styles.cardPad}`}
             style={{ display: "flex", flexDirection: "column", gap: "10px" }}
           >
+            {c.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={c.imageUrl}
+                alt=""
+                style={{
+                  width: "100%",
+                  height: "132px",
+                  objectFit: "cover",
+                  borderRadius: "10px",
+                  border: "1px solid var(--line)",
+                }}
+              />
+            )}
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <span className={`${styles.riskPill} ${styles[ESTADO_PILL[c.status] ?? "riskMuted"]}`}>
                 {ESTADO_LABEL[c.status] ?? c.status}
@@ -193,6 +227,29 @@ function ListaCupones({ cupones }: { cupones: CuponMarca[] }) {
                   </button>
                 </form>
               )}
+              {c.status !== "vencido" && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditando({
+                      id: c.id,
+                      title: c.title,
+                      description: c.description,
+                      type: c.type,
+                      minLevel: c.minLevel,
+                      stockTotal: c.stockTotal,
+                      claimValidityDays: c.claimValidityDays,
+                      eventDateInput: c.eventDateInput,
+                      eventLocation: c.eventLocation,
+                      conditions: c.conditions,
+                      imageUrl: c.imageUrl,
+                    })
+                  }
+                  className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                >
+                  Editar
+                </button>
+              )}
               {/* Solo se puede borrar lo que nadie reclamó: si alguien ya tiene
                   el código, borrar el cupón le desaparece el QR de la mano. */}
               {usados === 0 && (
@@ -213,171 +270,25 @@ function ListaCupones({ cupones }: { cupones: CuponMarca[] }) {
         );
       })}
     </div>
-  );
-}
 
-function FormularioCupon({
-  niveles,
-  verificada,
-}: {
-  niveles: { level: number; name: string }[];
-  verificada: boolean;
-}) {
-  const [state, formAction, pending] = useActionState<CuponState, FormData>(crearCuponAction, null);
-  const [tipo, setTipo] = useState("producto");
-
-  return (
-    <div className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "760px" }}>
-      <form action={formAction}>
-        <div className={styles.field}>
-          <label htmlFor="title">Título del cupón</label>
-          <input id="title" name="title" required placeholder="Ej: 2x1 en cócteles de autor" className={styles.inp} />
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-          <div className={styles.field}>
-            <label htmlFor="type">Tipo</label>
-            <select
-              id="type"
-              name="type"
-              className={styles.selectInp}
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-            >
-              <option value="producto">Producto</option>
-              <option value="servicio">Servicio</option>
-              <option value="evento">Evento</option>
-            </select>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="min_level">¿Quién puede reclamarlo?</label>
-            <select id="min_level" name="min_level" className={styles.selectInp} defaultValue={1}>
-              {niveles.map((n) => (
-                <option key={n.level} value={n.level}>
-                  {n.level === 1 ? "Todos los creadores" : `Nivel mínimo: ${n.name}`}
-                </option>
-              ))}
-            </select>
-            <p className={styles.fieldHint}>
-              Los niveles altos reflejan entregas aprobadas y ratings reales.
-            </p>
-          </div>
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="description">Descripción — qué incluye exactamente</label>
-          <textarea
-            id="description"
-            name="description"
-            required
-            rows={3}
-            placeholder="Contale al creador qué recibe al canjear este cupón"
-            className={styles.inp}
-            style={{ resize: "vertical" }}
+    {editando && (
+      <div className={styles.modalOverlay} onClick={() => setEditando(null)}>
+        <div
+          className={styles.modalCard}
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: "680px", maxHeight: "88vh", overflowY: "auto" }}
+        >
+          <h2 style={{ fontSize: "18px", marginBottom: "16px" }}>Editar cupón</h2>
+          <CuponForm
+            cupon={editando}
+            niveles={niveles}
+            verificada={verificada}
+            onListo={() => setEditando(null)}
           />
         </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-          <div className={styles.field}>
-            <label htmlFor="stock_total">Stock (canjes disponibles)</label>
-            <input
-              id="stock_total"
-              name="stock_total"
-              type="number"
-              min={1}
-              defaultValue={20}
-              required
-              className={styles.inp}
-            />
-          </div>
-
-          {tipo !== "evento" && (
-            <div className={styles.field}>
-              <label htmlFor="claim_validity_days">Vigencia del reclamo</label>
-              <select id="claim_validity_days" name="claim_validity_days" className={styles.selectInp} defaultValue={14}>
-                <option value={7}>7 días desde el reclamo</option>
-                <option value={14}>14 días desde el reclamo</option>
-                <option value={30}>30 días desde el reclamo</option>
-              </select>
-              <p className={styles.fieldHint}>Si vence sin usarse, el código expira y el stock se libera.</p>
-            </div>
-          )}
-        </div>
-
-        {tipo === "evento" && (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              <div className={styles.field}>
-                <label htmlFor="event_date">Fecha del evento</label>
-                <input id="event_date" name="event_date" type="date" required className={styles.inp} />
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="event_location">Ubicación</label>
-                <input
-                  id="event_location"
-                  name="event_location"
-                  placeholder="Ej: Local principal, Escazú"
-                  className={styles.inp}
-                />
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: "12px",
-                lineHeight: 1.5,
-                padding: "10px 12px",
-                borderRadius: "10px",
-                background: "var(--warn-bg)",
-                color: "var(--warn)",
-                marginBottom: "14px",
-              }}
-            >
-              🎟️ <b>Leyenda automática en la ficha:</b> &quot;{LEYENDA_EVENTO}&quot; — no es editable.
-              El QR vale hasta la fecha del evento, no por días desde el reclamo.
-            </div>
-          </>
-        )}
-
-        <div className={styles.field}>
-          <label htmlFor="conditions">Condiciones adicionales (opcional)</label>
-          <input
-            id="conditions"
-            name="conditions"
-            placeholder="Ej: válido solo de lunes a jueves"
-            className={styles.inp}
-          />
-        </div>
-
-        {state && "error" in state && state.error && (
-          <p style={{ fontSize: "13px", color: "var(--risk)", marginBottom: "12px" }}>{state.error}</p>
-        )}
-        {state && "ok" in state && state.ok && (
-          <p style={{ fontSize: "13px", color: "var(--ok)", marginBottom: "12px" }}>{state.ok}</p>
-        )}
-
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <button
-            type="submit"
-            name="publicar"
-            value="1"
-            disabled={pending || !verificada}
-            className={`${styles.btn} ${styles.btnPrimary}`}
-          >
-            {pending ? "Guardando…" : "Publicar cupón"}
-          </button>
-          <button type="submit" disabled={pending} className={`${styles.btn} ${styles.btnGhost}`}>
-            Guardar borrador
-          </button>
-        </div>
-
-        <p style={{ marginTop: "12px", fontSize: "12px", color: "var(--ink-3)" }}>
-          {verificada
-            ? "Tu negocio está verificado ✓ — tus cupones se publican al instante. Un canje por creador por cupón."
-            : "Tu negocio todavía está en revisión: podés dejar cupones en borrador y publicarlos apenas quede verificado."}
-        </p>
-      </form>
-    </div>
+      </div>
+    )}
+    </>
   );
 }
 

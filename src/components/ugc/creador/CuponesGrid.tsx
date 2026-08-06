@@ -18,6 +18,7 @@ export type CuponVista = {
   brandName: string;
   brandInitials: string;
   brandLogo: string | null;
+  imageUrl: string | null;
   stockAvailable: number;
   stockTotal: number;
   /** Ya formateada en el servidor, con la zona horaria de Costa Rica. */
@@ -100,6 +101,21 @@ export default function CuponesGrid({
                 opacity: desbloqueado ? 1 : 0.72,
               }}
             >
+              {c.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={c.imageUrl}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "136px",
+                    objectFit: "cover",
+                    borderRadius: "10px",
+                    border: "1px solid var(--line)",
+                    filter: desbloqueado ? "none" : "grayscale(0.7)",
+                  }}
+                />
+              )}
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span
                   className={styles.avSm}

@@ -123,6 +123,7 @@ export default async function RecompensasPage() {
       brandName: nombre,
       brandInitials: nombre.slice(0, 2).toUpperCase(),
       brandLogo: marca?.logo_url ?? null,
+      imageUrl: c.image_url,
       stockAvailable: stock?.stock_available ?? 0,
       stockTotal: stock?.stock_total ?? c.stock_total,
       vigencia,
@@ -162,6 +163,7 @@ export default async function RecompensasPage() {
       diasRestantes: dias,
       canjeadoTexto: r.redeemed_at ? fechaLarga(r.redeemed_at) : null,
       eventLocation: cupon?.event_location ?? null,
+      imageUrl: cupon?.image_url ?? null,
       qr: qrPorCodigo.get(r.code) ?? null,
     };
   });
