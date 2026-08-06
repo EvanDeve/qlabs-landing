@@ -18,6 +18,10 @@ const NAV_ITEMS: QosNavItem[] = [
 
   { href: "/ugc/creador/promos", label: "Feed de promos", icon: "megaphone", group: "Marketplace" },
   { href: "/ugc/creador/aplicaciones", label: "Mis aplicaciones", icon: "clock", group: "Marketplace" },
+  // Va en Marketplace y no en "Mi cuenta": los cupones los ponen las marcas de
+  // la plataforma, así que es lo mismo que el feed de promos — otra forma de
+  // que una marca lo busque.
+  { href: "/ugc/creador/recompensas", label: "Recompensas", icon: "sparkle", group: "Marketplace" },
 
   { href: "/ugc/creador/book", label: "Mi book", icon: "book", group: "Mi cuenta" },
   { href: "/ugc/creador/perfil", label: "Perfil", icon: "users", group: "Mi cuenta" },

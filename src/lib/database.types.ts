@@ -27,6 +27,9 @@ export type PortfolioMediaType = "image" | "video";
 // Loyalty Loop. No es un enum de Postgres a propósito: `point_rules.action` es
 // una PK de texto para poder agregar una acción con un INSERT, sin migración.
 // Este union es la lista de las que hay hoy, no un contrato de la base.
+export type CouponType = "producto" | "servicio" | "evento";
+export type CouponStatus = "borrador" | "publicado" | "pausado" | "agotado" | "vencido";
+export type RedemptionStatus = "reclamado" | "canjeado" | "expirado";
 export type PointAction =
   | "profile_completed"
   | "book_upload"
@@ -862,6 +865,72 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["points_events"]["Insert"]>;
         Relationships: [];
       };
+      coupons: {
+        Row: {
+          id: string;
+          brand_id: string;
+          title: string;
+          type: CouponType;
+          description: string;
+          image_url: string | null;
+          min_level: number;
+          stock_total: number;
+          claim_validity_days: number | null;
+          expires_at: string | null;
+          event_date: string | null;
+          event_location: string | null;
+          conditions: string | null;
+          status: CouponStatus;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          brand_id: string;
+          title: string;
+          type: CouponType;
+          description: string;
+          image_url?: string | null;
+          min_level?: number;
+          stock_total: number;
+          claim_validity_days?: number | null;
+          expires_at?: string | null;
+          event_date?: string | null;
+          event_location?: string | null;
+          conditions?: string | null;
+          status?: CouponStatus;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["coupons"]["Insert"]>;
+        Relationships: [];
+      };
+      // Se escribe solo por `claim_coupon` (y por `redeem_coupon` en la fase 3):
+      // no hay policy de INSERT ni de UPDATE para nadie.
+      redemptions: {
+        Row: {
+          id: string;
+          coupon_id: string;
+          creator_id: string;
+          code: string;
+          status: RedemptionStatus;
+          claimed_at: string;
+          expires_at: string;
+          redeemed_at: string | null;
+          validated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          coupon_id: string;
+          creator_id: string;
+          code: string;
+          status?: RedemptionStatus;
+          claimed_at?: string;
+          expires_at: string;
+          redeemed_at?: string | null;
+          validated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["redemptions"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       creator_public_profiles: {
@@ -904,6 +973,18 @@ export interface Database {
         Row: {
           creator_id: string;
           total_points: number;
+        };
+        Relationships: [];
+      };
+      // Al revés que la anterior: corre con permisos del dueño, porque con
+      // invoker cada creador contaría solo sus propios reclamos y vería stock
+      // libre en un cupón agotado. Solo devuelve números.
+      coupon_stock: {
+        Row: {
+          coupon_id: string;
+          stock_total: number;
+          stock_claimed: number;
+          stock_available: number;
         };
         Relationships: [];
       };
@@ -968,6 +1049,12 @@ export interface Database {
         Args: { p_creator: string };
         Returns: number;
       };
+      // Devuelve la fila de `redemptions` recién creada. Valida nivel, stock,
+      // estado y reclamo previo adentro de una transacción con lock.
+      claim_coupon: {
+        Args: { p_coupon: string };
+        Returns: Database["public"]["Tables"]["redemptions"]["Row"];
+      };
     };
     Enums: {
       app_role: AppRole;
@@ -982,6 +1069,9 @@ export interface Database {
       calendar_event_type: CalendarEventType;
       calendar_event_status: CalendarEventStatus;
       calendar_month_status: CalendarMonthStatus;
+      coupon_type: CouponType;
+      coupon_status: CouponStatus;
+      redemption_status: RedemptionStatus;
     };
   };
 }
