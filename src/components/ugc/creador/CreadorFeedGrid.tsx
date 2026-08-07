@@ -28,13 +28,10 @@ type FeedCampaign = {
   applicationStatus: ApplicationStatus | null;
 };
 
-export default function CreadorFeedGrid({
-  campaigns,
-  verified,
-}: {
-  campaigns: FeedCampaign[];
-  verified: boolean;
-}) {
+// Sin prop `verified`: al feed solo llega un creador verificado, así que
+// aplicar siempre está disponible. La variante "Perfil en revisión" se fue con
+// el bloqueo duro.
+export default function CreadorFeedGrid({ campaigns }: { campaigns: FeedCampaign[] }) {
   const industries = [...new Set(campaigns.map((c) => c.brandIndustry).filter((v): v is string => !!v))];
   const [activeIndustry, setActiveIndustry] = useState<string>("all");
 
@@ -136,10 +133,8 @@ export default function CreadorFeedGrid({
                   >
                     Ya aplicaste — {APPLICATION_STATUS_LABEL[campaign.applicationStatus]}
                   </span>
-                ) : verified ? (
-                  <ApplyForm campaignId={campaign.id} />
                 ) : (
-                  <span className={`${styles.riskPill} ${styles.riskMuted}`}>Perfil en revisión</span>
+                  <ApplyForm campaignId={campaign.id} />
                 )}
               </div>
             </div>

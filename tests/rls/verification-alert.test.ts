@@ -64,11 +64,14 @@ describe("aviso de verificación pendiente", () => {
     expect((row.payload as Record<string, unknown>).subject_role).toBe("brand");
     expect((row.payload as Record<string, unknown>).subject_detail).toBe("Industria de prueba");
 
-    // Un correo por admin, y dice lo que la marca queda bloqueada de hacer.
+    // Un correo por admin, y dice qué queda bloqueado. Desde el bloqueo duro
+    // (migración 20260807000000) el bloqueo ya no es por acción —publicar,
+    // aplicar— sino la entrada entera: el aviso tiene que decir eso, porque es
+    // lo que le marca al equipo la urgencia de revisar.
     expect(enviados.length).toBe(admins!.length);
     expect(enviados[0].subject).toContain(MARCA_DE_PRUEBA);
     expect(enviados[0].subject).toContain("marca");
-    expect(enviados[0].html).toContain("publicar campañas");
+    expect(enviados[0].html).toContain("no puede entrar al panel");
     expect(enviados[0].html).toContain("/ugc/admin/marketplace");
   });
 
@@ -82,10 +85,9 @@ describe("aviso de verificación pendiente", () => {
       detail: "Heredia",
     });
 
-    // Un creador sin verificar no puede APLICAR (la marca es la que no puede publicar).
     expect(enviados[0].subject).toContain("creador");
-    expect(enviados[0].html).toContain("aplicar a campañas");
-    expect(enviados[0].html).not.toContain("publicar campañas");
+    expect(enviados[0].subject).not.toContain("marca");
+    expect(enviados[0].html).toContain("no puede entrar al panel");
     expect(enviados[0].html).toContain("Ciudad: Heredia");
   });
 });

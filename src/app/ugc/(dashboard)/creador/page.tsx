@@ -36,26 +36,20 @@ export default async function CreadorHomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [
-    { data: applications },
-    { data: tasks },
-    { data: taskColumns },
-    { data: creatorProfile },
-    { count: bookCount },
-  ] = await Promise.all([
-    supabase.from("applications").select("*").eq("creator_id", user!.id),
-    supabase.from("creator_tasks").select("*").eq("creator_id", user!.id),
-    supabase
-      .from("creator_task_columns")
-      .select("*")
-      .eq("creator_id", user!.id)
-      .order("position", { ascending: true }),
-    supabase.from("creator_profiles").select("verified").eq("profile_id", user!.id).maybeSingle(),
-    supabase
-      .from("portfolio_items")
-      .select("*", { count: "exact", head: true })
-      .eq("creator_id", user!.id),
-  ]);
+  const [{ data: applications }, { data: tasks }, { data: taskColumns }, { count: bookCount }] =
+    await Promise.all([
+      supabase.from("applications").select("*").eq("creator_id", user!.id),
+      supabase.from("creator_tasks").select("*").eq("creator_id", user!.id),
+      supabase
+        .from("creator_task_columns")
+        .select("*")
+        .eq("creator_id", user!.id)
+        .order("position", { ascending: true }),
+      supabase
+        .from("portfolio_items")
+        .select("*", { count: "exact", head: true })
+        .eq("creator_id", user!.id),
+    ]);
 
   const apps = applications ?? [];
   const campaignIds = [...new Set(apps.map((a) => a.campaign_id))];
@@ -147,14 +141,9 @@ export default async function CreadorHomePage() {
     });
   }
 
-  if (!creatorProfile?.verified) {
-    atencion.push({
-      texto: "Tu perfil está en revisión",
-      detalle: "Mientras tanto no podés aplicar a promos. Completá tu book para acelerar la verificación.",
-      href: "/ugc/creador/book",
-      urgente: false,
-    });
-  } else if ((bookCount ?? 0) === 0) {
+  // Se fue el aviso de "tu perfil está en revisión": un creador que ve esta
+  // pantalla ya está verificado, porque si no el layout no lo deja entrar.
+  if ((bookCount ?? 0) === 0) {
     atencion.push({
       texto: "Tu book está vacío",
       detalle: "Las marcas miran tu book antes de aceptarte. Subí al menos una pieza.",

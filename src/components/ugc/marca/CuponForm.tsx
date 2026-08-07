@@ -33,15 +33,15 @@ export type CuponEditable = {
  * llega la URL: un archivo dentro del FormData choca con el tope de ~4.5 MB de
  * Vercel, que no se nota en local y falla en producción.
  */
+// Sin prop `verificada`: al panel de la marca solo entra un negocio verificado,
+// así que publicar un cupón siempre está disponible.
 export default function CuponForm({
   cupon,
   niveles,
-  verificada,
   onListo,
 }: {
   cupon?: CuponEditable;
   niveles: { level: number; name: string }[];
-  verificada: boolean;
   onListo?: () => void;
 }) {
   const router = useRouter();
@@ -374,7 +374,7 @@ export default function CuponForm({
             <button
               type="button"
               onClick={(e) => enviar(e as unknown as React.FormEvent<HTMLFormElement>, true)}
-              disabled={ocupado || !verificada}
+              disabled={ocupado}
               className={`${styles.btn} ${styles.btnPrimary}`}
             >
               {estado === "subiendo" ? "Subiendo foto…" : estado === "guardando" ? "Guardando…" : "Publicar cupón"}
@@ -393,9 +393,7 @@ export default function CuponForm({
 
       {!editando && (
         <p style={{ marginTop: "12px", fontSize: "12px", color: "var(--ink-3)" }}>
-          {verificada
-            ? "Tu negocio está verificado ✓ — tus cupones se publican al instante. Un canje por creador por cupón."
-            : "Tu negocio todavía está en revisión: podés dejar cupones en borrador y publicarlos apenas quede verificado."}
+          Tus cupones se publican al instante. Un canje por creador por cupón.
         </p>
       )}
     </form>

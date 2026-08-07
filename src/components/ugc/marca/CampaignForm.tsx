@@ -22,7 +22,7 @@ const BORRADOR_VIDA_MS = 7 * 24 * 60 * 60 * 1000;
 
 type Borrador = { savedAt: number; campos: Record<string, string> };
 
-export default function CampaignForm({ verified }: { verified: boolean }) {
+export default function CampaignForm() {
   const router = useRouter();
   const toast = useToast();
   const formRef = useRef<HTMLFormElement>(null);
@@ -332,50 +332,31 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
         </p>
       )}
 
-      {/* Sin verificar, publicar es un botón que solo puede fallar: el gate real
-          está en RLS y en la acción. Se muestra como lo que es —el paso que
-          viene después— y el borrador pasa a ser la acción principal. */}
-      {verified ? (
-        <div className={styles.formActions}>
-          <button
-            type="submit"
-            name="intent"
-            value="draft"
-            disabled={isPending || !hayEntregable}
-            title={hayEntregable ? undefined : "Elegí al menos un entregable"}
-            className={`${styles.btn} ${styles.btnGhost}`}
-          >
-            Guardar borrador
-          </button>
-          <button
-            type="submit"
-            name="intent"
-            value="publish"
-            disabled={isPending || !hayEntregable}
-            title={hayEntregable ? undefined : "Elegí al menos un entregable"}
-            className={`${styles.btn} ${styles.btnPrimary}`}
-          >
-            {isPending ? "Publicando…" : "Publicar campaña"}
-          </button>
-        </div>
-      ) : (
-        <div className={styles.formActions} style={{ flexDirection: "column" }}>
-          <button
-            type="submit"
-            name="intent"
-            value="draft"
-            disabled={isPending || !hayEntregable}
-            title={hayEntregable ? undefined : "Elegí al menos un entregable"}
-            className={`${styles.btn} ${styles.btnPrimary}`}
-          >
-            {isPending ? "Guardando…" : "Guardar borrador"}
-          </button>
-          <p className={styles.formNote} style={{ textAlign: "center" }}>
-            Vas a poder publicarla apenas verifiquemos tu negocio. Queda lista y la publicás de un
-            clic desde la campaña.
-          </p>
-        </div>
-      )}
+      {/* Antes esto tenía una variante sin verificar, con "Guardar borrador"
+          como acción principal. Se fue con el bloqueo duro: al panel solo entra
+          una marca verificada, así que publicar siempre es una opción real. */}
+      <div className={styles.formActions}>
+        <button
+          type="submit"
+          name="intent"
+          value="draft"
+          disabled={isPending || !hayEntregable}
+          title={hayEntregable ? undefined : "Elegí al menos un entregable"}
+          className={`${styles.btn} ${styles.btnGhost}`}
+        >
+          Guardar borrador
+        </button>
+        <button
+          type="submit"
+          name="intent"
+          value="publish"
+          disabled={isPending || !hayEntregable}
+          title={hayEntregable ? undefined : "Elegí al menos un entregable"}
+          className={`${styles.btn} ${styles.btnPrimary}`}
+        >
+          {isPending ? "Publicando…" : "Publicar campaña"}
+        </button>
+      </div>
     </form>
   );
 }

@@ -68,13 +68,11 @@ export default function LoyaltyMarcaTabs({
   cupones,
   canjes,
   niveles,
-  verificada,
   nombreMarca,
 }: {
   cupones: CuponMarca[];
   canjes: CanjeFila[];
   niveles: { level: number; name: string }[];
-  verificada: boolean;
   nombreMarca: string;
 }) {
   const [tab, setTab] = useState<Tab>("cupones");
@@ -114,18 +112,14 @@ export default function LoyaltyMarcaTabs({
       </div>
 
       {tab === "cupones" && (
-        <ListaCupones cupones={cupones} niveles={niveles} verificada={verificada} />
+        <ListaCupones cupones={cupones} niveles={niveles} />
       )}
       {tab === "nuevo" && (
         <div className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "760px" }}>
           <h2 style={{ fontSize: "17px", marginBottom: "16px" }}>Nuevo cupón</h2>
           {/* Vuelve a la lista al guardar: ahora es una acción con principio y
               fin, no una pestaña donde quedarse. También le da su "Cancelar". */}
-          <CuponForm
-            niveles={niveles}
-            verificada={verificada}
-            onListo={() => setTab("cupones")}
-          />
+          <CuponForm niveles={niveles} onListo={() => setTab("cupones")} />
         </div>
       )}
       {tab === "validar" && <Validador nombreMarca={nombreMarca} />}
@@ -137,11 +131,9 @@ export default function LoyaltyMarcaTabs({
 function ListaCupones({
   cupones,
   niveles,
-  verificada,
 }: {
   cupones: CuponMarca[];
   niveles: { level: number; name: string }[];
-  verificada: boolean;
 }) {
   const [editando, setEditando] = useState<CuponEditable | null>(null);
 
@@ -316,12 +308,7 @@ function ListaCupones({
           style={{ maxWidth: "680px", maxHeight: "88vh", overflowY: "auto" }}
         >
           <h2 style={{ fontSize: "18px", marginBottom: "16px" }}>Editar cupón</h2>
-          <CuponForm
-            cupon={editando}
-            niveles={niveles}
-            verificada={verificada}
-            onListo={() => setEditando(null)}
-          />
+          <CuponForm cupon={editando} niveles={niveles} onListo={() => setEditando(null)} />
         </div>
       </div>
     )}

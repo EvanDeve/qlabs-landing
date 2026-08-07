@@ -21,9 +21,12 @@ export type PendingVerification = {
 /**
  * Avisa a todo el equipo de que alguien terminó el registro y quedó esperando
  * verificación. Sin esto un registro real cae en el vacío: la verificación es
- * un bloqueo duro (una marca sin verificar no puede publicar, un creador sin
- * verificar no puede aplicar) y nadie se enteraba de que había alguien
- * esperando del otro lado.
+ * un bloqueo duro —sin ella no se entra al panel, ni como marca ni como
+ * creador— y nadie se enteraba de que había alguien esperando del otro lado.
+ *
+ * Desde ese cambio el aviso también marca el ritmo: la persona no puede hacer
+ * nada mientras tanto, así que cada día sin revisar es un día de nadie usando
+ * la plataforma.
  *
  * Se llama desde el onboarding y es best-effort a propósito — que Resend esté
  * caído o que no haya admins cargados nunca puede tumbar el registro de un
@@ -53,7 +56,6 @@ export async function notifyAdminsOfPendingVerification(subject: PendingVerifica
 
     const isBrand = subject.role === "brand";
     const roleLabel = isBrand ? "marca" : "creador";
-    const blockedFrom = isBrand ? "publicar campañas" : "aplicar a campañas";
 
     const { error: notifyError } = await admin.from("notifications").insert(
       admins.map((a) => ({
@@ -83,7 +85,7 @@ export async function notifyAdminsOfPendingVerification(subject: PendingVerifica
           `Nueva ${roleLabel} esperando verificación: ${subject.name}`,
           `<p><strong>${subject.name}</strong> terminó su registro en UGC·CRC como ${roleLabel} y está esperando verificación.</p>
            ${detailLine}
-           <p>Hasta que alguien la verifique no puede ${blockedFrom}.</p>
+           <p>Hasta que alguien la verifique <strong>no puede entrar al panel</strong>: está esperando en la pantalla de revisión.</p>
            <p><a href="${MARKETPLACE_URL}">Revisar y verificar</a></p>`
         );
       })

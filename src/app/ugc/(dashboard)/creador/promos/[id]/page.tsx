@@ -35,7 +35,7 @@ export default async function PromoDetailPage({
     notFound();
   }
 
-  const [{ data: brand }, { data: application }, { data: creatorProfile }] = await Promise.all([
+  const [{ data: brand }, { data: application }] = await Promise.all([
     supabase.from("brand_profiles").select("*").eq("profile_id", campaign.brand_id).maybeSingle(),
     supabase
       .from("applications")
@@ -43,7 +43,6 @@ export default async function PromoDetailPage({
       .eq("campaign_id", campaign.id)
       .eq("creator_id", user!.id)
       .maybeSingle(),
-    supabase.from("creator_profiles").select("verified").eq("profile_id", user!.id).single(),
   ]);
 
   const deliverables = Array.isArray(campaign.deliverables)
@@ -165,15 +164,8 @@ export default async function PromoDetailPage({
               >
                 Ya aplicaste — {APPLICATION_STATUS_LABEL[application.status]}
               </span>
-            ) : creatorProfile?.verified ? (
-              <ApplyForm campaignId={campaign.id} />
             ) : (
-              <div>
-                <span className={`${styles.riskPill} ${styles.riskMuted}`}>Perfil en revisión</span>
-                <p style={{ marginTop: "8px", fontSize: "13px", color: "var(--ink-2)" }}>
-                  Cuando verifiquemos tu perfil vas a poder aplicar a esta promo.
-                </p>
-              </div>
+              <ApplyForm campaignId={campaign.id} />
             )}
           </div>
         </div>

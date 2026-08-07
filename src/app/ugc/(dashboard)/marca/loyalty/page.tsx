@@ -13,7 +13,7 @@ export default async function LoyaltyMarcaPage() {
   } = await supabase.auth.getUser();
 
   const [{ data: marca }, { data: cupones }, { data: umbrales }] = await Promise.all([
-    supabase.from("brand_profiles").select("verified, brand_name").eq("profile_id", user!.id).maybeSingle(),
+    supabase.from("brand_profiles").select("brand_name").eq("profile_id", user!.id).maybeSingle(),
     supabase.from("coupons").select("*").eq("brand_id", user!.id).order("created_at", { ascending: false }),
     supabase.from("level_thresholds").select("*").order("min_points"),
   ]);
@@ -157,7 +157,6 @@ export default async function LoyaltyMarcaPage() {
           cupones={cuponesVista}
           canjes={canjes}
           niveles={(umbrales ?? []).map((n) => ({ level: n.level, name: n.name }))}
-          verificada={Boolean(marca?.verified)}
           nombreMarca={marca?.brand_name ?? "tu negocio"}
         />
       </div>
