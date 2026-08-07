@@ -256,6 +256,7 @@ export default function KanbanBoard({
             columnModal.is_done &&
             columns.filter((c) => c.is_done).length === 1
           }
+          seccionAbierta={seccion}
           onClose={() => setColumnModal(null)}
         />
       )}

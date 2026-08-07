@@ -8,13 +8,23 @@ export type ContentColumn = Database["public"]["Tables"]["content_columns"]["Row
  * guiones se escriben en una tanda de dos o tres días y después esas columnas
  * quedan quietas.
  *
- * Agregar una sección: sumar el valor al check de la migración
- * 20260803100000 y una entrada acá. No hay ningún otro lugar que enumere las
- * secciones.
+ * "IT" va última: es el carril de trabajo técnico de la plataforma, no de
+ * contenido de un Hero, así que es el que menos gente abre.
+ *
+ * ⚠️ La sección solo reparte columnas entre pestañas. Los conteos por Hero
+ * —publicados del mes, atrasadas, carga, y la agenda de McLovin— NO la miran,
+ * así que una pieza de IT suma como cualquier otra. Lo que la deja afuera es
+ * lo mismo que con los guiones: su columna final marcada `is_done` y no
+ * cargarle nunca `publish_date`.
+ *
+ * Agregar una sección: sumar el valor al check (migración 20260803100000, y
+ * 20260807100000 para 'it') y una entrada acá. No hay ningún otro lugar que
+ * enumere las secciones.
  */
 export const SECCIONES_PIPELINE: { id: PipelineSection; label: string }[] = [
   { id: "video", label: "Videos" },
   { id: "guion", label: "Guiones" },
+  { id: "it", label: "IT" },
 ];
 
 /** La sección que abre el tablero cuando la URL no dice otra cosa. */

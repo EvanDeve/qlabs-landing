@@ -62,7 +62,7 @@ export type ContentPlatform = "instagram" | "tiktok" | "reels";
 // de `creator_task_columns` para que cada creador arme las suyas — un enum de
 // Postgres no se puede extender en runtime. Ver 20260727100000.
 /** Pestaña del tablero. Ver la migración 20260803100000. */
-export type PipelineSection = "guion" | "video";
+export type PipelineSection = "guion" | "video" | "it";
 export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega" | "guion";
 export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";

@@ -13,6 +13,7 @@ import {
   SECCION_POR_DEFECTO,
   type ContentColumn,
 } from "@/lib/ugc/content-columns";
+import type { PipelineSection } from "@/lib/database.types";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -22,6 +23,7 @@ export default function ContentColumnModal({
   totalColumns,
   pieceCount,
   isOnlyDoneColumn,
+  seccionAbierta,
   onClose,
 }: {
   column: ContentColumn | null;
@@ -30,6 +32,13 @@ export default function ContentColumnModal({
   pieceCount: number;
   /** Es la única columna marcada como "publicadas": no se puede soltar. */
   isOnlyDoneColumn: boolean;
+  /**
+   * La pestaña desde la que se abrió el modal; null en "Todo". Es el default
+   * de una columna nueva: crear una columna estando en IT y que aparezca en
+   * Videos es un error silencioso —la columna existe, pero en otra pestaña— y
+   * el que lo sufre es justo el que está armando una sección nueva.
+   */
+  seccionAbierta: PipelineSection | null;
   onClose: () => void;
 }) {
   const editando = Boolean(column);
@@ -108,7 +117,7 @@ export default function ContentColumnModal({
             <label>Sección</label>
             <select
               name="section"
-              defaultValue={column?.section ?? SECCION_POR_DEFECTO}
+              defaultValue={column?.section ?? seccionAbierta ?? SECCION_POR_DEFECTO}
               className={styles.selectInp}
               style={{ width: "100%" }}
             >
