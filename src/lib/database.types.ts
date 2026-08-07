@@ -122,6 +122,8 @@ export interface Database {
           rate_min: number | null;
           rate_max: number | null;
           verified: boolean;
+          rejected_at: string | null;
+          rejection_reason: string | null;
           avg_views: number | null;
           engagement_rate: number | null;
           avg_reach: number | null;
@@ -137,6 +139,8 @@ export interface Database {
           rate_min?: number | null;
           rate_max?: number | null;
           verified?: boolean;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
           avg_views?: number | null;
           engagement_rate?: number | null;
           avg_reach?: number | null;
@@ -219,6 +223,8 @@ export interface Database {
           logo_url: string | null;
           location: string | null;
           verified: boolean;
+          rejected_at: string | null;
+          rejection_reason: string | null;
           slug: string | null;
         };
         Insert: {
@@ -231,6 +237,8 @@ export interface Database {
           logo_url?: string | null;
           location?: string | null;
           verified?: boolean;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
           slug?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["brand_profiles"]["Insert"]>;

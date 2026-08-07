@@ -15,6 +15,7 @@ let marca: TestUser;
 let marcaSinVerificar: TestUser;
 let creador: TestUser;
 let otroCreador: TestUser;
+let creadorSinVerificar: TestUser;
 
 let cuponTodos: string;
 let cuponPlata: string;
@@ -35,9 +36,10 @@ async function darPuntos(creatorId: string, puntos: number, referencia: string) 
 }
 
 beforeAll(async () => {
-  [marca, marcaSinVerificar, creador, otroCreador] = await Promise.all([
+  [marca, marcaSinVerificar, creador, otroCreador, creadorSinVerificar] = await Promise.all([
     makeUser("brand"),
     makeUser("brand"),
+    makeUser("creator"),
     makeUser("creator"),
     makeUser("creator"),
   ]);
@@ -51,6 +53,7 @@ beforeAll(async () => {
   const { error: eCreadores } = await admin.from("creator_profiles").insert([
     { profile_id: creador.id, handle: `@cup.${creador.id.slice(0, 8)}`, verified: true },
     { profile_id: otroCreador.id, handle: `@cup2.${otroCreador.id.slice(0, 8)}`, verified: true },
+    { profile_id: creadorSinVerificar.id, handle: `@cup3.${creadorSinVerificar.id.slice(0, 8)}`, verified: false },
   ]);
   if (eCreadores) throw new Error(`setup creator_profiles: ${eCreadores.message}`);
 
@@ -216,6 +219,22 @@ describe("nadie se saltea el RPC", () => {
   it("una marca no ve los cupones de otra marca", async () => {
     const { data } = await marcaSinVerificar.client.from("coupons").select("id").eq("brand_id", marca.id);
     expect(data).toEqual([]);
+  });
+});
+
+describe("el gate de verificación del creador", () => {
+  // Espejo del hueco que se cerró en `campaigns`: hasta la migración
+  // 20260807000000 alcanzaba con registrarse como creador para leer el catálogo
+  // entero de cupones de todas las marcas, sin que nadie hubiera verificado
+  // nada. Es el mismo dato que la competencia querría mirar.
+  it("un creador sin verificar no ve ningún cupón publicado", async () => {
+    const { data } = await creadorSinVerificar.client.from("coupons").select("id, title");
+    expect(data ?? []).toEqual([]);
+  });
+
+  it("y tampoco puede reclamar uno pidiéndolo por id", async () => {
+    const { error } = await creadorSinVerificar.client.rpc("claim_coupon", { p_coupon: cuponTodos });
+    expect(error).not.toBeNull();
   });
 });
 

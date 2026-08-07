@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { normalizarUrl } from "@/lib/ugc/url";
-import { ROLE_DASHBOARD } from "@/lib/ugc/roles";
+import { destinoDeSesion } from "@/lib/ugc/estado-cuenta";
 import { notifyAdminsOfPendingVerification } from "@/lib/ugc/admin-alerts";
 
 export type OnboardingActionState = { error: string } | null;
@@ -173,5 +173,8 @@ export async function completeOnboardingAction(
     }
   }
 
-  redirect(ROLE_DASHBOARD[role]);
+  // No manda al panel: hasta que un admin verifique la cuenta, el destino es la
+  // pantalla de espera. `destinoDeSesion` resuelve los tres casos (sin perfil,
+  // sin verificar, verificado) para no volver a repartir esa decisión.
+  redirect(await destinoDeSesion(supabase, user.id));
 }

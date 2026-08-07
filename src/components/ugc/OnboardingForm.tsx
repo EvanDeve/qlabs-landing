@@ -15,12 +15,37 @@ const BRAND_STEPS = ["Tu negocio", "Rubro y zona", "Detalles"] as const;
 const inputCls =
   "w-full rounded-xl border border-line bg-lavender px-4 py-3.5 text-sm text-ink outline-none transition focus:border-violet focus:bg-white";
 
+/** Lo que ya cargó un creador, para poder corregirlo mientras espera la verificación. */
+export type ValoresCreador = {
+  handle: string;
+  instagram: string;
+  tiktok: string;
+  city: string;
+  bio: string;
+  niches: string;
+  followers: string;
+};
+
+/** El equivalente de la marca. */
+export type ValoresMarca = {
+  brandName: string;
+  industry: string;
+  location: string;
+  description: string;
+  website: string;
+};
+
 export default function OnboardingForm({
   lockedRole,
   initialRole,
+  valoresCreador,
+  valoresMarca,
 }: {
   lockedRole: Role | null;
   initialRole: Role;
+  /** Presentes solo cuando se vuelve a esta pantalla a editar, no en el alta. */
+  valoresCreador?: ValoresCreador;
+  valoresMarca?: ValoresMarca;
 }) {
   const [role, setRole] = useState<Role | null>(lockedRole);
 
@@ -28,9 +53,9 @@ export default function OnboardingForm({
     return <RolePicker initial={initialRole} onPick={setRole} />;
   }
   if (role === "brand") {
-    return <BrandWizard />;
+    return <BrandWizard valores={valoresMarca} />;
   }
-  return <CreatorWizard />;
+  return <CreatorWizard valores={valoresCreador} />;
 }
 
 /* ---------------- Selector de rol (solo si no viene con rol, ej. OAuth) ---------------- */
@@ -81,19 +106,20 @@ function RolePicker({ initial, onPick }: { initial: Role; onPick: (r: Role) => v
 }
 
 /* ---------------- Wizard de creador ---------------- */
-function CreatorWizard() {
+function CreatorWizard({ valores }: { valores?: ValoresCreador }) {
   const [state, formAction, pending] = useActionState<OnboardingActionState, FormData>(
     completeOnboardingAction,
     null
   );
+  const editando = Boolean(valores);
   const [step, setStep] = useState(0);
-  const [handle, setHandle] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [tiktok, setTiktok] = useState("");
-  const [city, setCity] = useState("");
-  const [bio, setBio] = useState("");
-  const [nichesStr, setNichesStr] = useState("");
-  const [followers, setFollowers] = useState("");
+  const [handle, setHandle] = useState(valores?.handle ?? "");
+  const [instagram, setInstagram] = useState(valores?.instagram ?? "");
+  const [tiktok, setTiktok] = useState(valores?.tiktok ?? "");
+  const [city, setCity] = useState(valores?.city ?? "");
+  const [bio, setBio] = useState(valores?.bio ?? "");
+  const [nichesStr, setNichesStr] = useState(valores?.niches ?? "");
+  const [followers, setFollowers] = useState(valores?.followers ?? "");
 
   const niches = nichesStr.split(",").map((n) => n.trim()).filter(Boolean);
   const last = CREATOR_STEPS.length - 1;
@@ -274,7 +300,17 @@ function CreatorWizard() {
               disabled={pending || !canContinue}
               className="rounded-xl bg-violet px-7 py-3 text-sm font-bold text-white shadow-[0_10px_26px_-10px_rgba(112,92,246,0.7)] transition hover:bg-violet-deep disabled:opacity-50"
             >
-              {pending ? "Creando tu perfil…" : "Entrar a mi panel"}
+              {/* Ya no dice "Entrar a mi panel": desde el bloqueo por
+                  verificación, terminar el registro lleva a la pantalla de
+                  espera, no al panel. Prometer una puerta que no se abre era
+                  la peor forma de dar la noticia. */}
+              {pending
+                ? editando
+                  ? "Guardando…"
+                  : "Enviando tu registro…"
+                : editando
+                  ? "Guardar cambios"
+                  : "Enviar mi registro"}
             </button>
           )}
         </div>
@@ -393,17 +429,18 @@ function ProfilePreview({
    Mismo patrón que el del creador —pasos cortos + preview en vivo— y no por
    simetría: el negocio llenaba un formulario plano sin ver nunca cómo iba a
    aparecer del otro lado, que es justo lo que decide si un creador aplica. */
-function BrandWizard() {
+function BrandWizard({ valores }: { valores?: ValoresMarca }) {
   const [state, formAction, pending] = useActionState<OnboardingActionState, FormData>(
     completeOnboardingAction,
     null
   );
+  const editando = Boolean(valores);
   const [step, setStep] = useState(0);
-  const [brandName, setBrandName] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
-  const [website, setWebsite] = useState("");
+  const [brandName, setBrandName] = useState(valores?.brandName ?? "");
+  const [industry, setIndustry] = useState(valores?.industry ?? "");
+  const [location, setLocation] = useState(valores?.location ?? "");
+  const [description, setDescription] = useState(valores?.description ?? "");
+  const [website, setWebsite] = useState(valores?.website ?? "");
 
   const last = BRAND_STEPS.length - 1;
   const canContinue = brandName.trim().length > 0;
@@ -546,7 +583,17 @@ function BrandWizard() {
               disabled={pending || !canContinue}
               className="rounded-xl bg-violet px-7 py-3 text-sm font-bold text-white shadow-[0_10px_26px_-10px_rgba(112,92,246,0.7)] transition hover:bg-violet-deep disabled:opacity-50"
             >
-              {pending ? "Creando tu perfil…" : "Entrar a mi panel"}
+              {/* Ya no dice "Entrar a mi panel": desde el bloqueo por
+                  verificación, terminar el registro lleva a la pantalla de
+                  espera, no al panel. Prometer una puerta que no se abre era
+                  la peor forma de dar la noticia. */}
+              {pending
+                ? editando
+                  ? "Guardando…"
+                  : "Enviando tu registro…"
+                : editando
+                  ? "Guardar cambios"
+                  : "Enviar mi registro"}
             </button>
           )}
         </div>

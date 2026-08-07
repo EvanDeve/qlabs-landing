@@ -148,6 +148,54 @@ describe("aislamiento entre cuentas", () => {
 });
 
 describe("gate de verificación", () => {
+  // Este bloque es el que se ganó con la migración 20260807000000. Antes,
+  // `campaigns_select_published_creators` solo pedía el ROL, que se elige uno
+  // mismo al registrarse: bastaba registrarse como creador para leer el brief y
+  // el presupuesto de todas las campañas publicadas, sin verificar nada. Y la
+  // llave anónima de Supabase viaja en el HTML, así que ni siquiera hacía falta
+  // abrir el panel — se pedía por API.
+  //
+  // Se usa `otroCreador`, que queda sin verificar durante todo el archivo, para
+  // que estos tests no dependan del orden de los de abajo.
+  it("un creador sin verificar NO puede leer el brief de una campaña publicada", async () => {
+    const { data } = await otroCreador.client.from("campaigns").select("*").eq("id", campaignId);
+    expect(data ?? []).toEqual([]);
+  });
+
+  it("un creador sin verificar tampoco la ve al pedir la tabla entera", async () => {
+    const { data } = await otroCreador.client.from("campaigns").select("id");
+    expect(data ?? []).toEqual([]);
+  });
+
+  it("la vitrina pública SÍ le sigue saliendo — el bloqueo es del brief, no del catálogo", async () => {
+    const { data } = await otroCreador.client
+      .from("campaign_previews")
+      .select("*")
+      .eq("id", campaignId);
+    expect(data).toHaveLength(1);
+    expect(JSON.stringify(data![0])).not.toContain("BRIEF-SECRETO-RLS");
+  });
+
+  it("un creador no puede sacarse el rechazo solo (trigger protect_verified)", async () => {
+    const { error: eRechazo } = await admin
+      .from("creator_profiles")
+      .update({ rejected_at: new Date().toISOString(), rejection_reason: "prueba" })
+      .eq("profile_id", otroCreador.id);
+    expect(eRechazo).toBeNull();
+
+    await otroCreador.client
+      .from("creator_profiles")
+      .update({ rejected_at: null, rejection_reason: null })
+      .eq("profile_id", otroCreador.id);
+
+    const { data } = await admin
+      .from("creator_profiles")
+      .select("rejected_at")
+      .eq("profile_id", otroCreador.id)
+      .single();
+    expect(data!.rejected_at).not.toBeNull();
+  });
+
   it("un creador sin verificar NO puede aplicar", async () => {
     const { error } = await creador.client
       .from("applications")
@@ -164,8 +212,15 @@ describe("gate de verificación", () => {
 });
 
 describe("flujo crítico: publicar -> aplicar -> aceptar", () => {
-  it("una vez verificado, el creador sí puede aplicar", async () => {
+  it("una vez verificado, el creador ve el brief completo", async () => {
     await verifyCreator(creador.id);
+
+    const { data } = await creador.client.from("campaigns").select("brief").eq("id", campaignId);
+    expect(data).toHaveLength(1);
+    expect(data![0].brief).toBe("BRIEF-SECRETO-RLS");
+  });
+
+  it("una vez verificado, el creador sí puede aplicar", async () => {
 
     const { error } = await creador.client
       .from("applications")

@@ -2,38 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROLE_DASHBOARD } from "@/lib/ugc/roles";
+import { destinoDeSesion } from "@/lib/ugc/estado-cuenta";
 
 export type AuthActionState = { error: string } | { message: string } | null;
 
+// El onboarding a medias (rol puesto por el trigger pero sin perfil todavía) y
+// la cuenta sin verificar los resuelve `destinoDeSesion`, compartido con la
+// página de login, el onboarding y el nav público.
 async function redirectAfterLogin(userId: string): Promise<never> {
   const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .single();
-
-  if (!profile?.role) {
-    redirect("/ugc/onboarding");
-  }
-
-  // El onboarding puede quedar a medias (rol seteado por el trigger pero sin el
-  // perfil de creador/marca todavía). En ese caso se manda al onboarding, no al
-  // dashboard, que sin ese perfil quedaría vacío/roto.
-  if (profile.role === "creator" || profile.role === "brand") {
-    const table = profile.role === "creator" ? "creator_profiles" : "brand_profiles";
-    const { data: roleProfile } = await supabase
-      .from(table)
-      .select("profile_id")
-      .eq("profile_id", userId)
-      .maybeSingle();
-    if (!roleProfile) {
-      redirect("/ugc/onboarding");
-    }
-  }
-
-  redirect(ROLE_DASHBOARD[profile.role]);
+  redirect(await destinoDeSesion(supabase, userId));
 }
 
 export async function signInAction(
