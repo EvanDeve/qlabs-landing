@@ -83,7 +83,7 @@ export default async function MarcaResumenPage() {
         Tu Centro de Mando en Q Labs — UGC·CRC es tu sistema activo hoy.
       </p>
 
-      <div className={styles.kpiRow} style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+      <div className={`${styles.kpiRow} ${styles.kpiRow3}`}>
         {kpis.map((kpi) => (
           <div key={kpi.label} className={styles.kpi}>
             <div className={styles.kTop}>

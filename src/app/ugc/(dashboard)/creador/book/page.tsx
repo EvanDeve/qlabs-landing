@@ -63,7 +63,7 @@ export default async function CreatorBookPage() {
         Las marcas ven tu book al revisar tu aplicación — mantenelo actualizado con tus mejores piezas.
       </p>
 
-      <div className={styles.kpiRow} style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+      <div className={`${styles.kpiRow} ${styles.kpiRow3}`}>
         {stats.map((s) => (
           <div
             key={s.label}

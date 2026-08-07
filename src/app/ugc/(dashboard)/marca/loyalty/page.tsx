@@ -136,7 +136,7 @@ export default async function LoyaltyMarcaPage() {
         los canjes en tu local con un escaneo.
       </p>
 
-      <div className={styles.kpiRow} style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+      <div className={`${styles.kpiRow} ${styles.kpiRow3}`}>
         {kpis.map((kpi) => (
           <div key={kpi.label} className={styles.kpi}>
             <div className={styles.kTop}>

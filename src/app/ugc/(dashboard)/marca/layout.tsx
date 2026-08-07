@@ -56,6 +56,36 @@ export default async function MarcaLayout({
       bottom: true,
       shortLabel: "Perfil",
     },
+    // Pantallas que no van en el menú pero sí tienen que nombrarse en la barra:
+    // sin ellas, "/ugc/marca/campanas/nueva" cae en el fallback por prefijo,
+    // matchea "/ugc/marca" y el header anuncia "Resumen" mientras el menú
+    // ilumina el Resumen. Van al final del array: los grupos se cortan por orden
+    // y un item oculto en medio partiría "Marketing" en dos encabezados.
+    // El orden entre ellas no importa — gana el href más largo que calce.
+    {
+      href: "/ugc/marca/campanas/nueva",
+      label: "Nueva campaña",
+      icon: "megaphone",
+      group: "UGC·CRC",
+      hidden: true,
+      parentHref: "/ugc/marca/ugc",
+    },
+    {
+      href: "/ugc/marca/campanas",
+      label: "Campaña",
+      icon: "megaphone",
+      group: "UGC·CRC",
+      hidden: true,
+      parentHref: "/ugc/marca/ugc",
+    },
+    {
+      href: "/ugc/marca/validar",
+      label: "Validar canje",
+      icon: "check",
+      group: "Loyalty Loop",
+      hidden: true,
+      parentHref: "/ugc/marca/loyalty",
+    },
   ];
 
   return (

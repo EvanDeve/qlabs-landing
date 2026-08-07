@@ -799,6 +799,14 @@
   gap: 14px;
   margin-bottom: 22px;
 }
+/* Las pantallas de TRES KPIs (marca, Loyalty Loop, el book del creador) piden
+   tres columnas en escritorio. Antes lo hacían con `style` inline, y un estilo
+   inline le gana a TODA media query: en un teléfono las tres tarjetas seguían
+   apretadas en una fila y la última se cortaba a la mitad de la palabra. Como
+   clase, las reglas responsive de más abajo la pisan sin pelear. */
+.kpiRow3 {
+  grid-template-columns: repeat(3, 1fr);
+}
 .kpi {
   background: var(--surface);
   border: 1px solid var(--line);

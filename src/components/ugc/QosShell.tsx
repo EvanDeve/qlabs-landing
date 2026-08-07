@@ -55,6 +55,15 @@ export type QosNavItem = {
    */
   hidden?: boolean;
   /**
+   * Para items `hidden`: de qué pantalla del menú es hija esta ruta.
+   *
+   * El título de la barra pasa a ser el de la ruta real ("Nueva campaña"), pero
+   * el menú sigue iluminando la sección de la que se entró ("UGC·CRC"). Sin
+   * esto, meterse en una campaña apaga todos los items y se siente como haberse
+   * salido del panel.
+   */
+  parentHref?: string;
+  /**
    * Sale a la barra inferior en móvil. Es opt-in por rol: admin tiene 15+
    * pantallas y elegir cuatro sería arbitrario, así que se queda con el drawer.
    * Si ningún item la pide, no se dibuja la barra.
@@ -104,6 +113,10 @@ export default function QosShell({
   const activeItem =
     navItems.find((item) => pathname === item.href) ??
     [...navItems].sort((a, b) => b.href.length - a.href.length).find((item) => pathname.startsWith(item.href));
+
+  // Qué item del menú se pinta como activo. Coincide con la ruta salvo en las
+  // pantallas hijas, que delegan en su padre.
+  const highlightHref = activeItem?.parentHref ?? activeItem?.href;
 
   const bottomItems = navItems.filter((i) => i.bottom && !i.hidden);
   // Solo tiene sentido ofrecer "Más" si hay algo que la barra no muestra: la
@@ -158,7 +171,7 @@ export default function QosShell({
               <div key={gi}>
                 {g.group && <div className={styles.navLabel}>{g.group}</div>}
                 {g.items.map((item) => {
-                  const isActive = activeItem?.href === item.href;
+                  const isActive = highlightHref === item.href;
                   return (
                     <Link
                       key={item.href}
@@ -230,10 +243,14 @@ export default function QosShell({
               <QosIcon name="menu" size={18} />
             </button>
             <div>
+              {/* El segundo escalón sale del grupo del item activo y solo cae en
+                  `section` si el item no tiene grupo. Con `section` fijo, el
+                  rastro se contradecía con el menú: /ugc/admin/transcripcion
+                  decía "Operación" y el item vive en "Herramientas". */}
               <div className={styles.tbCrumb}>
                 <span>Q Labs</span>
                 <span>/</span>
-                <span>{section}</span>
+                <span>{activeItem?.group ?? section}</span>
               </div>
               <div className={styles.tbTitle}>{activeItem?.label ?? "Q·OS"}</div>
             </div>
@@ -249,7 +266,7 @@ export default function QosShell({
       {bottomItems.length > 0 && (
         <nav className={styles.bottomNav} aria-label="Accesos rápidos">
           {bottomItems.map((item) => {
-            const isActive = activeItem?.href === item.href;
+            const isActive = highlightHref === item.href;
             return (
               <Link
                 key={item.href}
