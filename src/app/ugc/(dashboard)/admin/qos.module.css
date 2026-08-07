@@ -1139,6 +1139,59 @@
   background: var(--surface);
   font-size: 13px;
 }
+/* El buscador del pipeline. Copia el alto y el borde de .selectInp para que la
+   fila se lea como una sola barra, pero es un contenedor y no un input pelado:
+   la lupa y la "x" van adentro del marco.
+   `flex: 1 1 210px` le da prioridad al crecer y un piso razonable — con el
+   ancho fijo de un select quedaba demasiado angosto para un título de pieza,
+   y sin piso se aplasta cuando la fila se llena de filtros. */
+.pipeSearch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 210px;
+  max-width: 340px;
+  padding: 0 10px;
+  height: 35px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink-3);
+}
+.pipeSearch:focus-within {
+  border-color: var(--b-500);
+}
+.pipeSearch input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+}
+/* Safari y Chrome le ponen su propia "x" a type=search, que aparecería al lado
+   de la nuestra. */
+.pipeSearch input::-webkit-search-cancel-button {
+  display: none;
+}
+.pipeSearch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  color: var(--ink-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pipeSearch button:hover {
+  color: var(--ink);
+}
 .kanban {
   display: flex;
   gap: 14px;
@@ -1261,6 +1314,35 @@
   font-size: 10px;
   color: var(--ink-3);
   font-weight: 500;
+}
+/* El Drive del Hero en la esquina de la tarjeta. Va en el borde superior
+   derecho a propósito: es lo más lejos posible del centro, que es de donde se
+   agarra la tarjeta para arrastrarla.
+   Área táctil de 22px con el ícono de 13: el ícono del Drive es un logo a
+   color y agrandarlo lo vuelve el elemento más llamativo de la tarjeta, por
+   encima del título. El margen negativo le devuelve a la fila su altura. */
+.kcDrive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: -4px -4px -4px 0;
+  border-radius: var(--r-sm);
+  flex-shrink: 0;
+  opacity: 0.75;
+  transition:
+    background var(--t-fast),
+    opacity var(--t-fast);
+}
+.kcDrive:hover {
+  background: var(--surface-3);
+  opacity: 1;
+}
+.kcDrive:focus-visible {
+  outline: 2px solid var(--b-500);
+  outline-offset: 1px;
+  opacity: 1;
 }
 .kcTitle {
   font-size: 13px;

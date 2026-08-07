@@ -31,7 +31,10 @@ export default async function PipelinePage({
 
   const [{ data: agencyClients }, { data: staffMembers }, { data: columns }, piecesQuery] =
     await Promise.all([
-    supabase.from("agency_clients").select("id, name, logo_url, archived").order("name"),
+    // drive_url viaja para poner el botón del Drive del Hero en cada tarjeta:
+    // es el MISMO que se carga en el expediente del Hero, no uno por pieza
+    // (`content_pieces.drive_url`, que sigue viviendo en el drawer).
+    supabase.from("agency_clients").select("id, name, logo_url, drive_url, archived").order("name"),
     // staff_directory y no staff_members: la tabla quedó cerrada a
     // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
     // expone solo lo que el tablero necesita para pintar responsables.
@@ -120,6 +123,7 @@ export default async function PipelinePage({
       id: c.id,
       name: c.archived ? `${c.name} (archivado)` : c.name,
       logoUrl: c.logo_url,
+      driveUrl: c.drive_url,
     }));
   const staff = (staffMembers ?? []).map((s) => ({
     id: s.profile_id,
@@ -129,14 +133,9 @@ export default async function PipelinePage({
     avatarUrl: staffProfileById.get(s.profile_id)?.avatar_url ?? null,
   }));
 
-  // El contador cuenta lo que se está VIENDO. Con la pestaña de Videos abierta,
-  // sumarle los guiones diría un número que no coincide con ninguna columna en
-  // pantalla y el equipo dejaría de mirarlo.
-  const visibleColumnIds = new Set(
-    (columns ?? []).filter((c) => !seccionActiva || c.section === seccionActiva).map((c) => c.id)
-  );
-  const visibleCount = contentPieces.filter((p) => visibleColumnIds.has(p.column_id)).length;
-
+  // El contador ya NO se calcula acá: desde que hay un buscador que filtra en el
+  // navegador, un número del servidor quedaría viejo con cada tecla. Lo cuenta
+  // KanbanBoard, que es quien sabe qué tarjetas hay realmente en pantalla.
   return (
     // pipeWide le saca al contenido el max-width de 1400px y casi todo el
     // padding (ver .main:has(.pipeWide) en qos.module.css). El Kanban es la
@@ -161,7 +160,6 @@ export default async function PipelinePage({
           dia: diaExacto,
           verArchivados,
           hayArchivados: archivedHeroIds.size > 0,
-          count: visibleCount,
         }}
       />
     </div>

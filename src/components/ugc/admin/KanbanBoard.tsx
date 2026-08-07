@@ -24,9 +24,28 @@ import ContentColumnModal from "./ContentColumnModal";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
-// logoUrl es opcional: NewContentPieceModal usa este mismo tipo solo para
-// llenar un <select> y no necesita el logo.
-export type BrandOption = { id: string; name: string; logoUrl?: string | null };
+// logoUrl y driveUrl son opcionales: NewContentPieceModal usa este mismo tipo
+// solo para llenar un <select> y no necesita ni el logo ni el Drive.
+export type BrandOption = {
+  id: string;
+  name: string;
+  logoUrl?: string | null;
+  /** El Drive del HERO (agency_clients.drive_url), no el de la pieza. */
+  driveUrl?: string | null;
+};
+
+/**
+ * Sin acentos, sin mayúsculas y sin espacios de más. Buscar "cafe" tiene que
+ * encontrar "Café", que es justo el caso que más aparece con títulos en
+ * español; sin normalizar, el buscador falla en la mitad de las tarjetas.
+ */
+function normalizar(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
 // avatarUrl es opcional por la misma razón que logoUrl: los modales que solo
 // llenan un <select> de responsables no necesitan la foto.
 export type StaffOption = {
@@ -91,6 +110,39 @@ export default function KanbanBoard({
     [columns, seccion]
   );
 
+  // El buscador filtra en el navegador y no por la URL como el resto de los
+  // filtros: las piezas ya están todas acá, así que buscar es instantáneo y no
+  // le cuesta una consulta a Supabase por tecla —el egress es la primera pared
+  // del proyecto—. La contra es que solo alcanza lo que ya se cargó, que es
+  // exactamente lo que el equipo espera de un buscador dentro del tablero.
+  //
+  // Busca en el título Y en el código: el equipo nombra las piezas de las dos
+  // formas, y un buscador que ignora el código obliga a leer tarjeta por tarjeta.
+  const [busqueda, setBusqueda] = useState("");
+  const q = normalizar(busqueda);
+  const coincide = (p: ContentPiece) =>
+    !q || normalizar(p.title).includes(q) || normalizar(p.code ?? "").includes(q);
+
+  const piezasBuscadas = q ? localPieces.filter(coincide) : localPieces;
+
+  const columnIdsVisibles = useMemo(
+    () => new Set(visibleColumns.map((c) => c.id)),
+    [visibleColumns]
+  );
+  // Lo que de verdad hay en pantalla. Antes lo contaba el servidor, pero con el
+  // buscador ese número quedaba viejo con cada tecla.
+  const enPantalla = piezasBuscadas.filter((p) => columnIdsVisibles.has(p.column_id)).length;
+  // Una tarjeta que calza pero vive en la otra pestaña no se ve, y sin avisar
+  // parece que la búsqueda no encontró nada.
+  //
+  // Exige `q`: sin búsqueda, "lo que está fuera de la pestaña" es simplemente
+  // la otra mitad del tablero, y avisarlo sería un cartel permanente diciendo
+  // que las pestañas separan cosas.
+  //
+  // Y exige `seccion`: en "Todo" no hay ningún afuera.
+  const fueraDeLaPestana =
+    q && seccion ? piezasBuscadas.filter((p) => !columnIdsVisibles.has(p.column_id)).length : 0;
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
@@ -113,6 +165,10 @@ export default function KanbanBoard({
         staff={staff}
         seccion={seccion}
         filtros={filtros}
+        count={enPantalla}
+        busqueda={busqueda}
+        onBusqueda={setBusqueda}
+        fueraDeLaPestana={fueraDeLaPestana}
         acciones={
           <>
             <button
@@ -150,7 +206,7 @@ export default function KanbanBoard({
               <Column
                 key={column.id}
                 column={column}
-                pieces={localPieces.filter((p) => p.column_id === column.id)}
+                pieces={piezasBuscadas.filter((p) => p.column_id === column.id)}
                 brandById={brandById}
                 staffById={staffById}
                 onSelect={setSelectedPiece}
@@ -350,6 +406,30 @@ function Card({
           {brand?.name ?? ""}
         </span>
         <span className={styles.kcNum}>{piece.code}</span>
+        {/* El Drive del Hero, para no tener que ir al expediente a buscarlo. Es
+            `agency_clients.drive_url`, el mismo que se carga en el Hero — no el
+            de la pieza, que vive en el drawer. Sin Drive cargado no se dibuja:
+            un botón que lleva a ningún lado es peor que no tenerlo.
+
+            Los dos stopPropagation son obligatorios y hacen cosas distintas: el
+            de pointerDown evita que @dnd-kit tome el clic como el arranque de un
+            arrastre, y el de click evita que se abra el drawer de la pieza. Sin
+            el primero el link no se puede apretar; sin el segundo, se abre el
+            Drive Y el drawer a la vez. */}
+        {brand?.driveUrl && (
+          <a
+            href={brand.driveUrl}
+            target="_blank"
+            rel="noreferrer"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className={styles.kcDrive}
+            title={`Drive de ${brand.name}`}
+            aria-label={`Abrir el Drive de ${brand.name}`}
+          >
+            <QosIcon name="drive" size={13} />
+          </a>
+        )}
       </div>
       <div className={styles.kcTitle}>{piece.title}</div>
       <div className={styles.kcMid}>

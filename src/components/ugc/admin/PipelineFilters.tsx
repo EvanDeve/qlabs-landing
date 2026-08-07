@@ -5,6 +5,7 @@ import { useTransition, type ReactNode } from "react";
 import type { PipelineSection } from "@/lib/database.types";
 import { SECCIONES_PIPELINE, SECCION_POR_DEFECTO } from "@/lib/ugc/content-columns";
 import { FILTROS_FECHA, type FiltroFecha } from "@/lib/ugc/content-meta";
+import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type Option = { id: string; name: string };
@@ -20,7 +21,6 @@ export type FiltrosPipeline = {
   verArchivados: boolean;
   /** Si no hay ningún Hero archivado, la casilla no se dibuja. */
   hayArchivados: boolean;
-  count: number;
 };
 
 /**
@@ -47,6 +47,10 @@ export default function PipelineFilters({
   staff,
   seccion,
   filtros,
+  count,
+  busqueda,
+  onBusqueda,
+  fueraDeLaPestana,
   acciones,
 }: {
   brands: Option[];
@@ -54,6 +58,17 @@ export default function PipelineFilters({
   /** null = la pestaña "Todo". */
   seccion: PipelineSection | null;
   filtros: FiltrosPipeline;
+  /** Tarjetas realmente en pantalla. Lo cuenta KanbanBoard, que aplica la búsqueda. */
+  count: number;
+  /**
+   * El buscador NO viaja en la URL como el resto de los filtros: filtra en el
+   * navegador sobre las piezas ya cargadas. Por eso su estado vive en
+   * KanbanBoard y llega hasta acá por props.
+   */
+  busqueda: string;
+  onBusqueda: (valor: string) => void;
+  /** Cuántas coincidencias quedaron en la otra pestaña. 0 si no hay que avisar. */
+  fueraDeLaPestana: number;
   /** "Nueva pieza" / "Nueva columna": viven en KanbanBoard, que tiene su estado. */
   acciones: ReactNode;
 }) {
@@ -61,7 +76,7 @@ export default function PipelineFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const { brand, owner, priority, fecha, dia, verArchivados, hayArchivados, count } = filtros;
+  const { brand, owner, priority, fecha, dia, verArchivados, hayArchivados } = filtros;
 
   /**
    * Escribe filtros en la URL. Acepta varias claves de una para poder aplicar
@@ -115,11 +130,50 @@ export default function PipelineFilters({
 
         <div className={styles.pipeBarEnd}>
           {acciones}
-          <span className={styles.chip}>{count} piezas en flujo</span>
+          <span className={styles.chip}>
+            {busqueda
+              ? `${count} ${count === 1 ? "coincidencia" : "coincidencias"}`
+              : `${count} piezas en flujo`}
+          </span>
         </div>
       </div>
 
       <div className={styles.pipeBar}>
+        {/* Va primero de la fila porque es lo que más se usa: buscar una pieza
+            por su nombre es la pregunta de todos los días; los selects recortan
+            el tablero, que se hace mucho menos seguido.
+
+            No hay debounce ni botón: filtra sobre lo que ya está en memoria, así
+            que responde en la misma tecla. */}
+        <div className={styles.pipeSearch}>
+          <QosIcon name="search" size={14} />
+          <input
+            type="search"
+            value={busqueda}
+            onChange={(e) => onBusqueda(e.target.value)}
+            placeholder="Buscar por nombre o código…"
+            aria-label="Buscar una pieza por nombre o código"
+          />
+          {busqueda && (
+            <button type="button" onClick={() => onBusqueda("")} aria-label="Limpiar la búsqueda">
+              <QosIcon name="x" size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Sin esto, buscar algo que vive en la otra pestaña se ve igual que
+            buscar algo que no existe, y la respuesta correcta —cambiá de
+            pestaña— no está en ningún lado. */}
+        {fueraDeLaPestana > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilter("seccion", "todo")}
+            className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+          >
+            {fueraDeLaPestana} en la otra pestaña — ver todo
+          </button>
+        )}
+
         <select
           value={brand ?? ""}
           onChange={(e) => setFilter("brand", e.target.value)}
