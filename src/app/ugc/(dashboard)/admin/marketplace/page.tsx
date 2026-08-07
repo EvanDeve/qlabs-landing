@@ -1,16 +1,35 @@
 import { requireDirector } from "@/lib/auth/require-director";
-import {
-  setCreatorVerifiedAction,
-  setBrandVerifiedAction,
-  markCampaignCompletedAction,
-} from "@/lib/actions/admin";
+import { markCampaignCompletedAction } from "@/lib/actions/admin";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
+import VerificacionAcciones from "@/components/ugc/admin/VerificacionAcciones";
+import { estadoCuenta, type EstadoCuenta } from "@/lib/ugc/estado-cuenta";
 import { APPLICATION_STATUS_LABEL } from "@/lib/ugc/application-status";
 import { CAMPAIGN_STATUS_LABEL } from "@/lib/ugc/campaign-status";
 import styles from "../qos.module.css";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 
 export const dynamic = "force-dynamic";
+
+// Los tres estados se pintan siempre, también "Pendiente": antes solo se
+// marcaba lo verificado y una fila sin sello podía ser tanto "todavía nadie la
+// miró" como "la miramos y la rechazamos".
+function EstadoPill({ estado, femenino }: { estado: EstadoCuenta; femenino: boolean }) {
+  if (estado === "verificada") {
+    return (
+      <span className={`${styles.riskPill} ${styles.riskOk}`}>
+        {femenino ? "Verificada" : "Verificado"}
+      </span>
+    );
+  }
+  if (estado === "rechazada") {
+    return (
+      <span className={`${styles.riskPill} ${styles.riskRisk}`}>
+        {femenino ? "Rechazada" : "Rechazado"}
+      </span>
+    );
+  }
+  return <span className={`${styles.riskPill} ${styles.riskWarn}`}>Pendiente</span>;
+}
 
 export default async function AdminMarketplacePage() {
   // Ruta de Sistema: solo directores. La RLS igual no le devolvería
@@ -65,15 +84,17 @@ export default async function AdminMarketplacePage() {
           // El handle es lo que arma la URL del media-kit. Puede venir vacío o
           // solo con "@" en filas viejas, y ahí el link caería en un 404.
           const slug = handleSlug(creator.handle);
+          const estado = estadoCuenta(creator);
           return (
             <div key={creator.profile_id} className={styles.attnItem} style={{ cursor: "default" }}>
               <div className={styles.attnBody}>
                 <div className={styles.attnTitle}>
-                  {displayHandle(creator.handle)} {creator.verified && <span className={`${styles.riskPill} ${styles.riskOk}`}>Verificado</span>}
+                  {displayHandle(creator.handle)} <EstadoPill estado={estado} femenino={false} />
                 </div>
                 <div className={styles.attnMeta}>
                   {account?.city && `${account.city} · `}
                   {creator.followers_count.toLocaleString("es-CR")} seguidores
+                  {estado === "rechazada" && creator.rejection_reason && ` · ${creator.rejection_reason}`}
                 </div>
               </div>
               <div className={styles.attnRight}>
@@ -91,16 +112,11 @@ export default async function AdminMarketplacePage() {
                     Ver book
                   </a>
                 )}
-                <form action={setCreatorVerifiedAction}>
-                  <input type="hidden" name="profile_id" value={creator.profile_id} />
-                  <input type="hidden" name="verified" value={(!creator.verified).toString()} />
-                  <button
-                    type="submit"
-                    className={`${styles.btn} ${styles.btnSm} ${creator.verified ? styles.btnGhost : styles.btnPrimary}`}
-                  >
-                    {creator.verified ? "Quitar verificación" : "Verificar"}
-                  </button>
-                </form>
+                <VerificacionAcciones
+                  profileId={creator.profile_id}
+                  tipo="creator"
+                  estado={estado}
+                />
               </div>
             </div>
           );
@@ -111,18 +127,18 @@ export default async function AdminMarketplacePage() {
         <div className={styles.sectionHead}>
           <h2>Marcas ({allBrands?.length ?? 0})</h2>
         </div>
-        {(allBrands ?? []).map((brand) => (
+        {(allBrands ?? []).map((brand) => {
+          const estado = estadoCuenta(brand);
+          return (
           <div key={brand.profile_id} className={styles.attnItem} style={{ cursor: "default" }}>
             <BrandAvatar name={brand.brand_name} logoUrl={brand.logo_url} size={32} radius={9} />
             <div className={styles.attnBody}>
               <div className={styles.attnTitle}>
-                {brand.brand_name}{" "}
-                {brand.verified && (
-                  <span className={`${styles.riskPill} ${styles.riskOk}`}>Verificada</span>
-                )}
+                {brand.brand_name} <EstadoPill estado={estado} femenino />
               </div>
               <div className={styles.attnMeta}>
                 {[brand.industry, brand.location].filter(Boolean).join(" · ") || "Sin datos"}
+                {estado === "rechazada" && brand.rejection_reason && ` · ${brand.rejection_reason}`}
               </div>
             </div>
             <div className={styles.attnRight}>
@@ -136,19 +152,15 @@ export default async function AdminMarketplacePage() {
                   Ver perfil
                 </a>
               )}
-              <form action={setBrandVerifiedAction}>
-                <input type="hidden" name="profile_id" value={brand.profile_id} />
-                <input type="hidden" name="verified" value={(!brand.verified).toString()} />
-                <button
-                  type="submit"
-                  className={`${styles.btn} ${styles.btnSm} ${brand.verified ? styles.btnGhost : styles.btnPrimary}`}
-                >
-                  {brand.verified ? "Quitar verificación" : "Verificar"}
-                </button>
-              </form>
+              <VerificacionAcciones
+                profileId={brand.profile_id}
+                tipo="brand"
+                estado={estado}
+              />
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>

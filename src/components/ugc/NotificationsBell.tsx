@@ -62,6 +62,15 @@ function describe(notification: Notification): { text: string; href: string } {
     };
   }
 
+  if (notification.type === "verification_approved") {
+    // Solo la puede leer alguien que ya entró: el rechazo no tiene par acá
+    // porque una cuenta rechazada nunca llega a ver la campana.
+    return {
+      text: "Verificamos tu cuenta — ya tenés acceso completo a UGC·CRC",
+      href: payload.role === "brand" ? "/ugc/marca" : "/ugc/creador",
+    };
+  }
+
   if (notification.type === "application_delivered") {
     return {
       text: `Llegó una entrega en "${campaignTitle}" — revisala y aprobala para seguir con el pago`,
