@@ -13,6 +13,7 @@ import {
   USAGE_SCOPE_DESC,
   USAGE_DURATION_LABEL,
 } from "@/lib/ugc/usage-rights";
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 /** Dónde se guarda el borrador del navegador. */
 const BORRADOR_KEY = "ugc:campana-borrador";
@@ -151,19 +152,28 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
   }
 
   return (
-    <form
-      ref={formRef}
-      onSubmit={handleSubmit}
-      onInput={guardarBorrador}
-      className="flex w-full max-w-xl flex-col gap-4"
-    >
+    <form ref={formRef} onSubmit={handleSubmit} onInput={guardarBorrador}>
       {restaurado && (
-        <p className="rounded-lg border border-black/10 bg-lavender px-4 py-3 text-xs font-semibold text-ink-soft">
+        <p
+          className={styles.formNote}
+          style={{
+            marginBottom: "15px",
+            padding: "10px 12px",
+            borderRadius: "var(--r-md)",
+            background: "var(--b-50)",
+            color: "var(--ink-2)",
+          }}
+        >
           Recuperamos lo que estabas escribiendo la última vez.
         </p>
       )}
 
-      <Field label="Título de la campaña" name="title" placeholder="Reel de brunch de domingo" required />
+      <Field
+        label="Título de la campaña"
+        name="title"
+        placeholder="Reel de brunch de domingo"
+        required
+      />
       <TextArea
         label="Brief"
         name="brief"
@@ -171,19 +181,20 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
         required
       />
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5 text-left">
-          <span className="text-xs font-bold text-ink">Presupuesto (₡)</span>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <div className={styles.field}>
+          <label htmlFor="budget_amount">Presupuesto (₡)</label>
           <input
+            id="budget_amount"
             name="budget_amount"
             type="number"
             required
             value={presupuesto}
             onChange={(e) => setPresupuesto(e.target.value)}
             placeholder="150000"
-            className="rounded-lg border border-black/10 bg-lavender px-4 py-3 text-sm outline-none focus:border-violet"
+            className={styles.inp}
           />
-        </label>
+        </div>
         <Field label="Plazo (días)" name="deadline_days" type="number" placeholder="15" />
       </div>
 
@@ -191,7 +202,9 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
           después de publicar, enterarse de cuánto le llega al creador ya no
           cambia nada. Es el mismo bloque que ve el creador en la promo. */}
       {Number(presupuesto) > 0 && (
-        <DesglosePago budgetAmount={Number(presupuesto)} audiencia="marca" />
+        <div style={{ marginBottom: "15px" }}>
+          <DesglosePago budgetAmount={Number(presupuesto)} audiencia="marca" />
+        </div>
       )}
 
       <Field
@@ -206,23 +219,19 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
         placeholder="Ej: Cena para 2 personas incluida"
       />
 
-      <fieldset className="flex flex-col gap-2 text-left">
-        <legend className="mb-1 text-xs font-bold text-ink">
-          Entregables <span className="text-coral">*</span>{" "}
-          <span className="font-semibold text-ink-soft">— elegí al menos uno</span>
-        </legend>
-        <div
-          className={`grid grid-cols-2 gap-3 rounded-lg ${
-            hayEntregable ? "" : "outline outline-1 outline-coral/40"
-          }`}
-        >
+      <div className={styles.field}>
+        {/* Sin `htmlFor`: rotula el grupo entero, no una caja en particular. */}
+        <label>Entregables — elegí al menos uno</label>
+        <div className={`${styles.qtyGrid} ${hayEntregable ? "" : styles.qtyGridFalta}`}>
           {DELIVERABLE_TYPES.map((type) => (
             <label
               key={type}
-              className="flex items-center justify-between gap-2 rounded-lg border border-black/10 bg-lavender px-4 py-3"
+              htmlFor={`qty_${type}`}
+              className={`${styles.qtyRow} ${(qty[type] ?? 0) > 0 ? styles.qtyRowOn : ""}`}
             >
-              <span className="text-sm font-semibold text-ink">{FORMAT_LABEL[type]}</span>
+              <span className={styles.qtyName}>{FORMAT_LABEL[type]}</span>
               <input
+                id={`qty_${type}`}
                 name={`qty_${type}`}
                 type="number"
                 min={0}
@@ -230,83 +239,67 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
                 onChange={(e) =>
                   setQty((prev) => ({ ...prev, [type]: Math.max(0, Number(e.target.value) || 0) }))
                 }
-                className="w-14 rounded-md border border-black/10 bg-white px-2 py-1 text-center text-sm outline-none focus:border-violet"
+                className={styles.qtyInp}
               />
             </label>
           ))}
         </div>
         {!hayEntregable && (
-          <p className="text-xs font-semibold text-coral">
+          <p className={styles.fieldHint} style={{ color: "var(--risk)" }}>
             Poné una cantidad mayor a 0 en al menos un formato.
           </p>
         )}
-      </fieldset>
+      </div>
 
       {/* Derechos de uso. Deliberadamente sin opción preseleccionada: define qué
           cede el creador, así que conviene que sea una decisión consciente y no
           el default que nadie miró. */}
-      <fieldset className="flex flex-col gap-4 rounded-lg border border-black/10 bg-lavender/50 p-4 text-left">
-        <legend className="px-1 text-xs font-bold text-ink">Derechos de uso del contenido</legend>
+      <fieldset className={styles.fieldGroup}>
+        <legend>Derechos de uso del contenido</legend>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold text-ink">¿Dónde puede usarse el contenido?</span>
-          {USAGE_SCOPES.map((scope) => (
-            <label
-              key={scope}
-              className="flex cursor-pointer items-start gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 transition hover:border-violet"
-            >
-              <input
-                type="radio"
-                name="usage_rights_scope"
-                value={scope}
-                required
-                className="mt-0.5 accent-violet"
-              />
-              <span>
-                <span className="block text-sm font-semibold text-ink">
-                  {USAGE_SCOPE_LABEL[scope]}
-                </span>
-                <span className="mt-0.5 block text-xs text-ink-soft">{USAGE_SCOPE_DESC[scope]}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold text-ink">
-            ¿Por cuánto tiempo? <span className="font-semibold text-ink-soft">(desde que aprobás la entrega)</span>
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            {USAGE_DURATIONS.map((duration) => (
-              <label
-                key={duration}
-                className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-black/10 bg-white px-4 py-3 transition hover:border-violet"
-              >
-                <input
-                  type="radio"
-                  name="usage_rights_duration"
-                  value={duration}
-                  required
-                  className="accent-violet"
-                />
-                <span className="text-sm font-semibold text-ink">
-                  {USAGE_DURATION_LABEL[duration]}
+        <div style={{ marginBottom: "16px" }}>
+          <span className={styles.fieldSub}>¿Dónde puede usarse el contenido?</span>
+          <div className={styles.optList}>
+            {USAGE_SCOPES.map((scope) => (
+              <label key={scope} className={styles.optCard}>
+                <input type="radio" name="usage_rights_scope" value={scope} required />
+                <span>
+                  <span className={styles.optTitle}>{USAGE_SCOPE_LABEL[scope]}</span>
+                  <span className={styles.optDesc}>{USAGE_SCOPE_DESC[scope]}</span>
                 </span>
               </label>
             ))}
           </div>
         </div>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 transition hover:border-violet">
-          <input
-            type="checkbox"
-            name="usage_rights_editing"
-            value="on"
-            className="mt-0.5 accent-violet"
-          />
+        <div style={{ marginBottom: "16px" }}>
+          <span className={styles.fieldSub}>
+            ¿Por cuánto tiempo?{" "}
+            <span style={{ fontWeight: 400, color: "var(--ink-3)" }}>
+              (desde que aprobás la entrega)
+            </span>
+          </span>
+          <div className={styles.optGrid}>
+            {USAGE_DURATIONS.map((duration) => (
+              <label key={duration} className={styles.optCard} style={{ alignItems: "center" }}>
+                <input
+                  type="radio"
+                  name="usage_rights_duration"
+                  value={duration}
+                  required
+                  style={{ marginTop: 0 }}
+                />
+                <span className={styles.optTitle}>{USAGE_DURATION_LABEL[duration]}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <label className={styles.optCard} style={{ marginBottom: "16px" }}>
+          <input type="checkbox" name="usage_rights_editing" value="on" />
           <span>
-            <span className="block text-sm font-semibold text-ink">Podés editar el material</span>
-            <span className="mt-0.5 block text-xs text-ink-soft">
+            <span className={styles.optTitle}>Podés editar el material</span>
+            <span className={styles.optDesc}>
               Si lo dejás sin marcar, te comprometés a publicar la pieza tal como te la entregan.
             </span>
           </span>
@@ -319,14 +312,14 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
           rows={2}
         />
 
-        <p className="text-xs text-ink-soft">
-          El creador siempre puede publicar la pieza en su propio perfil — es parte de cómo
-          funciona el UGC.
+        <p className={styles.formNote}>
+          El creador siempre puede publicar la pieza en su propio perfil — es parte de cómo funciona
+          el UGC.
         </p>
       </fieldset>
 
       {state && "error" in state && (
-        <p ref={errorRef} className="text-sm font-semibold text-coral">
+        <p ref={errorRef} className={styles.formError}>
           {state.error}
         </p>
       )}
@@ -334,7 +327,7 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
       {/* Nada de "se guarda solo" a secas: esto vive en ESTE navegador, no en
           la cuenta. Decirlo de más sería prometer algo que no es. */}
       {guardadoEn && (
-        <p className="text-xs text-ink-soft">
+        <p className={styles.formNote}>
           Guardado en este navegador — si cerrás la página, lo recuperás al volver.
         </p>
       )}
@@ -343,14 +336,14 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
           está en RLS y en la acción. Se muestra como lo que es —el paso que
           viene después— y el borrador pasa a ser la acción principal. */}
       {verified ? (
-        <div className="mt-2 flex gap-3">
+        <div className={styles.formActions}>
           <button
             type="submit"
             name="intent"
             value="draft"
             disabled={isPending || !hayEntregable}
             title={hayEntregable ? undefined : "Elegí al menos un entregable"}
-            className="flex-1 rounded-pill border border-black/10 py-3 text-sm font-bold text-ink transition hover:border-ink disabled:opacity-60"
+            className={`${styles.btn} ${styles.btnGhost}`}
           >
             Guardar borrador
           </button>
@@ -360,24 +353,24 @@ export default function CampaignForm({ verified }: { verified: boolean }) {
             value="publish"
             disabled={isPending || !hayEntregable}
             title={hayEntregable ? undefined : "Elegí al menos un entregable"}
-            className="flex-1 rounded-pill bg-violet py-3 text-sm font-bold text-white transition hover:bg-violet-deep disabled:opacity-60"
+            className={`${styles.btn} ${styles.btnPrimary}`}
           >
-            {isPending ? "Publicando..." : "Publicar campaña"}
+            {isPending ? "Publicando…" : "Publicar campaña"}
           </button>
         </div>
       ) : (
-        <div className="mt-2 flex flex-col gap-2">
+        <div className={styles.formActions} style={{ flexDirection: "column" }}>
           <button
             type="submit"
             name="intent"
             value="draft"
             disabled={isPending || !hayEntregable}
             title={hayEntregable ? undefined : "Elegí al menos un entregable"}
-            className="rounded-pill bg-violet py-3 text-sm font-bold text-white transition hover:bg-violet-deep disabled:opacity-60"
+            className={`${styles.btn} ${styles.btnPrimary}`}
           >
-            {isPending ? "Guardando..." : "Guardar borrador"}
+            {isPending ? "Guardando…" : "Guardar borrador"}
           </button>
-          <p className="text-center text-xs text-ink-soft">
+          <p className={styles.formNote} style={{ textAlign: "center" }}>
             Vas a poder publicarla apenas verifiquemos tu negocio. Queda lista y la publicás de un
             clic desde la campaña.
           </p>
@@ -401,16 +394,17 @@ function Field({
   required?: boolean;
 }) {
   return (
-    <label className="flex flex-col gap-1.5 text-left">
-      <span className="text-xs font-bold text-ink">{label}</span>
+    <div className={styles.field}>
+      <label htmlFor={name}>{label}</label>
       <input
+        id={name}
         name={name}
         type={type}
         required={required}
         placeholder={placeholder}
-        className="rounded-lg border border-black/10 bg-lavender px-4 py-3 text-sm outline-none focus:border-violet"
+        className={styles.inp}
       />
-    </label>
+    </div>
   );
 }
 
@@ -428,15 +422,17 @@ function TextArea({
   rows?: number;
 }) {
   return (
-    <label className="flex flex-col gap-1.5 text-left">
-      <span className="text-xs font-bold text-ink">{label}</span>
+    <div className={styles.field}>
+      <label htmlFor={name}>{label}</label>
       <textarea
+        id={name}
         name={name}
         required={required}
         placeholder={placeholder}
         rows={rows}
-        className="resize-none rounded-lg border border-black/10 bg-lavender px-4 py-3 text-sm outline-none focus:border-violet"
+        className={styles.inp}
+        style={{ resize: "vertical" }}
       />
-    </label>
+    </div>
   );
 }

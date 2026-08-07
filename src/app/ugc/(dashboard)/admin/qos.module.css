@@ -571,6 +571,33 @@
   padding: 6px 11px;
   font-size: 12.5px;
 }
+/* El sistema no tenía estado deshabilitado: "Publicar campaña" seguía violeta y
+   con sombra mientras faltaba elegir un entregable, así que el único aviso de
+   que no se podía era que el clic no hacía nada.
+   Se apaga el hover variante por variante en vez de poner `pointer-events: none`
+   porque el `title` que explica POR QUÉ está apagado es un tooltip del
+   navegador, y sin eventos de puntero no aparece. */
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.btn.btnPrimary:disabled:hover {
+  background: var(--b-500);
+  box-shadow: none;
+}
+.btn.btnDanger:disabled:hover {
+  background: #e5484d;
+  box-shadow: none;
+}
+.btn.btnGhost:disabled:hover {
+  border-color: var(--line);
+  box-shadow: none;
+}
+.btn.btnSoft:disabled:hover {
+  background: var(--b-50);
+  border-color: var(--b-100);
+}
 
 .card {
   background: var(--surface);
@@ -3313,4 +3340,233 @@
 .checklistHecho {
   color: var(--ink-3);
   text-decoration: line-through;
+}
+
+/* ============================================================
+   FORMULARIO DE CAMPAÑA: tarjetas de opción y grilla de entregables
+
+   Un radio suelto con su etiqueta al lado se toca mal en un teléfono y no se
+   ve cuál está elegido de un vistazo. Acá el área clickeable es la tarjeta
+   entera y el estado elegido se pinta con `:has(:checked)` — sin JS y sin que
+   el formulario tenga que llevar el valor en estado solo para dibujarlo.
+   ============================================================ */
+.optList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.optGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.optCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.optCard:hover {
+  border-color: var(--b-400);
+}
+.optCard:has(input:checked) {
+  border-color: var(--b-500);
+  background: var(--b-50);
+}
+/* El foco del teclado vive en el <input>, que es de 13px y queda escondido bajo
+   el anillo del navegador. Se traslada al borde de la tarjeta, que es lo que la
+   persona ve como "el control". */
+.optCard:has(input:focus-visible) {
+  border-color: var(--b-500);
+  box-shadow: var(--sh-glow);
+}
+.optCard input {
+  margin-top: 2px;
+  accent-color: var(--b-500);
+  flex-shrink: 0;
+}
+.optTitle {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.optDesc {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+/* Cada formato con su cantidad. La caja del número es angosta a propósito:
+   nadie pide 400 reels, y ancha invitaba a leerla como un campo de texto. */
+.qtyGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.qtyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: var(--t-fast);
+}
+.qtyRow:focus-within {
+  border-color: var(--b-400);
+}
+.qtyRowOn {
+  border-color: var(--b-500);
+  background: var(--b-50);
+}
+.qtyName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.qtyInp {
+  width: 58px;
+  padding: 5px 6px;
+  text-align: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  transition: var(--t-fast);
+}
+.qtyInp:focus {
+  outline: none;
+  border-color: var(--b-400);
+  box-shadow: var(--sh-glow);
+}
+/* El aviso de "falta elegir un entregable" tiene que verse como una advertencia
+   sobre el grupo entero, no sobre una tarjeta. Va como marco del bloque. */
+.qtyGridFalta {
+  padding: 8px;
+  margin: -8px;
+  border-radius: var(--r-lg);
+  outline: 1px solid var(--risk-line);
+}
+.fieldGroup {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  padding: 16px;
+  margin-bottom: 15px;
+}
+.fieldGroup > legend {
+  padding: 0 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.fieldSub {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.formNote {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+.formOk {
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--ok);
+}
+.formActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.formActions > * {
+  flex: 1;
+}
+@media (max-width: 560px) {
+  .optGrid,
+  .qtyGrid {
+    grid-template-columns: 1fr;
+  }
+  /* Dos botones de 50% dejan "Publicar campaña" en dos líneas en un teléfono. */
+  .formActions {
+    flex-direction: column;
+  }
+}
+
+/* ============================================================
+   FILA DE SUBTABS CON ACCIÓN
+
+   "+ Nuevo cupón" vivía como un .subtab más, al lado de los tres filtros de
+   vista. Se veía igual que ellos y hacía otra cosa: abre un formulario. Sale
+   del grupo y pasa a ser un botón, con el mismo peso visual que "+ Nueva
+   campaña" en UGC·CRC.
+   ============================================================ */
+.subtabsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.subtabsRow .subtabs {
+  margin-bottom: 0;
+}
+/* En un teléfono el botón se va al ancho completo debajo de los filtros: a la
+   derecha de una fila que ya envolvió quedaba colgando solo. */
+@media (max-width: 560px) {
+  .subtabsRow > * {
+    flex: 1 1 100%;
+  }
+}
+
+/* ============================================================
+   ESCÁNER DE QR (validar canje en el local)
+   ============================================================ */
+.scanBox {
+  position: relative;
+  margin-bottom: 14px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--ink-deep);
+  aspect-ratio: 4 / 3;
+}
+.scanVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* La mira: solo las cuatro esquinas. Un marco entero compite con el QR y
+   confunde sobre qué parte de la imagen se está leyendo. */
+.scanMira {
+  position: absolute;
+  inset: 16%;
+  border-radius: 12px;
+  box-shadow: 0 0 0 100vmax rgba(13, 10, 28, 0.45);
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: -2px;
+  pointer-events: none;
+}
+.scanHint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  text-align: center;
+  color: #fff;
+  background: rgba(13, 10, 28, 0.55);
 }

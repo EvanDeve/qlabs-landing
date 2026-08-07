@@ -11,6 +11,8 @@ import CuponForm, { type CuponEditable } from "./CuponForm";
 import { buscarCodigoAction, type BusquedaState } from "@/lib/actions/validar";
 import { LABEL_TIPO_CUPON, LEYENDA_EVENTO } from "@/lib/ugc/loyalty";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
+import EscanearQR from "./EscanearQR";
+import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 export type CuponMarca = {
@@ -79,24 +81,36 @@ export default function LoyaltyMarcaTabs({
 
   return (
     <div>
-      <div className={styles.subtabs}>
-        {(
-          [
-            ["cupones", `Mis cupones${cupones.length ? ` (${cupones.length})` : ""}`],
-            ["nuevo", "+ Nuevo cupón"],
-            ["validar", "Validar canje"],
-            ["canjes", `Canjes${canjes.length ? ` (${canjes.length})` : ""}`],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            className={`${styles.subtab} ${tab === id ? styles.subtabOn : ""}`}
-            onClick={() => setTab(id)}
-          >
-            {label}
-          </button>
-        ))}
+      {/* Los tres de la izquierda cambian QUÉ se está viendo; el de la derecha
+          crea algo. Mientras "+ Nuevo cupón" era un chip más de la misma fila,
+          las dos cosas se veían idénticas. */}
+      <div className={styles.subtabsRow}>
+        <div className={styles.subtabs}>
+          {(
+            [
+              ["cupones", `Mis cupones${cupones.length ? ` (${cupones.length})` : ""}`],
+              ["validar", "Validar canje"],
+              ["canjes", `Canjes${canjes.length ? ` (${canjes.length})` : ""}`],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={`${styles.subtab} ${tab === id ? styles.subtabOn : ""}`}
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.btnPrimary}`}
+          onClick={() => setTab("nuevo")}
+        >
+          <QosIcon name="plus" size={15} />
+          Nuevo cupón
+        </button>
       </div>
 
       {tab === "cupones" && (
@@ -104,7 +118,14 @@ export default function LoyaltyMarcaTabs({
       )}
       {tab === "nuevo" && (
         <div className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "760px" }}>
-          <CuponForm niveles={niveles} verificada={verificada} />
+          <h2 style={{ fontSize: "17px", marginBottom: "16px" }}>Nuevo cupón</h2>
+          {/* Vuelve a la lista al guardar: ahora es una acción con principio y
+              fin, no una pestaña donde quedarse. También le da su "Cancelar". */}
+          <CuponForm
+            niveles={niveles}
+            verificada={verificada}
+            onListo={() => setTab("cupones")}
+          />
         </div>
       )}
       {tab === "validar" && <Validador nombreMarca={nombreMarca} />}
@@ -314,17 +335,33 @@ function Validador({ nombreMarca }: { nombreMarca: string }) {
     null
   );
   const [canje, canjearFormAction, canjeando] = useActionState<CanjeState, FormData>(canjearAction, null);
+  const [codigo, setCodigo] = useState("");
 
   const encontrado = busqueda && "reclamo" in busqueda ? busqueda.reclamo : null;
   const yaCanjeado = canje && "ok" in canje;
+
+  /**
+   * El escaneo busca solo, sin pedir un toque más.
+   *
+   * La acción se despacha con un FormData armado a mano en vez de rellenar el
+   * campo y enviar el formulario: `setCodigo` no llega a pintarse en el mismo
+   * tick, así que un `requestSubmit()` acá mandaría el valor anterior.
+   */
+  function alEscanear(code: string) {
+    setCodigo(code);
+    const fd = new FormData();
+    fd.set("code", code);
+    buscarAction(fd);
+  }
 
   return (
     <div className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "560px" }}>
       <h2 style={{ fontSize: "16px", marginBottom: "6px" }}>Validar un canje</h2>
       <p style={{ fontSize: "13px", color: "var(--ink-2)", marginBottom: "18px" }}>
-        Escaneá el QR del creador con la cámara de tu teléfono, o digitá acá el código corto que te
-        muestra.
+        Escaneá el QR del creador con la cámara, o digitá acá el código corto que te muestra.
       </p>
+
+      <EscanearQR onCodigo={alEscanear} />
 
       <form action={buscarAction}>
         <div className={styles.field}>
@@ -332,6 +369,8 @@ function Validador({ nombreMarca }: { nombreMarca: string }) {
           <input
             id="code"
             name="code"
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value)}
             placeholder="QL-XXXX-XX"
             className={styles.inp}
             style={{
