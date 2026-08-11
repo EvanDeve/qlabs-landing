@@ -5,11 +5,14 @@ import {
   validarAccion,
   resolverCliente,
   describirPropuesta,
+  describirLoHecho,
+  normalizarTitulo,
   esValidaParaConfirmar,
   fechaEnRango,
   PROPUESTA_VIGENCIA_MS,
   type ContextoValidacion,
 } from "@/lib/ugc/agente";
+import type { AgendaItem } from "@/lib/ugc/agenda";
 
 const TOKEN = "token_de_prueba_no_real";
 const URL = "https://www.qlabsmethod.com/api/qos/agente/webhook";
@@ -342,5 +345,64 @@ describe("esValidaParaConfirmar", () => {
   it("rechaza una propuesta vieja", () => {
     const vieja = new Date(ahora.getTime() - PROPUESTA_VIGENCIA_MS - 1000).toISOString();
     expect(esValidaParaConfirmar(vieja, ahora)).toBe(false);
+  });
+});
+
+// El 2026-08-03 McLovin cerró la tarjeta equivocada y Daniel leyó "Pura vida."
+// La respuesta del modelo no sirve para detectar el error: hay que decirle qué
+// tocó el sistema, con el dato del sistema.
+describe("describirLoHecho", () => {
+  function item(titulo: string): AgendaItem {
+    return {
+      key: `k-${titulo}`,
+      ref: { kind: "piece", pieceId: "p1", campo: "publish_date" },
+      titulo,
+      heroe: "Delitalia",
+      conHora: false,
+      accion: "Publicar",
+      columna: "Por editar",
+      prioridad: null,
+      enRiesgo: false,
+      fecha: "2026-08-04",
+    };
+  }
+  const items = [item("Reel de brunch"), item("Unboxing ramen")];
+
+  it("nombra la pieza que se movió y a dónde fue", () => {
+    const texto = describirLoHecho({ tipo: "mover_pieza", item: 2, columna: "Publicado" }, items);
+    expect(texto).toBe('Listo: moví "Unboxing ramen" a Publicado.');
+  });
+
+  it("nombra la pieza que se dio por terminada", () => {
+    expect(describirLoHecho({ tipo: "marcar_hecho", item: 1 }, items)).toContain('"Reel de brunch"');
+  });
+
+  it("dice la fecha nueva al reprogramar", () => {
+    const texto = describirLoHecho({ tipo: "reprogramar", item: 1, fecha: "2026-08-09" }, items);
+    expect(texto).toContain("2026-08-09");
+  });
+
+  // Un paréntesis en cada mensaje se vuelve ruido y se deja de leer, así que
+  // solo se avisa de lo que de verdad tocó el tablero.
+  it("no dice nada cuando la acción no toca el tablero", () => {
+    expect(describirLoHecho({ tipo: "ninguna" }, items)).toBeNull();
+    expect(describirLoHecho({ tipo: "descartar" }, items)).toBeNull();
+  });
+
+  it("no inventa un título si el número no existe en la agenda", () => {
+    expect(describirLoHecho({ tipo: "mover_pieza", item: 9, columna: "Publicado" }, items)).toBeNull();
+  });
+});
+
+// Lo que decide si una pieza que se va a crear ya está en el tablero. Se compara
+// exacto y no "parecido": un falso positivo bloquea una pieza legítima, y esa no
+// la reclama nadie — el duplicado, en cambio, se ve y se borra.
+describe("normalizarTitulo", () => {
+  it("ignora acentos, mayúsculas y espacios de más", () => {
+    expect(normalizarTitulo("  Reel de BRUNCH  del   Día ")).toBe(normalizarTitulo("reel de brunch del dia"));
+  });
+
+  it("no da por iguales dos títulos que solo se parecen", () => {
+    expect(normalizarTitulo("Reel de brunch 2")).not.toBe(normalizarTitulo("Reel de brunch"));
   });
 });

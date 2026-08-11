@@ -299,6 +299,43 @@ export type AccionAgente =
 
 export type RespuestaAgente = { respuesta: string; accion: AccionAgente };
 
+/**
+ * La línea que dice qué se tocó, con el dato del sistema y no del modelo.
+ *
+ * El 2026-08-03 Daniel leyó "Pura vida." después de que le cerraran la tarjeta
+ * equivocada, y el error recién salió a la luz cuando aparecieron dos tarjetas.
+ * El modelo puede escribir cualquier cosa en su prosa —o nada—; esto sale de la
+ * acción que de verdad se ejecutó, así que un error se ve en el mismo mensaje.
+ *
+ * Devuelve null para las acciones que no tocan el tablero: no hay nada que
+ * confirmar, y un paréntesis de más en cada respuesta convierte el aviso en
+ * ruido que se deja de leer — que es justo lo que hay que evitar.
+ */
+export function describirLoHecho(accion: AccionAgente, items: AgendaItem[]): string | null {
+  if (accion.tipo !== "mover_pieza" && accion.tipo !== "marcar_hecho" && accion.tipo !== "reprogramar") {
+    return null;
+  }
+  const titulo = items[accion.item - 1]?.titulo;
+  if (!titulo) return null;
+
+  if (accion.tipo === "mover_pieza") return `Listo: moví "${titulo}" a ${accion.columna}.`;
+  if (accion.tipo === "marcar_hecho") return `Listo: di por terminada "${titulo}".`;
+  return `Listo: "${titulo}" queda para el ${accion.fecha}.`;
+}
+
+/**
+ * Un título llevado a su forma comparable: sin acentos, sin mayúsculas y sin
+ * espacios de más. Es lo que decide si una pieza que se va a crear ya existe.
+ */
+export function normalizarTitulo(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export type TurnoPrevio = { quien: "agente" | "persona"; texto: string };
 
 /** Cuánto vive una propuesta sin contestar. Ver esValidaParaConfirmar(). */

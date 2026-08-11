@@ -9,6 +9,8 @@ import {
   responderMensaje,
   getAjustesAgente,
   describirPropuesta,
+  describirLoHecho,
+  normalizarTitulo,
   esValidaParaConfirmar,
   type AccionAgente,
   type PropuestaPieza,
@@ -154,7 +156,7 @@ export async function POST(request: Request) {
     ajustes,
   });
 
-  const aplicada = await aplicarAccion(admin, {
+  const resultado = await aplicarAccion(admin, {
     profileId: miembro.profile_id,
     accion,
     items,
@@ -165,7 +167,7 @@ export async function POST(request: Request) {
 
   // Estamos dentro de la ventana de 24 h por definición —acaban de escribir—
   // así que acá el agente habla libre, sin plantilla.
-  await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, accion, aplicada));
+  await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, accion, resultado, items));
 
   return NextResponse.json({ ok: true });
 }
@@ -382,6 +384,16 @@ type Contexto = {
 };
 
 /**
+ * Lo que de verdad pasó al aplicar la acción.
+ *
+ * `nota` existe para los casos que no son ni éxito ni falla técnica: hoy, que la
+ * pieza ya estuviera en el tablero. Sin esto, ese caso caía en el aviso genérico
+ * de "no pude tocar el tablero", que manda a la persona a Q·OS a hacer a mano
+ * algo que en realidad ya estaba hecho.
+ */
+type ResultadoAccion = { aplicada: boolean; nota?: string };
+
+/**
  * Ejecuta la acción, con el segundo candado.
  *
  * El primero es que el modelo solo puede nombrar NÚMEROS de la agenda que se le
@@ -394,21 +406,21 @@ type Contexto = {
  * movía piezas sin dejar rastro de que hubiera sido él: la conversación estaba
  * en wa_messages, pero el efecto sobre el tablero no estaba en ningún lado.
  */
-async function aplicarAccion(admin: Admin, ctx: Contexto): Promise<boolean> {
+async function aplicarAccion(admin: Admin, ctx: Contexto): Promise<ResultadoAccion> {
   const { accion } = ctx;
-  if (accion.tipo === "ninguna") return true;
+  if (accion.tipo === "ninguna") return { aplicada: true };
 
   try {
     if (accion.tipo === "proponer_pieza") return await abrirPropuesta(admin, ctx, accion.pieza);
-    if (accion.tipo === "descartar") return await cerrarPropuesta(admin, ctx, "descartada");
-    if (accion.tipo === "confirmar") return await crearPiezaConfirmada(admin, ctx);
-    return await editarItem(admin, ctx, accion);
+    if (accion.tipo === "descartar") return { aplicada: await cerrarPropuesta(admin, ctx, "descartada") };
+    if (accion.tipo === "confirmar") return { aplicada: await crearPiezaConfirmada(admin, ctx) };
+    return { aplicada: await editarItem(admin, ctx, accion) };
   } catch (err) {
     console.error("[agente/webhook] no se pudo aplicar la acción:", err);
     await registrar(admin, ctx.profileId, kindDe(accion), { accion }, "fallida", {
       error: err instanceof Error ? err.message : "error desconocido",
     });
-    return false;
+    return { aplicada: false };
   }
 }
 
@@ -455,13 +467,55 @@ async function registrar(
 }
 
 /**
+ * Busca una pieza que ya diga lo mismo, en TODO el tablero de ese Hero.
+ *
+ * Tiene que mirar el tablero entero y no la agenda: el 2026-08-03 se duplicó una
+ * tarjeta justamente porque el agente había cerrado la buena treinta segundos
+ * antes, y al quedar cerrada salió de la agenda. Lo que él no ve es exactamente
+ * lo que hay que ir a buscar.
+ *
+ * Compara el título normalizado y exacto, no parecido. Un "contiene" tomaría
+ * "Reel de brunch 2" como duplicado de "Reel de brunch" y bloquearía una pieza
+ * legítima — y un falso positivo acá es peor que un duplicado: el duplicado se
+ * borra, la pieza que nunca se creó no se entera nadie.
+ */
+async function piezaYaExistente(
+  admin: Admin,
+  brandId: string,
+  titulo: string
+): Promise<string | null> {
+  const { data } = await admin
+    .from("content_pieces")
+    .select("title")
+    .eq("brand_id", brandId)
+    .limit(200);
+
+  const buscado = normalizarTitulo(titulo);
+  return (data ?? []).find((p) => normalizarTitulo(p.title) === buscado)?.title ?? null;
+}
+
+/**
  * Guarda lo que se va a crear, sin crear nada todavía.
  *
  * La propuesta anterior se vence antes de abrir la nueva porque el índice
  * `wa_agent_actions_una_propuesta_idx` no admite dos abiertas — que es
  * justamente lo que hace que "dale" no sea ambiguo.
  */
-async function abrirPropuesta(admin: Admin, ctx: Contexto, pieza: PropuestaPieza): Promise<boolean> {
+async function abrirPropuesta(admin: Admin, ctx: Contexto, pieza: PropuestaPieza): Promise<ResultadoAccion> {
+  // Antes de proponer nada: si ya está en el tablero, no se abre la propuesta.
+  // Avisar acá y no al confirmar es lo que corresponde — la persona se entera
+  // antes de decir "dale", no después de tener dos tarjetas.
+  if (pieza.tipo === "publicar") {
+    const cliente = ctx.clientes.find((c) => c.name === pieza.cliente);
+    const repetida = cliente ? await piezaYaExistente(admin, cliente.id, pieza.titulo) : null;
+    if (repetida) {
+      return {
+        aplicada: false,
+        nota: `Ojo: "${repetida}" ya está en el tablero de ${pieza.cliente}, así que no la anoté de nuevo. Si igual querés otra, cargala desde Q·OS.`,
+      };
+    }
+  }
+
   if (ctx.propuesta) await cerrarPropuesta(admin, ctx, "reemplazada");
   // El kind se decide acá, en la propuesta, y no al ejecutarla: el destino ya
   // está definido por `tipo` y así la bitácora dice desde el primer registro
@@ -473,7 +527,7 @@ async function abrirPropuesta(admin: Admin, ctx: Contexto, pieza: PropuestaPieza
     pieza as unknown as Record<string, unknown>,
     "propuesta"
   );
-  return id !== null;
+  return { aplicada: id !== null };
 }
 
 async function cerrarPropuesta(admin: Admin, ctx: Contexto, status: "descartada" | "reemplazada"): Promise<boolean> {
@@ -730,13 +784,24 @@ async function escribirEdicion(
  * y no se movió, mandar su texto tal cual sería la peor falla posible acá:
  * alguien confiando en que su tablero se actualizó cuando no.
  */
-function redactarSalida(respuesta: string, accion: AccionAgente, aplicada: boolean): string {
+function redactarSalida(
+  respuesta: string,
+  accion: AccionAgente,
+  resultado: ResultadoAccion,
+  items: AgendaItem[]
+): string {
+  const { aplicada, nota } = resultado;
+  if (nota) return `${respuesta}\n\n(${nota})`;
+
   if (accion.tipo === "proponer_pieza") {
     return aplicada
       ? `${respuesta}\n\n${describirPropuesta(accion.pieza, diaCR(new Date()))}`
       : `${respuesta}\n\n(No me quedó anotado, mejor cargalo desde Q·OS.)`;
   }
-  if (aplicada) return respuesta;
+  if (aplicada) {
+    const hecho = describirLoHecho(accion, items);
+    return hecho ? `${respuesta}\n\n(${hecho})` : respuesta;
+  }
   if (accion.tipo === "confirmar") return `${respuesta}\n\n(Ojo: no pude crearla, cargala vos desde Q·OS.)`;
   if (accion.tipo === "descartar") return respuesta;
   if (accion.tipo === "ninguna") return respuesta;
