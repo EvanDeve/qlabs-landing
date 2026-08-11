@@ -78,6 +78,22 @@ export type Agenda = {
   sinFecha: AgendaItem[];
   /** Cuántas quedaron afuera del recorte, para poder decir "y N más". */
   sinFechaOmitidas: number;
+  /**
+   * La ventana con la que se armó esta agenda.
+   *
+   * Viaja pegada a los datos y no como parámetro suelto porque quien la lee
+   * necesita poder decir HASTA DÓNDE miró: el agente contesta "veo hasta acá" y
+   * el resumen escribe "próximos N días". Con la ventana en una constante
+   * global, cambiarla dejaba textos diciendo un número y datos trayendo otro.
+   */
+  ventana: VentanaAgenda;
+};
+
+/** Cuánto ve la agenda. Sale de agent_settings; los defaults son los de acá. */
+export type VentanaAgenda = {
+  diasProximas: number;
+  diasVencidas: number;
+  maxSinFecha: number;
 };
 
 /** Cuántos días hacia adelante entran en "lo que se viene". */
@@ -107,24 +123,38 @@ export const DIAS_VENCIDAS = 30;
  */
 export const MAX_SIN_FECHA = 5;
 
+/**
+ * La ventana que se usa si nadie la configuró.
+ *
+ * Son los mismos números que estaban en código antes de que fueran editables,
+ * así que una base sin la migración 20260811120000 aplicada se comporta igual
+ * que siempre.
+ */
+export const VENTANA_POR_DEFECTO: VentanaAgenda = {
+  diasProximas: DIAS_PROXIMAS,
+  diasVencidas: DIAS_VENCIDAS,
+  maxSinFecha: MAX_SIN_FECHA,
+};
+
 const PRIORIDAD_PESO: Record<ContentPriority, number> = { alta: 0, media: 1, baja: 2 };
 
 export async function getStaffAgenda(
   supabase: SupabaseClient<Database>,
   profileId: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  ventana: VentanaAgenda = VENTANA_POR_DEFECTO
 ): Promise<Agenda> {
   const hoy = diaCR(now);
-  const desde = diaCR(sumarDias(now, -DIAS_VENCIDAS));
-  const hasta = diaCR(sumarDias(now, DIAS_PROXIMAS));
+  const desde = diaCR(sumarDias(now, -ventana.diasVencidas));
+  const hasta = diaCR(sumarDias(now, ventana.diasProximas));
 
   // El rango se acota en UTC con UN DÍA DE MARGEN a cada lado, y el filtro
   // fino por día CR queda para clasificar(). El margen no es por las dudas: CR
   // es UTC-6, así que el día CR `hasta` no termina a las 23:59Z de ese día sino
   // a las 05:59Z del siguiente. Sin margen, un evento a las 20:00 CR del último
   // día (02:00Z del siguiente) se caería del rango y nunca se avisaría.
-  const desdeUtc = new Date(`${diaCR(sumarDias(now, -DIAS_VENCIDAS - 1))}T00:00:00Z`).toISOString();
-  const hastaUtc = new Date(`${diaCR(sumarDias(now, DIAS_PROXIMAS + 1))}T23:59:59Z`).toISOString();
+  const desdeUtc = new Date(`${diaCR(sumarDias(now, -ventana.diasVencidas - 1))}T00:00:00Z`).toISOString();
+  const hastaUtc = new Date(`${diaCR(sumarDias(now, ventana.diasProximas + 1))}T23:59:59Z`).toISOString();
 
   const [{ data: piezas }, { data: eventos }] = await Promise.all([
     supabase
@@ -260,7 +290,7 @@ export async function getStaffAgenda(
     });
   }
 
-  return clasificar(items, { hoy, desde, hasta });
+  return clasificar(items, { hoy, desde, hasta }, ventana);
 }
 
 /**
@@ -275,9 +305,17 @@ export async function getStaffAgenda(
  */
 export function clasificar(
   items: AgendaItem[],
-  rango: { hoy: string; desde: string; hasta: string }
+  rango: { hoy: string; desde: string; hasta: string },
+  ventana: VentanaAgenda = VENTANA_POR_DEFECTO
 ): Agenda {
-  const agenda: Agenda = { vencidas: [], hoy: [], proximas: [], sinFecha: [], sinFechaOmitidas: 0 };
+  const agenda: Agenda = {
+    vencidas: [],
+    hoy: [],
+    proximas: [],
+    sinFecha: [],
+    sinFechaOmitidas: 0,
+    ventana,
+  };
 
   for (const item of items) {
     // Sin fecha no hay ventana que aplicar: no está ni atrasado ni por venir.
@@ -306,8 +344,8 @@ export function clasificar(
       (a.prioridad ? PRIORIDAD_PESO[a.prioridad] : 1) - (b.prioridad ? PRIORIDAD_PESO[b.prioridad] : 1) ||
       a.titulo.localeCompare(b.titulo)
   );
-  agenda.sinFechaOmitidas = Math.max(0, agenda.sinFecha.length - MAX_SIN_FECHA);
-  agenda.sinFecha = agenda.sinFecha.slice(0, MAX_SIN_FECHA);
+  agenda.sinFechaOmitidas = Math.max(0, agenda.sinFecha.length - ventana.maxSinFecha);
+  agenda.sinFecha = agenda.sinFecha.slice(0, ventana.maxSinFecha);
 
   return agenda;
 }
@@ -394,7 +432,7 @@ export function resumenDeterminista(agenda: Agenda, maxItems = 3): string {
     // para saber si ese 7 lo toca a uno; con los nombres, el mensaje ya sirve.
     // Se recorta como los otros bloques porque esto va en UNA línea de plantilla.
     bloques.push(
-      `Próximos ${DIAS_PROXIMAS} días (${agenda.proximas.length}): ${listar(agenda.proximas, maxItems)}`
+      `Próximos ${agenda.ventana.diasProximas} días (${agenda.proximas.length}): ${listar(agenda.proximas, maxItems)}`
     );
   }
   // Último a propósito: lo que tiene fecha manda, esto es el fondo del canasto.

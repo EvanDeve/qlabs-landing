@@ -58,6 +58,9 @@ export default function McLovinForm({
   guionPublico,
   linkAgenda,
   responderDesconocidos,
+  diasProximas,
+  diasVencidas,
+  maxSinFecha,
   // Bajan como props en vez de importarse: agente.ts y agente-publico.ts
   // arrastran los módulos enteros (agenda, fechas, el cliente de Gemini) y acá
   // solo hacen falta los textos.
@@ -72,6 +75,9 @@ export default function McLovinForm({
   guionPublico: string;
   linkAgenda: string;
   responderDesconocidos: boolean;
+  diasProximas: number;
+  diasVencidas: number;
+  maxSinFecha: number;
   personaPorDefecto: string;
   sobreQlabsArranque: string;
   guionArranque: string;
@@ -216,6 +222,60 @@ export default function McLovinForm({
             </span>
           </span>
         </label>
+      </Seccion>
+
+      <Seccion
+        titulo="Cuánto ve"
+        bajada="La ventana de tablero que mira antes de escribir. Si le preguntan por algo que cae afuera, lo dice en vez de dar la lista por completa."
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+          <div className={styles.field} style={{ maxWidth: "170px" }}>
+            <label>Días hacia adelante</label>
+            <input
+              name="dias_proximas"
+              type="number"
+              min={1}
+              max={60}
+              required
+              defaultValue={diasProximas}
+              className={styles.inp}
+            />
+            <p className={styles.fieldHint}>Lo que entra en “lo que se viene”.</p>
+          </div>
+
+          <div className={styles.field} style={{ maxWidth: "170px" }}>
+            <label>Días hacia atrás</label>
+            <input
+              name="dias_vencidas"
+              type="number"
+              min={1}
+              max={180}
+              required
+              defaultValue={diasVencidas}
+              className={styles.inp}
+            />
+            <p className={styles.fieldHint}>Hasta dónde busca lo atrasado.</p>
+          </div>
+
+          <div className={styles.field} style={{ maxWidth: "190px" }}>
+            <label>Sin fecha que nombra</label>
+            <input
+              name="max_sin_fecha"
+              type="number"
+              min={1}
+              max={30}
+              required
+              defaultValue={maxSinFecha}
+              className={styles.inp}
+            />
+            <p className={styles.fieldHint}>El resto lo cuenta como “y N más”.</p>
+          </div>
+        </div>
+
+        <p className={styles.fieldHint} style={{ marginTop: "4px" }}>
+          Subirlos mucho no lo hace más útil: la agenda entera viaja en cada mensaje, así que una ventana grande
+          encarece cada respuesta y lo hace equivocarse de tarjeta justo cuando hay más.
+        </p>
       </Seccion>
 
       <button

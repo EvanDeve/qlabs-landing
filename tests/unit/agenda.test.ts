@@ -7,6 +7,7 @@ import {
   contarAgenda,
   DIAS_PROXIMAS,
   MAX_SIN_FECHA,
+  VENTANA_POR_DEFECTO,
   type AgendaItem,
 } from "@/lib/ugc/agenda";
 
@@ -31,7 +32,14 @@ function item(parcial: Partial<AgendaItem> & { fecha: string | null }): AgendaIt
   };
 }
 
-const VACIA = { vencidas: [], hoy: [], proximas: [], sinFecha: [], sinFechaOmitidas: 0 };
+const VACIA = {
+  vencidas: [],
+  hoy: [],
+  proximas: [],
+  sinFecha: [],
+  sinFechaOmitidas: 0,
+  ventana: VENTANA_POR_DEFECTO,
+};
 
 const RANGO = { hoy: "2026-08-02", desde: "2026-07-03", hasta: "2026-08-05" };
 
@@ -143,6 +151,32 @@ describe("resumenDeterminista", () => {
     expect(texto).toContain("Publicar Reel de brunch (Zonna)");
     expect(texto).toContain("Grabar Unboxing ramen (Kosta)");
     expect(texto).not.toMatch(/[\r\n\t]/);
+  });
+
+  // La ventana viaja pegada a la agenda justamente para esto: si el equipo la
+  // sube a 7 días desde el panel, el texto tiene que decir 7 y no el 3 de
+  // fábrica. Un texto que dice un número y datos que traen otro es peor que no
+  // decir nada.
+  it("dice los días de la ventana configurada, no los de fábrica", () => {
+    const agenda = clasificar(
+      [item({ key: "p1", titulo: "Reel", accion: "Publicar", fecha: "2026-08-04T15:00:00Z" })],
+      RANGO,
+      { diasProximas: 7, diasVencidas: 45, maxSinFecha: 2 }
+    );
+
+    expect(resumenDeterminista(agenda)).toContain("Próximos 7 días (1)");
+  });
+
+  it("recorta las sin fecha según la ventana configurada", () => {
+    const items = Array.from({ length: 5 }, (_, i) =>
+      item({ key: `s${i}`, titulo: `Guion ${i}`, fecha: null, accion: null, columna: "Guiones" })
+    );
+
+    const agenda = clasificar(items, RANGO, { diasProximas: 3, diasVencidas: 30, maxSinFecha: 2 });
+
+    expect(agenda.sinFecha).toHaveLength(2);
+    expect(agenda.sinFechaOmitidas).toBe(3);
+    expect(resumenDeterminista(agenda)).toContain("Sin fecha (5)");
   });
 
   it("resume con 'y N más' en vez de listar todo", () => {

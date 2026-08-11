@@ -104,7 +104,11 @@ export async function enviarRecordatorioDiario(
   miembro: MiembroNotificable,
   now: Date = new Date()
 ): Promise<ResultadoRecordatorio> {
-  const agenda = await getStaffAgenda(admin, miembro.profileId, now);
+  // Los ajustes se leen ANTES de armar la agenda: la ventana configurada decide
+  // qué entra, así que pedirla después dejaría el recordatorio mirando siempre
+  // los días de fábrica por más que el panel dijera otra cosa.
+  const ajustes = await getAjustesAgente(admin);
+  const agenda = await getStaffAgenda(admin, miembro.profileId, now, ajustes.ventana);
 
   // Un "no tenés nada" todos los días es exactamente cómo se le enseña a
   // alguien a dejar de leer los mensajes. Si no hay pendientes, no hay mensaje.
@@ -125,7 +129,6 @@ export async function enviarRecordatorioDiario(
   // La personalidad sale de agent_settings, igual que en la conversación: el
   // recordatorio de la mañana y las respuestas del webhook tienen que sonar a
   // la misma persona.
-  const ajustes = await getAjustesAgente(admin);
   const mensaje = await redactarNudge(agenda, miembro.nombre, usaTextoLibre, now, ajustes);
 
   // La fila se inserta ANTES de llamar a Twilio: es el candado de exactly-once.

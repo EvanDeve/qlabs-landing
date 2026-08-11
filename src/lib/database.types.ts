@@ -465,6 +465,12 @@ export interface Database {
           guion_publico: string;
           /** Vacío o una URL https. Ver el check de la migración 20260802100000. */
           link_agenda: string;
+          // Cuánto ve la agenda del agente. Con checks en la base (migración
+          // 20260811120000): 1-60, 1-180 y 1-30. La agenda entera se numera y
+          // viaja en el prompt, así que la ventana no puede ser libre.
+          dias_proximas: number;
+          dias_vencidas: number;
+          max_sin_fecha: number;
           updated_at: string;
           updated_by: string | null;
         };
@@ -477,6 +483,9 @@ export interface Database {
           sobre_qlabs?: string;
           guion_publico?: string;
           link_agenda?: string;
+          dias_proximas?: number;
+          dias_vencidas?: number;
+          max_sin_fecha?: number;
           updated_at?: string;
           updated_by?: string | null;
         };

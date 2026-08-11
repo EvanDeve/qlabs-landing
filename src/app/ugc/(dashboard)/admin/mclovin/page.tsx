@@ -2,6 +2,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { requireDirector } from "@/lib/auth/require-director";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { AJUSTES_POR_DEFECTO, PERSONA_SEED, armarPersona } from "@/lib/ugc/agente";
+import { VENTANA_POR_DEFECTO } from "@/lib/ugc/agenda";
 import { SOBRE_QLABS_ARRANQUE, GUION_ARRANQUE, armarCerebroPublico } from "@/lib/ugc/agente-publico";
 import McLovinForm from "@/components/ugc/admin/McLovinForm";
 import type { WaActionStatus } from "@/lib/database.types";
@@ -91,9 +92,10 @@ export default async function McLovinPage() {
   const [{ data: ajustes }, { data: acciones }, { data: publicos }] = await Promise.all([
     supabase
       .from("agent_settings")
-      .select(
-        "nombre, persona, instrucciones, sobre_qlabs, guion_publico, link_agenda, responder_desconocidos"
-      )
+      // `*` por lo mismo que en getAjustesAgente: con la lista de columnas, un
+      // deploy anterior a la migración 20260811120000 dejaría esta pantalla
+      // mostrando el cerebro vacío como si nadie lo hubiera cargado nunca.
+      .select("*")
       .eq("id", true)
       .maybeSingle(),
     supabase
@@ -151,6 +153,9 @@ export default async function McLovinPage() {
           guionPublico={ajustes?.guion_publico ?? ""}
           linkAgenda={ajustes?.link_agenda ?? ""}
           responderDesconocidos={ajustes?.responder_desconocidos ?? false}
+          diasProximas={ajustes?.dias_proximas ?? VENTANA_POR_DEFECTO.diasProximas}
+          diasVencidas={ajustes?.dias_vencidas ?? VENTANA_POR_DEFECTO.diasVencidas}
+          maxSinFecha={ajustes?.max_sin_fecha ?? VENTANA_POR_DEFECTO.maxSinFecha}
           personaPorDefecto={PERSONA_SEED}
           sobreQlabsArranque={SOBRE_QLABS_ARRANQUE}
           guionArranque={GUION_ARRANQUE}

@@ -10,6 +10,32 @@ const MAX_NOMBRE = 40;
 const MAX_TEXTO = 4000;
 
 /**
+ * Los límites de la ventana de la agenda. Son los mismos checks que tiene la
+ * base (migración 20260811120000), repetidos acá para que el error se vea en el
+ * formulario y no como un fallo de Postgres que nadie puede leer.
+ *
+ * El tope de arriba no es decorativo: la agenda entera se numera y viaja dentro
+ * del prompt, y el modelo actúa sobre esos números. Una ventana enorme encarece
+ * cada mensaje y hace que se equivoque de ítem justo cuando hay más.
+ */
+const RANGOS = {
+  dias_proximas: { min: 1, max: 60, label: "Los días hacia adelante" },
+  dias_vencidas: { min: 1, max: 180, label: "Los días hacia atrás" },
+  max_sin_fecha: { min: 1, max: 30, label: "Las piezas sin fecha que nombra" },
+} as const;
+
+/** Devuelve el número validado, o el mensaje de error si no entra en el rango. */
+function leerNumero(formData: FormData, campo: keyof typeof RANGOS): number | string {
+  const { min, max, label } = RANGOS[campo];
+  const crudo = String(formData.get(campo) ?? "").trim();
+  const valor = Number(crudo);
+  if (!crudo || !Number.isInteger(valor) || valor < min || valor > max) {
+    return `${label} tiene que ser un número entero entre ${min} y ${max}.`;
+  }
+  return valor;
+}
+
+/**
  * Guarda la personalidad del agente.
  *
  * La escritura va con el cliente de sesión, no con el service-role: la policy
@@ -34,6 +60,13 @@ export async function saveAgentSettingsAction(
   const guionPublico = String(formData.get("guion_publico") ?? "").trim();
   const linkAgenda = String(formData.get("link_agenda") ?? "").trim();
   const responderDesconocidos = formData.get("responder_desconocidos") === "on";
+
+  const diasProximas = leerNumero(formData, "dias_proximas");
+  const diasVencidas = leerNumero(formData, "dias_vencidas");
+  const maxSinFecha = leerNumero(formData, "max_sin_fecha");
+  for (const valor of [diasProximas, diasVencidas, maxSinFecha]) {
+    if (typeof valor === "string") return { error: valor };
+  }
 
   if (!nombre) return { error: "El nombre no puede quedar vacío." };
   if (nombre.length > MAX_NOMBRE) return { error: `El nombre no puede pasar de ${MAX_NOMBRE} caracteres.` };
@@ -71,6 +104,9 @@ export async function saveAgentSettingsAction(
       guion_publico: guionPublico,
       link_agenda: linkAgenda,
       responder_desconocidos: responderDesconocidos,
+      dias_proximas: diasProximas as number,
+      dias_vencidas: diasVencidas as number,
+      max_sin_fecha: maxSinFecha as number,
       updated_at: new Date().toISOString(),
       updated_by: user.id,
     })

@@ -5,10 +5,10 @@ import { COSTA_RICA_TZ, diaCR, sumarDias } from "@/lib/ugc/calendar";
 import {
   type Agenda,
   type AgendaItem,
+  type VentanaAgenda,
   itemsDeAgenda,
   resumenDeterminista,
-  DIAS_PROXIMAS,
-  DIAS_VENCIDAS,
+  VENTANA_POR_DEFECTO,
 } from "@/lib/ugc/agenda";
 
 /**
@@ -72,6 +72,8 @@ export type AjustesAgente = {
   guionPublico: string;
   /** Dónde agenda la persona (Calendly). Vacío = no ofrece agenda. */
   linkAgenda: string;
+  /** Cuánto ve la agenda. Editable desde el panel; ver 20260811120000. */
+  ventana: VentanaAgenda;
 };
 
 export const AJUSTES_POR_DEFECTO: AjustesAgente = {
@@ -82,6 +84,7 @@ export const AJUSTES_POR_DEFECTO: AjustesAgente = {
   sobreQlabs: "",
   guionPublico: "",
   linkAgenda: "",
+  ventana: VENTANA_POR_DEFECTO,
 };
 
 /**
@@ -93,7 +96,12 @@ export const AJUSTES_POR_DEFECTO: AjustesAgente = {
 export async function getAjustesAgente(supabase: SupabaseClient<Database>): Promise<AjustesAgente> {
   const { data, error } = await supabase
     .from("agent_settings")
-    .select("nombre, persona, instrucciones, responder_desconocidos, sobre_qlabs, guion_publico, link_agenda")
+    // `*` a propósito, y no la lista de columnas: si el deploy llega antes que
+    // la migración 20260811120000, pedir `dias_proximas` por nombre hace fallar
+    // la consulta entera y el agente se queda sin persona, sin sobre_qlabs y sin
+    // link — o sea, vuelve a fábrica sin que nadie se entere. Con `*` las
+    // columnas que todavía no existen simplemente no vienen y caen en su default.
+    .select("*")
     .eq("id", true)
     .maybeSingle();
 
@@ -112,6 +120,14 @@ export async function getAjustesAgente(supabase: SupabaseClient<Database>): Prom
     sobreQlabs: data.sobre_qlabs,
     guionPublico: data.guion_publico,
     linkAgenda: data.link_agenda,
+    // `??` y no `||`: la base tiene checks que impiden un 0, pero si la
+    // migración 20260811120000 todavía no se aplicó estos vienen undefined y
+    // hay que caer en el default, no en un cero que dejaría la agenda vacía.
+    ventana: {
+      diasProximas: data.dias_proximas ?? VENTANA_POR_DEFECTO.diasProximas,
+      diasVencidas: data.dias_vencidas ?? VENTANA_POR_DEFECTO.diasVencidas,
+      maxSinFecha: data.max_sin_fecha ?? VENTANA_POR_DEFECTO.maxSinFecha,
+    },
   };
 }
 
@@ -399,7 +415,7 @@ cierres con "y algunas más": si pregunta qué hay, quiere saber qué hay, y una
 que no nombraste es una que nadie va a hacer. Esta es la única excepción a
 escribir corto — numerar así no es una lista con viñetas, que sigue prohibida.
 
-Solo ves ${DIAS_VENCIDAS} días para atrás y ${DIAS_PROXIMAS} para adelante. Si te
+Solo ves ${agenda.ventana.diasVencidas} días para atrás y ${agenda.ventana.diasProximas} para adelante. Si te
 pregunta por algo fuera de esa ventana, contestá lo que sí ves y decile hasta
 dónde llegás. Nunca des por completa una lista que no pudiste mirar entera.
 

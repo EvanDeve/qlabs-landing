@@ -136,7 +136,7 @@ export async function POST(request: Request) {
 
   const propuesta = await leerPropuestaViva(admin, miembro.profile_id);
 
-  const agenda = await getStaffAgenda(admin, miembro.profile_id);
+  const agenda = await getStaffAgenda(admin, miembro.profile_id, new Date(), ajustes.ventana);
   const items = itemsDeAgenda(agenda);
 
   // El más nuevo es el que acabamos de guardar; va aparte como `mensaje`.
