@@ -6,6 +6,7 @@ import {
   resolverCliente,
   describirPropuesta,
   describirLoHecho,
+  describirCierreHecho,
   normalizarTitulo,
   esValidaParaConfirmar,
   fechaEnRango,
@@ -82,7 +83,7 @@ const CTX: ContextoValidacion = {
   columnas: ["Guion", "Grabación", "Publicado"],
   clientes: ["Zonna", "Kosta Asiatika", "La Arboleda"],
   hoyCR: HOY,
-  hayPropuesta: false,
+  hayPendiente: false,
 };
 
 const ctx = (extra: Partial<ContextoValidacion> = {}): ContextoValidacion => ({ ...CTX, ...extra });
@@ -228,15 +229,15 @@ describe("validarAccion — proponer una pieza nueva", () => {
 
 describe("validarAccion — confirmar y descartar", () => {
   it("solo valen si hay una propuesta viva", () => {
-    expect(validarAccion({ tipo: "confirmar" }, ctx({ hayPropuesta: true }))).toEqual({ tipo: "confirmar" });
-    expect(validarAccion({ tipo: "descartar" }, ctx({ hayPropuesta: true }))).toEqual({ tipo: "descartar" });
+    expect(validarAccion({ tipo: "confirmar" }, ctx({ hayPendiente: true }))).toEqual({ tipo: "confirmar" });
+    expect(validarAccion({ tipo: "descartar" }, ctx({ hayPendiente: true }))).toEqual({ tipo: "descartar" });
   });
 
   // Sin este candado, un "dale" suelto después de que la propuesta se venció
   // haría que el modelo contestara "listo, ya la anoté" sin que exista nada.
   it("se descartan si no hay nada que confirmar", () => {
-    expect(validarAccion({ tipo: "confirmar" }, ctx({ hayPropuesta: false }))).toEqual({ tipo: "ninguna" });
-    expect(validarAccion({ tipo: "descartar" }, ctx({ hayPropuesta: false }))).toEqual({ tipo: "ninguna" });
+    expect(validarAccion({ tipo: "confirmar" }, ctx({ hayPendiente: false }))).toEqual({ tipo: "ninguna" });
+    expect(validarAccion({ tipo: "descartar" }, ctx({ hayPendiente: false }))).toEqual({ tipo: "ninguna" });
   });
 
   /**
@@ -254,7 +255,7 @@ describe("validarAccion — confirmar y descartar", () => {
         tipo: "confirmar",
         pieza: { titulo: "Otra cosa", cliente: "La Arboleda", fecha: "2026-12-25", tipo: "publicar" },
       },
-      ctx({ hayPropuesta: true })
+      ctx({ hayPendiente: true })
     );
 
     expect(accion).toEqual({ tipo: "confirmar" });
@@ -373,8 +374,17 @@ describe("describirLoHecho", () => {
     expect(texto).toBe('Listo: moví "Unboxing ramen" a Publicado.');
   });
 
-  it("nombra la pieza que se dio por terminada", () => {
-    expect(describirLoHecho({ tipo: "marcar_hecho", item: 1 }, items)).toContain('"Reel de brunch"');
+  // Cerrar pide confirmación, así que en este punto TODAVÍA no pasó. Decir
+  // "listo" acá sería la mentira exacta que esta línea existe para evitar.
+  it("al pedir cerrar avisa que falta el dale, y no que ya cerró", () => {
+    const texto = describirLoHecho({ tipo: "marcar_hecho", item: 1 }, items);
+    expect(texto).toContain('"Reel de brunch"');
+    expect(texto).toContain("Delitalia");
+    expect(texto).not.toMatch(/listo|terminada/i);
+  });
+
+  it("recién con el dale se dice que quedó terminada", () => {
+    expect(describirCierreHecho("Reel de brunch")).toBe('Listo: di por terminada "Reel de brunch".');
   });
 
   it("dice la fecha nueva al reprogramar", () => {

@@ -331,12 +331,23 @@ export function describirLoHecho(accion: AccionAgente, items: AgendaItem[]): str
   if (accion.tipo !== "mover_pieza" && accion.tipo !== "marcar_hecho" && accion.tipo !== "reprogramar") {
     return null;
   }
-  const titulo = items[accion.item - 1]?.titulo;
-  if (!titulo) return null;
+  const item = items[accion.item - 1];
+  if (!item) return null;
+  const titulo = item.titulo;
+  const heroe = item.heroe ? ` (${item.heroe})` : "";
 
   if (accion.tipo === "mover_pieza") return `Listo: moví "${titulo}" a ${accion.columna}.`;
-  if (accion.tipo === "marcar_hecho") return `Listo: di por terminada "${titulo}".`;
+  // Cerrar todavía NO pasó: acá solo se abrió la pregunta. Decir "listo" sería
+  // exactamente la mentira que esta línea existe para evitar. Se nombra la
+  // tarjeta con su Hero porque es el momento de cazar el error —después la
+  // tarjeta ya no está a la vista.
+  if (accion.tipo === "marcar_hecho") return `Confirmame y la cierro: "${titulo}"${heroe}.`;
   return `Listo: "${titulo}" queda para el ${accion.fecha}.`;
+}
+
+/** Lo que se escribe cuando un "dale" termina de cerrar la tarjeta. */
+export function describirCierreHecho(titulo: string): string {
+  return `Listo: di por terminada "${titulo}".`;
 }
 
 /**
@@ -354,6 +365,25 @@ export function normalizarTitulo(texto: string): string {
 
 export type TurnoPrevio = { quien: "agente" | "persona"; texto: string };
 
+/**
+ * Lo que la persona todavía puede confirmar con un "dale".
+ *
+ * Son dos cosas distintas con el mismo mecanismo. Crear inventa una fila a
+ * partir de texto que el modelo entendió de oído. Cerrar no inventa nada, pero
+ * SACA la tarjeta del tablero — y con ella, de la agenda del agente: el
+ * 2026-08-03 esa desaparición fue lo que hizo que treinta segundos después
+ * McLovin ya no la viera y propusiera crearla de nuevo. Una acción que se borra
+ * a sí misma de la vista tiene que preguntar antes.
+ *
+ * Mover y reprogramar no están acá a propósito: son reversibles, son las de
+ * todos los días, y la línea de "qué toqué" ya muestra el error en el mismo
+ * mensaje. Pedirles confirmación sería cobrarle dos mensajes al equipo por el
+ * caso que ya está cubierto.
+ */
+export type Pendiente =
+  | { tipo: "crear"; pieza: PropuestaPieza }
+  | { tipo: "cerrar"; titulo: string };
+
 /** Cuánto vive una propuesta sin contestar. Ver esValidaParaConfirmar(). */
 export const PROPUESTA_VIGENCIA_MS = 30 * 60 * 1000;
 
@@ -365,12 +395,12 @@ export async function responderMensaje(opciones: {
   clientes: string[];
   historial: TurnoPrevio[];
   mensaje: string;
-  /** La propuesta viva de esta persona, si hay alguna. */
-  propuesta: PropuestaPieza | null;
+  /** Lo que quedó esperando un "dale" de esta persona, si hay algo. */
+  pendiente: Pendiente | null;
   ajustes?: AjustesAgente;
   now?: Date;
 }): Promise<RespuestaAgente> {
-  const { nombre, agenda, columnas, clientes, historial, mensaje, propuesta } = opciones;
+  const { nombre, agenda, columnas, clientes, historial, mensaje, pendiente } = opciones;
   const ajustes = opciones.ajustes ?? AJUSTES_POR_DEFECTO;
   const now = opciones.now ?? new Date();
   const hoyCR = formatInTimeZone(now, COSTA_RICA_TZ, "yyyy-MM-dd");
@@ -380,14 +410,20 @@ export async function responderMensaje(opciones: {
     .map((t) => `${t.quien === "agente" ? "VOS" : nombre.toUpperCase()}: ${t.texto}`)
     .join("\n");
 
-  const bloquePropuesta = propuesta
-    ? `LE PROPUSISTE ESTO Y ESTÁS ESPERANDO QUE TE DIGA SÍ O NO:
-${describirPropuesta(propuesta, hoyCR)} (fecha exacta: ${propuesta.fecha})
-Si en su mensaje acepta, usá {"tipo":"confirmar"}. Si dice que no o cambia de
-tema, {"tipo":"descartar"}. Si pide cambiarle algo, proponé de nuevo con los
-datos corregidos. Si solo pregunta algo, contestá con {"tipo":"ninguna"} y la
-propuesta sigue en pie.`
-    : "";
+  // El cierre del bloque es el mismo para las dos: lo que cambia es QUÉ está
+  // esperando, no cómo se contesta.
+  const comoSeContesta = `Si en su mensaje acepta, usá {"tipo":"confirmar"}. Si dice que no o cambia de
+tema, {"tipo":"descartar"}. Si solo pregunta algo, contestá con
+{"tipo":"ninguna"} y sigue en pie.`;
+
+  const bloquePendiente = !pendiente
+    ? ""
+    : pendiente.tipo === "crear"
+      ? `LE PROPUSISTE ESTO Y ESTÁS ESPERANDO QUE TE DIGA SÍ O NO:
+${describirPropuesta(pendiente.pieza, hoyCR)} (fecha exacta: ${pendiente.pieza.fecha})
+${comoSeContesta} Si pide cambiarle algo, proponé de nuevo con los datos corregidos.`
+      : `LE PREGUNTASTE SI DA POR TERMINADA "${pendiente.titulo}" Y ESTÁS ESPERANDO QUE TE DIGA SÍ O NO:
+${comoSeContesta}`;
 
   const crudo = await pedirleAGemini(
     `${armarPersona(ajustes)}
@@ -401,7 +437,7 @@ COLUMNAS DEL TABLERO: ${columnas.join(", ")}
 
 CLIENTES DE LA AGENCIA: ${clientes.length ? clientes.join(", ") : "(ninguno cargado)"}
 
-${conversacion ? `LO QUE SE DIJERON ANTES:\n${conversacion}\n` : ""}${bloquePropuesta ? `${bloquePropuesta}\n\n` : ""}MENSAJE NUEVO DE ${nombre.toUpperCase()}: ${mensaje}
+${conversacion ? `LO QUE SE DIJERON ANTES:\n${conversacion}\n` : ""}${bloquePendiente ? `${bloquePendiente}\n\n` : ""}MENSAJE NUEVO DE ${nombre.toUpperCase()}: ${mensaje}
 
 Contestale. Si de lo que dice se desprende que hay que tocar el tablero o el
 calendario, elegí UNA acción; si no, "ninguna". Nunca inventes un número de
@@ -427,6 +463,11 @@ el total, no inventes los nombres que faltan.
 Con "tipo":"publicar" anotás un video en el tablero; con "tipo":"grabar" anotás
 una jornada de grabación en el calendario. Las grabaciones se planean una vez al
 mes para varios videos a la vez, así que no son una tarjeta del tablero.
+
+Dar algo por terminado tampoco pasa en el acto: mandá "marcar_hecho" y en tu
+texto preguntale si la cierra, nombrándola. Recién con su "dale" se cierra. Es
+la única de las tres que saca la tarjeta del tablero, así que si te equivocaste
+de cuál, después ya no está a la vista para darse cuenta.
 
 Si te pide anotar algo nuevo, NO lo creás en el acto: proponelo con
 "proponer_pieza" y escribile una línea corta preguntándole si va así. NO repitas
@@ -462,7 +503,7 @@ Formas válidas de accion:
         columnas,
         clientes,
         hoyCR,
-        hayPropuesta: propuesta !== null,
+        hayPendiente: pendiente !== null,
       }),
     };
   } catch {
@@ -503,7 +544,7 @@ export type ContextoValidacion = {
   clientes: string[];
   /** Hoy en Costa Rica, 'yyyy-MM-dd'. Ancla el rango de fechas aceptables. */
   hoyCR: string;
-  hayPropuesta: boolean;
+  hayPendiente: boolean;
 };
 
 /** Hasta cuánto en el futuro se puede agendar algo nuevo. */
@@ -542,7 +583,7 @@ export function validarAccion(accion: unknown, ctx: ContextoValidacion): AccionA
   // Sin este candado, un "dale" suelto un rato después de que la propuesta se
   // venció le haría creer al modelo que creó algo — y la respuesta saldría
   // diciéndolo.
-  if ((a.tipo === "confirmar" || a.tipo === "descartar") && ctx.hayPropuesta) {
+  if ((a.tipo === "confirmar" || a.tipo === "descartar") && ctx.hayPendiente) {
     return { tipo: a.tipo };
   }
 
