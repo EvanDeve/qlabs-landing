@@ -390,7 +390,12 @@ export function resumenDeterminista(agenda: Agenda, maxItems = 3): string {
     bloques.push(`Hoy (${agenda.hoy.length}): ${listar(agenda.hoy, maxItems, true)}`);
   }
   if (agenda.proximas.length) {
-    bloques.push(`Próximos ${DIAS_PROXIMAS} días: ${agenda.proximas.length}`);
+    // Nombradas, no contadas. "Próximos 3 días: 7" obliga a abrir el tablero
+    // para saber si ese 7 lo toca a uno; con los nombres, el mensaje ya sirve.
+    // Se recorta como los otros bloques porque esto va en UNA línea de plantilla.
+    bloques.push(
+      `Próximos ${DIAS_PROXIMAS} días (${agenda.proximas.length}): ${listar(agenda.proximas, maxItems)}`
+    );
   }
   // Último a propósito: lo que tiene fecha manda, esto es el fondo del canasto.
   if (agenda.sinFecha.length) {

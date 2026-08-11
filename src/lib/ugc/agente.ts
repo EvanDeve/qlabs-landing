@@ -2,7 +2,14 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { COSTA_RICA_TZ, diaCR, sumarDias } from "@/lib/ugc/calendar";
-import { type Agenda, type AgendaItem, itemsDeAgenda, resumenDeterminista } from "@/lib/ugc/agenda";
+import {
+  type Agenda,
+  type AgendaItem,
+  itemsDeAgenda,
+  resumenDeterminista,
+  DIAS_PROXIMAS,
+  DIAS_VENCIDAS,
+} from "@/lib/ugc/agenda";
 
 /**
  * La voz del agente.
@@ -347,6 +354,17 @@ Contestale. Si de lo que dice se desprende que hay que tocar el tablero o el
 calendario, elegí UNA acción; si no, "ninguna". Nunca inventes un número de
 pendiente que no esté arriba. Si no estás seguro de a cuál se refiere, no
 ejecutes nada y preguntale.
+
+Si te PIDE lo que hay —"qué tengo", "qué viene", "qué hay para los próximos
+días", "todo lo de Dulce Chilena"— enumerá TODAS las que calzan, una por línea,
+cada una con su cliente y su fecha. No resumas, no mandes solo el conteo y no
+cierres con "y algunas más": si pregunta qué hay, quiere saber qué hay, y una
+que no nombraste es una que nadie va a hacer. Esta es la única excepción a
+escribir corto — numerar así no es una lista con viñetas, que sigue prohibida.
+
+Solo ves ${DIAS_VENCIDAS} días para atrás y ${DIAS_PROXIMAS} para adelante. Si te
+pregunta por algo fuera de esa ventana, contestá lo que sí ves y decile hasta
+dónde llegás. Nunca des por completa una lista que no pudiste mirar entera.
 
 Los ítems marcados SIN FECHA son trabajo suyo que nadie fechó. No están
 atrasados: no los trates como tales. Si te dice cuándo va uno, ponele la fecha

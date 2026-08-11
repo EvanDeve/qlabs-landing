@@ -127,6 +127,24 @@ describe("resumenDeterminista", () => {
     expect(texto).toContain("Publicar Reel de brunch (Zonna)");
   });
 
+  // Antes este bloque mandaba solo el número ("Próximos 3 días: 7"), y para
+  // saber si ese 7 lo tocaba a uno había que abrir el tablero igual.
+  it("nombra lo que viene en los próximos días, no solo cuántas son", () => {
+    const agenda = clasificar(
+      [
+        item({ key: "p1", titulo: "Reel de brunch", heroe: "Zonna", accion: "Publicar", fecha: "2026-08-04T15:00:00Z" }),
+        item({ key: "p2", titulo: "Unboxing ramen", heroe: "Kosta", accion: "Grabar", fecha: "2026-08-05T15:00:00Z" }),
+      ],
+      RANGO
+    );
+
+    const texto = resumenDeterminista(agenda);
+    expect(texto).toContain(`Próximos ${DIAS_PROXIMAS} días (2)`);
+    expect(texto).toContain("Publicar Reel de brunch (Zonna)");
+    expect(texto).toContain("Grabar Unboxing ramen (Kosta)");
+    expect(texto).not.toMatch(/[\r\n\t]/);
+  });
+
   it("resume con 'y N más' en vez de listar todo", () => {
     const items = Array.from({ length: 6 }, (_, i) =>
       item({ key: `v${i}`, titulo: `Pieza ${i}`, fecha: "2026-07-30T15:00:00Z" })
