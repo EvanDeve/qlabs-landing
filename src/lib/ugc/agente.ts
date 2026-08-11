@@ -397,10 +397,18 @@ export async function responderMensaje(opciones: {
   mensaje: string;
   /** Lo que quedó esperando un "dale" de esta persona, si hay algo. */
   pendiente: Pendiente | null;
+  /**
+   * El estado de la agencia, ya redactado. Solo para directores: es el único
+   * rol que puede ver el trabajo de los demás. Null para todo el resto, y esa
+   * ausencia es el permiso — si el bloque no está en el prompt, no hay dato que
+   * el modelo pueda soltar por más que se lo pidan.
+   */
+  reporte?: string | null;
   ajustes?: AjustesAgente;
   now?: Date;
 }): Promise<RespuestaAgente> {
   const { nombre, agenda, columnas, clientes, historial, mensaje, pendiente } = opciones;
+  const reporte = opciones.reporte ?? null;
   const ajustes = opciones.ajustes ?? AJUSTES_POR_DEFECTO;
   const now = opciones.now ?? new Date();
   const hoyCR = formatInTimeZone(now, COSTA_RICA_TZ, "yyyy-MM-dd");
@@ -433,7 +441,21 @@ Estás conversando con ${nombre} por WhatsApp. Hoy es ${hoyCR}.
 SUS PENDIENTES (referite a ellos por su número cuando ejecutes una acción):
 ${describirAgenda(agenda, hoyCR) || "(no tiene nada pendiente)"}
 
-COLUMNAS DEL TABLERO: ${columnas.join(", ")}
+${
+  reporte
+    ? `SOS DIRECTOR, ASÍ QUE TAMBIÉN VES ESTO — EL ESTADO DE TODA LA AGENCIA:
+${reporte}
+
+Con esto contestás por el estado general, por un Hero o por una persona. Tres
+reglas: contestá SOLO lo que te preguntó —nadie pidió el reporte entero—, usá
+los números tal cual están acá sin recalcular nada, y si te pregunta por alguien
+del equipo hablá de las piezas, no de la persona: "a Daniel le quedan 4
+atrasadas" y nunca "Daniel va atrasado". Si te pide algo que no está en este
+bloque, decilo en vez de estimarlo.
+
+`
+    : ""
+}COLUMNAS DEL TABLERO: ${columnas.join(", ")}
 
 CLIENTES DE LA AGENCIA: ${clientes.length ? clientes.join(", ") : "(ninguno cargado)"}
 

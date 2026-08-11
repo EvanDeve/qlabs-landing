@@ -24,6 +24,7 @@ import {
   demoraDeEscritura,
 } from "@/lib/ugc/agente-publico";
 import { CONTACTO_WA_NUEVO } from "@/lib/ugc/admin-alerts";
+import { getReporte, describirReporte } from "@/lib/ugc/reporte";
 import { diaCR } from "@/lib/ugc/calendar";
 import type { AgendaItem } from "@/lib/ugc/agenda";
 import type { WaActionKind } from "@/lib/database.types";
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
 
   const { data: miembro } = await admin
     .from("staff_members")
-    .select("profile_id, wa_opt_in")
+    .select("profile_id, wa_opt_in, staff_role")
     .eq("phone_e164", telefono)
     .maybeSingle();
 
@@ -140,6 +141,12 @@ export async function POST(request: Request) {
   const agenda = await getStaffAgenda(admin, miembro.profile_id, new Date(), ajustes.ventana);
   const items = itemsDeAgenda(agenda);
 
+  // El estado de toda la agencia, solo si es director. El corte es
+  // `staff_members.staff_role` y no `profiles.role`, que es el mismo que usa el
+  // resto de Q·OS. Se arma acá y no siempre porque son dos consultas de más
+  // para un dato que el 60% del equipo no puede ver.
+  const reporte = miembro.staff_role === "director" ? await armarReporteDirector(admin) : null;
+
   // El más nuevo es el que acabamos de guardar; va aparte como `mensaje`.
   const historial: TurnoPrevio[] = (previos ?? [])
     .slice(1)
@@ -158,6 +165,7 @@ export async function POST(request: Request) {
       : propuesta.tipo === "cerrar"
         ? { tipo: "cerrar", titulo: propuesta.titulo }
         : { tipo: "crear", pieza: propuesta.pieza },
+    reporte,
     ajustes,
   });
 
@@ -175,6 +183,46 @@ export async function POST(request: Request) {
   await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, accion, resultado, items, propuesta));
 
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * El estado de la agencia para un director.
+ *
+ * El equipo se lee de `staff_members` y no de la vista `staff_directory`, que es
+ * lo que usa el Dashboard: la vista filtra por `current_app_role() = 'admin'` y
+ * acá el cliente es service-role, sin sesión, así que devolvería CERO filas y el
+ * reporte saldría sin nadie del equipo — sin fallar, que es lo peor.
+ *
+ * Si algo se cae, se devuelve null: que el reporte no salga es molesto; que se
+ * caiga el webhook deja al agente mudo para todo el mundo.
+ */
+async function armarReporteDirector(admin: Admin): Promise<string | null> {
+  try {
+    const { data: equipo } = await admin
+      .from("staff_members")
+      .select("profile_id, staff_role")
+      .eq("active", true);
+    if (!equipo?.length) return null;
+
+    const { data: perfiles } = await admin
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", equipo.map((m) => m.profile_id));
+    const nombrePorId = new Map((perfiles ?? []).map((p) => [p.id, p.display_name]));
+
+    const reporte = await getReporte(
+      admin,
+      equipo.map((m) => ({
+        profileId: m.profile_id,
+        nombre: nombrePorId.get(m.profile_id) ?? "Sin nombre",
+        rol: m.staff_role,
+      }))
+    );
+    return describirReporte(reporte);
+  } catch (err) {
+    console.error("[agente/webhook] no se pudo armar el reporte:", err);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------

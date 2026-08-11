@@ -5,11 +5,13 @@ import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import StaffAvatar from "@/components/ugc/admin/StaffAvatar";
 import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
+import { riesgoDeHero, TOPE_CARGA } from "@/lib/ugc/reporte";
 import styles from "./qos.module.css";
 
 export const dynamic = "force-dynamic";
 
-const OVERLOAD_THRESHOLD = 6;
+// El tope lo define reporte.ts: McLovin dice "SOBRECARGADO" con el mismo número.
+const OVERLOAD_THRESHOLD = TOPE_CARGA;
 
 const KPI_COLORS = ["#6d54f3", "#df4650", "#c07414", "#14a06a"];
 const KPI_ICONS = ["users", "alert", "check", "calendar"];
@@ -118,12 +120,10 @@ export default async function AdminDashboardPage() {
     const expected = +(target * monthFraction).toFixed(1);
     const deficit = +(expected - published).toFixed(1);
 
-    let risk: "alto" | "medio" | "bajo";
-    if (published === 0) risk = "alto";
-    else if (deficit > expected * 0.5) risk = "alto";
-    else if (!calendarApproved) risk = "medio";
-    else if (deficit > 0) risk = "medio";
-    else risk = "bajo";
+    // La fórmula vive en reporte.ts porque McLovin contesta lo mismo por
+    // WhatsApp: con una copia acá, afinar el umbral en esta pantalla dejaría al
+    // agente diciendo lo de antes y los dos números se contradicen.
+    const risk = riesgoDeHero({ publicados: published, esperado: expected, deficit, cronogramaAprobado: calendarApproved });
 
     return { hero, target, published, remaining: Math.max(target - published, 0), deficit, calendarApproved, risk };
   });
