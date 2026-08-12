@@ -61,6 +61,11 @@ export default async function AdminLayout({
       count: piezasActivas.length,
     },
     { href: "/ugc/admin/calendario", label: "Calendario", icon: "calendar", group: "Operación" },
+
+    // Va pegada al Calendario y antes de Heroes: los items de un mismo grupo
+    // tienen que ir seguidos en el array, porque QosShell abre un grupo nuevo
+    // cada vez que cambia el valor de `group`.
+    { href: "/ugc/admin/cronogramas", label: "Cronogramas", icon: "book", group: "Operación" },
     { href: "/ugc/admin/heroes", label: "Heroes", icon: "users", group: "Operación", count: heroesActivos.length },
 
     // Misma herramienta que la del creador, sobre el material propio del

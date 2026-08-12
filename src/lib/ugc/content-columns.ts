@@ -23,7 +23,10 @@ export type ContentColumn = Database["public"]["Tables"]["content_columns"]["Row
  */
 export const SECCIONES_PIPELINE: { id: PipelineSection; label: string }[] = [
   { id: "video", label: "Videos" },
-  { id: "guion", label: "Guiones" },
+  // El id sigue siendo 'guion' aunque la pestaña diga Cronogramas: está en el
+  // check de content_columns y en las URLs que el equipo tiene guardadas.
+  // Ver la migración 20260812200000.
+  { id: "guion", label: "Cronogramas" },
   { id: "it", label: "IT" },
 ];
 
