@@ -16,7 +16,9 @@ export const dynamic = "force-dynamic";
 const OVERLOAD_THRESHOLD = TOPE_CARGA;
 
 const KPI_COLORS = ["#6d54f3", "#df4650", "#c07414", "#14a06a"];
-const KPI_ICONS = ["users", "alert", "check", "calendar"];
+// El primero era "users" cuando el KPI contaba Heroes; ahora cuenta videos
+// listos para salir.
+const KPI_ICONS = ["film", "alert", "check", "calendar"];
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -115,6 +117,10 @@ export default async function AdminDashboardPage({
   const approvalColumnIds = new Set(
     columns.filter((c) => c.is_pending_approval).map((c) => c.id)
   );
+  // "Terminado" es el video que ya está hecho pero todavía no salió. Se
+  // reconoce por `is_ready` y no por el nombre, igual que el resto: la columna
+  // se llama así hoy y el equipo puede renombrarla mañana.
+  const readyColumnIds = new Set(columns.filter((c) => c.is_ready).map((c) => c.id));
   const activePieces = pieces.filter((p) => !doneColumnIds.has(p.column_id));
 
   const heroesManaged = (agencyClients ?? []).filter((c) => !c.archived);
@@ -229,8 +235,14 @@ export default async function AdminDashboardPage({
     (p) => p.publish_date && diaCR(p.publish_date) >= hoyCR && diaCR(p.publish_date) <= en7DiasCR
   );
 
+  // Videos hechos que todavía no salieron. Es una COLA, no un acumulado del
+  // mes: la pregunta que responde es "¿cuánto hay listo esperando publicarse?",
+  // así que no se filtra por fecha. El acumulado del mes ya lo dice
+  // "Publicados", que cuenta lo que sí salió.
+  const readyPieces = pieces.filter((p) => readyColumnIds.has(p.column_id));
+
   const kpis = [
-    { label: "Heroes", value: heroesManaged.length },
+    { label: "Videos terminados", value: readyPieces.length },
     { label: "Piezas atrasadas", value: overduePieces.length },
     { label: "Pend. aprobación", value: pendingApprovalPieces.length },
     { label: "Publican esta semana", value: publishingThisWeekPieces.length },
