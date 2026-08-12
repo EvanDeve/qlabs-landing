@@ -16,8 +16,10 @@ export type FiltrosPipeline = {
   owner?: string;
   priority?: string;
   fecha: FiltroFecha | null;
-  /** Día exacto 'yyyy-MM-dd'. Excluyente con `fecha`. */
+  /** Día exacto 'yyyy-MM-dd'. Excluyente con `fecha` y `mes`. */
   dia: string | null;
+  /** Mes 'yyyy-MM'. Excluyente con `fecha` y `dia`; el día le gana. */
+  mes: string | null;
   verArchivados: boolean;
   /** Si no hay ningún Hero archivado, la casilla no se dibuja. */
   hayArchivados: boolean;
@@ -76,7 +78,7 @@ export default function PipelineFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const { brand, owner, priority, fecha, dia, verArchivados, hayArchivados } = filtros;
+  const { brand, owner, priority, fecha, dia, mes, verArchivados, hayArchivados } = filtros;
 
   /**
    * Escribe filtros en la URL. Acepta varias claves de una para poder aplicar
@@ -170,7 +172,9 @@ export default function PipelineFilters({
             onClick={() => setFilter("seccion", "todo")}
             className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
           >
-            {fueraDeLaPestana} en la otra pestaña — ver todo
+            {/* "la otra pestaña" se escribió cuando el tablero tenía dos
+                secciones; con IT ya son tres y la frase dejó de ser cierta. */}
+            {fueraDeLaPestana} en otras pestañas — ver todo
           </button>
         )}
 
@@ -214,13 +218,15 @@ export default function PipelineFilters({
           <option value="baja">Baja</option>
         </select>
 
-        {/* Preset y día exacto son dos formas de la MISMA pregunta, así que se
-            limpian entre sí: elegir un preset borra el día y viceversa. Van
-            pegados —con la etiqueta "o el día" en el medio— para que se lean
-            como un control con dos entradas y no como dos filtros que se suman. */}
+        {/* Preset, mes y día exacto son tres formas de la MISMA pregunta, así
+            que se limpian entre sí: elegir uno borra los otros dos. Van pegados
+            —con "o el mes" / "o el día" en el medio— para que se lean como un
+            control con tres entradas y no como tres filtros que se suman.
+            Combinarlos daría cosas como "atrasadas Y septiembre", que casi
+            siempre es el conjunto vacío y se lee como que el tablero se rompió. */}
         <select
           value={fecha ?? ""}
-          onChange={(e) => setFilters({ fecha: e.target.value, dia: "" })}
+          onChange={(e) => setFilters({ fecha: e.target.value, mes: "", dia: "" })}
           className={styles.selectInp}
           aria-label="Filtrar por fecha de publicación"
         >
@@ -232,23 +238,41 @@ export default function PipelineFilters({
           ))}
         </select>
 
-        <span className={styles.pipeSep}>o el día</span>
+        {/* Cada separador va pegado a SU campo en un contenedor propio: sueltos
+            en la fila, al envolverse quedaba un "o el día" solo al principio de
+            la línea siguiente, sin el campo al que se refiere. */}
+        <span className={styles.pipeDateGroup}>
+          <span className={styles.pipeSep}>o el mes</span>
+          {/* `type="month"` y no un select armado a mano: el nativo ya trae el
+              año, no hay que decidir hasta dónde llega la lista, y manda
+              'yyyy-MM' que es exactamente lo que espera parseMesCorto. */}
+          <input
+            type="month"
+            value={mes ?? ""}
+            onChange={(e) => setFilters({ mes: e.target.value, fecha: "", dia: "" })}
+            className={styles.selectInp}
+            aria-label="Publica en un mes"
+          />
+        </span>
 
-        <input
-          type="date"
-          value={dia ?? ""}
-          onChange={(e) => setFilters({ dia: e.target.value, fecha: "" })}
-          className={styles.selectInp}
-          aria-label="Publica un día exacto"
-        />
+        <span className={styles.pipeDateGroup}>
+          <span className={styles.pipeSep}>o el día</span>
+          <input
+            type="date"
+            value={dia ?? ""}
+            onChange={(e) => setFilters({ dia: e.target.value, fecha: "", mes: "" })}
+            className={styles.selectInp}
+            aria-label="Publica un día exacto"
+          />
+        </span>
 
-        {dia && (
+        {(dia || mes) && (
           <button
             type="button"
-            onClick={() => setFilter("dia", "")}
+            onClick={() => setFilters({ dia: "", mes: "" })}
             className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
           >
-            Quitar el día
+            Quitar {dia ? "el día" : "el mes"}
           </button>
         )}
 

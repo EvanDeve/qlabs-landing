@@ -162,6 +162,44 @@ export async function guardarVideoAction(formData: FormData) {
   revalidar(heroId, mes);
 }
 
+/**
+ * Borra el cronograma de un mes.
+ *
+ * Qué se lleva y qué no, que es lo único importante acá:
+ *
+ * - **Sus videos planificados se van con él** (`on delete cascade`). Sin el mes
+ *   al que pertenecen no significan nada.
+ * - **Las tarjetas que ya nacieron en el pipeline SE QUEDAN.** Son trabajo, y
+ *   posiblemente trabajo empezado. La FK es `on delete set null`, así que se
+ *   sueltan del cronograma y siguen su vida en el tablero.
+ * - **La tarjeta del cronograma sí se borra**, pero SOLO si la creó el sistema.
+ *   Se reconoce porque tiene `calendar_month` y vive en el carril de
+ *   cronogramas. Las `GUION-AGOSTO` que el equipo puso a mano tienen
+ *   `calendar_month` en null y no se tocan — son suyas, no nuestras.
+ */
+export async function borrarCronogramaAction(heroId: string, mesRaw: string) {
+  const supabase = await admin();
+  const mes = parseMes(mesRaw);
+  if (!supabase || !mes) return;
+
+  const { data: delCarril } = await supabase.from("content_columns").select("id").eq("section", "guion");
+  const ids = (delCarril ?? []).map((c) => c.id);
+
+  if (ids.length > 0) {
+    await supabase
+      .from("content_pieces")
+      .delete()
+      .eq("brand_id", heroId)
+      .eq("calendar_month", mes)
+      .in("column_id", ids);
+  }
+
+  await supabase.from("hero_calendar_months").delete().eq("hero_id", heroId).eq("month", mes);
+
+  revalidar(heroId, mes);
+  redirect("/ugc/admin/cronogramas");
+}
+
 export async function borrarVideoAction(id: string, heroId: string, mesRaw: string) {
   const supabase = await admin();
   const mes = parseMes(mesRaw);

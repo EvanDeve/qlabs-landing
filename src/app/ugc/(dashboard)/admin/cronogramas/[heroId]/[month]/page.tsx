@@ -2,7 +2,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { agregarVideoAction } from "@/lib/actions/cronogramas";
+import { agregarVideoAction, borrarCronogramaAction } from "@/lib/actions/cronogramas";
+import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import { parseMes, nombreDeMes } from "@/lib/ugc/cronograma";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CronogramaVideoRow from "@/components/ugc/admin/CronogramaVideoRow";
@@ -66,6 +67,10 @@ export default async function ArmarCronogramaPage({
   const aprobado = cronograma.status === "aprobado";
   const comentados = items.filter((i) => i.client_comment).length;
   const sinFecha = items.filter((i) => !i.publish_date).length;
+  // Cuántos videos ya son tarjetas del tablero. Decide qué le advierte el
+  // borrado: sin esto, la única frase posible sería un "no se puede deshacer"
+  // que no dice lo que la persona necesita saber.
+  const enElPipeline = items.filter((i) => i.piece_id).length;
 
   return (
     <>
@@ -132,16 +137,39 @@ export default async function ArmarCronogramaPage({
         )}
       </div>
 
-      <form
-        action={async () => {
-          "use server";
-          await agregarVideoAction(heroId, mes);
-        }}
-      >
-        <button type="submit" className={`${styles.btn} ${styles.btnSoft}`}>
-          <QosIcon name="plus" size={15} /> Agregar video
-        </button>
-      </form>
+      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+        <form
+          action={async () => {
+            "use server";
+            await agregarVideoAction(heroId, mes);
+          }}
+        >
+          <button type="submit" className={`${styles.btn} ${styles.btnSoft}`}>
+            <QosIcon name="plus" size={15} /> Agregar video
+          </button>
+        </form>
+
+        {/* El mensaje dice qué se lleva y qué no, y no un "no se puede
+            deshacer" genérico: lo que la persona necesita saber antes de
+            confirmar es si le va a desaparecer trabajo del tablero. */}
+        <ConfirmDeleteButton
+          action={async () => {
+            "use server";
+            await borrarCronogramaAction(heroId, mes);
+          }}
+          confirmMessage={
+            enElPipeline > 0
+              ? `Se borra el cronograma de ${nombreDeMes(mes)} y sus ${items.length} videos planificados. ` +
+                `Las ${enElPipeline} tarjetas que ya están en el pipeline NO se borran: se sueltan del cronograma y siguen en el tablero.`
+              : `Se borra el cronograma de ${nombreDeMes(mes)}` +
+                (items.length > 0 ? ` y sus ${items.length} videos planificados` : "") +
+                `. Todavía no hay nada en el pipeline, así que no se pierde trabajo.`
+          }
+          className={`${styles.btn} ${styles.btnGhostDanger}`}
+        >
+          Borrar cronograma
+        </ConfirmDeleteButton>
+      </div>
     </>
   );
 }

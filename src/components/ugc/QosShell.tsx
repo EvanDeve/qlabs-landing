@@ -81,6 +81,7 @@ export default function QosShell({
   userAvatarUrl = null,
   profileHref,
   section = "Operación",
+  topbarActions,
   children,
 }: {
   navItems: QosNavItem[];
@@ -95,6 +96,12 @@ export default function QosShell({
    */
   profileHref?: string;
   section?: string;
+  /**
+   * Controles propios de una pantalla, a la izquierda de la campanita. Se
+   * renderizan en TODAS las páginas del área, así que cada uno decide solo si
+   * le corresponde aparecer (ver SelectorDeMes).
+   */
+  topbarActions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -255,6 +262,11 @@ export default function QosShell({
               <div className={styles.tbTitle}>{activeItem?.label ?? "Q·OS"}</div>
             </div>
             <div className={styles.tbActions}>
+              {/* Controles que encuadran la pantalla —hoy el mes del
+                  Dashboard— antes de la campanita. Los pasa el layout, que no
+                  sabe en qué página está: cada control decide solo si le toca
+                  aparecer. */}
+              {topbarActions}
               <NotificationsBell notifications={notifications} />
             </div>
           </header>

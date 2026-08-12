@@ -6,8 +6,8 @@ import { QosIcon } from "@/lib/ugc/qos-icons";
 import StaffAvatar from "@/components/ugc/admin/StaffAvatar";
 import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
 import { riesgoDeHero, TOPE_CARGA, metaDelMes } from "@/lib/ugc/reporte";
-import { mesCR as mesCRDe, parseMes, diasDelMes, nombreDeMes, mesesAlrededor } from "@/lib/ugc/cronograma";
-import SelectorDeMes from "@/components/ugc/admin/SelectorDeMes";
+// El selector de mes vive en la barra superior (lo monta el layout), no acá.
+import { mesCR as mesCRDe, parseMes, diasDelMes, nombreDeMes } from "@/lib/ugc/cronograma";
 import styles from "./qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -396,14 +396,11 @@ export default async function AdminDashboardPage({
           </div>
 
           <div className={`${styles.card} ${styles.cardPad}`}>
+            {/* El selector de mes NO va acá: vive en la barra superior, al lado
+                de la campanita. Encuadra la pantalla entera —de qué mes estamos
+                hablando— y no es un filtro de esta tarjeta. */}
             <div className={styles.sectionHead}>
               <h2>Estado de las cuentas</h2>
-              <div className={styles.sectionHeadAct}>
-                <SelectorDeMes
-                  meses={mesesAlrededor(now).map((m) => ({ valor: m, label: nombreDeMes(m) }))}
-                  actual={monthKey}
-                />
-              </div>
             </div>
 
             {/* Solo cuando se está mirando otro mes: en el mes en curso el

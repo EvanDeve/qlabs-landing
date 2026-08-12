@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth/require-role";
 import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
+import SelectorDeMes from "@/components/ugc/admin/SelectorDeMes";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 
 export default async function AdminLayout({
@@ -113,6 +114,7 @@ export default async function AdminLayout({
       userAvatarUrl={profile?.avatar_url ?? null}
       profileHref="/ugc/admin/perfil"
       userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
+      topbarActions={<SelectorDeMes />}
     >
       {children}
     </QosShell>

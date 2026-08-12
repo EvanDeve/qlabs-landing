@@ -86,3 +86,30 @@ export function mesesAlrededor(ahora: Date = new Date()): string[] {
 export function horaCorta(hora: string | null): string {
   return hora?.slice(0, 5) ?? "";
 }
+
+/**
+ * El `?mes=` del filtro del pipeline, que llega como 'yyyy-MM'.
+ *
+ * Es otro formato que `parseMes`: un `<input type="month">` manda el mes sin
+ * día, mientras que las rutas del cronograma llevan el día 1 porque así es la
+ * clave de la tabla. Se validan aparte para que ninguno acepte lo del otro por
+ * accidente.
+ */
+export function parseMesCorto(valor: string | undefined): string | null {
+  if (!valor || !/^\d{4}-\d{2}$/.test(valor)) return null;
+  const mes = Number(valor.slice(5, 7));
+  return mes >= 1 && mes <= 12 ? valor : null;
+}
+
+/**
+ * El primer y último día de un mes 'yyyy-MM', para comparar contra una columna
+ * `date`.
+ *
+ * Devuelve días sueltos y no instantes: `publish_date` es `date`, y mandarle un
+ * ISO con hora la haría comparar contra medianoche UTC y correría el corte seis
+ * horas. Mismo criterio que rangoFiltroFecha.
+ */
+export function rangoDelMes(mes: string): { gte: string; lte: string } {
+  const ultimo = diasDelMes(`${mes}-01`);
+  return { gte: `${mes}-01`, lte: `${mes}-${String(ultimo).padStart(2, "0")}` };
+}
