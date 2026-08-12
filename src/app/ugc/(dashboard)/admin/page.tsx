@@ -5,7 +5,9 @@ import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import StaffAvatar from "@/components/ugc/admin/StaffAvatar";
 import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
-import { riesgoDeHero, TOPE_CARGA } from "@/lib/ugc/reporte";
+import { riesgoDeHero, TOPE_CARGA, metaDelMes } from "@/lib/ugc/reporte";
+import { mesCR as mesCRDe, parseMes, diasDelMes, nombreDeMes, mesesAlrededor } from "@/lib/ugc/cronograma";
+import SelectorDeMes from "@/components/ugc/admin/SelectorDeMes";
 import styles from "./qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,11 @@ const OVERLOAD_THRESHOLD = TOPE_CARGA;
 const KPI_COLORS = ["#6d54f3", "#df4650", "#c07414", "#14a06a"];
 const KPI_ICONS = ["users", "alert", "check", "calendar"];
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mes?: string }>;
+}) {
   const supabase = await createClient();
 
   const now = new Date();
@@ -31,11 +37,22 @@ export default async function AdminDashboardPage() {
   // corridos un día todas las tardes. Ver la migración 20260801000000.
   const hoyCR = diaCR(now);
   const en7DiasCR = diaCR(in7Days);
-  const mesCR = hoyCR.slice(0, 7);
-  const dayOfMonth = Number(hoyCR.slice(8, 10));
-  const daysInMonth = new Date(Date.UTC(Number(hoyCR.slice(0, 4)), Number(hoyCR.slice(5, 7)), 0)).getUTCDate();
+
+  // El Pase de servicio mira UN mes, elegido con el select. El resto del
+  // Dashboard —atrasadas, agenda de la semana, carga del equipo— es siempre
+  // sobre hoy: son preguntas del presente y un selector ahí no significaría
+  // nada.
+  const mesActual = mesCRDe(now);
+  const monthKey = parseMes((await searchParams).mes) ?? mesActual;
+  const esMesActual = monthKey === mesActual;
+  const mesCR = monthKey.slice(0, 7);
+
+  const daysInMonth = diasDelMes(monthKey);
+  // Un mes ya cerrado se mide entero: a mitad de septiembre, el ritmo esperado
+  // de agosto es el 100% de su meta, no la fracción del día de hoy. Con la
+  // cuenta del mes en curso, todos los meses pasados saldrían cumpliendo.
+  const dayOfMonth = esMesActual ? Number(hoyCR.slice(8, 10)) : daysInMonth;
   const monthFraction = dayOfMonth / daysInMonth;
-  const monthKey = `${mesCR}-01`;
 
   const [
     { data: agencyClients },
@@ -56,9 +73,16 @@ export default async function AdminDashboardPage() {
       .select("*")
       .gte("starts_at", now.toISOString())
       .lte("starts_at", in7Days.toISOString()),
-    supabase.from("hero_calendar_months").select("hero_id, status").eq("month", monthKey),
+    supabase.from("hero_calendar_months").select("hero_id, status, target").eq("month", monthKey),
     supabase.from("content_columns").select("*").order("position", { ascending: true }),
   ]);
+
+  // Los videos del cronograma del mes elegido: son la meta mientras el
+  // cronograma siga pendiente. Ver metaDelMes en reporte.ts.
+  const { data: planificados } = await supabase
+    .from("calendar_month_items")
+    .select("hero_id")
+    .eq("month", monthKey);
 
   const brandNameByProfileId = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
 
@@ -96,7 +120,12 @@ export default async function AdminDashboardPage() {
   const heroesManaged = (agencyClients ?? []).filter((c) => !c.archived);
 
   // ---- Pase de servicio: progreso del mes por Hero ----
-  const approvedByHeroId = new Map((calendarMonths ?? []).map((r) => [r.hero_id, r.status === "aprobado"]));
+  const calendarByHeroId = new Map((calendarMonths ?? []).map((r) => [r.hero_id, r]));
+
+  const plannedByHeroId = new Map<string, number>();
+  for (const p of planificados ?? []) {
+    plannedByHeroId.set(p.hero_id, (plannedByHeroId.get(p.hero_id) ?? 0) + 1);
+  }
 
   const publishedThisMonth = (heroId: string) =>
     pieces.filter(
@@ -109,11 +138,20 @@ export default async function AdminDashboardPage() {
 
   const heroStats = heroesManaged.map((hero) => {
     const published = publishedThisMonth(hero.id);
-    const calendarApproved = approvedByHeroId.get(hero.id) ?? false;
-    const target = hero.monthly_target;
+    const calendar = calendarByHeroId.get(hero.id);
+    const calendarApproved = calendar?.status === "aprobado";
+    // La meta sale del cronograma, no de un número suelto en el expediente.
+    // La fórmula vive en reporte.ts por lo mismo que riesgoDeHero: McLovin
+    // responde el mismo número por WhatsApp.
+    const target = metaDelMes(calendar, plannedByHeroId.get(hero.id) ?? 0);
+
+    // "No hay cronograma" y "hay cronograma sin aprobar" dejaron de ser lo
+    // mismo. Antes daba igual —la meta salía del expediente— pero ahora el
+    // cronograma ES la meta, así que su ausencia es el problema a mostrar.
+    const sinCronograma = !calendar;
 
     if (target == null) {
-      return { hero, target: null, published, remaining: null, deficit: 0, calendarApproved, risk: null };
+      return { hero, target: null, published, remaining: null, deficit: 0, calendarApproved, sinCronograma, risk: null };
     }
 
     // Ritmo esperado proporcional al día del mes (meta × día/días del mes).
@@ -125,7 +163,16 @@ export default async function AdminDashboardPage() {
     // agente diciendo lo de antes y los dos números se contradicen.
     const risk = riesgoDeHero({ publicados: published, esperado: expected, deficit, cronogramaAprobado: calendarApproved });
 
-    return { hero, target, published, remaining: Math.max(target - published, 0), deficit, calendarApproved, risk };
+    return {
+      hero,
+      target,
+      published,
+      remaining: Math.max(target - published, 0),
+      deficit,
+      calendarApproved,
+      sinCronograma,
+      risk,
+    };
   });
 
   const riskOrder = { alto: 0, medio: 1, bajo: 2 } as const;
@@ -351,7 +398,23 @@ export default async function AdminDashboardPage() {
           <div className={`${styles.card} ${styles.cardPad}`}>
             <div className={styles.sectionHead}>
               <h2>Estado de las cuentas</h2>
+              <div className={styles.sectionHeadAct}>
+                <SelectorDeMes
+                  meses={mesesAlrededor(now).map((m) => ({ valor: m, label: nombreDeMes(m) }))}
+                  actual={monthKey}
+                />
+              </div>
             </div>
+
+            {/* Solo cuando se está mirando otro mes: en el mes en curso el
+                encabezado ya lo dice y el aviso sería ruido permanente. */}
+            {!esMesActual && (
+              <p className={styles.formNote} style={{ marginTop: "-6px", marginBottom: "12px" }}>
+                Estás viendo <strong style={{ textTransform: "capitalize" }}>{nombreDeMes(monthKey)}</strong>. El
+                ritmo se mide sobre el mes completo, no sobre el día de hoy.
+              </p>
+            )}
+
             <table className={styles.acctTable}>
               <thead>
                 <tr>
@@ -364,7 +427,7 @@ export default async function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedHeroStats.map(({ hero, target, published, remaining, deficit, calendarApproved, risk }) => (
+                {sortedHeroStats.map(({ hero, target, published, remaining, deficit, calendarApproved, sinCronograma, risk }) => (
                   <tr key={hero.id}>
                     <td>
                       <Link href={`/ugc/admin/heroes/${hero.id}`} className={styles.acctHero}>
@@ -380,16 +443,32 @@ export default async function AdminDashboardPage() {
                       </Link>
                     </td>
                     <td>
-                      <form action={toggleCalendarMonthAction.bind(null, hero.id)}>
-                        <button
-                          type="submit"
-                          className={`${styles.calBtn} ${calendarApproved ? styles.calBtnOk : styles.calBtnPend}`}
-                          title={`Marcar cronograma de ${monthName} como ${calendarApproved ? "pendiente" : "aprobado"}`}
+                      {/* Sin cronograma no hay nada que aprobar: el botón crearía
+                          uno vacío y ya aprobado, con meta 0. Lleva a armarlo. */}
+                      {sinCronograma ? (
+                        <Link
+                          href="/ugc/admin/cronogramas"
+                          className={`${styles.calBtn} ${styles.calBtnPend}`}
+                          title={`${hero.name} no tiene cronograma de ${monthName}`}
                         >
                           <span className={styles.dot} />
-                          {calendarApproved ? "Aprobado" : "Pendiente"}
-                        </button>
-                      </form>
+                          Sin cronograma
+                        </Link>
+                      ) : (
+                        /* El mes va atado al botón: con el selector puesto, dar
+                           por aprobado "el mes actual" mientras se mira agosto
+                           tocaría el cronograma equivocado. */
+                        <form action={toggleCalendarMonthAction.bind(null, hero.id, monthKey)}>
+                          <button
+                            type="submit"
+                            className={`${styles.calBtn} ${calendarApproved ? styles.calBtnOk : styles.calBtnPend}`}
+                            title={`Marcar cronograma de ${monthName} como ${calendarApproved ? "pendiente" : "aprobado"}`}
+                          >
+                            <span className={styles.dot} />
+                            {calendarApproved ? "Aprobado" : "Pendiente"}
+                          </button>
+                        </form>
+                      )}
                     </td>
                     <td className={styles.paceCell}>
                       {published}/{target ?? "—"}

@@ -246,19 +246,19 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
             </div>
           </div>
 
+          {/* "Videos por mes" salió de acá el 2026-08-12. Era un número suelto
+              que se escribía una vez y no lo miraba nadie; ahora la meta del
+              mes la da el cronograma, que es donde el mes se decide de verdad y
+              donde lo aprueba el cliente. Ver metaDelMes en reporte.ts. */}
           <div className={styles.settingsRow}>
             <div className={styles.settingsLabel}>
               <strong>Videos por mes</strong>
-              <p>Meta mensual según el paquete contratado. Vacío = sin paquete definido.</p>
+              <p>La define el cronograma de cada mes, no este expediente.</p>
             </div>
             <div className={styles.settingsControl}>
-              <input
-                type="number"
-                name="monthly_target"
-                min={0}
-                defaultValue={client.monthly_target ?? ""}
-                className={styles.inp}
-              />
+              <Link href="/ugc/admin/cronogramas" className={styles.linkMore}>
+                Ver cronogramas <QosIcon name="chevR" size={13} />
+              </Link>
             </div>
           </div>
         </div>

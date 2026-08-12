@@ -25,6 +25,43 @@ import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 export const TOPE_CARGA = 6;
 
 /**
+ * La meta de videos de un Hero para un mes. La comparten el Dashboard y McLovin.
+ *
+ * Antes era `agency_clients.monthly_target`: un número suelto en el expediente
+ * del Hero, escrito una vez y nunca más mirado. Ahora manda el cronograma, que
+ * es donde el mes se decide de verdad y lo aprueba el cliente.
+ *
+ * Tres estados, y los tres significan cosas distintas:
+ *
+ * - **Sin cronograma del mes → null.** No es "meta cero", es "todavía no se
+ *   acordó nada". Mostrar 0 haría que un Hero sin planificar aparezca como si
+ *   estuviera cumpliendo perfecto.
+ * - **Cronograma pendiente → el conteo vivo de sus videos.** Se está armando,
+ *   así que el número se mueve con cada fila. Sirve igual: ya dice cuánto se le
+ *   va a pedir al mes.
+ * - **Cronograma aprobado → el número sellado.** Es lo que el cliente aceptó, y
+ *   no puede bajar porque alguien borre una tarjeta después.
+ *
+ * ⚠️ El caso raro que hay que respetar: los cronogramas aprobados ANTES de que
+ * existiera todo esto (los de julio y agosto de 2026) tienen `target` en null y
+ * cero videos cargados. Ésos son "sin meta", no "meta cero" — si no, los seis
+ * Heroes de agosto aparecerían cumpliendo una meta de cero.
+ */
+export function metaDelMes(
+  cronograma: { status: string; target: number | null } | undefined,
+  videosPlanificados: number
+): number | null {
+  if (!cronograma) return null;
+
+  if (cronograma.status === "aprobado") {
+    if (cronograma.target != null) return cronograma.target;
+    return videosPlanificados > 0 ? videosPlanificados : null;
+  }
+
+  return videosPlanificados > 0 ? videosPlanificados : null;
+}
+
+/**
  * Qué tan mal está un Hero este mes. La comparten el Dashboard y McLovin.
  *
  * Vive acá y no en cada uno porque es un JUICIO, no un dato: el orden de los
@@ -103,12 +140,16 @@ export async function getReporte(
   const diasDelMes = new Date(Date.UTC(Number(hoyCR.slice(0, 4)), Number(hoyCR.slice(5, 7)), 0)).getUTCDate();
   const fraccionDelMes = diaDelMes / diasDelMes;
 
-  const [{ data: clientes }, { data: piezasCrudas }, { data: meses }, { data: columnas }] = await Promise.all([
-    supabase.from("agency_clients").select("id, name, archived, monthly_target"),
-    supabase.from("content_pieces").select("id, title, brand_id, column_id, owner_id, publish_date"),
-    supabase.from("hero_calendar_months").select("hero_id, status").eq("month", `${mesCR}-01`),
-    supabase.from("content_columns").select("id, is_done, is_pending_approval"),
-  ]);
+  const [{ data: clientes }, { data: piezasCrudas }, { data: meses }, { data: columnas }, { data: planificados }] =
+    await Promise.all([
+      supabase.from("agency_clients").select("id, name, archived"),
+      supabase.from("content_pieces").select("id, title, brand_id, column_id, owner_id, publish_date"),
+      supabase.from("hero_calendar_months").select("hero_id, status, target").eq("month", `${mesCR}-01`),
+      supabase.from("content_columns").select("id, is_done, is_pending_approval"),
+      // Los videos del cronograma de este mes: son la meta mientras siga
+      // pendiente. Ver metaDelMes.
+      supabase.from("calendar_month_items").select("hero_id").eq("month", `${mesCR}-01`),
+    ]);
 
   // El filtro de archivados se aplica UNA vez, como en el Dashboard: filtrar
   // caso por caso es cómo un número se queda viejo y contradice a los otros.
@@ -123,7 +164,12 @@ export async function getReporte(
   const terminadas = new Set((columnas ?? []).filter((c) => c.is_done).map((c) => c.id));
   const deAprobacion = new Set((columnas ?? []).filter((c) => c.is_pending_approval).map((c) => c.id));
   const activas = piezas.filter((p) => !terminadas.has(p.column_id));
-  const aprobadoPorHero = new Map((meses ?? []).map((r) => [r.hero_id, r.status === "aprobado"]));
+  const cronogramaPorHero = new Map((meses ?? []).map((r) => [r.hero_id, r]));
+
+  const planificadosPorHero = new Map<string, number>();
+  for (const p of planificados ?? []) {
+    planificadosPorHero.set(p.hero_id, (planificadosPorHero.get(p.hero_id) ?? 0) + 1);
+  }
 
   const pieza = (p: (typeof piezas)[number]): PiezaReporte => ({
     titulo: p.title,
@@ -140,8 +186,9 @@ export async function getReporte(
         p.publish_date &&
         diaCR(p.publish_date).slice(0, 7) === mesCR
     ).length;
-    const cronogramaAprobado = aprobadoPorHero.get(hero.id) ?? false;
-    const meta = hero.monthly_target;
+    const cronograma = cronogramaPorHero.get(hero.id);
+    const cronogramaAprobado = cronograma?.status === "aprobado";
+    const meta = metaDelMes(cronograma, planificadosPorHero.get(hero.id) ?? 0);
 
     if (meta == null) {
       return { nombre: hero.name, meta: null, publicados, restantes: null, deficit: 0, cronogramaAprobado, riesgo: null };

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { HeroContact } from "@/lib/database.types";
+import { parseMes, mesCR } from "@/lib/ugc/cronograma";
 
 const HERO_LOGO_BUCKET = "hero-logos";
 
@@ -141,9 +142,6 @@ export async function updateHeroProfileAction(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const monthlyTargetRaw = String(formData.get("monthly_target") ?? "").trim();
-  const monthlyTarget = monthlyTargetRaw ? Math.max(0, parseInt(monthlyTargetRaw, 10) || 0) : null;
-
   const logoUrl = await uploadHeroLogo(supabase, formData.get("logo"));
 
   await supabase
@@ -157,7 +155,6 @@ export async function updateHeroProfileAction(formData: FormData) {
       contacts,
       client_since: clientSince,
       servicios,
-      monthly_target: monthlyTarget,
       ...(logoUrl ? { logo_url: logoUrl } : {}),
     })
     .eq("id", id);
@@ -167,12 +164,24 @@ export async function updateHeroProfileAction(formData: FormData) {
   revalidatePath("/ugc/admin");
 }
 
-// Alterna el estado del cronograma del mes actual (pendiente ↔ aprobado).
-export async function toggleCalendarMonthAction(heroId: string) {
+/**
+ * Alterna el estado del cronograma de un mes (pendiente ↔ aprobado), a mano.
+ *
+ * Es el atajo del equipo para cuando el Hero aprueba por WhatsApp o por
+ * teléfono en vez de entrar a su link. Queda registrado como `approved_by:
+ * 'equipo'` justamente para poder distinguirlo después de una aprobación real
+ * del cliente.
+ *
+ * ⚠️ El mes llega por parámetro desde el 2026-08-12. Antes se calculaba acá con
+ * `now.getFullYear()/getMonth()`, que da la fecha del SERVIDOR — UTC en Vercel.
+ * El 31 de agosto después de las 6 PM de Costa Rica eso ya es septiembre, así
+ * que el botón aprobaba el cronograma del mes equivocado. Es el mismo bug que
+ * arregló la migración 20260801000000 para las fechas de las piezas.
+ */
+export async function toggleCalendarMonthAction(heroId: string, monthRaw?: string) {
   const supabase = await createClient();
 
-  const now = new Date();
-  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const month = parseMes(monthRaw) ?? mesCR();
 
   const { data: existing } = await supabase
     .from("hero_calendar_months")
@@ -181,14 +190,28 @@ export async function toggleCalendarMonthAction(heroId: string) {
     .eq("month", month)
     .maybeSingle();
 
-  const approving = existing?.status !== "aprobado";
+  // Sin cronograma no hay nada que aprobar. Antes esto hacía un upsert que lo
+  // creaba de la nada; con la meta saliendo del cronograma, eso dejaba un mes
+  // "aprobado" con cero videos y meta 0 — un Hero sin planificar figurando
+  // como que cumplió. El cronograma se arma en /ugc/admin/cronogramas.
+  if (!existing) return;
 
-  await supabase.from("hero_calendar_months").upsert({
-    hero_id: heroId,
-    month,
-    status: approving ? "aprobado" : "pendiente",
-    approved_at: approving ? new Date().toISOString() : null,
-  });
+  const approving = existing.status !== "aprobado";
+
+  // update y no upsert: la fila ya existe (se comprobó arriba), y un upsert acá
+  // volvería a abrir la puerta a crear cronogramas de la nada.
+  await supabase
+    .from("hero_calendar_months")
+    .update({
+      status: approving ? "aprobado" : "pendiente",
+      approved_at: approving ? new Date().toISOString() : null,
+      // Lo marcó el equipo, no el cliente desde su link. La diferencia importa
+      // a fin de mes: "el cliente aprobó" es un compromiso suyo.
+      approved_by: approving ? "equipo" : null,
+    })
+    .eq("hero_id", heroId)
+    .eq("month", month);
 
   revalidatePath("/ugc/admin");
+  revalidatePath("/ugc/admin/cronogramas");
 }
