@@ -66,6 +66,8 @@ export type PipelineSection = "guion" | "video" | "it";
 export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega" | "guion";
 export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";
+/** Quién aprobó el cronograma: el Hero desde su link, o el equipo a mano. */
+export type CalendarApprovedBy = "cliente" | "equipo";
 export type WaDirection = "out" | "in";
 export type WaMessageStatus = "queued" | "sent" | "failed" | "received";
 export type WaActionKind =
@@ -556,7 +558,6 @@ export interface Database {
           servicios: string[];
           contacts: HeroContact[];
           client_since: string | null;
-          monthly_target: number | null;
           /** Fuera de servicio: ver la migración 20260803110000. */
           archived: boolean;
           created_at: string;
@@ -572,7 +573,6 @@ export interface Database {
           servicios?: string[];
           contacts?: HeroContact[];
           client_since?: string | null;
-          monthly_target?: number | null;
           archived?: boolean;
           created_at?: string;
         };
@@ -626,9 +626,23 @@ export interface Database {
           // y compararlas como instantes es exactamente el bug que arregló.
           publish_date: string | null;
           record_date: string | null;
+          // Columna `time` sin zona: llega como 'HH:mm:ss' y es hora de Costa
+          // Rica. Va aparte de publish_date justamente para no volver a meter
+          // una hora dentro de un día. Ver la migración 20260812000000.
+          publish_time: string | null;
           drive_url: string | null;
           script_url: string | null;
           final_url: string | null;
+          // El guion estructurado. El hook vive aparte de la idea central
+          // porque es la línea que se dice tal cual (SOP-002).
+          script_hook: string | null;
+          script_idea: string | null;
+          script_desarrollo: string | null;
+          script_cta: string | null;
+          // Primer día del mes del cronograma al que pertenece la pieza, o null
+          // si es una tarjeta suelta. FK compuesta con brand_id contra
+          // hero_calendar_months.
+          calendar_month: string | null;
           notes: string | null;
           // La cargó McLovin desde el chat de WhatsApp, no una persona desde el
           // tablero. Ver la migración 20260802000000.
@@ -648,9 +662,15 @@ export interface Database {
           platform?: ContentPlatform;
           publish_date?: string | null;
           record_date?: string | null;
+          publish_time?: string | null;
           drive_url?: string | null;
           script_url?: string | null;
           final_url?: string | null;
+          script_hook?: string | null;
+          script_idea?: string | null;
+          script_desarrollo?: string | null;
+          script_cta?: string | null;
+          calendar_month?: string | null;
           notes?: string | null;
           created_by_agent?: boolean;
           created_at?: string;
@@ -771,18 +791,81 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["calendar_events"]["Insert"]>;
         Relationships: [];
       };
+      // Los videos planificados del mes, ANTES de ser tarjetas del pipeline.
+      // Nacen como content_pieces recién cuando el Hero aprueba el cronograma.
+      // Ver la migración 20260812100000.
+      calendar_month_items: {
+        Row: {
+          id: string;
+          hero_id: string;
+          month: string;
+          position: number;
+          title: string;
+          publish_date: string | null;
+          publish_time: string | null;
+          platform: ContentPlatform;
+          script_hook: string | null;
+          script_idea: string | null;
+          script_desarrollo: string | null;
+          script_cta: string | null;
+          notes: string | null;
+          client_comment: string | null;
+          client_comment_at: string | null;
+          // La tarjeta que nació de esta fila al aprobar. Null mientras el
+          // cronograma siga pendiente, y el candado contra aprobar dos veces.
+          piece_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          hero_id: string;
+          month: string;
+          position?: number;
+          title?: string;
+          publish_date?: string | null;
+          publish_time?: string | null;
+          platform?: ContentPlatform;
+          script_hook?: string | null;
+          script_idea?: string | null;
+          script_desarrollo?: string | null;
+          script_cta?: string | null;
+          notes?: string | null;
+          client_comment?: string | null;
+          client_comment_at?: string | null;
+          piece_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["calendar_month_items"]["Insert"]>;
+        Relationships: [];
+      };
       hero_calendar_months: {
         Row: {
           hero_id: string;
           month: string;
           status: CalendarMonthStatus;
           approved_at: string | null;
+          // La meta del mes, sellada al aprobar el cronograma. En 'pendiente'
+          // vale null y la meta es el conteo vivo de sus videos; lo sella un
+          // trigger, no el código. Ver la migración 20260812100000.
+          target: number | null;
+          // La credencial del link del Hero. Quien conoce el token entra, así
+          // que desde afuera solo se puede leer, comentar y aprobar.
+          share_token: string;
+          // "El cliente aprobó" y "lo dimos por aprobado" no son lo mismo.
+          approved_by: CalendarApprovedBy | null;
+          client_seen_at: string | null;
         };
         Insert: {
           hero_id: string;
           month: string;
           status?: CalendarMonthStatus;
           approved_at?: string | null;
+          target?: number | null;
+          share_token?: string;
+          approved_by?: CalendarApprovedBy | null;
+          client_seen_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["hero_calendar_months"]["Insert"]>;
         Relationships: [];

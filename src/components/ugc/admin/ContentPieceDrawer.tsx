@@ -36,6 +36,10 @@ export default function ContentPieceDrawer({
   // nombre editado no se vería hasta cerrar y volver a entrar.
   const [title, setTitle] = useState(piece.title);
   const [code, setCode] = useState(piece.code ?? "");
+  // La aprobación vive en estado para que el badge del guion siga al <select>
+  // sin esperar a guardar: los dos miran el mismo dato y verlos discrepar
+  // dentro de la misma pantalla se lee como que algo se rompió.
+  const [approval, setApproval] = useState(piece.approval);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
@@ -118,6 +122,8 @@ export default function ContentPieceDrawer({
           <form onSubmit={handleSave}>
             <input type="hidden" name="id" value={piece.id} />
 
+            <GuionSection piece={piece} approval={approval} />
+
             {/* El nombre de la tarjeta se corrige acá: antes quedaba fijo desde
                 que se creaba la pieza —o desde lo que entendió McLovin por
                 WhatsApp— y un título mal escrito solo se arreglaba borrando la
@@ -199,7 +205,12 @@ export default function ContentPieceDrawer({
 
             <div className={styles.field}>
               <label>Aprobación</label>
-              <select name="approval" defaultValue={piece.approval} className={styles.inp}>
+              <select
+                name="approval"
+                value={approval}
+                onChange={(e) => setApproval(e.target.value as ContentPiece["approval"])}
+                className={styles.inp}
+              >
                 <option value="pendiente">Pendiente</option>
                 <option value="correccion">Corrección</option>
                 <option value="revisado">Revisado</option>
@@ -215,9 +226,30 @@ export default function ContentPieceDrawer({
                 perdería su fecha en silencio al tocarle cualquier otra cosa. */}
             <input type="hidden" name="record_date" value={piece.record_date?.slice(0, 10) ?? ""} />
 
-            <div className={styles.field}>
-              <label>Publicación</label>
-              <input type="date" name="publish_date" defaultValue={piece.publish_date?.slice(0, 10) ?? ""} className={styles.inp} />
+            {/* La hora va en su propio campo y su propia columna, no dentro de
+                publish_date: ese es el bug del día corrido de la migración
+                20260801000000, y meterle una hora lo reabriría entero. */}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <div className={styles.field} style={{ flex: 1 }}>
+                <label htmlFor="piece-publish-date">Publicación</label>
+                <input
+                  id="piece-publish-date"
+                  type="date"
+                  name="publish_date"
+                  defaultValue={piece.publish_date?.slice(0, 10) ?? ""}
+                  className={styles.inp}
+                />
+              </div>
+              <div className={styles.field} style={{ width: "130px" }}>
+                <label htmlFor="piece-publish-time">Hora</label>
+                <input
+                  id="piece-publish-time"
+                  type="time"
+                  name="publish_time"
+                  defaultValue={piece.publish_time?.slice(0, 5) ?? ""}
+                  className={styles.inp}
+                />
+              </div>
             </div>
 
             <LinkField
@@ -227,7 +259,6 @@ export default function ContentPieceDrawer({
               icon="drive"
               placeholder="https://drive.google.com/..."
             />
-            <LinkField label="Link guion" name="script_url" value={piece.script_url} icon="doc" />
             <LinkField label="Link video final" name="final_url" value={piece.final_url} icon="play" />
 
             <div className={styles.field}>
@@ -253,6 +284,114 @@ export default function ContentPieceDrawer({
           </form>
         </div>
       </aside>
+    </div>
+  );
+}
+
+/** Cómo se ve el estado de aprobación cuando lo que se está mirando es el guion. */
+const APROBACION_DEL_GUION: Record<ContentPiece["approval"], { texto: string; color: string; fondo: string }> = {
+  pendiente: { texto: "Pendiente de aprobación", color: "var(--warn)", fondo: "var(--warn-bg)" },
+  correccion: { texto: "Con correcciones", color: "var(--risk)", fondo: "var(--risk-bg)" },
+  revisado: { texto: "Aprobado", color: "var(--ok)", fondo: "var(--ok-bg)" },
+};
+
+/**
+ * El guion de la pieza: hook, idea central, desarrollo y CTA.
+ *
+ * El hook va arriba y con caja propia, separado de los otros tres, porque es la
+ * única línea que se dice tal cual y no se improvisa en el set (SOP-002). Que se
+ * vea distinto no es decoración: es la regla, puesta donde se escribe.
+ *
+ * Va plegable porque el drawer también sirve para tocar cosas que no tienen nada
+ * que ver con el guion —mover de columna, corregir el Hero, pegar el link del
+ * video final— y con los cuatro campos abiertos siempre, esas quedan a dos
+ * pantallas de scroll.
+ */
+function GuionSection({ piece, approval }: { piece: ContentPiece; approval: ContentPiece["approval"] }) {
+  const [abierto, setAbierto] = useState(true);
+  const estado = APROBACION_DEL_GUION[approval];
+
+  return (
+    <div className={styles.guionBlock}>
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        className={styles.guionHd}
+        aria-expanded={abierto}
+        aria-controls="guion-body"
+      >
+        <h3>Guion</h3>
+        <span className={styles.badgeSt} style={{ background: estado.fondo, color: estado.color }}>
+          {estado.texto}
+        </span>
+        <QosIcon
+          name="chevR"
+          size={16}
+          className={`${styles.guionChev} ${abierto ? styles.guionChevOpen : ""}`}
+        />
+      </button>
+
+      {/* Se oculta con CSS y no desmontando: los campos tienen que seguir en el
+          formulario aunque el bloque esté plegado, o guardar con el guion
+          cerrado le borraría el guion a la pieza. */}
+      <div id="guion-body" className={styles.guionBody} hidden={!abierto}>
+        <div className={styles.hookBox}>
+          <label htmlFor="guion-hook" className={styles.hookLabel}>
+            <QosIcon name="lock" size={12} />
+            Hook — sagrado, se dice tal cual
+          </label>
+          <textarea
+            id="guion-hook"
+            name="script_hook"
+            rows={2}
+            defaultValue={piece.script_hook ?? ""}
+            placeholder="El hook exacto del guion…"
+            className={styles.hookInput}
+          />
+          <p className={styles.hookNote}>El hook no se modifica en el set. Sin excepciones (SOP-002).</p>
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="guion-idea">Idea central</label>
+          <textarea
+            id="guion-idea"
+            name="script_idea"
+            rows={2}
+            defaultValue={piece.script_idea ?? ""}
+            placeholder="De qué se trata el video, en una línea…"
+            className={styles.inp}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="guion-desarrollo">Desarrollo</label>
+          <textarea
+            id="guion-desarrollo"
+            name="script_desarrollo"
+            rows={5}
+            defaultValue={piece.script_desarrollo ?? ""}
+            placeholder="Cómo se desarrolla el video…"
+            className={styles.inp}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="guion-cta">CTA</label>
+          <textarea
+            id="guion-cta"
+            name="script_cta"
+            rows={2}
+            defaultValue={piece.script_cta ?? ""}
+            placeholder="Llamado a la acción final…"
+            className={styles.inp}
+          />
+        </div>
+
+        {/* El link a Drive se queda: agosto entero vive ahí y nadie abandona
+            Docs de golpe. Acá abajo queda como respaldo del guion de arriba, no
+            como un campo suelto del formulario. */}
+        <LinkField label="Documento original" name="script_url" value={piece.script_url} icon="doc" />
+      </div>
     </div>
   );
 }

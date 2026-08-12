@@ -118,10 +118,21 @@ export async function updateContentPieceAction(formData: FormData) {
   const approval = String(formData.get("approval") ?? "pendiente") as ContentApproval;
   const publishDateRaw = String(formData.get("publish_date") ?? "").trim();
   const recordDateRaw = String(formData.get("record_date") ?? "").trim();
+  const publishTimeRaw = String(formData.get("publish_time") ?? "").trim();
   const driveUrl = String(formData.get("drive_url") ?? "").trim() || null;
   const scriptUrl = String(formData.get("script_url") ?? "").trim() || null;
   const finalUrl = String(formData.get("final_url") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  // El guion. Se guarda con trim pero SIN colapsar saltos de línea: el
+  // desarrollo se escribe en varios párrafos y aplastarlos cambiaría el texto
+  // que el guionista escribió.
+  const guion = {
+    script_hook: String(formData.get("script_hook") ?? "").trim() || null,
+    script_idea: String(formData.get("script_idea") ?? "").trim() || null,
+    script_desarrollo: String(formData.get("script_desarrollo") ?? "").trim() || null,
+    script_cta: String(formData.get("script_cta") ?? "").trim() || null,
+  };
 
   await supabase
     .from("content_pieces")
@@ -135,9 +146,11 @@ export async function updateContentPieceAction(formData: FormData) {
       approval,
       publish_date: publishDateRaw || null,
       record_date: recordDateRaw || null,
+      publish_time: publishTimeRaw || null,
       drive_url: driveUrl,
       script_url: scriptUrl,
       final_url: finalUrl,
+      ...guion,
       notes,
     })
     .eq("id", pieceId);

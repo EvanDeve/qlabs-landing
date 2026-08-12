@@ -1798,6 +1798,221 @@
   padding: 22px;
   flex: 1;
 }
+
+/* ---- El guion dentro de la tarjeta ----
+   Bloque plegable con el hook destacado arriba. El hook tiene tratamiento
+   propio a propósito: es la única línea del guion que se dice tal cual y que no
+   se improvisa en el set (SOP-002). Que se vea distinto ES la regla. */
+.guionBlock {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+.guionHd {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: var(--t-fast);
+}
+.guionHd:hover {
+  background: var(--surface-2);
+}
+.guionHd h3 {
+  font-size: 14px;
+  font-weight: 700;
+}
+/* Empuja el chevron al extremo, quede o no el badge en el medio. Es el `chevR`
+   del set, que apunta a la derecha: plegado señala "hay más acá adentro" y
+   abierto gira 90° para apuntar al contenido. */
+.guionChev {
+  margin-left: auto;
+  color: var(--ink-3);
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+}
+.guionChevOpen {
+  transform: rotate(90deg);
+}
+.guionBody {
+  padding: 0 16px 16px;
+}
+/* Explícito y no confiando en el `[hidden] { display: none }` del navegador:
+   dentro del shell Q·OS las capas de Tailwind ya se comieron reglas que
+   parecían seguras. Ver la nota de cascade layers del proyecto. */
+.guionBody[hidden] {
+  display: none;
+}
+.hookBox {
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, var(--b-50), var(--b-100));
+  border: 1px solid var(--b-100);
+  padding: 13px 15px 11px;
+  margin-bottom: 18px;
+}
+.hookLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--b-600);
+  margin-bottom: 8px;
+}
+/* Sin caja propia: el hook se lee como parte del bloque y no como "otro campo
+   más" de la lista de abajo. El foco lo marca el borde inferior. */
+.hookInput {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: none;
+  padding: 2px 0 5px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  resize: vertical;
+  transition: var(--t-fast);
+}
+.hookInput::placeholder {
+  font-weight: 600;
+  color: var(--b-600);
+  opacity: 0.42;
+}
+.hookInput:focus {
+  outline: none;
+  border-bottom-color: var(--b-400);
+}
+.hookNote {
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--b-600);
+  opacity: 0.75;
+}
+/* ---- Cronogramas ---- */
+.cronoRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition: var(--t-fast);
+}
+.cronoRow:hover {
+  border-color: var(--b-400);
+  background: var(--surface-2);
+}
+.cronoName {
+  font-weight: 700;
+  font-size: 14px;
+}
+.cronoCount {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+/* Empuja el chevron al extremo con lo que haya en el medio. */
+.cronoChev {
+  margin-left: auto;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+/* Una fila de video dentro del cronograma: cabecera clickeable + guion adentro. */
+.videoRow {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.videoRowAbierta {
+  border-color: var(--b-400);
+  box-shadow: var(--sh-glow);
+}
+.videoHd {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: var(--t-fast);
+}
+.videoHd:hover {
+  background: var(--surface-2);
+}
+.videoNum {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  flex-shrink: 0;
+  min-width: 20px;
+}
+.videoTitulo {
+  font-weight: 600;
+  font-size: 13.5px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Sin título todavía: se distingue del que sí lo tiene, para que armando el
+   mes se vea de un vistazo cuáles faltan por llenar. */
+.videoSinTitulo {
+  font-weight: 500;
+  color: var(--ink-3);
+  font-style: italic;
+}
+.videoFecha {
+  font-size: 12px;
+  color: var(--ink-2);
+  flex-shrink: 0;
+}
+.videoSinFecha {
+  color: var(--warn);
+}
+.videoBody {
+  padding: 4px 14px 16px;
+  border-top: 1px solid var(--line);
+}
+.videoBody[hidden] {
+  display: none;
+}
+.videoFila {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.videoFila > * {
+  flex: 1;
+  /* Sin esto, un hijo de flex no baja de su ancho de contenido y la fila
+     desborda en pantallas angostas en vez de repartirse. */
+  min-width: 150px;
+}
+
 .modalOverlay {
   position: fixed;
   inset: 0;
