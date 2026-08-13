@@ -160,7 +160,9 @@ export async function guardarVideoAction(formData: FormData) {
       notes: texto("notes"),
     })
     .eq("id", id)
-    .select("piece_id, title, publish_date, publish_time, platform")
+    .select(
+      "piece_id, title, publish_date, publish_time, platform, script_hook, script_idea, script_desarrollo, script_cta"
+    )
     .maybeSingle();
 
   if (item?.piece_id) await sincronizarConLaTarjeta(supabase, item);
@@ -169,17 +171,23 @@ export async function guardarVideoAction(formData: FormData) {
 }
 
 /**
- * El cambio de PLAN sigue a la tarjeta que ya nació; el guion no.
+ * Lo que se edita en el cronograma baja a la tarjeta que ya nació, guion incluido.
  *
  * Sin esto, editar un video después de aprobado dejaba dos verdades: pasó de
  * verdad el 2026-08-13 —el cronograma decía septiembre y la tarjeta seguía
  * diciendo agosto, así que "no aparecía" en el mes donde se la buscaba— y de
  * paso descuadraba la meta sellada del mes, que cuenta videos del cronograma.
  *
- * **Fecha, hora, título y plataforma sí; los cuatro campos del guion no.** Es
- * la asimetría a propósito: después de aprobar, el guion es lo que el equipo
- * trabaja EN la tarjeta, y copiarle encima lo del cronograma sería borrarles
- * trabajo. El plan, en cambio, es justamente lo que el cronograma promete.
+ * **El cronograma manda**, que es el modelo de todo este módulo: la fila es lo
+ * que se le prometió al Hero, así que la tarjeta la sigue. Evan lo decidió el
+ * 2026-08-13, con el costo sobre la mesa: si alguien reescribió el guion en la
+ * tarjeta y después se toca esa fila, lo del cronograma gana. Se copia tal cual
+ * —vacío incluido—: dejar un campo en blanco en el cronograma es decir que va
+ * en blanco, y respetarlo a medias daría una tercera verdad.
+ *
+ * **Los apuntes quedan afuera**, y es lo único. En la tarjeta son notas de
+ * producción que se escriben en el set (locación, utilería, quién sale), no lo
+ * que se planificó; son el único campo que nace en el pipeline y no acá.
  *
  * Un título vacío no pisa el que había: `content_pieces.title` es NOT NULL y la
  * fila del cronograma admite vacío (default '').
@@ -192,6 +200,10 @@ async function sincronizarConLaTarjeta(
     publish_date: string | null;
     publish_time: string | null;
     platform: ContentPlatform;
+    script_hook: string | null;
+    script_idea: string | null;
+    script_desarrollo: string | null;
+    script_cta: string | null;
   }
 ) {
   if (!item.piece_id) return;
@@ -205,6 +217,10 @@ async function sincronizarConLaTarjeta(
       publish_date: item.publish_date,
       publish_time: item.publish_time,
       platform: item.platform,
+      script_hook: item.script_hook,
+      script_idea: item.script_idea,
+      script_desarrollo: item.script_desarrollo,
+      script_cta: item.script_cta,
     })
     .eq("id", item.piece_id);
 }
