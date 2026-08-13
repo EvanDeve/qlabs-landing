@@ -99,10 +99,13 @@ export default function ContentPieceEditor({
   return (
     <>
       <div style={{ marginBottom: "18px" }}>
-        <Link href="/ugc/admin/pipeline" className={styles.linkMore} style={{ marginLeft: "-8px" }}>
-          <QosIcon name="chevL" size={13} /> Pipeline
+        {/* Botón y no link de texto: es la salida de una pantalla completa, no
+            un "ver más" dentro de una tarjeta. Como link se leía igual que el
+            resto del texto y no parecía la forma de volver. */}
+        <Link href="/ugc/admin/pipeline" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}>
+          <QosIcon name="chevL" size={14} /> Volver al Pipeline
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", margin: "6px 0 2px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", margin: "12px 0 2px" }}>
           {code && <span className={styles.sopTag}>{code}</span>}
           <h2 className={styles.sectionHeadBig}>{title}</h2>
         </div>

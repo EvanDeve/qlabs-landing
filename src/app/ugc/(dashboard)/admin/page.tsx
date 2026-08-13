@@ -15,10 +15,6 @@ export const dynamic = "force-dynamic";
 // El tope lo define reporte.ts: McLovin dice "SOBRECARGADO" con el mismo número.
 const OVERLOAD_THRESHOLD = TOPE_CARGA;
 
-const KPI_COLORS = ["#6d54f3", "#df4650", "#c07414", "#14a06a"];
-// El primero era "users" cuando el KPI contaba Heroes; ahora cuenta videos
-// listos para salir.
-const KPI_ICONS = ["film", "alert", "check", "calendar"];
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -108,7 +104,6 @@ export default async function AdminDashboardPage({
   );
   const pieces = (contentPieces ?? []).filter((p) => !archivedHeroIds.has(p.brand_id));
   const columns = contentColumns ?? [];
-  const columnById = new Map(columns.map((c) => [c.id, c]));
   // Qué cuenta como publicado y qué como pendiente de aprobación lo declara la
   // columna, NO su nombre: el equipo puede renombrarlas y estas cuentas —de las
   // que salen meta, ritmo y riesgo del Pase de servicio— tienen que seguir
@@ -196,37 +191,6 @@ export default async function AdminDashboardPage({
   const monthName = now.toLocaleDateString("es-CR", { month: "long" });
   const daysLeft = daysInMonth - dayOfMonth;
 
-  // Los tres cuellos de botella cuentan HEROES, no piezas — y comparten lista
-  // con "Requiere tu atención", donde cada fila SÍ es una pieza y el número de
-  // la derecha es una columna del tablero. Con la misma forma visual, un
-  // "Atrasados vs. ritmo · 1" se leía como "un video atrasado".
-  //
-  // Por eso cada etiqueta empieza con "Heroes" y el contador dice la unidad. Y
-  // el de ritmo lleva además el déficit al lado de cada nombre: es un número
-  // proyectado (meta × día del mes − publicados), no una fecha vencida, así que
-  // sin verlo no hay forma de entender por qué ese Hero está en la lista.
-  const bottlenecks = [
-    {
-      label: "Heroes sin ningún video este mes",
-      color: "var(--risk)",
-      heroes: withTarget.filter((s) => s.published === 0),
-      detalle: null,
-    },
-    {
-      label: "Heroes sin cronograma aprobado",
-      color: "var(--warn)",
-      heroes: heroStats.filter((s) => !s.calendarApproved),
-      detalle: null,
-    },
-    {
-      label: "Heroes por debajo del ritmo del mes",
-      color: "var(--warn)",
-      heroes: withTarget.filter((s) => s.published > 0 && s.deficit > 0),
-      detalle: (s: (typeof heroStats)[number]) =>
-        `${s.hero.name} (${s.published}/${s.target}, va ${s.deficit} por debajo)`,
-    },
-  ].filter((b) => b.heroes.length > 0);
-
   const overduePieces = activePieces.filter((p) => p.publish_date && diaCR(p.publish_date) < hoyCR);
   const pendingApprovalPieces = activePieces.filter(
     (p) => approvalColumnIds.has(p.column_id)
@@ -241,24 +205,80 @@ export default async function AdminDashboardPage({
   // "Publicados", que cuenta lo que sí salió.
   const readyPieces = pieces.filter((p) => readyColumnIds.has(p.column_id));
 
+  /**
+   * Las ocho tarjetas de números, en un solo array y en orden.
+   *
+   * Antes eran dos listas con formas distintas —la de arriba sin subtítulo, la
+   * de abajo con— y eso ataba el orden: mover una tarjeta de fila significaba
+   * moverla de estructura. Unificadas, el orden es solo el del array.
+   *
+   * La primera fila es lo que está en movimiento y puede necesitar una
+   * decisión hoy. La segunda es cómo viene el mes, y arranca con "terminados" y
+   * "publicados" pegadas a propósito: son estados distintos —uno está hecho y
+   * el otro ya salió— pero los dos son trabajo que ya no se toca, y leerlos
+   * juntos es lo que dice si hay cola esperando publicación.
+   */
   const kpis = [
-    { label: "Videos terminados", value: readyPieces.length },
-    { label: "Piezas atrasadas", value: overduePieces.length },
-    { label: "Pend. aprobación", value: pendingApprovalPieces.length },
-    { label: "Publican esta semana", value: publishingThisWeekPieces.length },
-  ];
+    {
+      label: "Piezas atrasadas",
+      value: overduePieces.length,
+      sub: "la fecha de publicación ya pasó",
+      icon: "alert",
+      color: "#df4650",
+    },
+    {
+      label: "Pend. aprobación",
+      value: pendingApprovalPieces.length,
+      sub: "esperando al cliente",
+      icon: "clock",
+      color: "#c07414",
+    },
+    {
+      label: "Publican esta semana",
+      value: publishingThisWeekPieces.length,
+      sub: "próximos 7 días",
+      icon: "calendar",
+      color: "#6d54f3",
+    },
+    {
+      label: "Cronogramas aprobados",
+      value: `${approvedCount}/${heroesManaged.length}`,
+      sub: `de ${monthName}`,
+      icon: "book",
+      color: "#2aa5c0",
+    },
 
-  const attentionItems = [
-    ...overduePieces.map((p) => ({ piece: p, reason: "Publicación vencida", late: true })),
-    ...pendingApprovalPieces
-      .filter((p) => !overduePieces.includes(p))
-      .map((p) => ({ piece: p, reason: "Esperando aprobación del cliente", late: false })),
-  ].sort((a, b) => {
-    // Las piezas sin fecha van al final: no hay nada que se les esté venciendo.
-    const aDate = a.piece.publish_date ? diaCR(a.piece.publish_date) : "9999-12-31";
-    const bDate = b.piece.publish_date ? diaCR(b.piece.publish_date) : "9999-12-31";
-    return aDate.localeCompare(bDate);
-  });
+    {
+      label: "Videos terminados",
+      value: readyPieces.length,
+      sub: "hechos, todavía sin publicar",
+      icon: "film",
+      color: "#2aa5c0",
+    },
+    {
+      label: "Publicados",
+      value: publishedTotal,
+      sub: `ritmo esperado a hoy: ~${expectedTotal}`,
+      icon: "check",
+      color: "#14a06a",
+    },
+    {
+      label: "Meta del mes",
+      value: metaTotal,
+      // "paquete definido" era el lenguaje de monthly_target, que ya no existe:
+      // la meta ahora sale del cronograma.
+      sub: `${withTarget.length} de ${heroesManaged.length} heroes con cronograma`,
+      icon: "flag",
+      color: "#6d54f3",
+    },
+    {
+      label: "Restantes",
+      value: remainingTotal,
+      sub: `quedan ${daysLeft} días de ${monthName}`,
+      icon: "clock",
+      color: "#c07414",
+    },
+  ];
 
   const weekAgendaItems = [
     ...pieces
@@ -299,117 +319,28 @@ export default async function AdminDashboardPage({
 
   return (
     <div>
+      {/* Una sola grilla sobre `kpis`. La fila la corta el grid a los 4 por
+          ancho, no dos contenedores distintos — así reordenar es mover una
+          entrada del array y nada más. */}
       <div className={styles.kpiRow}>
-        {kpis.map((kpi, i) => (
+        {kpis.map((kpi) => (
           <div key={kpi.label} className={styles.kpi}>
             <div className={styles.kTop}>
-              <div className={styles.kIc} style={{ background: `${KPI_COLORS[i]}22`, color: KPI_COLORS[i] }}>
-                <QosIcon name={KPI_ICONS[i]} size={16} />
+              <div className={styles.kIc} style={{ background: `${kpi.color}22`, color: kpi.color }}>
+                <QosIcon name={kpi.icon} size={16} />
               </div>
               <div className={styles.kLabel}>{kpi.label}</div>
             </div>
-            <div className={styles.kNum} style={{ color: KPI_COLORS[i] }}>
+            <div className={styles.kNum} style={{ color: kpi.color }}>
               {kpi.value}
             </div>
-          </div>
-        ))}
-      </div>
-
-      <div className={styles.kpiRow}>
-        {[
-          {
-            label: "Meta del mes",
-            value: metaTotal,
-            sub: `${withTarget.length} de ${heroesManaged.length} heroes con paquete definido`,
-            icon: "flag",
-            color: "#6d54f3",
-          },
-          {
-            label: "Publicados",
-            value: publishedTotal,
-            sub: `ritmo esperado a hoy: ~${expectedTotal}`,
-            icon: "check",
-            color: "#14a06a",
-          },
-          {
-            label: "Restantes",
-            value: remainingTotal,
-            sub: `quedan ${daysLeft} días de ${monthName}`,
-            icon: "clock",
-            color: "#c07414",
-          },
-          {
-            label: "Calendarios aprobados",
-            value: `${approvedCount}/${heroesManaged.length}`,
-            sub: `cronogramas de ${monthName}`,
-            icon: "calendar",
-            color: "#2aa5c0",
-          },
-        ].map((card) => (
-          <div key={card.label} className={styles.kpi}>
-            <div className={styles.kTop}>
-              <div className={styles.kIc} style={{ background: `${card.color}22`, color: card.color }}>
-                <QosIcon name={card.icon} size={16} />
-              </div>
-              <div className={styles.kLabel}>{card.label}</div>
-            </div>
-            <div className={styles.kNum} style={{ color: card.color }}>
-              {card.value}
-            </div>
-            <div className={styles.kSub}>{card.sub}</div>
+            <div className={styles.kSub}>{kpi.sub}</div>
           </div>
         ))}
       </div>
 
       <div className={styles.dashGrid}>
         <div className={styles.stack}>
-          <div className={`${styles.card} ${styles.cardPad}`}>
-            <div className={styles.sectionHead}>
-              <h2 className={styles.sectionHeadBig}>Requiere tu atención</h2>
-              <span className={`${styles.chip} ${styles.riskRisk}`}>
-                {bottlenecks.length + attentionItems.length} items
-              </span>
-            </div>
-            {bottlenecks.map((b) => (
-              <div key={b.label} className={styles.attnItem} style={{ cursor: "default" }}>
-                <div className={styles.attnBar} style={{ background: b.color }} />
-                <div className={styles.attnBody}>
-                  <div className={styles.attnTitle}>{b.label}</div>
-                  <div className={styles.attnMeta}>
-                    {b.heroes.map((s) => b.detalle?.(s) ?? s.hero.name).join(", ")}
-                  </div>
-                </div>
-                <span className={styles.tag}>
-                  {b.heroes.length} {b.heroes.length === 1 ? "Hero" : "Heroes"}
-                </span>
-              </div>
-            ))}
-            {attentionItems.length > 0 ? (
-              attentionItems.map(({ piece, reason, late }) => (
-                // A la PIEZA y no al expediente del Hero. La fila habla de un
-                // video concreto —"esperando aprobación del cliente"— y hasta
-                // el 2026-08-12 el clic caía en la ficha del Hero, así que para
-                // hacer algo había que ir a buscar la tarjeta al tablero.
-                <Link key={piece.id} href={`/ugc/admin/pipeline/${piece.id}`} className={styles.attnItem}>
-                  <div className={styles.attnBar} style={{ background: late ? "var(--risk)" : "var(--warn)" }} />
-                  <div className={styles.attnBody}>
-                    <div className={styles.attnTitle}>{piece.title}</div>
-                    <div className={styles.attnMeta}>
-                      <span>{brandNameByProfileId.get(piece.brand_id)}</span>
-                      <span>·</span>
-                      <span style={{ color: late ? "var(--risk)" : "var(--warn)", fontWeight: 600 }}>{reason}</span>
-                    </div>
-                  </div>
-                  <div className={styles.attnRight}>
-                    <span className={styles.tag}>{columnById.get(piece.column_id)?.name ?? "—"}</span>
-                    <QosIcon name="chevR" size={16} />
-                  </div>
-                </Link>
-              ))
-            ) : bottlenecks.length === 0 ? (
-              <div className={styles.empty}>Nada pendiente por ahora.</div>
-            ) : null}
-          </div>
 
           <div className={`${styles.card} ${styles.cardPad}`}>
             {/* El selector de mes NO va acá: vive en la barra superior, al lado

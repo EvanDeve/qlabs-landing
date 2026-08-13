@@ -419,6 +419,21 @@ function Card({
         )}
       </div>
       <div className={styles.kcTitle}>{piece.title}</div>
+
+      {/* Los apuntes, a la vista. Son lo que el equipo se deja escrito para
+          producir —"grabar antes de las 10 por la luz", "falta el voice over"—
+          y hasta ahora había que abrir la pieza para leerlos, o sea que en la
+          práctica no los leía nadie.
+
+          Se recortan a dos líneas por CSS y el texto entero queda en el
+          `title`: una nota larga no puede empujar la tarjeta hasta romper la
+          columna, pero tampoco tiene por qué perderse. */}
+      {piece.notes?.trim() && (
+        <div className={styles.kcNotes} title={piece.notes}>
+          {piece.notes}
+        </div>
+      )}
+
       <div className={styles.kcMid}>
         <span className={`${styles.prio} ${styles[PRIO_CLASS[piece.priority]]}`}>{piece.priority}</span>
         <span className={styles.tag}>{piece.platform}</span>
