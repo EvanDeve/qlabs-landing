@@ -146,7 +146,7 @@ export async function guardarVideoAction(formData: FormData) {
 
   const texto = (campo: string) => String(formData.get(campo) ?? "").trim() || null;
 
-  await supabase
+  const { data: item } = await supabase
     .from("calendar_month_items")
     .update({
       title: String(formData.get("title") ?? "").trim(),
@@ -159,9 +159,54 @@ export async function guardarVideoAction(formData: FormData) {
       script_cta: texto("script_cta"),
       notes: texto("notes"),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("piece_id, title, publish_date, publish_time, platform")
+    .maybeSingle();
+
+  if (item?.piece_id) await sincronizarConLaTarjeta(supabase, item);
 
   revalidar(heroId, mes);
+}
+
+/**
+ * El cambio de PLAN sigue a la tarjeta que ya nació; el guion no.
+ *
+ * Sin esto, editar un video después de aprobado dejaba dos verdades: pasó de
+ * verdad el 2026-08-13 —el cronograma decía septiembre y la tarjeta seguía
+ * diciendo agosto, así que "no aparecía" en el mes donde se la buscaba— y de
+ * paso descuadraba la meta sellada del mes, que cuenta videos del cronograma.
+ *
+ * **Fecha, hora, título y plataforma sí; los cuatro campos del guion no.** Es
+ * la asimetría a propósito: después de aprobar, el guion es lo que el equipo
+ * trabaja EN la tarjeta, y copiarle encima lo del cronograma sería borrarles
+ * trabajo. El plan, en cambio, es justamente lo que el cronograma promete.
+ *
+ * Un título vacío no pisa el que había: `content_pieces.title` es NOT NULL y la
+ * fila del cronograma admite vacío (default '').
+ */
+async function sincronizarConLaTarjeta(
+  supabase: NonNullable<Awaited<ReturnType<typeof admin>>>,
+  item: {
+    piece_id: string | null;
+    title: string;
+    publish_date: string | null;
+    publish_time: string | null;
+    platform: ContentPlatform;
+  }
+) {
+  if (!item.piece_id) return;
+
+  const titulo = item.title.trim();
+
+  await supabase
+    .from("content_pieces")
+    .update({
+      ...(titulo ? { title: titulo } : {}),
+      publish_date: item.publish_date,
+      publish_time: item.publish_time,
+      platform: item.platform,
+    })
+    .eq("id", item.piece_id);
 }
 
 /**
