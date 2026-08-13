@@ -1959,6 +1959,110 @@
   color: var(--b-600);
   opacity: 0.75;
 }
+/* ---- Los pasos del carril, en el detalle de una pieza ---- */
+.pasosHd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.pasos {
+  display: flex;
+  align-items: flex-start;
+  list-style: none;
+  /* Se encoge antes que el botón de avanzar, que tiene ancho fijo. */
+  flex: 1;
+  min-width: 0;
+}
+.paso {
+  display: flex;
+  align-items: center;
+  /* Todos los pasos miden lo mismo, así la línea entre círculos queda pareja
+     aunque un nombre sea mucho más largo que otro. */
+  flex: 1;
+  min-width: 0;
+}
+.paso:first-child {
+  flex: 0 0 auto;
+}
+/* La línea vive DENTRO del paso siguiente y no entre dos: como hermana suelta
+   habría que dibujar n-1 elementos y el `gap` del flex la partiría al medio. */
+.pasoLinea {
+  height: 2px;
+  flex: 1;
+  min-width: 12px;
+  margin: 0 6px;
+  border-radius: 2px;
+  transition: var(--t-fast);
+}
+.pasoBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  cursor: pointer;
+  font: inherit;
+  min-width: 0;
+  border-radius: var(--r-sm);
+  transition: var(--t-fast);
+}
+.pasoBtn:disabled {
+  cursor: default;
+}
+.pasoBtn:not(:disabled):hover .pasoNombre {
+  color: var(--ink) !important;
+}
+.pasoBtn:not(:disabled):hover .pasoDot {
+  transform: scale(1.12);
+}
+.pasoBtn:focus-visible {
+  outline: 2px solid var(--b-500);
+  outline-offset: 2px;
+}
+.pasoDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid;
+  font-size: 11px;
+  font-weight: 700;
+  transition: var(--t-fast);
+}
+/* El paso actual se marca con un halo y no solo con color: en una fila de
+   círculos de colores distintos, "el que está más saturado" no se distingue. */
+.pasoDotActual {
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 18%, transparent);
+}
+.pasoNombre {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: var(--t-fast);
+}
+/* En pantallas angostas los nombres no entran: quedan los círculos, que siguen
+   diciendo en cuál de cuántos pasos está, y el nombre del actual lo dice el
+   botón de avanzar y el `title` de cada círculo. */
+@media (max-width: 780px) {
+  .pasoNombre {
+    display: none;
+  }
+  .paso {
+    flex: 0 0 auto;
+  }
+  .pasoLinea {
+    min-width: 20px;
+  }
+}
+
 /* El detalle de una pieza: guion a la izquierda, ficha al costado. */
 .pieceGrid {
   display: grid;

@@ -57,6 +57,13 @@ export default function ContentPieceEditor({
   const current = columns.find((c) => c.id === columnId);
   const upcoming = nextColumn(columns, columnId);
 
+  // Solo los pasos del carril al que pertenece la pieza. Un video no atraviesa
+  // las columnas de IT ni las de cronogramas, así que dibujarlas lo haría ver
+  // atascado al principio de un recorrido que no es el suyo.
+  const delCarril = columns
+    .filter((c) => c.section === current?.section)
+    .sort((a, b) => a.position - b.position);
+
   useEffect(() => {
     if (!saved) return;
     const t = setTimeout(() => setSaved(false), 2000);
@@ -88,6 +95,15 @@ export default function ContentPieceEditor({
     });
   }
 
+  /** Saltar a cualquier paso desde los círculos, incluido hacia atrás. */
+  function handleIr(destinoId: string) {
+    if (destinoId === columnId) return;
+    startTransition(async () => {
+      await updateContentPieceColumnAction(piece.id, destinoId);
+      setColumnId(destinoId);
+    });
+  }
+
   async function handleDelete() {
     await deleteContentPieceAction(piece.id);
     // La pieza dejó de existir, así que esta URL también: volver al tablero es
@@ -113,8 +129,8 @@ export default function ContentPieceEditor({
       </div>
 
       <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "18px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-          <span className={styles.sopTag}>{current?.name ?? "Sin columna"}</span>
+        <div className={styles.pasosHd}>
+          <Pasos columnas={delCarril} actualId={columnId} onIr={handleIr} deshabilitado={isPending} />
           {upcoming && (
             <button
               type="button"
@@ -127,7 +143,7 @@ export default function ContentPieceEditor({
           )}
         </div>
         {current?.sop_code && (
-          <p style={{ marginTop: "8px", fontSize: "11.5px", color: "var(--ink-3)" }}>
+          <p style={{ marginTop: "14px", fontSize: "11.5px", color: "var(--ink-3)" }}>
             {current.sop_code}
             {current.owner_role ? ` · Responsable: ${current.owner_role}` : ""}
           </p>
@@ -326,6 +342,80 @@ export default function ContentPieceEditor({
         </div>
       </form>
     </>
+  );
+}
+
+/**
+ * En qué paso del carril está el video, como una fila de círculos.
+ *
+ * Reemplaza al tag de texto que solo decía el nombre de la columna. Un nombre
+ * suelto no dice cuánto falta: "Por editar" no deja ver que quedan tres pasos
+ * ni cuáles ya pasaron. Con los círculos eso se lee sin pensar.
+ *
+ * Los pasos son clickeables, y esa es la parte que agrega algo además de lo
+ * visual: hasta ahora la única forma de mover una pieza desde esta pantalla era
+ * "Avanzar", que va de a uno y solo hacia adelante. Mandar un video de vuelta a
+ * edición obligaba a ir al tablero a arrastrarlo. El botón se queda igual
+ * porque nombra el destino y es la acción de todos los días.
+ */
+function Pasos({
+  columnas,
+  actualId,
+  onIr,
+  deshabilitado,
+}: {
+  columnas: ContentColumn[];
+  actualId: string;
+  onIr: (id: string) => void;
+  deshabilitado: boolean;
+}) {
+  const actual = columnas.findIndex((c) => c.id === actualId);
+
+  return (
+    <ol className={styles.pasos}>
+      {columnas.map((c, i) => {
+        const pasado = i < actual;
+        const esActual = i === actual;
+        // El color lo pone la columna, que el equipo configura. Los pasos que
+        // todavía no llegaron van en gris: pintarlos de su color haría ver el
+        // recorrido entero como si ya estuviera hecho.
+        const color = pasado || esActual ? c.color : "var(--ink-3)";
+
+        return (
+          <li key={c.id} className={styles.paso}>
+            {i > 0 && (
+              <span
+                className={styles.pasoLinea}
+                style={{ background: i <= actual ? c.color : "var(--line)" }}
+                aria-hidden
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => onIr(c.id)}
+              disabled={deshabilitado || esActual}
+              className={styles.pasoBtn}
+              title={esActual ? `Está en ${c.name}` : `Mover a ${c.name}`}
+              aria-current={esActual ? "step" : undefined}
+            >
+              <span
+                className={`${styles.pasoDot} ${esActual ? styles.pasoDotActual : ""}`}
+                style={{
+                  background: pasado ? color : esActual ? "var(--surface)" : "var(--surface-3)",
+                  borderColor: color,
+                  color: pasado ? "#fff" : color,
+                }}
+              >
+                {pasado ? <QosIcon name="check" size={12} /> : i + 1}
+              </span>
+              <span className={styles.pasoNombre} style={{ color: esActual ? "var(--ink)" : "var(--ink-3)" }}>
+                {c.name}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
