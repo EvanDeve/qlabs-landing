@@ -15,10 +15,11 @@ import { updateContentPieceColumnAction } from "@/lib/actions/content-pieces";
 import type { ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { diaCorto, estadoPublicacion } from "@/lib/ugc/calendar";
+import { vistaDelPipeline } from "@/lib/ugc/content-meta";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import StaffAvatar from "./StaffAvatar";
 import PipelineFilters, { type FiltrosPipeline } from "./PipelineFilters";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import NewContentPieceModal from "./NewContentPieceModal";
 import ContentColumnModal from "./ContentColumnModal";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -63,6 +64,7 @@ export default function KanbanBoard({
   brands,
   staff,
   filtros,
+  busquedaInicial,
 }: {
   pieces: ContentPiece[];
   /** TODAS las columnas, no solo las de la sección abierta. */
@@ -77,8 +79,11 @@ export default function KanbanBoard({
    * fila con las pestañas.
    */
   filtros: FiltrosPipeline;
+  /** Lo que venía en `?q=`: con qué texto se estaba buscando al entrar a una pieza. */
+  busquedaInicial: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [localPieces, setLocalPieces] = useState(pieces);
   // Guarda EN QUÉ columna se está creando, no un booleano: el "+" de cada
   // columna abre el modal ya posicionado ahí.
@@ -118,7 +123,7 @@ export default function KanbanBoard({
   //
   // Busca en el título Y en el código: el equipo nombra las piezas de las dos
   // formas, y un buscador que ignora el código obliga a leer tarjeta por tarjeta.
-  const [busqueda, setBusqueda] = useState("");
+  const [busqueda, setBusqueda] = useState(busquedaInicial);
   const q = normalizar(busqueda);
   const coincide = (p: ContentPiece) =>
     !q || normalizar(p.title).includes(q) || normalizar(p.code ?? "").includes(q);
@@ -156,6 +161,25 @@ export default function KanbanBoard({
       prev.map((p) => (p.id === pieceId ? { ...p, column_id: newColumnId } : p))
     );
     void updateContentPieceColumnAction(pieceId, newColumnId);
+  }
+
+  /**
+   * Abrir una tarjeta es SALIR del tablero: la pieza tiene URL propia, así que
+   * el query con los filtros se queda atrás. Por eso la vista viaja en
+   * `?volver=` y el botón de regresar de la pieza la reconstruye — antes había
+   * que volver a filtrar después de abrir cada tarjeta.
+   */
+  function abrirPieza(p: ContentPiece) {
+    const vista = new URLSearchParams(vistaDelPipeline(searchParams.toString()));
+    // El buscador no vive en la URL —filtra en el navegador— así que se suma
+    // acá, en el único momento en que hace falta persistirlo.
+    if (busqueda.trim()) vista.set("q", busqueda.trim());
+    else vista.delete("q");
+
+    const volver = vista.toString();
+    router.push(
+      `/ugc/admin/pipeline/${p.id}${volver ? `?volver=${encodeURIComponent(volver)}` : ""}`
+    );
   }
 
   return (
@@ -209,7 +233,7 @@ export default function KanbanBoard({
                 pieces={piezasBuscadas.filter((p) => p.column_id === column.id)}
                 brandById={brandById}
                 staffById={staffById}
-                onSelect={(p) => router.push(`/ugc/admin/pipeline/${p.id}`)}
+                onSelect={abrirPieza}
                 onAdd={setCreatingInColumn}
                 onEditColumn={setColumnModal}
               />

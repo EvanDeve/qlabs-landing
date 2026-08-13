@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
+import { STAFF_ROLE_LABEL, hrefDelPipeline } from "@/lib/ugc/content-meta";
 import ContentPieceEditor from "@/components/ugc/admin/ContentPieceEditor";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,21 @@ export const dynamic = "force-dynamic";
  * Vive bajo /pipeline para que el menú siga marcando Pipeline y el rastro de la
  * barra diga de dónde viene.
  */
-export default async function PiezaPage({ params }: { params: Promise<{ pieceId: string }> }) {
-  const { pieceId } = await params;
+export default async function PiezaPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ pieceId: string }>;
+  /**
+   * `volver` es el query del tablero de donde se vino (pestaña, filtros y
+   * búsqueda). Viaja porque esta pantalla tiene URL propia: sin él, salir de la
+   * pieza devolvía el Pipeline sin filtros y había que armarlos de nuevo.
+   * Puede faltar —se puede llegar acá desde el Dashboard o por un link de
+   * WhatsApp— y entonces se vuelve al tablero sin recortes.
+   */
+  searchParams: Promise<{ volver?: string }>;
+}) {
+  const [{ pieceId }, { volver }] = await Promise.all([params, searchParams]);
 
   // La forma se valida antes de consultar: `id` es uuid, y cualquier otra cosa
   // hace fallar la consulta en Postgres —error 500— en vez de devolver vacío,
@@ -47,6 +60,7 @@ export default async function PiezaPage({ params }: { params: Promise<{ pieceId:
   return (
     <ContentPieceEditor
       piece={piece}
+      volverHref={hrefDelPipeline(volver)}
       columns={columns ?? []}
       brands={brands ?? []}
       staff={(staff ?? []).map((s) => ({

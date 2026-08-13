@@ -20,9 +20,15 @@ export default async function PipelinePage({
     mes?: string;
     seccion?: string;
     archivados?: string;
+    /**
+     * El texto del buscador. NO lo escribe la barra de filtros —el buscador
+     * filtra en el navegador— sino quien vuelve de una pieza: es parte de "el
+     * tablero como lo dejé". Ver `vistaDelPipeline`.
+     */
+    q?: string;
   }>;
 }) {
-  const { brand, owner, priority, fecha, dia, mes, seccion, archivados } = await searchParams;
+  const { brand, owner, priority, fecha, dia, mes, seccion, archivados, q } = await searchParams;
   const diaExacto = parseDia(dia);
   const mesExacto = diaExacto ? null : parseMesCorto(mes);
   // Los tres cortes por fecha son excluyentes, y el orden de precedencia es de
@@ -171,6 +177,7 @@ export default async function PipelinePage({
           verArchivados,
           hayArchivados: archivedHeroIds.size > 0,
         }}
+        busquedaInicial={q ?? ""}
       />
     </div>
   );

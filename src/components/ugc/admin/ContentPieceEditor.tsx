@@ -27,11 +27,14 @@ type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
  */
 export default function ContentPieceEditor({
   piece,
+  volverHref,
   columns,
   brands,
   staff,
 }: {
   piece: ContentPiece;
+  /** El tablero como lo dejó quien entró acá: pestaña, filtros y búsqueda. */
+  volverHref: string;
   columns: ContentColumn[];
   brands: BrandOption[];
   staff: StaffOption[];
@@ -55,7 +58,6 @@ export default function ContentPieceEditor({
   const [saved, setSaved] = useState(false);
   const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
   const current = columns.find((c) => c.id === columnId);
-  const upcoming = nextColumn(columns, columnId);
 
   // Solo los pasos del carril al que pertenece la pieza. Un video no atraviesa
   // las columnas de IT ni las de cronogramas, así que dibujarlas lo haría ver
@@ -63,6 +65,18 @@ export default function ContentPieceEditor({
   const delCarril = columns
     .filter((c) => c.section === current?.section)
     .sort((a, b) => a.position - b.position);
+
+  /**
+   * El paso siguiente DENTRO del carril, y ninguno si la pieza ya está en una
+   * columna terminal.
+   *
+   * Las dos condiciones arreglan el mismo síntoma: un video en Publicado
+   * ofrecía "Avanzar a Sin Empezar" —la primera columna de Cronogramas— porque
+   * el siguiente se buscaba sobre `columns`, que son TODAS las columnas del
+   * tablero pegadas una detrás de otra. Un video terminado no continúa en el
+   * carril de al lado, y desde una columna `is_done` no continúa en ninguno.
+   */
+  const upcoming = current?.is_done ? null : nextColumn(delCarril, columnId);
 
   useEffect(() => {
     if (!saved) return;
@@ -109,7 +123,7 @@ export default function ContentPieceEditor({
     // La pieza dejó de existir, así que esta URL también: volver al tablero es
     // lo único que tiene sentido. `replace` y no `push` para que el botón de
     // atrás no traiga de vuelta una página que ya da 404.
-    router.replace("/ugc/admin/pipeline");
+    router.replace(volverHref);
   }
 
   return (
@@ -118,7 +132,7 @@ export default function ContentPieceEditor({
         {/* Botón y no link de texto: es la salida de una pantalla completa, no
             un "ver más" dentro de una tarjeta. Como link se leía igual que el
             resto del texto y no parecía la forma de volver. */}
-        <Link href="/ugc/admin/pipeline" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}>
+        <Link href={volverHref} className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}>
           <QosIcon name="chevL" size={14} /> Volver al Pipeline
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", margin: "12px 0 2px" }}>
@@ -376,6 +390,11 @@ function Pasos({
       {columnas.map((c, i) => {
         const pasado = i < actual;
         const esActual = i === actual;
+        // Estar EN una columna terminal es haberla cumplido: un video en
+        // Publicado ya se publicó. Sin esto el último paso se dibujaba con su
+        // número y sin palomita —igual que los que faltan— y el recorrido se
+        // leía incompleto justo cuando está entero.
+        const hecho = pasado || (esActual && c.is_done);
         // El color lo pone la columna, que el equipo configura. Los pasos que
         // todavía no llegaron van en gris: pintarlos de su color haría ver el
         // recorrido entero como si ya estuviera hecho.
@@ -401,12 +420,20 @@ function Pasos({
               <span
                 className={`${styles.pasoDot} ${esActual ? styles.pasoDotActual : ""}`}
                 style={{
-                  background: pasado ? color : esActual ? "var(--surface)" : "var(--surface-3)",
+                  background: hecho ? color : esActual ? "var(--surface)" : "var(--surface-3)",
                   borderColor: color,
-                  color: pasado ? "#fff" : color,
+                  color: hecho ? "#fff" : color,
+                  // El halo del paso actual lo saca la clase de `currentColor`,
+                  // y en un paso cumplido currentColor es blanco: sobre la
+                  // tarjeta blanca el halo desaparecería. Se repone con el
+                  // color de la columna.
+                  boxShadow:
+                    esActual && hecho
+                      ? `0 0 0 4px color-mix(in srgb, ${color} 18%, transparent)`
+                      : undefined,
                 }}
               >
-                {pasado ? <QosIcon name="check" size={12} /> : i + 1}
+                {hecho ? <QosIcon name="check" size={12} /> : i + 1}
               </span>
               <span className={styles.pasoNombre} style={{ color: esActual ? "var(--ink)" : "var(--ink-3)" }}>
                 {c.name}

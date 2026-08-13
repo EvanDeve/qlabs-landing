@@ -77,6 +77,52 @@ export function parseDia(valor: string | undefined): string | null {
 }
 
 /**
+ * Las claves de la URL que definen CÓMO quedó el tablero: qué pestaña, qué
+ * filtros y qué se buscó.
+ *
+ * Existen como lista porque entrar a una pieza es salir del tablero: la pieza
+ * tiene URL propia, así que el query con los filtros se queda atrás y volver
+ * dejaba el Pipeline en blanco. El equipo tenía que volver a filtrar después de
+ * abrir CADA tarjeta.
+ *
+ * `q` es el buscador. No vive en la URL mientras se escribe —filtra en el
+ * navegador, ver KanbanBoard— pero sí viaja acá: para quien vuelve, que se le
+ * borre el texto buscado es exactamente el mismo problema que perder un filtro.
+ */
+const CLAVES_VISTA_PIPELINE = [
+  "seccion",
+  "brand",
+  "owner",
+  "priority",
+  "fecha",
+  "dia",
+  "mes",
+  "archivados",
+  "q",
+] as const;
+
+/**
+ * El query del tablero recortado a esas claves, para llevárselo al entrar a una
+ * pieza. La lista blanca es lo que evita que un `?volver=` escrito a mano meta
+ * cualquier cosa en la URL a la que se regresa.
+ */
+export function vistaDelPipeline(query: string): string {
+  const params = new URLSearchParams(query);
+  const vista = new URLSearchParams();
+  for (const clave of CLAVES_VISTA_PIPELINE) {
+    const valor = params.get(clave);
+    if (valor) vista.set(clave, valor);
+  }
+  return vista.toString();
+}
+
+/** El tablero tal como lo dejó quien entró a la pieza. */
+export function hrefDelPipeline(volver: string | undefined): string {
+  const vista = vistaDelPipeline(volver ?? "");
+  return vista ? `/ugc/admin/pipeline?${vista}` : "/ugc/admin/pipeline";
+}
+
+/**
  * El filtro traducido a condiciones sobre `publish_date`, en días de Costa Rica.
  *
  * Devuelve días sueltos ('yyyy-MM-dd') porque la columna es `date`: mandarle un
