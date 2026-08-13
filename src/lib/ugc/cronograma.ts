@@ -88,6 +88,38 @@ export function horaCorta(hora: string | null): string {
 }
 
 /**
+ * Cuánto guion tiene escrito un video del cronograma.
+ *
+ * Existe para que armar un mes se pueda recorrer de un vistazo. La pregunta
+ * constante al escribir diez videos es "¿cuáles me faltan?", y hasta ahora solo
+ * se contestaba abriendo uno por uno.
+ *
+ * Los cuatro campos cuentan por igual, incluido el hook. No es que el hook
+ * valga más: es que un guion sin hook no está listo para grabarse, igual que
+ * uno sin cierre.
+ *
+ * Un campo con solo espacios cuenta como vacío — si no, un enter suelto haría
+ * figurar un guion como escrito.
+ */
+export type EstadoDelGuion = { escritos: number; total: number; estado: "vacio" | "parcial" | "completo" };
+
+export function estadoDelGuion(video: {
+  script_hook: string | null;
+  script_idea: string | null;
+  script_desarrollo: string | null;
+  script_cta: string | null;
+}): EstadoDelGuion {
+  const campos = [video.script_hook, video.script_idea, video.script_desarrollo, video.script_cta];
+  const escritos = campos.filter((c) => (c ?? "").trim().length > 0).length;
+
+  return {
+    escritos,
+    total: campos.length,
+    estado: escritos === 0 ? "vacio" : escritos === campos.length ? "completo" : "parcial",
+  };
+}
+
+/**
  * El `?mes=` del filtro del pipeline, que llega como 'yyyy-MM'.
  *
  * Es otro formato que `parseMes`: un `<input type="month">` manda el mes sin

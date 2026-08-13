@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import type { Database } from "@/lib/database.types";
 import { guardarVideoAction, borrarVideoAction } from "@/lib/actions/cronogramas";
-import { horaCorta } from "@/lib/ugc/cronograma";
+import { horaCorta, estadoDelGuion } from "@/lib/ugc/cronograma";
 import { diaCorto } from "@/lib/ugc/calendar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
@@ -20,6 +20,42 @@ type Item = Database["public"]["Tables"]["calendar_month_items"]["Row"];
  * detalle de a un video por vez. Con todo abierto son diez pantallas de scroll
  * y se pierde la vista del mes, que es justo lo que el cronograma viene a dar.
  */
+/**
+ * En qué anda el guion de este video, leído con la fila cerrada.
+ *
+ * Es lo que convierte la pantalla en algo que se puede recorrer: armando diez
+ * videos, la pregunta constante es "¿cuáles me faltan por escribir?", y sin
+ * esto solo se contestaba abriendo uno por uno.
+ *
+ * Completo no lleva contador —"4/4" no agrega nada— y lo que falta sí lo lleva,
+ * porque no es lo mismo que falte un campo a que falten tres.
+ */
+function GuionChip({ item }: { item: Item }) {
+  const { escritos, total, estado } = estadoDelGuion(item);
+
+  if (estado === "completo") {
+    return (
+      <span className={styles.badgeSt} style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
+        <QosIcon name="check" size={12} /> Guion listo
+      </span>
+    );
+  }
+
+  if (estado === "vacio") {
+    return (
+      <span className={styles.chip} style={{ color: "var(--ink-3)" }}>
+        Sin guion
+      </span>
+    );
+  }
+
+  return (
+    <span className={styles.badgeSt} style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>
+      Guion {escritos}/{total}
+    </span>
+  );
+}
+
 export default function CronogramaVideoRow({ item, numero }: { item: Item; numero: number }) {
   const [abierto, setAbierto] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -54,6 +90,8 @@ export default function CronogramaVideoRow({ item, numero }: { item: Item; numer
         <span className={`${styles.videoTitulo} ${titulo ? "" : styles.videoSinTitulo}`}>
           {titulo || "Sin título todavía"}
         </span>
+
+        <GuionChip item={item} />
 
         {/* El comentario del Hero se ve con la fila cerrada: si hay que
             recorrer los videos abriéndolos uno por uno para encontrarlo, el

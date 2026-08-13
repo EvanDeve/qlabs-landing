@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { agregarVideoAction, borrarCronogramaAction } from "@/lib/actions/cronogramas";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
-import { parseMes, nombreDeMes } from "@/lib/ugc/cronograma";
+import { parseMes, nombreDeMes, estadoDelGuion } from "@/lib/ugc/cronograma";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CronogramaVideoRow from "@/components/ugc/admin/CronogramaVideoRow";
 import CronogramaShareLink from "@/components/ugc/admin/CronogramaShareLink";
@@ -71,6 +71,10 @@ export default async function ArmarCronogramaPage({
   // borrado: sin esto, la única frase posible sería un "no se puede deshacer"
   // que no dice lo que la persona necesita saber.
   const enElPipeline = items.filter((i) => i.piece_id).length;
+  // Cuántos guiones faltan por terminar. Es el dato que decide si el mes se
+  // puede mandar a revisar: un cronograma con la mitad de los guiones a medias
+  // no está listo para que lo vea el cliente.
+  const guionesPendientes = items.filter((i) => estadoDelGuion(i).estado !== "completo").length;
 
   return (
     <>
@@ -115,6 +119,17 @@ export default async function ArmarCronogramaPage({
           {sinFecha > 0 && (
             <span className={styles.chip} style={{ background: "var(--warn-bg)", color: "var(--warn)", borderColor: "var(--warn-line)" }}>
               <QosIcon name="alert" size={12} /> {sinFecha} sin fecha
+            </span>
+          )}
+          {guionesPendientes > 0 && (
+            <span className={styles.chip} style={{ background: "var(--warn-bg)", color: "var(--warn)", borderColor: "var(--warn-line)" }}>
+              <QosIcon name="doc" size={12} />{" "}
+              {guionesPendientes === 1 ? "1 guion sin terminar" : `${guionesPendientes} guiones sin terminar`}
+            </span>
+          )}
+          {items.length > 0 && guionesPendientes === 0 && (
+            <span className={styles.chip} style={{ background: "var(--ok-bg)", color: "var(--ok)", borderColor: "var(--ok-line)" }}>
+              <QosIcon name="check" size={12} /> Todos los guiones listos
             </span>
           )}
           {comentados > 0 && (
