@@ -1941,6 +1941,22 @@
   color: var(--b-600);
   opacity: 0.75;
 }
+/* El detalle de una pieza: guion a la izquierda, ficha al costado. */
+.pieceGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+/* `minmax(0, …)` en las dos columnas y no `1.6fr 1fr` a secas: el default de
+   un item de grid es `min-width: auto`, así que un textarea o un link largo del
+   guion ensancha su columna y empuja la ficha fuera de pantalla. */
+@media (max-width: 1000px) {
+  .pieceGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---- Cronogramas ---- */
 .cronoRow {
   display: flex;

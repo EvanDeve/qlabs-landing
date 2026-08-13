@@ -74,13 +74,19 @@ export default async function CronogramasPage() {
         </div>
       </div>
 
-      {/* Lo que el equipo necesita ver al entrar acá a fin de mes: a quién le
-          falta el mes que viene. Sin esto hay que cruzar mentalmente la lista
-          de Heroes contra la de cronogramas. */}
+      {/* A quién le falta el mes que viene. Sin esto hay que cruzar mentalmente
+          la lista de Heroes contra la de cronogramas.
+          El encabezado ya NO nombra el mes: decía "Sin cronograma de septiembre
+          2026" y el equipo ya sabe desde cuándo corre esto, así que repetirlo
+          en el título solo lo ataba a un mes que en octubre iba a leerse viejo.
+          El mes se dice una vez, en la línea de abajo. */}
       {heroesSinMesSiguiente.length > 0 && (
         <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "18px" }}>
           <div className={styles.sectionHead}>
-            <h2>Sin cronograma de {nombreDeMes(siguiente)}</h2>
+            <h2>Heroes sin cronograma del próximo mes</h2>
+            <span className={styles.chip} style={{ marginLeft: "10px" }}>
+              {heroesSinMesSiguiente.length}
+            </span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "7px", marginTop: "10px" }}>
             {heroesSinMesSiguiente.map((h) => (
@@ -94,7 +100,7 @@ export default async function CronogramasPage() {
 
       {porMes.size === 0 ? (
         <div className={styles.empty}>
-          Todavía no hay cronogramas. Empezá por el de {nombreDeMes(siguiente)}.
+          Todavía no hay cronogramas. Creá el primero para empezar a armar el mes.
         </div>
       ) : (
         [...porMes.entries()].map(([mes, filas]) => (

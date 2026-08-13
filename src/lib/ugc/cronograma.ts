@@ -102,6 +102,19 @@ export function parseMesCorto(valor: string | undefined): string | null {
 }
 
 /**
+ * El mes que manda un formulario, venga como 'yyyy-MM' o como 'yyyy-MM-01'.
+ *
+ * Un `<input type="month">` manda lo primero y las rutas del cronograma usan lo
+ * segundo, que es la clave de la tabla. Normalizar acá evita que cada server
+ * action tenga que acordarse de cuál de los dos le llega.
+ */
+export function mesDeFormulario(valor: string | undefined): string | null {
+  const corto = parseMesCorto(valor);
+  if (corto) return `${corto}-01`;
+  return parseMes(valor);
+}
+
+/**
  * El primer y último día de un mes 'yyyy-MM', para comparar contra una columna
  * `date`.
  *

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { Database } from "@/lib/database.types";
 import { updateContentPieceAction, updateContentPieceColumnAction, deleteContentPieceAction } from "@/lib/actions/content-pieces";
@@ -11,21 +13,30 @@ import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
 
-export default function ContentPieceDrawer({
+/**
+ * El detalle de una pieza, a pantalla completa.
+ *
+ * Era un panel lateral. El guion lo volvió insostenible: con cuatro campos de
+ * texto largo más los quince de la ficha, editar un video era hacer scroll en
+ * una columna de 420px mientras el tablero de atrás no servía para nada.
+ *
+ * A pantalla completa el guion se lleva la columna ancha —es lo que se escribe
+ * y se relee— y la ficha queda al costado. Además la pieza pasa a tener URL
+ * propia, que es lo que deja que el Dashboard mande directo acá en vez de al
+ * expediente del Hero.
+ */
+export default function ContentPieceEditor({
   piece,
   columns,
   brands,
   staff,
-  onClose,
-  onDeleted,
 }: {
   piece: ContentPiece;
   columns: ContentColumn[];
   brands: BrandOption[];
   staff: StaffOption[];
-  onClose: () => void;
-  onDeleted: () => void;
 }) {
+  const router = useRouter();
   const [columnId, setColumnId] = useState(piece.column_id);
   // El Hero vive en estado y no solo en el <select> para que el encabezado del
   // drawer diga la marca elegida apenas se cambia, y no la que tenía al abrir.
@@ -79,50 +90,77 @@ export default function ContentPieceDrawer({
 
   async function handleDelete() {
     await deleteContentPieceAction(piece.id);
-    onDeleted();
+    // La pieza dejó de existir, así que esta URL también: volver al tablero es
+    // lo único que tiene sentido. `replace` y no `push` para que el botón de
+    // atrás no traiga de vuelta una página que ya da 404.
+    router.replace("/ugc/admin/pipeline");
   }
 
   return (
-    <div className={styles.drawerOverlay} onClick={onClose}>
-      <aside className={styles.drawer} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.drawerHd}>
-          <div>
-            {code && <span className={styles.sopTag}>{code}</span>}
-            <h2 style={{ fontSize: "18px", marginTop: "6px" }}>{title}</h2>
-            <p style={{ fontSize: "13px", color: "var(--ink-2)" }}>{brandName}</p>
+    <>
+      <div style={{ marginBottom: "18px" }}>
+        <Link href="/ugc/admin/pipeline" className={styles.linkMore} style={{ marginLeft: "-8px" }}>
+          <QosIcon name="chevL" size={13} /> Pipeline
+        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", margin: "6px 0 2px" }}>
+          {code && <span className={styles.sopTag}>{code}</span>}
+          <h2 className={styles.sectionHeadBig}>{title}</h2>
+        </div>
+        <p className={styles.formNote}>{brandName}</p>
+      </div>
+
+      <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "18px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+          <span className={styles.sopTag}>{current?.name ?? "Sin columna"}</span>
+          {upcoming && (
+            <button
+              type="button"
+              onClick={handleAdvance}
+              disabled={isPending}
+              className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
+            >
+              Avanzar a {upcoming.name} <QosIcon name="chevR" size={13} />
+            </button>
+          )}
+        </div>
+        {current?.sop_code && (
+          <p style={{ marginTop: "8px", fontSize: "11.5px", color: "var(--ink-3)" }}>
+            {current.sop_code}
+            {current.owner_role ? ` · Responsable: ${current.owner_role}` : ""}
+          </p>
+        )}
+      </div>
+
+      {/* Dos columnas: el guion —lo que se escribe y se relee— se lleva la
+          ancha, y la ficha queda al costado. En una sola columna el guion
+          empujaba los quince campos de metadatos fuera de pantalla, que es
+          justamente lo que hacía incómodo el panel lateral. */}
+      <form onSubmit={handleSave} className={styles.pieceGrid}>
+        <input type="hidden" name="id" value={piece.id} />
+
+        <div>
+          <GuionSection piece={piece} approval={approval} />
+
+          {/* Las notas de producción van acá abajo y no en la ficha: se
+              escriben junto con el guion —locación, utilería, quién sale— y no
+              al configurar la pieza. */}
+          <div className={styles.field}>
+            <label htmlFor="piece-notes">Apuntes</label>
+            <textarea
+              id="piece-notes"
+              name="notes"
+              rows={4}
+              defaultValue={piece.notes ?? ""}
+              placeholder="Locación, utilería, quién sale…"
+              className={styles.inp}
+            />
           </div>
-          <button type="button" onClick={onClose} className={styles.drawerClose}>
-            <QosIcon name="x" size={16} />
-          </button>
         </div>
 
-        <div className={styles.drawerBody}>
-          <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-              <span className={styles.sopTag}>{current?.name ?? "Sin columna"}</span>
-              {upcoming && (
-                <button
-                  type="button"
-                  onClick={handleAdvance}
-                  disabled={isPending}
-                  className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
-                >
-                  Avanzar a {upcoming.name} <QosIcon name="chevR" size={13} />
-                </button>
-              )}
-            </div>
-            {current?.sop_code && (
-              <p style={{ marginTop: "8px", fontSize: "11.5px", color: "var(--ink-3)" }}>
-                {current.sop_code}
-                {current.owner_role ? ` · Responsable: ${current.owner_role}` : ""}
-              </p>
-            )}
+        <div className={`${styles.card} ${styles.cardPad}`}>
+          <div className={styles.sectionHead}>
+            <h2>Ficha</h2>
           </div>
-
-          <form onSubmit={handleSave}>
-            <input type="hidden" name="id" value={piece.id} />
-
-            <GuionSection piece={piece} approval={approval} />
 
             {/* El nombre de la tarjeta se corrige acá: antes quedaba fijo desde
                 que se creaba la pieza —o desde lo que entendió McLovin por
@@ -261,30 +299,30 @@ export default function ContentPieceDrawer({
             />
             <LinkField label="Link video final" name="final_url" value={piece.final_url} icon="play" />
 
-            <div className={styles.field}>
-              <label>Apuntes</label>
-              <textarea name="notes" rows={3} defaultValue={piece.notes ?? ""} className={styles.inp} />
-            </div>
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              {/* El drawer no se cierra al guardar, así que sin este aviso no
-                  había ninguna señal de que el cambio entró. */}
+            {/* La página no se cierra al guardar, así que sin este aviso no hay
+                ninguna señal de que el cambio entró. */}
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "4px" }}>
               <button type="submit" disabled={isPending} className={`${styles.btn} ${styles.btnPrimary}`}>
                 {isPending ? "Guardando…" : saved ? "Guardado" : "Guardar"}
                 {saved && !isPending && <QosIcon name="check" size={15} />}
               </button>
+            </div>
+
+            {/* Apartado del guardar y al pie de la ficha: es la única acción
+                irreversible de la pantalla y no tiene por qué estar al lado de
+                la que se usa veinte veces por día. */}
+            <div style={{ marginTop: "22px", paddingTop: "16px", borderTop: "1px solid var(--line)" }}>
               <ConfirmDeleteButton
                 action={handleDelete}
-                confirmMessage={`¿Borrar la pieza "${title}"? No se puede deshacer.`}
-                className={`${styles.btn} ${styles.btnDanger}`}
+                confirmMessage={`¿Borrar la pieza "${title}"? Se pierde su guion y no se puede deshacer.`}
+                className={`${styles.btn} ${styles.btnGhostDanger} ${styles.btnSm}`}
               >
                 Borrar pieza
               </ConfirmDeleteButton>
             </div>
-          </form>
         </div>
-      </aside>
-    </div>
+      </form>
+    </>
   );
 }
 

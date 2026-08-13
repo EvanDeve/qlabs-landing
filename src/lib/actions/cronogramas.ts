@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ContentPlatform } from "@/lib/database.types";
-import { parseMes, nombreDeMes } from "@/lib/ugc/cronograma";
+import { parseMes, mesDeFormulario, nombreDeMes } from "@/lib/ugc/cronograma";
 
 /**
  * El cronograma mensual de un Hero.
@@ -48,7 +48,9 @@ export async function crearCronogramaAction(formData: FormData) {
   if (!supabase) return;
 
   const heroId = String(formData.get("hero_id") ?? "").trim();
-  const mes = parseMes(String(formData.get("month") ?? "").trim());
+  // El campo manda 'yyyy-MM'; la tabla guarda el día 1. mesDeFormulario acepta
+  // las dos formas para que un formulario viejo tampoco se rompa.
+  const mes = mesDeFormulario(String(formData.get("month") ?? "").trim());
   if (!heroId || !mes) return;
 
   // upsert y no insert: si el mes ya existe —lo pudo crear el botón de aprobar

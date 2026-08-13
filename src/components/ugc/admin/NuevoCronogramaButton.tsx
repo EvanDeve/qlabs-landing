@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { crearCronogramaAction } from "@/lib/actions/cronogramas";
-import { mesesAlrededor, nombreDeMes } from "@/lib/ugc/cronograma";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
@@ -21,7 +20,6 @@ export default function NuevoCronogramaButton({
   mesSugerido: string;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const meses = mesesAlrededor();
 
   if (!abierto) {
     return (
@@ -53,15 +51,20 @@ export default function NuevoCronogramaButton({
             </select>
           </div>
 
+          {/* Campo de mes y no un <select> de nombres: la lista era una ventana
+              fija de meses alrededor del actual, o sea un tope arbitrario que
+              impedía cargar cualquier mes fuera de él. Además es el mismo
+              control que el filtro del pipeline y el selector del Dashboard. */}
           <div className={styles.field}>
             <label htmlFor="crono-mes">Mes</label>
-            <select id="crono-mes" name="month" defaultValue={mesSugerido} className={styles.inp}>
-              {meses.map((m) => (
-                <option key={m} value={m} style={{ textTransform: "capitalize" }}>
-                  {nombreDeMes(m)}
-                </option>
-              ))}
-            </select>
+            <input
+              id="crono-mes"
+              type="month"
+              name="month"
+              defaultValue={mesSugerido.slice(0, 7)}
+              required
+              className={styles.inp}
+            />
           </div>
 
           <p className={styles.formNote} style={{ marginBottom: "14px" }}>

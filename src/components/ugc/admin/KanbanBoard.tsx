@@ -18,7 +18,7 @@ import { diaCorto, estadoPublicacion } from "@/lib/ugc/calendar";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import StaffAvatar from "./StaffAvatar";
 import PipelineFilters, { type FiltrosPipeline } from "./PipelineFilters";
-import ContentPieceDrawer from "./ContentPieceDrawer";
+import { useRouter } from "next/navigation";
 import NewContentPieceModal from "./NewContentPieceModal";
 import ContentColumnModal from "./ContentColumnModal";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
@@ -78,8 +78,8 @@ export default function KanbanBoard({
    */
   filtros: FiltrosPipeline;
 }) {
+  const router = useRouter();
   const [localPieces, setLocalPieces] = useState(pieces);
-  const [selectedPiece, setSelectedPiece] = useState<ContentPiece | null>(null);
   // Guarda EN QUÉ columna se está creando, no un booleano: el "+" de cada
   // columna abre el modal ya posicionado ahí.
   const [creatingInColumn, setCreatingInColumn] = useState<string | null>(null);
@@ -209,27 +209,13 @@ export default function KanbanBoard({
                 pieces={piezasBuscadas.filter((p) => p.column_id === column.id)}
                 brandById={brandById}
                 staffById={staffById}
-                onSelect={setSelectedPiece}
+                onSelect={(p) => router.push(`/ugc/admin/pipeline/${p.id}`)}
                 onAdd={setCreatingInColumn}
                 onEditColumn={setColumnModal}
               />
             ))}
           </div>
         </DndContext>
-      )}
-
-      {selectedPiece && (
-        <ContentPieceDrawer
-          piece={selectedPiece}
-          columns={columns}
-          brands={brands}
-          staff={staff}
-          onClose={() => setSelectedPiece(null)}
-          onDeleted={() => {
-            setLocalPieces((prev) => prev.filter((p) => p.id !== selectedPiece.id));
-            setSelectedPiece(null);
-          }}
-        />
       )}
 
       {creatingInColumn && (

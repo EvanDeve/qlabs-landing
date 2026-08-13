@@ -386,7 +386,11 @@ export default async function AdminDashboardPage({
             ))}
             {attentionItems.length > 0 ? (
               attentionItems.map(({ piece, reason, late }) => (
-                <Link key={piece.id} href={`/ugc/admin/heroes/${piece.brand_id}`} className={styles.attnItem}>
+                // A la PIEZA y no al expediente del Hero. La fila habla de un
+                // video concreto —"esperando aprobación del cliente"— y hasta
+                // el 2026-08-12 el clic caía en la ficha del Hero, así que para
+                // hacer algo había que ir a buscar la tarjeta al tablero.
+                <Link key={piece.id} href={`/ugc/admin/pipeline/${piece.id}`} className={styles.attnItem}>
                   <div className={styles.attnBar} style={{ background: late ? "var(--risk)" : "var(--warn)" }} />
                   <div className={styles.attnBody}>
                     <div className={styles.attnTitle}>{piece.title}</div>
