@@ -157,10 +157,9 @@ export default async function PipelinePage({
     // única pantalla donde el ancho ES la funcionalidad: cada columna que entra
     // sin scrollear es una etapa menos que hay que ir a buscar.
     <div className={styles.pipeWide}>
-      {/* Los filtros los renderiza KanbanBoard y no esta página: así los
-          botones "Nueva pieza"/"Nueva columna" —que necesitan su estado— pueden
-          compartir fila con las pestañas, y la barra entra en dos líneas en
-          vez de tres. */}
+      {/* Los filtros los renderiza KanbanBoard y no esta página: así el botón
+          "Nueva pieza" —que necesita su estado— puede compartir fila con las
+          pestañas, y la barra entra en dos líneas en vez de tres. */}
       <KanbanBoard
         pieces={contentPieces}
         columns={columns ?? []}

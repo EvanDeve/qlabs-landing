@@ -71,7 +71,7 @@ export default function PipelineFilters({
   onBusqueda: (valor: string) => void;
   /** Cuántas coincidencias quedaron en la otra pestaña. 0 si no hay que avisar. */
   fueraDeLaPestana: number;
-  /** "Nueva pieza" / "Nueva columna": viven en KanbanBoard, que tiene su estado. */
+  /** "Nueva pieza": vive en KanbanBoard, que tiene su estado. */
   acciones: ReactNode;
 }) {
   const router = useRouter();
@@ -114,7 +114,7 @@ export default function PipelineFilters({
               key={s.id}
               type="button"
               onClick={() => setFilter("seccion", s.id === SECCION_POR_DEFECTO ? "" : s.id)}
-              className={`${styles.btn} ${styles.btnSm} ${seccion === s.id ? styles.btnPrimary : styles.btnGhost}`}
+              className={`${styles.pipeTab} ${seccion === s.id ? styles.pipeTabOn : ""}`}
               aria-current={seccion === s.id ? "page" : undefined}
             >
               {s.label}
@@ -123,7 +123,7 @@ export default function PipelineFilters({
           <button
             type="button"
             onClick={() => setFilter("seccion", "todo")}
-            className={`${styles.btn} ${styles.btnSm} ${seccion === null ? styles.btnPrimary : styles.btnGhost}`}
+            className={`${styles.pipeTab} ${seccion === null ? styles.pipeTabOn : ""}`}
             aria-current={seccion === null ? "page" : undefined}
           >
             Todo

@@ -183,7 +183,10 @@ export default function KanbanBoard({
   }
 
   return (
-    <div>
+    // kbRoot no pinta nada: es el eslabón del medio que deja pasar el alto de
+    // .content hasta .kanban, que es quien scrollea. Ver la cadena de flex en
+    // qos.module.css.
+    <div className={styles.kbRoot}>
       <PipelineFilters
         brands={brands}
         staff={staff}
@@ -194,34 +197,38 @@ export default function KanbanBoard({
         onBusqueda={setBusqueda}
         fueraDeLaPestana={fueraDeLaPestana}
         acciones={
-          <>
-            <button
-              type="button"
-              onClick={() => setCreatingInColumn(visibleColumns[0]?.id ?? null)}
-              disabled={visibleColumns.length === 0}
-              className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`}
-            >
-              <QosIcon name="plus" size={14} />
-              Nueva pieza
-            </button>
-            <button
-              type="button"
-              onClick={() => setColumnModal("nueva")}
-              className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
-            >
-              <QosIcon name="columns" size={14} />
-              Nueva columna
-            </button>
-          </>
+          // "Nueva columna" ya no vive acá: se mudó al final del tablero, donde
+          // además se ve dónde va a caer la columna nueva.
+          <button
+            type="button"
+            onClick={() => setCreatingInColumn(visibleColumns[0]?.id ?? null)}
+            disabled={visibleColumns.length === 0}
+            className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`}
+          >
+            <QosIcon name="plus" size={14} />
+            Nueva pieza
+          </button>
         }
       />
 
       {visibleColumns.length === 0 ? (
         // Pasa si alguien borró todas las columnas de la sección. Sin esto el
         // tablero queda en blanco y parece que se rompió.
+        //
+        // El botón va acá adentro y no solo en el texto: desde que "Nueva
+        // columna" vive al final del tablero, una sección sin columnas se
+        // quedaba sin ningún lugar donde crear la primera.
         <p className={styles.empty}>
-          Esta sección no tiene columnas. Creá una con &ldquo;Nueva columna&rdquo; o mirá el tablero
-          completo en &ldquo;Todo&rdquo;.
+          Esta sección no tiene columnas. Mirá el tablero completo en &ldquo;Todo&rdquo;, o creá la
+          primera:{" "}
+          <button
+            type="button"
+            onClick={() => setColumnModal("nueva")}
+            className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+          >
+            <QosIcon name="columns" size={14} />
+            Nueva columna
+          </button>
         </p>
       ) : (
         <DndContext id="kanban-board" sensors={sensors} onDragEnd={handleDragEnd}>
@@ -238,6 +245,17 @@ export default function KanbanBoard({
                 onEditColumn={setColumnModal}
               />
             ))}
+            {/* El hueco al final del tablero. Va DENTRO del DndContext y no
+                después: si viviera afuera, sería otro elemento en la fila y el
+                scroll horizontal lo dejaría fuera del área que se arrastra. */}
+            <button
+              type="button"
+              onClick={() => setColumnModal("nueva")}
+              className={styles.kcolNew}
+            >
+              <QosIcon name="plus" size={16} />
+              Nueva columna
+            </button>
           </div>
         </DndContext>
       )}
@@ -297,7 +315,9 @@ function Column({
     <div ref={setNodeRef} className={`${styles.kcol} ${isOver ? styles.kcolDropHi : ""}`}>
       <div className={styles.kcolHead}>
         <span className={styles.dot} style={{ background: column.color }} />
-        <span className={styles.kcName}>{column.name}</span>
+        <span className={styles.kcName} title={column.name}>
+          {column.name}
+        </span>
         <span className={styles.kcCount}>{pieces.length}</span>
         {column.sop_code && <span className={styles.sopTag}>{column.sop_code}</span>}
         <button

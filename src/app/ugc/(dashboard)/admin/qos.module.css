@@ -760,6 +760,7 @@
   background: var(--b-50);
   color: var(--b-600);
   border: 1px solid var(--b-100);
+  flex-shrink: 0;
 }
 .riskPill {
   display: inline-flex;
@@ -1136,10 +1137,39 @@
   align-items: center;
   gap: 10px;
 }
+/* Las secciones del tablero, como un control segmentado y no como cuatro
+   botones sueltos: son opciones de UNA misma pregunta —qué parte del flujo
+   estoy mirando—, no cuatro acciones distintas. Encerradas en un riel se leen
+   así de una, y además ocupan bastante menos ancho, que es lo que le hacía
+   falta a la barra para no comerse tres filas. */
 .pipeTabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+}
+/* OJO con el prefijo .qosRoot: el reset `.qosRoot button { background:none;
+   border:none }` le gana a cualquier selector de una sola clase y la pestaña
+   activa saldría sin su fondo violeta. Mismo caso que .kcAdd más abajo. */
+.qosRoot .pipeTab {
+  padding: 6px 14px;
+  border-radius: var(--r-full);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--t-fast);
+}
+.qosRoot .pipeTab:hover {
+  color: var(--ink);
+}
+.qosRoot .pipeTabOn {
+  background: var(--b-500);
+  color: #fff;
+  box-shadow: var(--sh-sm);
 }
 /* "o el día", entre el preset y el selector de fecha. Va en minúscula y en gris
    para leerse como parte del control y no como una etiqueta de campo. */
@@ -1231,6 +1261,10 @@
 .pipeSearch button:hover {
   color: var(--ink);
 }
+/* OJO: .kanban / .kcol / .kcolHead / .kcolBody las comparten DOS tableros — el
+   del equipo (/ugc/admin/pipeline) y el del creador (CreatorTaskBoard). Lo de
+   acá es la base que usan los dos; lo que cambia solo para el del equipo va más
+   abajo, bajo `.pipeWide .kcol`. */
 .kanban {
   display: flex;
   gap: 14px;
@@ -1244,16 +1278,68 @@
   border-radius: var(--r-lg);
   display: flex;
   flex-direction: column;
-  /* El 230 estaba calibrado para una barra de control de TRES filas. Ahora son
-     dos, así que las columnas pueden estirarse otros 25px y mostrar una tarjeta
-     más antes de obligar a scrollear dentro de la columna. */
   max-height: calc(100vh - 205px);
   transition: var(--t-fast);
+}
+
+/* El tablero del equipo, a ancho y alto completos.
+   ANCHO: las columnas se reparten lo que hay en vez de medir 262px fijos. Con
+   cuatro columnas en un monitor de 1920 quedaban ~470px de nada a la derecha, y
+   agregar una quinta no usaba ese hueco: arrancaba a scrollear. Con `1 1 0` las
+   cuatro se estiran hasta llenar y cada columna nueva las angosta de a poco
+   hasta el piso de 250px; recién ahí aparece el scroll horizontal. El techo de
+   400px es para que una sección de una o dos columnas no las estire a media
+   pantalla — una tarjeta de 800px con un título de 13px es puro vacío.
+   ALTO: lo reparte la cadena de flex (.content → .pipeWide → .kbRoot → .kanban)
+   en vez del `calc(100vh - 205px)` de la base, que estaba calibrado a ojo
+   contra la altura de la barra de filtros y quedaba viejo cada vez que la barra
+   cambiaba de filas. `min-height: 0` es obligatorio en los dos: sin él un hijo
+   flex no achica por debajo de su contenido, y el scroll se lo lleva la página
+   entera en vez de cada columna. */
+.pipeWide .kanban {
+  flex: 1;
+  min-height: 0;
+}
+.pipeWide .kcol {
+  flex: 1 1 0;
+  min-width: 250px;
+  max-width: 400px;
+  max-height: none;
+  min-height: 0;
 }
 .kcolDropHi {
   background: var(--b-50);
   border-color: var(--b-300);
   box-shadow: var(--sh-glow);
+}
+/* "Nueva columna", al final del tablero y con borde punteado.
+   Salió de la barra de arriba: ahí competía por espacio con los filtros y no
+   decía nada sobre DÓNDE iba a caer la columna nueva. Acá se ve que va al
+   final, que es exactamente lo que hace.
+   Angosta y sin `flex-grow`: es un hueco, no una etapa del flujo, y estirarla
+   como a una columna de verdad le daría un peso que no tiene. */
+.qosRoot .kcolNew {
+  flex: 0 0 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 16px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .kcolNew:hover {
+  border-color: var(--b-400);
+  background: var(--b-50);
+  color: var(--b-600);
 }
 .kcolHead {
   display: flex;
@@ -1261,10 +1347,19 @@
   gap: 8px;
   padding: 12px 13px 10px;
 }
+/* Una sola línea, con puntos suspensivos si no entra. Desde que las columnas se
+   angostan al agregar más, un nombre largo ("Cronogramas aprobados") se
+   envolvía y ESA columna arrancaba sus tarjetas 15px más abajo que las demás:
+   la primera fila del tablero quedaba en escalera. El nombre completo sigue
+   disponible en el `title`. */
 .kcName {
   font-size: 12.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kcCount {
   font-family: var(--font-mono);
@@ -1277,6 +1372,10 @@
   padding: 0 7px;
   min-width: 20px;
   text-align: center;
+  /* Lo que se achica cuando la columna es angosta es el NOMBRE, no el contador
+     ni el código de SOP: son los dos de ancho fijo y aplastarlos los vuelve
+     ilegibles sin ganar casi nada. */
+  flex-shrink: 0;
 }
 /* "+" para crear directo en una columna del Kanban.
    OJO con el prefijo .qosRoot: el reset `.qosRoot button { background:none;
@@ -3011,6 +3110,61 @@
 .main:has(.pipeWide) .content {
   max-width: none;
   padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Los dos eslabones del medio de la cadena de alto: el marcador de la página y
+   el <div> raíz de KanbanBoard. No aportan nada visual —solo dejan pasar el
+   alto hasta .kanban, que es quien scrollea—, pero sin ellos la cadena se corta
+   y el tablero vuelve a medir lo que mide su contenido. */
+/* El primer eslabón, y el que de verdad acota: `min-height: 100vh` deja crecer
+   la reja, así que sin esto la cadena de `flex: 1` reparte un alto infinito y
+   el tablero termina midiendo lo que miden sus tarjetas —10.000px, medidos— y
+   scrollea la página entera en vez de cada columna. */
+.app:has(.pipeWide) {
+  height: 100vh;
+  /* La reja no declara filas, así que la implícita es `auto` y se estira con su
+     contenido AUNQUE el contenedor mida 100vh: medido, `.main` terminaba en
+     10.262px adentro de una reja de 936. `minmax(0, 1fr)` fija la fila al alto
+     del contenedor, y el 0 de mínimo es el que la deja achicarse —con `1fr`
+     pelado el mínimo automático vuelve a ser el contenido y no cambia nada. */
+  grid-template-rows: minmax(0, 1fr);
+}
+.app:has(.pipeWide) .main {
+  min-height: 0;
+}
+
+.pipeWide,
+.kbRoot {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* En móvil la cadena de alto se desarma. Ahí la barra de filtros se envuelve en
+   tres o cuatro filas, y repartir "lo que sobra" dejaría al tablero con 150px
+   de alto: media tarjeta. Vuelve a mandar el contenido y scrollea la página,
+   con las columnas topeadas para que ninguna se estire sola. */
+@media (max-width: 900px) {
+  .app:has(.pipeWide) {
+    height: auto;
+  }
+  .main:has(.pipeWide) .content,
+  .pipeWide,
+  .kbRoot {
+    display: block;
+    flex: none;
+  }
+  .pipeWide .kanban {
+    flex: none;
+  }
+  .pipeWide .kcol {
+    max-height: 70vh;
+  }
 }
 
 .workspace {
