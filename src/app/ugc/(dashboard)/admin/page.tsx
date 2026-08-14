@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { toggleCalendarMonthAction } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import { coloresDeHeroes } from "@/lib/ugc/content-meta";
 import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
 import { riesgoDeHero, metaDelMes } from "@/lib/ugc/reporte";
 // El selector de mes vive en la barra superior (lo monta el layout), no acá.
@@ -72,6 +73,9 @@ export default async function AdminDashboardPage({
     .eq("month", monthKey);
 
   const brandNameByProfileId = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
+  // El mismo reparto de colores que usa el filtro del Pipeline, así que un Hero
+  // sin logo se ve del mismo color en las dos pantallas.
+  const colorPorHero = coloresDeHeroes((agencyClients ?? []).map((c) => c.id));
 
   // ---- Heroes archivados ----
   // El filtro se aplica UNA vez acá y no en cada cálculo, porque todo lo de
@@ -400,7 +404,7 @@ export default async function AdminDashboardPage({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={hero.logo_url} alt={hero.name} className={styles.heroMono} style={{ objectFit: "cover" }} />
                         ) : (
-                          <span className={styles.heroMono} style={{ background: staffColorFromString(hero.id) }}>
+                          <span className={styles.heroMono} style={{ background: colorPorHero.get(hero.id) }}>
                             {hero.name.slice(0, 2).toUpperCase()}
                           </span>
                         )}
@@ -509,11 +513,4 @@ export default async function AdminDashboardPage({
       </div>
     </div>
   );
-}
-
-function staffColorFromString(input: string): string {
-  const palette = ["#6d54f3", "#c0392b", "#2aa5c0", "#3f8f4f", "#b3487f", "#8a5a2b", "#1f9ac9"];
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
-  return palette[hash % palette.length];
 }

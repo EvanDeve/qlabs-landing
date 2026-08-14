@@ -7,6 +7,11 @@ import {
   markAllNotificationsReadAction,
 } from "@/lib/actions/notifications";
 import type { Database } from "@/lib/database.types";
+import { QosIcon } from "@/lib/ugc/qos-icons";
+// La campana solo se monta dentro de QosShell (admin, marca y creador), así que
+// se viste con el sistema de ahí y no con las clases del landing: era el último
+// control de la barra superior que seguía siendo un círculo con Font Awesome.
+import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 
@@ -111,19 +116,15 @@ export default function NotificationsBell({ notifications }: { notifications: No
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="relative">
+    <div className={styles.bellWrap}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Notificaciones"
-        className="relative flex h-9 w-9 items-center justify-center rounded-full border border-line text-lg transition hover:border-ink"
+        className={`${styles.calNavBtn} ${styles.bellBtn}`}
       >
-        <i className="fa-solid fa-bell" aria-hidden />
-        {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-coral px-1 text-[10px] font-bold text-white">
-            {unreadCount}
-          </span>
-        )}
+        <QosIcon name="bell" size={17} />
+        {unreadCount > 0 && <span className={styles.bellDot}>{unreadCount}</span>}
       </button>
 
       {open && (
@@ -132,14 +133,14 @@ export default function NotificationsBell({ notifications }: { notifications: No
             type="button"
             aria-label="Cerrar notificaciones"
             onClick={() => setOpen(false)}
-            className="fixed inset-0 z-20 cursor-default"
+            style={{ position: "fixed", inset: 0, zIndex: 39, cursor: "default" }}
           />
-          <div className="absolute right-0 z-30 mt-2 w-80 rounded-card border border-line bg-white p-2 shadow-lg">
-            <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-xs font-bold text-ink-soft">Notificaciones</span>
+          <div className={styles.bellPanel}>
+            <div className={styles.bellPanelHead}>
+              <span>Notificaciones</span>
               {unreadCount > 0 && (
                 <form action={markAllNotificationsReadAction}>
-                  <button type="submit" className="text-xs font-bold text-violet hover:underline">
+                  <button type="submit" className={styles.linkMore}>
                     Marcar todas como leídas
                   </button>
                 </form>
@@ -147,17 +148,15 @@ export default function NotificationsBell({ notifications }: { notifications: No
             </div>
 
             {notifications.length > 0 ? (
-              <div className="mt-1 flex max-h-80 flex-col gap-1 overflow-y-auto">
+              <div className={styles.bellList}>
                 {notifications.map((notification) => {
                   const { text, href } = describe(notification);
                   return (
                     <div
                       key={notification.id}
-                      className={`flex items-start gap-2 rounded-lg p-2 text-sm ${
-                        notification.read ? "text-ink-soft" : "bg-lavender text-ink"
-                      }`}
+                      className={`${styles.bellItem} ${notification.read ? "" : styles.bellItemNew}`}
                     >
-                      <Link href={href} onClick={() => setOpen(false)} className="flex-1 hover:underline">
+                      <Link href={href} onClick={() => setOpen(false)} style={{ flex: 1 }}>
                         {text}
                       </Link>
                       {!notification.read && (
@@ -166,9 +165,9 @@ export default function NotificationsBell({ notifications }: { notifications: No
                           <button
                             type="submit"
                             aria-label="Marcar como leída"
-                            className="text-xs text-ink-soft hover:text-ink"
+                            className={styles.bellItemRead}
                           >
-                            <i className="fa-solid fa-check" aria-hidden />
+                            <QosIcon name="check" size={13} />
                           </button>
                         </form>
                       )}
@@ -177,9 +176,7 @@ export default function NotificationsBell({ notifications }: { notifications: No
                 })}
               </div>
             ) : (
-              <p className="px-2 py-4 text-center text-sm text-ink-soft">
-                Sin notificaciones todavía.
-              </p>
+              <div className={styles.empty}>Sin notificaciones todavía.</div>
             )}
           </div>
         </>

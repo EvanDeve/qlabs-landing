@@ -4,11 +4,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
 import type { PipelineSection } from "@/lib/database.types";
 import { SECCIONES_PIPELINE, SECCION_POR_DEFECTO } from "@/lib/ugc/content-columns";
-import { FILTROS_FECHA, type FiltroFecha } from "@/lib/ugc/content-meta";
+import { CONTENT_PRIORITY_DOT, FILTROS_FECHA, type FiltroFecha } from "@/lib/ugc/content-meta";
+import { diaCorto } from "@/lib/ugc/calendar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import FiltroDropdown from "@/components/ugc/admin/FiltroDropdown";
 import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
 
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; color?: string };
 
 /** Todo lo que la URL dice sobre qué se está mirando. */
 export type FiltrosPipeline = {
@@ -16,24 +18,29 @@ export type FiltrosPipeline = {
   owner?: string;
   priority?: string;
   fecha: FiltroFecha | null;
-  /** Día exacto 'yyyy-MM-dd'. Excluyente con `fecha` y `mes`. */
+  /** Día exacto 'yyyy-MM-dd'. Excluyente con `fecha`. */
   dia: string | null;
-  /** Mes 'yyyy-MM'. Excluyente con `fecha` y `dia`; el día le gana. */
-  mes: string | null;
   verArchivados: boolean;
-  /** Si no hay ningún Hero archivado, la casilla no se dibuja. */
+  /** Si no hay ningún Hero archivado, el interruptor no se dibuja. */
   hayArchivados: boolean;
 };
 
 /**
  * La barra de control del tablero, en DOS filas:
  *
- *   1. dónde estoy y qué puedo crear — pestañas + acciones + contador
- *   2. qué estoy recortando — los filtros
+ *   1. dónde estoy, qué busco y qué puedo crear — pestañas + buscador +
+ *      contador + acciones
+ *   2. qué estoy recortando — los filtros, detrás del rótulo "Filtros"
  *
  * Antes eran tres (pestañas / filtros / botones) y empujaban las tarjetas media
  * pantalla para abajo. La división no es por tipo de control sino por pregunta:
- * la primera fila no cambia lo que se ve, la segunda sí.
+ * la primera fila no cambia QUÉ piezas hay, solo cuáles miro y cómo las
+ * encuentro; la segunda sí las recorta.
+ *
+ * El buscador vive arriba, con las pestañas, y no entre los filtros: no filtra
+ * contra la base como ellos —trabaja sobre lo que ya está cargado— y es lo que
+ * más se usa, así que no tiene que competir por lugar con cuatro controles que
+ * se tocan mucho menos.
  *
  * Cada select navega solo al cambiar. Se usa router.replace y no un submit de
  * formulario por dos razones: la navegación es del lado del cliente (no recarga
@@ -78,7 +85,7 @@ export default function PipelineFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const { brand, owner, priority, fecha, dia, mes, verArchivados, hayArchivados } = filtros;
+  const { brand, owner, priority, fecha, dia, verArchivados, hayArchivados } = filtros;
 
   /**
    * Escribe filtros en la URL. Acepta varias claves de una para poder aplicar
@@ -102,6 +109,14 @@ export default function PipelineFilters({
   }
 
   const setFilter = (key: string, value: string) => setFilters({ [key]: value });
+
+  // Lo que se lee en cada pastilla con el panel cerrado. Un filtro puesto tiene
+  // que decir SU valor —"Zonna Gastrobar", no "Hero"—, que es lo que hace que se
+  // note que el tablero está recortado sin abrir nada.
+  const nombreDe = (lista: Option[], id?: string) => lista.find((o) => o.id === id)?.name;
+  const labelFecha = dia
+    ? diaCorto(dia)
+    : (FILTROS_FECHA.find((f) => f.id === fecha)?.label ?? "Cualquiera");
 
   return (
     <div style={{ opacity: isPending ? 0.6 : 1 }}>
@@ -130,22 +145,7 @@ export default function PipelineFilters({
           </button>
         </div>
 
-        <div className={styles.pipeBarEnd}>
-          {acciones}
-          <span className={styles.chip}>
-            {busqueda
-              ? `${count} ${count === 1 ? "coincidencia" : "coincidencias"}`
-              : `${count} piezas en flujo`}
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.pipeBar}>
-        {/* Va primero de la fila porque es lo que más se usa: buscar una pieza
-            por su nombre es la pregunta de todos los días; los selects recortan
-            el tablero, que se hace mucho menos seguido.
-
-            No hay debounce ni botón: filtra sobre lo que ya está en memoria, así
+        {/* No hay debounce ni botón: filtra sobre lo que ya está en memoria, así
             que responde en la misma tecla. */}
         <div className={styles.pipeSearch}>
           <QosIcon name="search" size={14} />
@@ -153,7 +153,7 @@ export default function PipelineFilters({
             type="search"
             value={busqueda}
             onChange={(e) => onBusqueda(e.target.value)}
-            placeholder="Buscar por nombre o código…"
+            placeholder="Nombre o código…"
             aria-label="Buscar una pieza por nombre o código"
           />
           {busqueda && (
@@ -178,115 +178,98 @@ export default function PipelineFilters({
           </button>
         )}
 
-        <select
-          value={brand ?? ""}
-          onChange={(e) => setFilter("brand", e.target.value)}
-          className={styles.selectInp}
-          aria-label="Filtrar por Hero"
-        >
-          <option value="">Todos los Heroes</option>
-          {brands.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        <div className={styles.pipeBarEnd}>
+          <span className={styles.chip}>
+            {busqueda
+              ? `${count} ${count === 1 ? "coincidencia" : "coincidencias"}`
+              : `${count} piezas en flujo`}
+          </span>
+          {acciones}
+        </div>
+      </div>
 
-        <select
-          value={owner ?? ""}
-          onChange={(e) => setFilter("owner", e.target.value)}
-          className={styles.selectInp}
-          aria-label="Filtrar por responsable"
-        >
-          <option value="">Todos los responsables</option>
-          {staff.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={priority ?? ""}
-          onChange={(e) => setFilter("priority", e.target.value)}
-          className={styles.selectInp}
-          aria-label="Filtrar por prioridad"
-        >
-          <option value="">Toda prioridad</option>
-          <option value="alta">Alta</option>
-          <option value="media">Media</option>
-          <option value="baja">Baja</option>
-        </select>
-
-        {/* Preset, mes y día exacto son tres formas de la MISMA pregunta, así
-            que se limpian entre sí: elegir uno borra los otros dos. Van pegados
-            —con "o el mes" / "o el día" en el medio— para que se lean como un
-            control con tres entradas y no como tres filtros que se suman.
-            Combinarlos daría cosas como "atrasadas Y septiembre", que casi
-            siempre es el conjunto vacío y se lee como que el tablero se rompió. */}
-        <select
-          value={fecha ?? ""}
-          onChange={(e) => setFilters({ fecha: e.target.value, mes: "", dia: "" })}
-          className={styles.selectInp}
-          aria-label="Filtrar por fecha de publicación"
-        >
-          <option value="">Cualquier fecha</option>
-          {FILTROS_FECHA.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-
-        {/* Cada separador va pegado a SU campo en un contenedor propio: sueltos
-            en la fila, al envolverse quedaba un "o el día" solo al principio de
-            la línea siguiente, sin el campo al que se refiere. */}
-        <span className={styles.pipeDateGroup}>
-          <span className={styles.pipeSep}>o el mes</span>
-          {/* `type="month"` y no un select armado a mano: el nativo ya trae el
-              año, no hay que decidir hasta dónde llega la lista, y manda
-              'yyyy-MM' que es exactamente lo que espera parseMesCorto. */}
-          <input
-            type="month"
-            value={mes ?? ""}
-            onChange={(e) => setFilters({ mes: e.target.value, fecha: "", dia: "" })}
-            className={styles.selectInp}
-            aria-label="Publica en un mes"
-          />
+      <div className={styles.pipeBar}>
+        <span className={styles.pipeFiltersTag}>
+          <QosIcon name="menu" size={13} />
+          Filtros
         </span>
 
-        <span className={styles.pipeDateGroup}>
-          <span className={styles.pipeSep}>o el día</span>
-          <input
-            type="date"
-            value={dia ?? ""}
-            onChange={(e) => setFilters({ dia: e.target.value, fecha: "", mes: "" })}
-            className={styles.selectInp}
-            aria-label="Publica un día exacto"
-          />
-        </span>
+        <FiltroDropdown
+          label="Hero"
+          valorLabel={nombreDe(brands, brand) ?? "Todos"}
+          activo={Boolean(brand)}
+          seleccionado={brand ?? ""}
+          onElegir={(id) => setFilter("brand", id)}
+          opciones={[
+            { id: "", label: "Todos" },
+            ...brands.map((b) => ({ id: b.id, label: b.name, color: b.color })),
+          ]}
+        />
 
-        {(dia || mes) && (
-          <button
-            type="button"
-            onClick={() => setFilters({ dia: "", mes: "" })}
-            className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
-          >
-            Quitar {dia ? "el día" : "el mes"}
-          </button>
-        )}
+        <FiltroDropdown
+          label="Responsable"
+          valorLabel={nombreDe(staff, owner) ?? "Todos"}
+          activo={Boolean(owner)}
+          seleccionado={owner ?? ""}
+          onElegir={(id) => setFilter("owner", id)}
+          opciones={[{ id: "", label: "Todos" }, ...staff.map((s) => ({ id: s.id, label: s.name }))]}
+        />
+
+        <FiltroDropdown
+          label="Prioridad"
+          valorLabel={priority ? priority[0].toUpperCase() + priority.slice(1) : "Toda"}
+          activo={Boolean(priority)}
+          seleccionado={priority ?? ""}
+          onElegir={(id) => setFilter("priority", id)}
+          opciones={[
+            { id: "", label: "Toda" },
+            { id: "alta", label: "Alta", color: CONTENT_PRIORITY_DOT.alta },
+            { id: "media", label: "Media", color: CONTENT_PRIORITY_DOT.media },
+            { id: "baja", label: "Baja", color: CONTENT_PRIORITY_DOT.baja },
+          ]}
+        />
+
+        {/* Preset y día exacto son la MISMA pregunta, así que viven en UN control
+            y se limpian entre sí: elegir uno borra el otro. Combinarlos daría
+            cosas como "atrasadas Y el 10 de agosto", que casi siempre es el
+            conjunto vacío y se lee como que el tablero se rompió.
+            (Hubo un tercero, "o el mes", hasta el 2026-08-14: lo sacó Evan por
+            repetir a "Publica este mes", que es la pregunta que sí se hace.) */}
+        <FiltroDropdown
+          label="Fecha"
+          valorLabel={labelFecha}
+          activo={Boolean(fecha || dia)}
+          seleccionado={dia ? "__dia" : (fecha ?? "")}
+          onElegir={(id) => setFilters({ fecha: id, dia: "" })}
+          opciones={[
+            { id: "", label: "Cualquiera" },
+            ...FILTROS_FECHA.map((f) => ({ id: f.id, label: f.label })),
+          ]}
+          pie={
+            <>
+              <label htmlFor="pipe-dia">O un día exacto</label>
+              <input
+                id="pipe-dia"
+                type="date"
+                value={dia ?? ""}
+                onChange={(e) => setFilters({ dia: e.target.value, fecha: "" })}
+              />
+            </>
+          }
+        />
 
         <div className={styles.pipeBarEnd}>
-          {/* Solo aparece si hay algo que mostrar: una casilla que nunca cambia
-              nada es ruido permanente en la barra. */}
+          {/* Solo aparece si hay algo que mostrar: un interruptor que nunca
+              cambia nada es ruido permanente en la barra. */}
           {hayArchivados && (
-            <label className={styles.pipeCheck}>
+            <label className={styles.switchCheck}>
               <input
                 type="checkbox"
                 checked={verArchivados}
                 onChange={(e) => setFilter("archivados", e.target.checked ? "1" : "")}
               />
-              Ver Heroes archivados
+              <span className={styles.switchTrack} />
+              Heroes archivados
             </label>
           )}
         </div>

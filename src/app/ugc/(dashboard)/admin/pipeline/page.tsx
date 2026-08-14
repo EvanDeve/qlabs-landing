@@ -1,8 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import KanbanBoard from "@/components/ugc/admin/KanbanBoard";
-import { STAFF_ROLE_LABEL, parseFiltroFecha, parseDia, rangoFiltroFecha } from "@/lib/ugc/content-meta";
+import {
+  STAFF_ROLE_LABEL,
+  coloresDeHeroes,
+  parseFiltroFecha,
+  parseDia,
+  rangoFiltroFecha,
+} from "@/lib/ugc/content-meta";
 import { parseSeccion } from "@/lib/ugc/content-columns";
-import { parseMesCorto, rangoDelMes } from "@/lib/ugc/cronograma";
 import type { ContentPriority } from "@/lib/database.types";
 import styles from "../qos.module.css";
 
@@ -17,7 +22,6 @@ export default async function PipelinePage({
     priority?: string;
     fecha?: string;
     dia?: string;
-    mes?: string;
     seccion?: string;
     archivados?: string;
     /**
@@ -28,15 +32,19 @@ export default async function PipelinePage({
     q?: string;
   }>;
 }) {
-  const { brand, owner, priority, fecha, dia, mes, seccion, archivados, q } = await searchParams;
+  const { brand, owner, priority, fecha, dia, seccion, archivados, q } = await searchParams;
   const diaExacto = parseDia(dia);
-  const mesExacto = diaExacto ? null : parseMesCorto(mes);
-  // Los tres cortes por fecha son excluyentes, y el orden de precedencia es de
-  // más preciso a menos: día > mes > preset. Si por alguna razón viajan varios
-  // en la URL se aplica UNO solo, y la toolbar muestra ese mismo — nunca se
-  // cruzan, porque "atrasadas Y septiembre" casi siempre es el conjunto vacío
-  // y se lee como que el tablero se rompió.
-  const filtroFecha = diaExacto || mesExacto ? null : parseFiltroFecha(fecha);
+  // Los dos cortes por fecha son excluyentes, y el más preciso gana: día >
+  // preset. Si por alguna razón viajan los dos en la URL se aplica UNO solo, y
+  // la barra muestra ese mismo — nunca se cruzan, porque "atrasadas Y el 10 de
+  // agosto" casi siempre es el conjunto vacío y se lee como que el tablero se
+  // rompió.
+  //
+  // Hubo un tercero, `?mes=`, hasta el 2026-08-14: lo sacó Evan del rediseño de
+  // la barra por repetir a "Publica este mes", que es la pregunta que el equipo
+  // sí se hace. Un `?mes=` viejo en un link guardado ya no filtra nada; el
+  // tablero sale completo, que es el comportamiento seguro.
+  const filtroFecha = diaExacto ? null : parseFiltroFecha(fecha);
   const seccionActiva = parseSeccion(seccion);
   const verArchivados = archivados === "1";
   const supabase = await createClient();
@@ -77,10 +85,7 @@ export default async function PipelinePage({
       // `publish_date` es una columna `date`, así que la igualdad contra un día
       // suelto es exacta y no hace falta ningún rango.
       if (diaExacto) query = query.eq("publish_date", diaExacto);
-      else if (mesExacto) {
-        const { gte, lte } = rangoDelMes(mesExacto);
-        query = query.gte("publish_date", gte).lte("publish_date", lte);
-      } else if (filtroFecha) {
+      else if (filtroFecha) {
         const rango = rangoFiltroFecha(filtroFecha);
         if (rango.esNulo) query = query.is("publish_date", null);
         if (rango.lt) query = query.lt("publish_date", rango.lt);
@@ -132,11 +137,16 @@ export default async function PipelinePage({
   // Los archivados salen del selector de Hero y del "Nueva pieza": no se le
   // carga trabajo nuevo a un cliente que se fue. Con la casilla prendida
   // vuelven, o no se podría filtrar por el Hero cuyas piezas se está mirando.
+  // El color se reparte sobre TODOS los Heroes, archivados incluidos: si se
+  // calculara sobre la lista ya filtrada, prender "ver archivados" le cambiaría
+  // el color a media lista.
+  const colorPorHero = coloresDeHeroes((agencyClients ?? []).map((c) => c.id));
   const brands = (agencyClients ?? [])
     .filter((c) => verArchivados || !c.archived)
     .map((c) => ({
       id: c.id,
       name: c.archived ? `${c.name} (archivado)` : c.name,
+      color: colorPorHero.get(c.id),
       logoUrl: c.logo_url,
       driveUrl: c.drive_url,
     }));
@@ -172,7 +182,6 @@ export default async function PipelinePage({
           priority,
           fecha: filtroFecha,
           dia: diaExacto,
-          mes: mesExacto,
           verArchivados,
           hayArchivados: archivedHeroIds.size > 0,
         }}

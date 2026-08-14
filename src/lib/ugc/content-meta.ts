@@ -36,6 +36,70 @@ export const CONTENT_PLATFORM_LABEL: Record<ContentPlatform, string> = {
   reels: "Reels",
 };
 
+/** El punto de color de cada prioridad, para las listas de filtro. */
+export const CONTENT_PRIORITY_DOT: Record<ContentPriority, string> = {
+  alta: "#df4650",
+  media: "#c07414",
+  baja: "#9793ad",
+};
+
+/**
+ * Veinticuatro colores, y el número no es de adorno: el reparto es sobre TODOS
+ * los Heroes —archivados incluidos, ver `coloresDeHeroes`—, que al 2026-08-14
+ * son 16. Con menos colores que Heroes, dos marcas comparten el suyo y el punto
+ * deja de servir para reconocerlas. Esto da aire hasta 24; pasado eso empiezan a
+ * repetirse de a uno, sin romperse.
+ */
+const COLORES_HERO = [
+  "#6d54f3",
+  "#c0392b",
+  "#2aa5c0",
+  "#3f8f4f",
+  "#b3487f",
+  "#8a5a2b",
+  "#1f9ac9",
+  "#e07b39",
+  "#4a7ab8",
+  "#7c4de0",
+  "#d4a017",
+  "#2f9e8f",
+  "#a8442a",
+  "#5c6bc0",
+  "#9c27b0",
+  "#00897b",
+  "#f4511e",
+  "#546e7a",
+  "#d81b60",
+  "#43a047",
+  "#5e35b1",
+  "#00acc1",
+  "#8d6e63",
+  "#ef6c00",
+];
+
+/**
+ * Un color por Hero, repartiendo la paleta entre TODOS.
+ *
+ * Los Heroes no tienen columna de color: la identidad visual la da el logo. Pero
+ * en una lista sin logos —el filtro del tablero— hace falta algo que distinga a
+ * Zonna de Snowty de un vistazo.
+ *
+ * Reparte por posición y no por un hash del id, que fue el primer intento y
+ * falló medido: los UUID de Postgres comparten demasiada estructura y los 11
+ * Heroes activos caían en 6 colores, con tres marcas compartiendo el mismo
+ * marrón. Por posición no hay dos iguales mientras haya menos Heroes que
+ * colores.
+ *
+ * Se ordena por id —no por nombre— para que el color de cada uno NO cambie al
+ * renombrar una marca ni al archivar otra. Hay que pasarle la lista COMPLETA
+ * (archivados incluidos) por la misma razón: una lista que se achica corre los
+ * colores de todos los que vienen después.
+ */
+export function coloresDeHeroes(ids: string[]): Map<string, string> {
+  const ordenados = [...ids].sort();
+  return new Map(ordenados.map((id, i) => [id, COLORES_HERO[i % COLORES_HERO.length]]));
+}
+
 /**
  * Filtro por fecha de publicación del pipeline.
  *
@@ -96,7 +160,6 @@ const CLAVES_VISTA_PIPELINE = [
   "priority",
   "fecha",
   "dia",
-  "mes",
   "archivados",
   "q",
 ] as const;
