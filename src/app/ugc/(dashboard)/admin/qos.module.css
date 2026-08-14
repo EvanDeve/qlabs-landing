@@ -215,7 +215,15 @@
   color: var(--b-300);
   margin-top: 3px;
 }
-.mobileMenuBtn {
+/* El botón del menú es SOLO de teléfono: en escritorio la sidebar ya está a la
+   vista y abrirla no significa nada.
+   Va con doble clase porque el botón se dibuja como `.calNavBtn .mobileMenuBtn`
+   y `.calNavBtn` —que vive mucho más abajo en este archivo— también declara
+   `display: grid`. A igual especificidad gana el que va último, así que este
+   `none` no se aplicaba nunca y el botón se veía siempre. Mismo recurso que
+   usa `.btn.btnPrimary`. */
+.mobileMenuBtn,
+.calNavBtn.mobileMenuBtn {
   display: none;
 }
 .sbScrim {
@@ -2772,7 +2780,8 @@
     background: rgba(13, 10, 28, 0.4);
     z-index: 39;
   }
-  .mobileMenuBtn {
+  .mobileMenuBtn,
+  .calNavBtn.mobileMenuBtn {
     display: grid;
   }
 }
