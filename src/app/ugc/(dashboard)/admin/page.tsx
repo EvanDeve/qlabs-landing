@@ -169,7 +169,6 @@ export default async function AdminDashboardPage({
   const publishedTotal = heroStats.reduce((sum, s) => sum + s.published, 0);
   const remainingTotal = withTarget.reduce((sum, s) => sum + (s.remaining ?? 0), 0);
   const expectedTotal = Math.round(metaTotal * monthFraction);
-  const approvedCount = heroStats.filter((s) => s.calendarApproved).length;
   const monthName = now.toLocaleDateString("es-CR", { month: "long" });
   const daysLeft = daysInMonth - dayOfMonth;
 
@@ -195,10 +194,13 @@ export default async function AdminDashboardPage({
    * moverla de estructura. Unificadas, el orden es solo el del array.
    *
    * La primera fila es lo que está en movimiento y puede necesitar una
-   * decisión hoy. La segunda es cómo viene el mes, y arranca con "terminados" y
-   * "publicados" pegadas a propósito: son estados distintos —uno está hecho y
-   * el otro ya salió— pero los dos son trabajo que ya no se toca, y leerlos
-   * juntos es lo que dice si hay cola esperando publicación.
+   * decisión hoy. La segunda es trabajo que ya no se toca: "terminados",
+   * "publicados" y su suma van pegadas a propósito —son estados distintos, uno
+   * está hecho y el otro ya salió— y leerlas juntas es lo que dice si hay cola
+   * esperando publicación.
+   *
+   * La CUARTA columna es el mes: "meta" arriba y "restantes" abajo quedan una
+   * sobre la otra, que es como se leen.
    */
   const kpis = [
     {
@@ -223,11 +225,13 @@ export default async function AdminDashboardPage({
       color: "#6d54f3",
     },
     {
-      label: "Cronogramas aprobados",
-      value: `${approvedCount}/${heroesManaged.length}`,
-      sub: `de ${monthName}`,
-      icon: "book",
-      color: "#2aa5c0",
+      label: "Meta del mes",
+      value: metaTotal,
+      // "paquete definido" era el lenguaje de monthly_target, que ya no existe:
+      // la meta ahora sale del cronograma.
+      sub: `${withTarget.length} de ${heroesManaged.length} heroes con cronograma`,
+      icon: "flag",
+      color: "#6d54f3",
     },
 
     {
@@ -245,13 +249,19 @@ export default async function AdminDashboardPage({
       color: "#14a06a",
     },
     {
-      label: "Meta del mes",
-      value: metaTotal,
-      // "paquete definido" era el lenguaje de monthly_target, que ya no existe:
-      // la meta ahora sale del cronograma.
-      sub: `${withTarget.length} de ${heroesManaged.length} heroes con cronograma`,
-      icon: "flag",
-      color: "#6d54f3",
+      // La suma de las dos de al lado, ni más ni menos: es lo que pidió el
+      // equipo para saber cuánto hay listo sin importar si ya salió.
+      //
+      // ⚠️ Las dos NO cuentan sobre el mismo período —"terminados" es la cola
+      // entera y "publicados" es del mes del selector—, así que este número
+      // tampoco. Se eligió a sabiendas (2026-08-14): que el total cuadre con
+      // los dos números que tiene al lado pesa más que la pureza, porque un KPI
+      // que no se puede sumar con el dedo es un KPI en el que nadie confía.
+      label: "Finalizados",
+      value: readyPieces.length + publishedTotal,
+      sub: "terminados + publicados",
+      icon: "briefcase",
+      color: "#5a41e0",
     },
     {
       label: "Restantes",
