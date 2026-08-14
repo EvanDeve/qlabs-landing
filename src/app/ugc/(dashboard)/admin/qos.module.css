@@ -526,6 +526,19 @@
   .tbMes span {
     display: none;
   }
+  /* Un `<input type="month">` trae ancho intrínseco propio (179px medidos), y
+     adentro de un flex eso es también su mínimo: con la etiqueta ya oculta, la
+     barra seguía midiendo 7px más que la pantalla y el Dashboard scrolleaba a
+     lo ancho. Los `min-width: 0` abren la cadena —sin ellos el `max-width` del
+     input no sirve de nada, porque quien no encoge es su envoltorio. */
+  .tbActions,
+  .tbMes {
+    min-width: 0;
+  }
+  .tbMes input {
+    min-width: 0;
+    max-width: 148px;
+  }
 }
 .content {
   padding: 26px;
@@ -855,8 +868,8 @@
 .kpiRow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 22px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 /* Las pantallas de TRES KPIs (marca, Loyalty Loop, el book del creador) piden
    tres columnas en escritorio. Antes lo hacían con `style` inline, y un estilo
@@ -866,11 +879,16 @@
 .kpiRow3 {
   grid-template-columns: repeat(3, 1fr);
 }
+/* El radio grande (--r-xl, 20px) es de la ronda de refresh visual: las tarjetas
+   de número son lo primero que se mira al entrar y con 15px se leían como
+   cajas. Va en `.kpi` y no solo en admin a propósito — la clase la comparten
+   marca, creador y Loyalty Loop, y media pantalla redondeada y media no sería
+   un refresh sino un parche. */
 .kpi {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  padding: 15px 16px;
+  border-radius: var(--r-xl);
+  padding: 17px 18px;
   box-shadow: var(--sh-sm);
   position: relative;
   overflow: hidden;
@@ -906,22 +924,24 @@
   margin-bottom: 10px;
 }
 .kIc {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  /* Acompaña al radio de la tarjeta: un cuadrado de esquina dura adentro de una
+     tarjeta de 20px se ve pegado con cinta. */
+  border-radius: var(--r-md);
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 .kLabel {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--ink-2);
   line-height: 1.2;
 }
 .kNum {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -929,7 +949,7 @@
 .kSub {
   font-size: 11px;
   color: var(--ink-3);
-  margin-top: 5px;
+  margin-top: 6px;
 }
 
 .dashGrid {
@@ -941,6 +961,61 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
+}
+
+/* ---- El Dashboard entra entero en la ventana ----
+   La reja de paneles se come lo que sobra bajo los KPIs y cada panel scrollea
+   por dentro. Antes las dos listas crecían con sus datos —11 Heroes y 25
+   piezas de la semana— y la página terminaba midiendo el doble de la pantalla:
+   para ver el final de la agenda había que dejar los KPIs arriba, fuera de
+   vista. Los `min-height: 0` no son de adorno: sin ellos el mínimo automático
+   de un item de flex es su contenido y la lista vuelve a empujar hacia abajo.
+   La cadena que llega hasta acá está más abajo, junto a la del Pipeline. */
+.dashFull .dashGrid {
+  flex: 1;
+  min-height: 0;
+}
+.dashFull .dashGrid > * {
+  min-height: 0;
+  min-width: 0;
+}
+.cardScroll {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* La tarjeta redondea sus esquinas y el cuerpo que scrollea vive adentro:
+     sin esto, las filas se dibujan por encima del radio al llegar al borde. */
+  overflow: hidden;
+}
+/* `.cardScroll` reemplaza a `.cardPad`, así que el padding se reparte entre el
+   encabezado (fijo) y el cuerpo (scrollea). El cuerpo conserva el padding
+   lateral para que las filas no se peguen al borde, y se queda sin el de
+   arriba porque ya lo puso el encabezado. */
+.cardScrollHead {
+  padding: 18px 18px 0;
+  flex-shrink: 0;
+}
+.cardScrollBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 18px 18px;
+}
+/* El encabezado de la tabla se queda pegado arriba mientras corren las filas:
+   con 11 Heroes y el panel acotado, sin esto se scrollean tres columnas de
+   números sin saber cuál es cuál.
+   El `box-shadow` hace de borde inferior y NO un `border-bottom`: con
+   `border-collapse: collapse` el borde pertenece a la tabla, no a la celda, y
+   se queda en su sitio original en cuanto el `th` se despega. */
+.cardScrollBody .acctTable th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  padding-top: 2px;
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 var(--line);
 }
 
 .attnItem {
@@ -1031,21 +1106,9 @@
   font-weight: 400;
 }
 
-.loadRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 0;
-}
-.lrName {
-  width: 120px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  font-weight: 600;
-}
+/* De la barra de carga quedan solo la pista y el relleno: los usa Loyalty Loop
+   (marca y creador) para el progreso de un cupón. Las filas con nombre y
+   conteo se fueron con "Carga del equipo" del Dashboard. */
 .loadTrack {
   flex: 1;
   height: 8px;
@@ -1058,15 +1121,6 @@
   height: 100%;
   border-radius: var(--r-full);
   transition: width 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-.loadVal {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-2);
-  width: 58px;
-  text-align: right;
-  flex-shrink: 0;
 }
 
 .acctTable {
@@ -2664,8 +2718,13 @@
   .kpiRow {
     grid-template-columns: repeat(3, 1fr);
   }
+  /* `minmax(0, …)` y no `1fr` pelado: el mínimo automático de un item de grid es
+     su contenido, así que la tabla de cuentas —que en un teléfono no entra—
+     ensanchaba el track, y con él la tarjeta y la página entera. Medido: 433px
+     de tarjeta en un viewport de 390. Con el 0 de mínimo, la tarjeta se queda
+     en el ancho de la pantalla y el que scrollea a lo ancho es su cuerpo. */
   .dashGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 /* Con CUATRO KPIs, tres columnas dejan el cuarto solo en una segunda fila y
@@ -3164,6 +3223,67 @@
   }
   .pipeWide .kcol {
     max-height: 70vh;
+  }
+}
+
+/* El Dashboard, misma cadena de alto que el Pipeline pero SIN tocar el ancho:
+   sigue centrado en los 1400px de `.content` como el resto del sistema. Acá el
+   alto no se reparte para ganar columnas sino para que los KPIs no se vayan de
+   pantalla al bajar por la lista de Heroes.
+   Los eslabones son cuatro: .app (acota a la ventana) → .main → .content →
+   .dashFull, y de ahí sigue en la sección DASHBOARD con .dashGrid y las
+   tarjetas. Si se corta uno solo, la reja vuelve a medir lo que mide su
+   contenido y scrollea la página entera. */
+.app:has(.dashFull) {
+  height: 100vh;
+  grid-template-rows: minmax(0, 1fr);
+}
+.app:has(.dashFull) .main {
+  min-height: 0;
+}
+.main:has(.dashFull) .content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.dashFull {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* El corte va en 1140 y no en 900 como el Pipeline: es donde `.dashGrid` pasa a
+   una sola columna. Con las dos tarjetas apiladas, repartir el alto de la
+   ventana le daría a cada una media pantalla —tres filas visibles y scroll
+   adentro de un scroll—, así que ahí vuelve a mandar el contenido. */
+@media (max-width: 1140px) {
+  .app:has(.dashFull) {
+    height: auto;
+    grid-template-rows: none;
+  }
+  .main:has(.dashFull) .content,
+  .dashFull {
+    display: block;
+    flex: none;
+  }
+  .dashFull .dashGrid {
+    flex: none;
+  }
+  .cardScroll {
+    overflow: visible;
+  }
+  /* `auto` y no `visible`: sin alto acotado el cuerpo crece con sus filas, así
+     que no aparece scroll vertical interno, pero la tabla de cuentas —que en un
+     teléfono no entra— scrollea a lo ancho adentro de la tarjeta en vez de
+     empujar la página. (Un eje en `visible` y el otro en `auto` no existe: el
+     navegador convierte el `visible` en `auto` y reaparece el scroll doble.) */
+  .cardScrollBody {
+    overflow: auto;
+  }
+  .cardScrollBody .acctTable th {
+    position: static;
   }
 }
 

@@ -1,19 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { toggleCalendarMonthAction } from "@/lib/actions/heroes";
-import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import StaffAvatar from "@/components/ugc/admin/StaffAvatar";
 import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
-import { riesgoDeHero, TOPE_CARGA, metaDelMes } from "@/lib/ugc/reporte";
+import { riesgoDeHero, metaDelMes } from "@/lib/ugc/reporte";
 // El selector de mes vive en la barra superior (lo monta el layout), no acá.
 import { mesCR as mesCRDe, parseMes, diasDelMes, nombreDeMes } from "@/lib/ugc/cronograma";
 import styles from "./qos.module.css";
 
 export const dynamic = "force-dynamic";
-
-// El tope lo define reporte.ts: McLovin dice "SOBRECARGADO" con el mismo número.
-const OVERLOAD_THRESHOLD = TOPE_CARGA;
 
 
 export default async function AdminDashboardPage({
@@ -37,9 +32,8 @@ export default async function AdminDashboardPage({
   const en7DiasCR = diaCR(in7Days);
 
   // El Pase de servicio mira UN mes, elegido con el select. El resto del
-  // Dashboard —atrasadas, agenda de la semana, carga del equipo— es siempre
-  // sobre hoy: son preguntas del presente y un selector ahí no significaría
-  // nada.
+  // Dashboard —atrasadas, agenda de la semana— es siempre sobre hoy: son
+  // preguntas del presente y un selector ahí no significaría nada.
   const mesActual = mesCRDe(now);
   const monthKey = parseMes((await searchParams).mes) ?? mesActual;
   const esMesActual = monthKey === mesActual;
@@ -55,17 +49,12 @@ export default async function AdminDashboardPage({
   const [
     { data: agencyClients },
     { data: contentPieces },
-    { data: staffMembers },
     { data: calendarEvents },
     { data: calendarMonths },
     { data: contentColumns },
   ] = await Promise.all([
     supabase.from("agency_clients").select("*"),
     supabase.from("content_pieces").select("*").order("publish_date", { ascending: true }),
-    // staff_directory y no staff_members: la tabla quedó cerrada a
-    // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
-    // expone solo lo que el tablero necesita para pintar responsables.
-    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true),
     supabase
       .from("calendar_events")
       .select("*")
@@ -84,18 +73,11 @@ export default async function AdminDashboardPage({
 
   const brandNameByProfileId = new Map((agencyClients ?? []).map((c) => [c.id, c.name]));
 
-  const staffIds = (staffMembers ?? []).map((s) => s.profile_id);
-  const { data: staffAccountProfiles } = staffIds.length
-    ? await supabase.from("profiles").select("id, display_name, avatar_url").in("id", staffIds)
-    : { data: [] };
-  const staffNameById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.display_name]));
-  const staffAvatarById = new Map((staffAccountProfiles ?? []).map((p) => [p.id, p.avatar_url]));
-
   // ---- Heroes archivados ----
   // El filtro se aplica UNA vez acá y no en cada cálculo, porque todo lo de
-  // abajo —KPIs, Pase de servicio, atrasadas, agenda de la semana, carga del
-  // equipo— sale de `pieces` y de `heroesManaged`. Filtrar caso por caso es
-  // cómo un número se queda sin actualizar y contradice a los otros tres.
+  // abajo —KPIs, Pase de servicio, atrasadas, agenda de la semana— sale de
+  // `pieces` y de `heroesManaged`. Filtrar caso por caso es cómo un número se
+  // queda sin actualizar y contradice a los otros tres.
   //
   // brandNameByProfileId se arma con TODOS a propósito (arriba): si alguna
   // pieza archivada se llegara a mostrar, tiene que decir de qué marca es.
@@ -301,24 +283,12 @@ export default async function AdminDashboardPage({
     // de CR, nunca restando los instantes.
   ].sort((a, b) => diaCR(a.date).localeCompare(diaCR(b.date)));
 
-  const teamLoad = (staffMembers ?? []).map((staff) => {
-    const count = activePieces.filter((p) => p.owner_id === staff.profile_id).length;
-    return {
-      profileId: staff.profile_id,
-      name: staffNameById.get(staff.profile_id) ?? "Sin nombre",
-      role: STAFF_ROLE_LABEL[staff.staff_role],
-      color: staff.color,
-      avatarUrl: staffAvatarById.get(staff.profile_id) ?? null,
-      count,
-      overloaded: count > OVERLOAD_THRESHOLD,
-    };
-  });
-
-  const maxLoad = Math.max(1, ...teamLoad.map((t) => t.count));
-  const overloadedStaff = teamLoad.filter((t) => t.overloaded);
-
   return (
-    <div>
+    /* `dashFull` es el marcador que hace que la pantalla entre en la ventana:
+       el layout lo detecta con `:has()` y reparte el alto hasta acá, así que
+       lo que scrollea es cada panel y no la página. Mismo patrón que
+       `pipeWide` en el Pipeline — el layout no conoce rutas. */
+    <div className={styles.dashFull}>
       {/* Una sola grilla sobre `kpis`. La fila la corta el grid a los 4 por
           ancho, no dos contenedores distintos — así reordenar es mover una
           entrada del array y nada más. */}
@@ -340,14 +310,20 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className={styles.dashGrid}>
-        <div className={styles.stack}>
-
-          <div className={`${styles.card} ${styles.cardPad}`}>
+        <div className={`${styles.card} ${styles.cardScroll}`}>
+          {/* El encabezado queda fuera del cuerpo que scrollea: si viajara con
+              las filas, al bajar la lista se perdería de qué habla la tarjeta. */}
+          <div className={styles.cardScrollHead}>
             {/* El selector de mes NO va acá: vive en la barra superior, al lado
                 de la campanita. Encuadra la pantalla entera —de qué mes estamos
                 hablando— y no es un filtro de esta tarjeta. */}
             <div className={styles.sectionHead}>
               <h2>Estado de las cuentas</h2>
+              <div className={styles.sectionHeadAct}>
+                <Link href="/ugc/admin/heroes" className={styles.linkMore}>
+                  Ver todas
+                </Link>
+              </div>
             </div>
 
             {/* Solo cuando se está mirando otro mes: en el mes en curso el
@@ -358,20 +334,20 @@ export default async function AdminDashboardPage({
                 ritmo se mide sobre el mes completo, no sobre el día de hoy.
               </p>
             )}
+          </div>
 
+          <div className={styles.cardScrollBody}>
             <table className={styles.acctTable}>
               <thead>
                 <tr>
                   <th>Hero</th>
                   <th>Calendario</th>
-                  <th>Publicados</th>
-                  <th>Rest.</th>
-                  <th>Ritmo</th>
+                  <th>Publ.</th>
                   <th style={{ textAlign: "right" }}>Riesgo</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedHeroStats.map(({ hero, target, published, remaining, deficit, calendarApproved, sinCronograma, risk }) => (
+                {sortedHeroStats.map(({ hero, target, published, deficit, calendarApproved, sinCronograma, risk }) => (
                   <tr key={hero.id}>
                     <td>
                       <Link href={`/ugc/admin/heroes/${hero.id}`} className={styles.acctHero}>
@@ -417,27 +393,29 @@ export default async function AdminDashboardPage({
                     <td className={styles.paceCell}>
                       {published}/{target ?? "—"}
                     </td>
-                    <td className={styles.paceCell}>{remaining ?? "—"}</td>
-                    <td>
-                      {target != null ? (
-                        <span className={`${styles.paceCell} ${deficit > 0 ? styles.paceBad : styles.paceOk}`}>
-                          {deficit > 0 ? `−${deficit}` : deficit < 0 ? `+${Math.abs(deficit)}` : "a tiempo"}
-                        </span>
-                      ) : (
-                        <span style={{ color: "var(--ink-3)" }}>—</span>
-                      )}
-                    </td>
                     <td style={{ textAlign: "right" }}>
                       {risk ? (
                         <span
                           className={`${styles.riskPill} ${
                             risk === "alto" ? styles.riskRisk : risk === "medio" ? styles.riskWarn : styles.riskOk
                           }`}
+                          /* El ritmo dejó de tener columna propia, pero es de
+                             dónde sale este pill: sin el número, un "Medio" no
+                             dice por cuánto. Va como tooltip. */
+                          title={
+                            deficit > 0
+                              ? `Va ${deficit} por debajo del ritmo del mes`
+                              : deficit < 0
+                                ? `Va ${Math.abs(deficit)} por encima del ritmo del mes`
+                                : "Al día con el ritmo del mes"
+                          }
                         >
                           {risk === "alto" ? "Alto" : risk === "medio" ? "Medio" : "Bajo"}
                         </span>
                       ) : (
-                        <span className={`${styles.riskPill} ${styles.riskMuted}`}>Sin meta</span>
+                        <span className={`${styles.riskPill} ${styles.riskMuted}`} title="Este Hero todavía no tiene cronograma del mes">
+                          Sin meta
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -447,11 +425,21 @@ export default async function AdminDashboardPage({
           </div>
         </div>
 
-        <div className={styles.stack}>
-          <div className={`${styles.card} ${styles.cardPad}`}>
+        <div className={`${styles.card} ${styles.cardScroll}`}>
+          <div className={styles.cardScrollHead}>
             <div className={styles.sectionHead}>
               <h2>Esta semana</h2>
+              {weekAgendaItems.length > 0 && (
+                <div className={styles.sectionHeadAct}>
+                  <span className={styles.chip}>
+                    {weekAgendaItems.length} {weekAgendaItems.length === 1 ? "pieza" : "piezas"}
+                  </span>
+                </div>
+              )}
             </div>
+          </div>
+
+          <div className={styles.cardScrollBody}>
             {weekAgendaItems.length > 0 ? (
               weekAgendaItems.map((item, i) => (
                 <div key={i} className={styles.weekRow}>
@@ -470,36 +458,6 @@ export default async function AdminDashboardPage({
               ))
             ) : (
               <div className={styles.empty}>No hay eventos en los próximos 7 días.</div>
-            )}
-          </div>
-
-          <div className={`${styles.card} ${styles.cardPad}`}>
-            <div className={styles.sectionHead}>
-              <h2>Carga del equipo</h2>
-            </div>
-            {teamLoad.map((t) => (
-              <div key={t.profileId} className={styles.loadRow}>
-                <div className={styles.lrName}>
-                  <StaffAvatar name={t.name} avatarUrl={t.avatarUrl} color={t.color} />
-                  {t.name}
-                </div>
-                <div className={styles.loadTrack}>
-                  <div
-                    className={styles.loadFill}
-                    style={{
-                      width: `${Math.min(100, (t.count / maxLoad) * 100)}%`,
-                      background: t.overloaded ? "var(--risk)" : "var(--b-500)",
-                    }}
-                  />
-                </div>
-                <div className={styles.loadVal}>{t.count} piezas</div>
-              </div>
-            ))}
-            {overloadedStaff.length > 0 && (
-              <div style={{ fontSize: "11.5px", color: "var(--ink-3)", marginTop: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <QosIcon name="alert" size={13} />
-                {overloadedStaff.map((t) => t.name).join(", ")} con más de {OVERLOAD_THRESHOLD} piezas activas.
-              </div>
             )}
           </div>
         </div>
