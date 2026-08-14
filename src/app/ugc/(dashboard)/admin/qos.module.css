@@ -1469,6 +1469,30 @@
   color: var(--ink);
 }
 
+/* "Limpiar los N filtros", al final de la fila y solo cuando hay alguno puesto.
+   Va sin borde a propósito: con uno se leería como una quinta pastilla, cuando
+   lo que hace es apagar a las otras cuatro. */
+.qosRoot .filtroLimpiar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* Un pixel más arriba y abajo que .filtroBtn, que sí tiene borde: sin eso
+     queda 2px más bajo que las pastillas que tiene al lado. */
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+  transition: var(--t-fast);
+}
+.qosRoot .filtroLimpiar:hover {
+  background: var(--b-50);
+  color: var(--b-600);
+}
+
 /* Interruptor. Reemplaza al checkbox de "ver archivados": una casilla se lee
    como "marcá esto para confirmar" y esto es una vista que se prende y se
    apaga. El input real sigue ahí abajo —invisible pero enfocable— para no

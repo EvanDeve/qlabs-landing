@@ -118,6 +118,19 @@ export default function PipelineFilters({
     ? diaCorto(dia)
     : (FILTROS_FECHA.find((f) => f.id === fecha)?.label ?? "Cualquiera");
 
+  // Cuántas pastillas están recortando el tablero. El botón de limpiar aparece
+  // solo si hay alguna: un "Limpiar filtros" que nunca hace nada es ruido fijo,
+  // y además el hueco que deja al desaparecer no mueve nada —va al final de la
+  // fila, después de la última pastilla.
+  const puestos = [brand, owner, priority, fecha, dia].filter(Boolean).length;
+  // `archivados` NO entra, aunque viva en la misma fila: es el único control que
+  // AGREGA piezas en vez de sacarlas. Quien toca "limpiar" quiere ver más, así
+  // que apagarle el interruptor haría justo lo contrario.
+  // La búsqueda tampoco: vive en la otra fila y su texto queda a la vista, así
+  // que borrarla desde acá sería una desaparición sin causa visible.
+  const limpiarFiltros = () =>
+    setFilters({ brand: "", owner: "", priority: "", fecha: "", dia: "" });
+
   return (
     <div style={{ opacity: isPending ? 0.6 : 1 }}>
       <div className={styles.pipeBar}>
@@ -257,6 +270,15 @@ export default function PipelineFilters({
             </>
           }
         />
+
+        {/* Dice CUÁNTOS limpia, y no solo "Limpiar": con el tablero vacío, el
+            número es lo que explica por qué está vacío sin abrir una pastilla. */}
+        {puestos > 0 && (
+          <button type="button" onClick={limpiarFiltros} className={styles.filtroLimpiar}>
+            <QosIcon name="x" size={12} />
+            Limpiar {puestos === 1 ? "el filtro" : `los ${puestos} filtros`}
+          </button>
+        )}
 
         <div className={styles.pipeBarEnd}>
           {/* Solo aparece si hay algo que mostrar: un interruptor que nunca
