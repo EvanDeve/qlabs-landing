@@ -959,6 +959,19 @@
   color: var(--ink-3);
   margin-top: 6px;
 }
+/* Lo que el número deja afuera y hay que resolver — hoy, los videos terminados
+   sin fecha de publicación. Va en ámbar y no en gris porque no es una nota al
+   pie: es un pendiente. La tarjeta crece 17px y sus hermanas de fila la
+   siguen, que es justo lo que hace que se note. */
+.kAlert {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warn);
+  margin-top: 6px;
+}
 
 .dashGrid {
   display: grid;

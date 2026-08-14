@@ -169,7 +169,11 @@ export default async function AdminDashboardPage({
   const publishedTotal = heroStats.reduce((sum, s) => sum + s.published, 0);
   const remainingTotal = withTarget.reduce((sum, s) => sum + (s.remaining ?? 0), 0);
   const expectedTotal = Math.round(metaTotal * monthFraction);
-  const monthName = now.toLocaleDateString("es-CR", { month: "long" });
+  // El mes que se está MIRANDO, no el de hoy. Salía de `now`, así que con el
+  // selector puesto en julio los subtítulos y los tooltips seguían diciendo
+  // "agosto" al lado de números que sí eran de julio: el número correcto con la
+  // etiqueta equivocada es peor que ninguno de los dos.
+  const monthName = nombreDeMes(monthKey);
   const daysLeft = daysInMonth - dayOfMonth;
 
   const overduePieces = activePieces.filter((p) => p.publish_date && diaCR(p.publish_date) < hoyCR);
@@ -180,11 +184,21 @@ export default async function AdminDashboardPage({
     (p) => p.publish_date && diaCR(p.publish_date) >= hoyCR && diaCR(p.publish_date) <= en7DiasCR
   );
 
-  // Videos hechos que todavía no salieron. Es una COLA, no un acumulado del
-  // mes: la pregunta que responde es "¿cuánto hay listo esperando publicarse?",
-  // así que no se filtra por fecha. El acumulado del mes ya lo dice
-  // "Publicados", que cuenta lo que sí salió.
-  const readyPieces = pieces.filter((p) => readyColumnIds.has(p.column_id));
+  // Videos hechos que todavía no salieron, del mes que se está mirando.
+  //
+  // Hasta el 2026-08-14 esto era la cola entera, sin fecha: el número no se
+  // movía al cambiar de mes y no se podía sumar con "Publicados", que sí es
+  // mensual.
+  //
+  // Un video terminado SIN fecha no cae en ningún mes, así que no entra en el
+  // conteo — pero tampoco puede desaparecer: la columna existe justamente para
+  // decir "ya está hecho, falta la fecha" (ver `is_ready`). Se cuentan aparte y
+  // el KPI los muestra como pendiente, que es lo que son.
+  const readyByColumn = pieces.filter((p) => readyColumnIds.has(p.column_id));
+  const readyPieces = readyByColumn.filter(
+    (p) => p.publish_date && diaCR(p.publish_date).slice(0, 7) === mesCR
+  );
+  const readySinFecha = readyByColumn.filter((p) => !p.publish_date);
 
   /**
    * Las ocho tarjetas de números, en un solo array y en orden.
@@ -202,7 +216,15 @@ export default async function AdminDashboardPage({
    * La CUARTA columna es el mes: "meta" arriba y "restantes" abajo quedan una
    * sobre la otra, que es como se leen.
    */
-  const kpis = [
+  const kpis: {
+    label: string;
+    value: number | string;
+    sub: string;
+    /** Segunda línea, en ámbar: algo que el número deja afuera y hay que resolver. */
+    alert?: string | null;
+    icon: string;
+    color: string;
+  }[] = [
     {
       label: "Piezas atrasadas",
       value: overduePieces.length,
@@ -237,7 +259,14 @@ export default async function AdminDashboardPage({
     {
       label: "Videos terminados",
       value: readyPieces.length,
-      sub: "hechos, todavía sin publicar",
+      sub: `hechos en ${monthName}, sin publicar`,
+      // Los que no tienen fecha no entran en el número, pero se avisan: son
+      // trabajo hecho que hoy no cuenta en ningún lado, y ponerles fecha es lo
+      // que los devuelve a la cuenta.
+      alert:
+        readySinFecha.length > 0
+          ? `${readySinFecha.length} terminado${readySinFecha.length === 1 ? "" : "s"} sin fecha`
+          : null,
       icon: "film",
       color: "#2aa5c0",
     },
@@ -315,6 +344,12 @@ export default async function AdminDashboardPage({
               {kpi.value}
             </div>
             <div className={styles.kSub}>{kpi.sub}</div>
+            {kpi.alert && (
+              <div className={styles.kAlert}>
+                <QosIcon name="alert" size={12} />
+                {kpi.alert}
+              </div>
+            )}
           </div>
         ))}
       </div>
