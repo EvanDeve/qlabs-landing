@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { addDays, addMonths, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { CalendarItem } from "@/lib/ugc/calendar";
@@ -67,9 +66,7 @@ export default function CalendarView({
   itemsByDay,
   brands,
   staff,
-  heroes,
   heroColors,
-  heroFilter,
 }: {
   view: ViewMode;
   refDateStr: string;
@@ -77,15 +74,9 @@ export default function CalendarView({
   itemsByDay: Record<string, CalendarItem[]>;
   brands: Option[];
   staff: Option[];
-  /** Solo los Heroes activos: son los que tienen pastilla de filtro. */
-  heroes: Option[];
   /** id de Hero → color. Viene calculado con la lista COMPLETA, ver la página. */
   heroColors: Record<string, string>;
-  heroFilter: string[];
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isPending, startTransition] = useTransition();
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [showNewForm, setShowNewForm] = useState<string | null>(null);
   const [pickedDay, setPickedDay] = useState<string | null>(null);
@@ -97,46 +88,14 @@ export default function CalendarView({
   const nextDateStr = format(shifter(refDate, shiftAmount), "yyyy-MM-dd");
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
-  /**
-   * Todo link de esta pantalla se arma acá para que arrastre los filtros
-   * puestos. Es la lección del `?volver=` del Pipeline: un href escrito a mano
-   * que solo pone `?date=` borra la selección de Heroes en cada flecha, y el
-   * filtro parece que se apaga solo al cambiar de mes.
-   */
-  function hrefCon(cambios: { view?: ViewMode; date?: string; heroes?: string[] }) {
+  /** Los links de navegación de la pantalla: vista y fecha. */
+  function hrefCon(cambios: { view?: ViewMode; date?: string }) {
     const params = new URLSearchParams({
       view: cambios.view ?? view,
       date: cambios.date ?? refDateStr,
     });
-    const sel = cambios.heroes ?? heroFilter;
-    if (sel.length) params.set("heroes", sel.join(","));
     return `?${params.toString()}`;
   }
-
-  // Mismo patrón que PipelineFilters: router.replace (no push) para no obligar a
-  // deshacer Hero por Hero con el botón de atrás, y useTransition para que la
-  // pastilla se vea ocupada mientras vuelve el server component.
-  function toggleHero(id: string) {
-    const sel = heroFilter.includes(id) ? heroFilter.filter((h) => h !== id) : [...heroFilter, id];
-    startTransition(() => router.replace(`${pathname}${hrefCon({ heroes: sel })}`, { scroll: false }));
-  }
-
-  /**
-   * La grilla filtrada por Hero. Se filtra en el navegador y no en la consulta
-   * porque los items ya están todos cargados: pedirlos de nuevo por cada
-   * pastilla sería tráfico de Supabase por algo que ya está en memoria, que es
-   * justo lo que este proyecto no puede gastar de más.
-   */
-  const visibles = useMemo(() => {
-    if (!heroFilter.length) return itemsByDay;
-    const set = new Set(heroFilter);
-    const out: Record<string, CalendarItem[]> = {};
-    for (const [dia, items] of Object.entries(itemsByDay)) {
-      const quedan = items.filter((i) => i.brandId && set.has(i.brandId));
-      if (quedan.length) out[dia] = quedan;
-    }
-    return out;
-  }, [itemsByDay, heroFilter]);
 
   /**
    * El día que mira el panel de la derecha.
@@ -221,49 +180,13 @@ export default function CalendarView({
         </button>
       </div>
 
-      <div className={styles.calHeroes} data-pending={isPending ? "1" : undefined}>
-        <span className={styles.pipeFiltersTag}>Heroes</span>
-        {heroes.map((h) => {
-          const on = heroFilter.includes(h.id);
-          return (
-            <button
-              key={h.id}
-              type="button"
-              onClick={() => toggleHero(h.id)}
-              className={`${styles.calHeroPill} ${on ? styles.calHeroPillOn : ""}`}
-              style={
-                on
-                  ? { background: tinte(heroColors[h.id] ?? "#6d54f3", 0.16), borderColor: heroColors[h.id] }
-                  : undefined
-              }
-              aria-pressed={on}
-            >
-              <span className={styles.dot} style={{ background: heroColors[h.id] ?? "var(--ink-3)" }} />
-              {h.name}
-            </button>
-          );
-        })}
-        {/* Sin esto, apagar el filtro obliga a acordarse de cuáles se prendieron
-            y a hacer un clic por cada uno. Aparece solo cuando hay algo que
-            limpiar, igual que en la barra del Pipeline. */}
-        {heroFilter.length > 0 && (
-          <button
-            type="button"
-            onClick={() => startTransition(() => router.replace(`${pathname}${hrefCon({ heroes: [] })}`, { scroll: false }))}
-            className={styles.calHeroClear}
-          >
-            Ver todos
-          </button>
-        )}
-      </div>
-
       {view === "month" || view === "week" ? (
         <div className={styles.calLayout}>
           {view === "month" ? (
             <MonthGrid
               refDateStr={refDateStr}
               gridDays={gridDays}
-              itemsByDay={visibles}
+              itemsByDay={itemsByDay}
               heroColors={heroColors}
               activeDay={activeDay}
               todayStr={todayStr}
@@ -274,7 +197,7 @@ export default function CalendarView({
           ) : (
             <WeekGrid
               gridDays={gridDays}
-              itemsByDay={visibles}
+              itemsByDay={itemsByDay}
               heroColors={heroColors}
               activeDay={activeDay}
               todayStr={todayStr}
@@ -286,18 +209,18 @@ export default function CalendarView({
           <aside className={styles.calRail}>
             <AgendaDelDia
               dayStr={activeDay}
-              items={visibles[activeDay] ?? []}
+              items={itemsByDay[activeDay] ?? []}
               heroColors={heroColors}
               onSelectItem={setSelectedItem}
             />
-            <CargaDelMes refDateStr={refDateStr} itemsByDay={visibles} onPickDay={setPickedDay} />
+            <CargaDelMes refDateStr={refDateStr} itemsByDay={itemsByDay} onPickDay={setPickedDay} />
           </aside>
         </div>
       ) : (
         <div className={styles.calLayout}>
           <DayView
             dayStr={activeDay}
-            items={visibles[activeDay] ?? []}
+            items={itemsByDay[activeDay] ?? []}
             heroColors={heroColors}
             onSelectItem={setSelectedItem}
             onCreate={setShowNewForm}
@@ -305,11 +228,11 @@ export default function CalendarView({
           <aside className={styles.calRail}>
             <AgendaDelDia
               dayStr={activeDay}
-              items={visibles[activeDay] ?? []}
+              items={itemsByDay[activeDay] ?? []}
               heroColors={heroColors}
               onSelectItem={setSelectedItem}
             />
-            <CargaDelMes refDateStr={refDateStr} itemsByDay={visibles} onPickDay={setPickedDay} />
+            <CargaDelMes refDateStr={refDateStr} itemsByDay={itemsByDay} onPickDay={setPickedDay} />
           </aside>
         </div>
       )}

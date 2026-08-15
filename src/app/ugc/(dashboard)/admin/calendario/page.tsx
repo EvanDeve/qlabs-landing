@@ -19,9 +19,9 @@ type ViewMode = "month" | "week" | "day";
 export default async function CalendarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; date?: string; heroes?: string }>;
+  searchParams: Promise<{ view?: string; date?: string }>;
 }) {
-  const { view: viewParam, date: dateParam, heroes: heroesParam } = await searchParams;
+  const { view: viewParam, date: dateParam } = await searchParams;
   const view: ViewMode = viewParam === "week" || viewParam === "day" ? viewParam : "month";
   const refDateStr = dateParam || formatInTimeZone(new Date(), COSTA_RICA_TZ, "yyyy-MM-dd");
   const refDate = new Date(`${refDateStr}T00:00:00`);
@@ -48,10 +48,7 @@ export default async function CalendarioPage({
 
   const [{ data: agencyClients }, { data: staffMembers }, { data: calendarEvents }, { data: contentPieces }] =
     await Promise.all([
-      // `archived` viaja porque decide dos cosas distintas: qué Heroes tienen
-      // pastilla de filtro (solo los activos) y con cuántos se calcula la
-      // paleta (TODOS). Ver coloresDeHeroes más abajo.
-      supabase.from("agency_clients").select("id, name, logo_url, archived"),
+      supabase.from("agency_clients").select("id, name, logo_url"),
       // staff_directory y no staff_members: la tabla quedó cerrada a
     // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
     // expone solo lo que el tablero necesita para pintar responsables.
@@ -189,23 +186,9 @@ export default async function CalendarioPage({
 
   // La paleta se calcula con TODOS los Heroes, archivados incluidos, porque
   // coloresDeHeroes reparte por posición en la lista ordenada: si acá entraran
-  // solo los 11 activos, cada uno tomaría el color del que le sigue y el mismo
-  // Hero cambiaría de color según qué pantalla lo pida. Las pastillas del
-  // filtro, en cambio, muestran solo los activos — un Hero archivado no tiene
-  // nada que planificar este mes.
+  // solo los activos, cada uno tomaría el color del que le sigue y el mismo Hero
+  // cambiaría de color según qué pantalla lo pida.
   const heroColors = Object.fromEntries(coloresDeHeroes((agencyClients ?? []).map((c) => c.id)));
-  const heroes = (agencyClients ?? [])
-    .filter((c) => !c.archived)
-    .map((c) => ({ id: c.id, name: c.name }))
-    .sort((a, b) => a.name.localeCompare(b.name, "es"));
-
-  // El filtro viaja en la URL y no en estado del cliente porque moverse de mes
-  // es una navegación de verdad (`?date=`): con estado se perdía la selección
-  // en cada flecha. Mismo motivo que el `?volver=` del Pipeline.
-  const heroFilter = (heroesParam ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
 
   return (
     <CalendarView
@@ -215,9 +198,7 @@ export default async function CalendarioPage({
       itemsByDay={itemsByDay}
       brands={brands}
       staff={staff}
-      heroes={heroes}
       heroColors={heroColors}
-      heroFilter={heroFilter}
     />
   );
 }

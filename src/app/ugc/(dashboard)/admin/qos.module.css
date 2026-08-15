@@ -2713,53 +2713,10 @@
   overflow-y: visible;
 }
 
-/* ---- Las pastillas de Hero ---- */
-.calHeroes {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-bottom: 14px;
-}
-.calHeroes[data-pending="1"] {
-  opacity: 0.6;
-  pointer-events: none;
-}
-.qosRoot .calHeroPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 11px;
-  border-radius: var(--r-full);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: var(--t-fast);
-}
-.qosRoot .calHeroPill:hover {
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
-/* La pastilla prendida se pinta con el color de SU Hero (inline), así que acá
-   solo va lo que no depende del Hero. El color de texto se sube a tinta plena
-   porque el fondo teñido le baja el contraste al gris. */
-.qosRoot .calHeroPillOn {
-  color: var(--ink);
-  font-weight: 700;
-}
-.qosRoot .calHeroClear {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--b-600);
-  padding: 5px 4px;
-  cursor: pointer;
-}
-.qosRoot .calHeroClear:hover {
-  text-decoration: underline;
-}
+/* Las pastillas de Hero se fueron el 2026-08-15, a pedido de Evan: eran una
+   fila entera de once marcas arriba del calendario y con ellas se fue el filtro
+   por Hero, que era su único control. Los COLORES por Hero se quedan — los usan
+   los chips del mes, los bloques de la semana y los avatares del panel. */
 
 /* ---- Panel derecho: agenda del día ---- */
 .calAgendaDate {
