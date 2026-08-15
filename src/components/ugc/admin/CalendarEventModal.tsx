@@ -25,9 +25,14 @@ export default function CalendarEventModal({
   onClose: () => void;
 }) {
   const isDerived = Boolean(item?.contentPieceId);
+  // La grilla de la semana manda el día CON la hora del slot que se tocó
+  // ('2026-08-13T14:00'); el resto del calendario manda solo el día y las 9 de
+  // la mañana son un default razonable para un evento sin hora elegida.
   const defaultStartsAt = item
     ? formatInTimeZone(new Date(item.date), COSTA_RICA_TZ, "yyyy-MM-dd'T'HH:mm")
-    : `${defaultDate}T09:00`;
+    : defaultDate?.includes("T")
+      ? defaultDate
+      : `${defaultDate}T09:00`;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>

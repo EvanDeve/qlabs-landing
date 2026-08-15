@@ -1,11 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { addDays, addMonths, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { CalendarItem } from "@/lib/ugc/calendar";
-import { CALENDAR_EVENT_TYPE_LABEL, CALENDAR_EVENT_TYPE_DOT, CALENDAR_EVENT_TYPE_BG, horaCR } from "@/lib/ugc/calendar";
+import {
+  CALENDAR_EVENT_TYPE_LABEL,
+  CALENDAR_EVENT_TYPE_DOT,
+  CALENDAR_EVENT_TYPE_ICON,
+  CARGA_COLOR,
+  CARGA_LABEL,
+  nivelDeCarga,
+  entraEnLaGrilla,
+  HORA_INICIO,
+  HORA_FIN,
+} from "@/lib/ugc/calendar";
+import { CONTENT_APPROVAL_LABEL, CONTENT_PLATFORM_LABEL } from "@/lib/ugc/content-meta";
+import type { ContentApproval } from "@/lib/database.types";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import StaffAvatar from "./StaffAvatar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
@@ -17,6 +30,36 @@ type Option = { id: string; name: string };
 
 const WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+/** Cuántos chips entran en una celda antes del "+N más". */
+const CHIPS_POR_CELDA = 3;
+
+/**
+ * El estado de aprobación en tokens de Q·OS.
+ *
+ * CONTENT_APPROVAL_STYLE no sirve acá: son clases de Tailwind del landing
+ * público, y este panel corre sobre CSS Modules con sus propias variables. Los
+ * textos sí se comparten (CONTENT_APPROVAL_LABEL), que es lo que importa que no
+ * se desincronice.
+ */
+const APPROVAL_QOS: Record<ContentApproval, { bg: string; fg: string }> = {
+  pendiente: { bg: "var(--surface-3)", fg: "var(--ink-2)" },
+  correccion: { bg: "var(--warn-bg)", fg: "var(--warn)" },
+  revisado: { bg: "var(--ok-bg)", fg: "var(--ok)" },
+};
+
+/**
+ * El color del Hero al 12% de opacidad, para el fondo del chip.
+ *
+ * Va a mano y no con color-mix() porque los colores llegan como hex desde
+ * COLORES_HERO y esto se usa en un `style` inline, donde una función CSS que
+ * falle deja el chip transparente sin avisar.
+ */
+function tinte(hex: string, alpha: number): string {
+  const limpio = hex.replace("#", "");
+  const n = parseInt(limpio.length === 3 ? limpio.replace(/./g, "$&$&") : limpio, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
 export default function CalendarView({
   view,
   refDateStr,
@@ -24,6 +67,9 @@ export default function CalendarView({
   itemsByDay,
   brands,
   staff,
+  heroes,
+  heroColors,
+  heroFilter,
 }: {
   view: ViewMode;
   refDateStr: string;
@@ -31,9 +77,18 @@ export default function CalendarView({
   itemsByDay: Record<string, CalendarItem[]>;
   brands: Option[];
   staff: Option[];
+  /** Solo los Heroes activos: son los que tienen pastilla de filtro. */
+  heroes: Option[];
+  /** id de Hero → color. Viene calculado con la lista COMPLETA, ver la página. */
+  heroColors: Record<string, string>;
+  heroFilter: string[];
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [showNewForm, setShowNewForm] = useState<string | null>(null);
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
 
   const refDate = useMemo(() => new Date(`${refDateStr}T00:00:00`), [refDateStr]);
   const shiftAmount = view === "month" ? 1 : view === "week" ? 7 : 1;
@@ -42,34 +97,114 @@ export default function CalendarView({
   const nextDateStr = format(shifter(refDate, shiftAmount), "yyyy-MM-dd");
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
-  const title =
-    view === "month"
-      ? format(refDate, "MMMM yyyy", { locale: es })
-      : view === "week"
-        ? `Semana del ${format(refDate, "d 'de' MMMM", { locale: es })}`
-        : format(refDate, "EEEE d 'de' MMMM", { locale: es });
+  /**
+   * Todo link de esta pantalla se arma acá para que arrastre los filtros
+   * puestos. Es la lección del `?volver=` del Pipeline: un href escrito a mano
+   * que solo pone `?date=` borra la selección de Heroes en cada flecha, y el
+   * filtro parece que se apaga solo al cambiar de mes.
+   */
+  function hrefCon(cambios: { view?: ViewMode; date?: string; heroes?: string[] }) {
+    const params = new URLSearchParams({
+      view: cambios.view ?? view,
+      date: cambios.date ?? refDateStr,
+    });
+    const sel = cambios.heroes ?? heroFilter;
+    if (sel.length) params.set("heroes", sel.join(","));
+    return `?${params.toString()}`;
+  }
+
+  // Mismo patrón que PipelineFilters: router.replace (no push) para no obligar a
+  // deshacer Hero por Hero con el botón de atrás, y useTransition para que la
+  // pastilla se vea ocupada mientras vuelve el server component.
+  function toggleHero(id: string) {
+    const sel = heroFilter.includes(id) ? heroFilter.filter((h) => h !== id) : [...heroFilter, id];
+    startTransition(() => router.replace(`${pathname}${hrefCon({ heroes: sel })}`, { scroll: false }));
+  }
+
+  /**
+   * La grilla filtrada por Hero. Se filtra en el navegador y no en la consulta
+   * porque los items ya están todos cargados: pedirlos de nuevo por cada
+   * pastilla sería tráfico de Supabase por algo que ya está en memoria, que es
+   * justo lo que este proyecto no puede gastar de más.
+   */
+  const visibles = useMemo(() => {
+    if (!heroFilter.length) return itemsByDay;
+    const set = new Set(heroFilter);
+    const out: Record<string, CalendarItem[]> = {};
+    for (const [dia, items] of Object.entries(itemsByDay)) {
+      const quedan = items.filter((i) => i.brandId && set.has(i.brandId));
+      if (quedan.length) out[dia] = quedan;
+    }
+    return out;
+  }, [itemsByDay, heroFilter]);
+
+  /**
+   * El día que mira el panel de la derecha.
+   *
+   * `pickedDay` es lo que eligió el usuario y puede quedar viejo: al pasar de
+   * mes, el día elegido ya no está en la grilla. Por eso el que manda es este
+   * cálculo — si el elegido no está a la vista, cae en hoy (cuando hoy se ve) o
+   * en el primer día del mes que se está mirando.
+   */
+  const activeDay = useMemo(() => {
+    if (pickedDay && gridDays.includes(pickedDay)) return pickedDay;
+    if (gridDays.includes(todayStr)) return todayStr;
+    // El día al que se navegó, antes que el primero de la grilla. Importa en la
+    // vista de Día, donde la grilla es UN día: sin esto caía en el 1 del mes y
+    // el panel de la derecha mostraba un día distinto al que se está viendo.
+    if (gridDays.includes(refDateStr)) return refDateStr;
+    return gridDays[0] ?? refDateStr;
+  }, [pickedDay, gridDays, todayStr, refDateStr]);
+
+  // La semana se titula con su RANGO, como el mockup ("10–16 agosto 2026"), y no
+  // con "Semana del 13": el rango dice de una qué días se están mirando, que es
+  // lo que se necesita saber al llegar. Cuando la semana cruza de mes, cada
+  // extremo lleva el suyo.
+  const title = (() => {
+    if (view === "month") return format(refDate, "MMMM yyyy", { locale: es });
+    // El día de la semana no va acá sino adentro de la tarjeta, como el mockup:
+    // arriba manda la fecha, que es lo que se cambia con las flechas.
+    if (view === "day") return format(refDate, "d 'de' MMMM, yyyy", { locale: es });
+    const ini = new Date(`${gridDays[0]}T00:00:00`);
+    const fin = new Date(`${gridDays[gridDays.length - 1]}T00:00:00`);
+    const mismoMes = format(ini, "yyyy-MM") === format(fin, "yyyy-MM");
+    return mismoMes
+      ? `${format(ini, "d")}–${format(fin, "d MMMM yyyy", { locale: es })}`
+      : `${format(ini, "d MMM", { locale: es })} – ${format(fin, "d MMM yyyy", { locale: es })}`;
+  })();
+  // La mayúscula inicial va acá y no con `text-transform: capitalize`, que
+  // capitaliza cada palabra y rompía "13 de agosto" → "13 De Agosto".
+  const tituloVisible = title.charAt(0).toUpperCase() + title.slice(1);
 
   return (
-    <div>
+    // `calFit` acota la pantalla a la ventana y hace que scrollee el calendario
+    // y no la página. Va en Semana y en Día: son las dos vistas que se recorren
+    // por hora, y ahí el encabezado —los días, o los tres números del día— es la
+    // referencia que no puede irse de pantalla mientras se baja por el horario.
+    // El Mes no: su alto crece con las semanas del mes y ya se lee entero.
+    <div className={`${styles.calWide} ${view === "month" ? "" : styles.calFit}`}>
       <div className={styles.calHead}>
-        <h2 className={styles.calMonth}>{title}</h2>
+        <h2 className={styles.calMonth}>{tituloVisible}</h2>
         <div className={styles.calNav}>
-          <Link href={`?view=${view}&date=${prevDateStr}`} className={styles.calNavBtn}>
+          <Link href={hrefCon({ date: prevDateStr })} className={styles.calNavBtn} aria-label="Anterior">
             <QosIcon name="chevL" size={16} />
           </Link>
-          <Link href={`?view=${view}&date=${todayStr}`} className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}>
+          <Link href={hrefCon({ date: todayStr })} className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}>
             Hoy
           </Link>
-          <Link href={`?view=${view}&date=${nextDateStr}`} className={styles.calNavBtn}>
+          <Link href={hrefCon({ date: nextDateStr })} className={styles.calNavBtn} aria-label="Siguiente">
             <QosIcon name="chevR" size={16} />
           </Link>
         </div>
-        <div className={styles.calViewToggle}>
+        {/* Riel segmentado, el mismo de las secciones del Pipeline: son tres
+            respuestas a UNA pregunta —con qué zoom miro el mes—, no tres
+            acciones sueltas. */}
+        <div className={styles.pipeTabs}>
           {(["month", "week", "day"] as ViewMode[]).map((v) => (
             <Link
               key={v}
-              href={`?view=${v}&date=${refDateStr}`}
-              className={`${styles.btn} ${styles.btnSm} ${v === view ? styles.btnPrimary : styles.btnGhost}`}
+              href={hrefCon({ view: v })}
+              className={`${styles.pipeTab} ${v === view ? styles.pipeTabOn : ""}`}
             >
               {v === "month" ? "Mes" : v === "week" ? "Semana" : "Día"}
             </Link>
@@ -77,7 +212,7 @@ export default function CalendarView({
         </div>
         <button
           type="button"
-          onClick={() => setShowNewForm(refDateStr)}
+          onClick={() => setShowNewForm(activeDay)}
           className={`${styles.btn} ${styles.btnPrimary}`}
           style={{ marginLeft: "auto" }}
         >
@@ -86,17 +221,97 @@ export default function CalendarView({
         </button>
       </div>
 
-      {view === "month" && (
-        <MonthGrid
-          refDate={refDate}
-          gridDays={gridDays}
-          itemsByDay={itemsByDay}
-          onSelectItem={setSelectedItem}
-          onCreate={setShowNewForm}
-        />
-      )}
-      {(view === "week" || view === "day") && (
-        <AgendaColumns days={gridDays} itemsByDay={itemsByDay} onSelectItem={setSelectedItem} onCreate={setShowNewForm} />
+      <div className={styles.calHeroes} data-pending={isPending ? "1" : undefined}>
+        <span className={styles.pipeFiltersTag}>Heroes</span>
+        {heroes.map((h) => {
+          const on = heroFilter.includes(h.id);
+          return (
+            <button
+              key={h.id}
+              type="button"
+              onClick={() => toggleHero(h.id)}
+              className={`${styles.calHeroPill} ${on ? styles.calHeroPillOn : ""}`}
+              style={
+                on
+                  ? { background: tinte(heroColors[h.id] ?? "#6d54f3", 0.16), borderColor: heroColors[h.id] }
+                  : undefined
+              }
+              aria-pressed={on}
+            >
+              <span className={styles.dot} style={{ background: heroColors[h.id] ?? "var(--ink-3)" }} />
+              {h.name}
+            </button>
+          );
+        })}
+        {/* Sin esto, apagar el filtro obliga a acordarse de cuáles se prendieron
+            y a hacer un clic por cada uno. Aparece solo cuando hay algo que
+            limpiar, igual que en la barra del Pipeline. */}
+        {heroFilter.length > 0 && (
+          <button
+            type="button"
+            onClick={() => startTransition(() => router.replace(`${pathname}${hrefCon({ heroes: [] })}`, { scroll: false }))}
+            className={styles.calHeroClear}
+          >
+            Ver todos
+          </button>
+        )}
+      </div>
+
+      {view === "month" || view === "week" ? (
+        <div className={styles.calLayout}>
+          {view === "month" ? (
+            <MonthGrid
+              refDateStr={refDateStr}
+              gridDays={gridDays}
+              itemsByDay={visibles}
+              heroColors={heroColors}
+              activeDay={activeDay}
+              todayStr={todayStr}
+              onPickDay={setPickedDay}
+              onSelectItem={setSelectedItem}
+              onCreate={setShowNewForm}
+            />
+          ) : (
+            <WeekGrid
+              gridDays={gridDays}
+              itemsByDay={visibles}
+              heroColors={heroColors}
+              activeDay={activeDay}
+              todayStr={todayStr}
+              onPickDay={setPickedDay}
+              onSelectItem={setSelectedItem}
+              onCreate={setShowNewForm}
+            />
+          )}
+          <aside className={styles.calRail}>
+            <AgendaDelDia
+              dayStr={activeDay}
+              items={visibles[activeDay] ?? []}
+              heroColors={heroColors}
+              onSelectItem={setSelectedItem}
+            />
+            <CargaDelMes refDateStr={refDateStr} itemsByDay={visibles} onPickDay={setPickedDay} />
+          </aside>
+        </div>
+      ) : (
+        <div className={styles.calLayout}>
+          <DayView
+            dayStr={activeDay}
+            items={visibles[activeDay] ?? []}
+            heroColors={heroColors}
+            onSelectItem={setSelectedItem}
+            onCreate={setShowNewForm}
+          />
+          <aside className={styles.calRail}>
+            <AgendaDelDia
+              dayStr={activeDay}
+              items={visibles[activeDay] ?? []}
+              heroColors={heroColors}
+              onSelectItem={setSelectedItem}
+            />
+            <CargaDelMes refDateStr={refDateStr} itemsByDay={visibles} onPickDay={setPickedDay} />
+          </aside>
+        </div>
       )}
 
       {selectedItem && (
@@ -115,20 +330,33 @@ export default function CalendarView({
 }
 
 function MonthGrid({
-  refDate,
+  refDateStr,
   gridDays,
   itemsByDay,
+  heroColors,
+  activeDay,
+  todayStr,
+  onPickDay,
   onSelectItem,
   onCreate,
 }: {
-  refDate: Date;
+  refDateStr: string;
   gridDays: string[];
   itemsByDay: Record<string, CalendarItem[]>;
+  heroColors: Record<string, string>;
+  activeDay: string;
+  todayStr: string;
+  onPickDay: (dayStr: string) => void;
   onSelectItem: (item: CalendarItem) => void;
   onCreate: (dayStr: string) => void;
 }) {
-  const currentMonth = format(refDate, "yyyy-MM");
-  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const currentMonth = refDateStr.slice(0, 7);
+
+  // El ancho de la barrita de carga es relativo al día más cargado que se ve, y
+  // el COLOR es de corte fijo (nivelDeCarga). Los dos juntos: el color dice si
+  // el día está lleno en términos absolutos, el largo deja comparar de un
+  // vistazo dos días del mismo mes.
+  const maxDia = Math.max(1, ...gridDays.map((d) => (itemsByDay[d] ?? []).length));
 
   return (
     <div className={styles.calGrid}>
@@ -142,69 +370,99 @@ function MonthGrid({
           const items = itemsByDay[dayStr] ?? [];
           const inMonth = dayStr.startsWith(currentMonth);
           const isToday = dayStr === todayStr;
+          const isActive = dayStr === activeDay;
+          const nivel = nivelDeCarga(items.length);
           return (
             <div
               key={dayStr}
-              onClick={() => onCreate(dayStr)}
-              className={`${styles.calCell} ${!inMonth ? styles.calCellOut : ""}`}
+              onClick={() => onPickDay(dayStr)}
+              className={`${styles.calCell} ${!inMonth ? styles.calCellOut : ""} ${isActive ? styles.calCellSel : ""}`}
             >
-              <div className={`${styles.calDaynum} ${isToday ? styles.calDaynumToday : ""} ${!inMonth ? styles.calDaynumOut : ""}`}>
-                {Number(dayStr.slice(-2))}
+              <div className={styles.calCellTop}>
+                {nivel === "llena" && <span className={styles.calFullTag}>Lleno</span>}
+                {isToday && <span className={styles.calTodayTag}>Hoy</span>}
+                <div
+                  className={`${styles.calDaynum} ${isToday ? styles.calDaynumToday : ""} ${!inMonth ? styles.calDaynumOut : ""}`}
+                >
+                  {Number(dayStr.slice(-2))}
+                </div>
               </div>
               <div>
-                {items.slice(0, 3).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectItem(item);
-                    }}
-                    className={styles.calEv}
-                    style={{
-                      background: CALENDAR_EVENT_TYPE_BG[item.type],
-                      color: CALENDAR_EVENT_TYPE_DOT[item.type],
-                      borderLeft: `3px solid ${CALENDAR_EVENT_TYPE_DOT[item.type]}`,
-                    }}
-                    // El color del chip dice el TIPO de evento, no de quién es.
-                    // Con un mes entero de grabaciones todos salen del mismo
-                    // azul, así que el Hero hay que poder leerlo aparte: va el
-                    // logo, y el tooltip con marca + tipo + título para cuando
-                    // el texto se corta con ellipsis.
-                    title={[item.brandName, CALENDAR_EVENT_TYPE_LABEL[item.type], item.title]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  >
-                    {item.brandName && (
-                      <BrandAvatar
-                        name={item.brandName}
-                        logoUrl={item.brandLogoUrl}
-                        size={14}
-                        width={item.brandLogoUrl ? 22 : 14}
-                        radius={4}
-                        fit="contain"
-                      />
-                    )}
-                    {/* En la grilla del mes manda el Hero, no el título: el
-                        color del chip ya dice el tipo, así que un título como
-                        "GRABACION-AGOSTO" repite lo que se ve y esconde lo
-                        único que distingue dos eventos del mismo día. El
-                        título completo sigue en el tooltip y en el detalle.
-                        Los eventos sin marca —una reunión interna— caen al
-                        título, que ahí sí es lo que los identifica. */}
-                    <span
-                      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                {items.slice(0, CHIPS_POR_CELDA).map((item) => {
+                  // Los eventos sin Hero —una reunión interna— caen al color del
+                  // tipo: no tienen paleta propia y dejarlos grises los borraría.
+                  const color = (item.brandId && heroColors[item.brandId]) || CALENDAR_EVENT_TYPE_DOT[item.type];
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectItem(item);
+                      }}
+                      className={styles.calEv}
+                      // --ev-color lo lee el :hover para dibujar el anillo en
+                      // el color del Hero. Antes eso salía de `currentColor`,
+                      // que servía cuando el TEXTO del chip iba coloreado; ahora
+                      // el texto es tinta —varios Heroes de la paleta son
+                      // amarillos o naranjas y sobre un fondo al 12% no se
+                      // leían— así que el color viaja aparte.
+                      style={
+                        {
+                          background: tinte(color, 0.12),
+                          borderLeft: `3px solid ${color}`,
+                          "--ev-color": color,
+                        } as React.CSSProperties
+                      }
+                      // El chip corta el nombre con ellipsis, así que el título
+                      // completo tiene que estar en algún lado que no obligue a
+                      // abrir la pieza.
+                      title={[item.brandName, CALENDAR_EVENT_TYPE_LABEL[item.type], item.hora, item.title]
+                        .filter(Boolean)
+                        .join(" · ")}
                     >
-                      {item.brandName ?? item.title}
-                    </span>
-                  </button>
-                ))}
-                {items.length > 3 && (
-                  <span style={{ fontSize: "10px", fontWeight: 600, color: "var(--ink-3)" }}>
-                    +{items.length - 3} más
-                  </span>
+                      <span className={styles.calEvIcon} style={{ color }}>
+                        <QosIcon name={CALENDAR_EVENT_TYPE_ICON[item.type]} size={11} />
+                      </span>
+                      {/* La hora solo si existe de verdad. Medido: 100 de los
+                          129 items de agosto no tienen ninguna, así que un
+                          hueco fijo dejaría casi todos los chips con un espacio
+                          vacío al frente. */}
+                      {item.hora && <span className={styles.calEvHora}>{item.hora}</span>}
+                      <span className={styles.calEvName}>{item.brandName ?? item.title}</span>
+                    </button>
+                  );
+                })}
+                {items.length > CHIPS_POR_CELDA && (
+                  <span className={styles.calMas}>+{items.length - CHIPS_POR_CELDA} más</span>
                 )}
               </div>
+
+              {/* Crear quedó en un botón propio porque el clic en la celda pasó
+                  a elegir el día. Aparece al pasar el mouse y en la esquina de
+                  abajo, que es la parte de la celda que casi nunca tiene chips. */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreate(dayStr);
+                }}
+                className={styles.calAdd}
+                title="Nuevo evento este día"
+                aria-label={`Nuevo evento el ${dayStr}`}
+              >
+                <QosIcon name="plus" size={13} />
+              </button>
+
+              {nivel !== "libre" && (
+                <span
+                  className={styles.calLoad}
+                  style={{
+                    width: `${Math.round((items.length / maxDia) * 100)}%`,
+                    background: CARGA_COLOR[nivel],
+                  }}
+                />
+              )}
             </div>
           );
         })}
@@ -213,89 +471,496 @@ function MonthGrid({
   );
 }
 
-function AgendaColumns({
-  days,
+/* ============================================================
+   VISTA DE SEMANA
+   ============================================================ */
+
+/** Alto de una hora de la grilla, en px. Manda todo el cálculo de posiciones. */
+const ALTO_HORA = 56;
+/**
+ * Alto de un bloque de evento: 34 de los 56 de la hora.
+ *
+ * A pedido de Evan (2026-08-15): "los cards en el calendario deben de verse más
+ * pequeñitos, recuerda que los detalles se ven a la derecha donde vienen
+ * listados los eventos del día". Por eso el bloque dice solo DOS cosas —a qué
+ * hora y de qué Hero— y se le sacó la línea del título: el título completo está
+ * en el tooltip y en el panel de la derecha, que es donde él lo va a buscar.
+ * Antes medía 52 de 56 con tres líneas y la grilla se leía como un muro de
+ * tarjetas en vez de como un horario.
+ */
+const ALTO_EVENTO = 34;
+/** Chips que entran en la banda "Sin hora" antes del "+N más". */
+const CHIPS_SIN_HORA = 3;
+
+const HORAS = Array.from({ length: HORA_FIN - HORA_INICIO }, (_, i) => HORA_INICIO + i);
+
+/** "8 am", "12 pm", "3 pm" — el formato del mockup para la regla de la izquierda. */
+function etiquetaHora(h: number): string {
+  if (h === 12) return "12 pm";
+  return h < 12 ? `${h} am` : `${h - 12} pm`;
+}
+
+function aMinutos(hora: string): number {
+  const [h, m] = hora.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/**
+ * Reparte los items de un día entre la grilla y la banda de arriba.
+ *
+ * A la banda van dos cosas distintas que comparten problema —no tienen lugar en
+ * la grilla—: los que no tienen hora (36 de los 49 items de la semana del 10 al
+ * 16 de agosto, medido) y los que la tienen pero caen fuera de 8–20. Estos
+ * últimos son hoy los 3 eventos de madrugada de agosto, que están mal por el bug
+ * de zona horaria de `calendar-events.ts`; mandarlos a la banda con su hora a la
+ * vista es lo que impide que el bug se vuelva invisible.
+ *
+ * Los que sí entran se apilan: si un bloque arranca antes de que termine el
+ * anterior, se lo empuja justo abajo en vez de superponerlo. Es lo que eligió
+ * Evan sobre partir la columna en dos. El costo, dicho: dos eventos de la misma
+ * hora se dibujan uno más abajo que el otro, así que el segundo parece más
+ * tarde de lo que es. Por eso el bloque muestra SIEMPRE su hora escrita.
+ */
+function repartirDia(items: CalendarItem[]) {
+  const banda: CalendarItem[] = [];
+  const enGrilla: { item: CalendarItem; top: number }[] = [];
+
+  const conHora = items.filter((i) => entraEnLaGrilla(i.hora)).sort((a, b) => a.hora!.localeCompare(b.hora!));
+
+  for (const item of items) if (!conHora.includes(item)) banda.push(item);
+
+  let finAnterior = -Infinity;
+  for (const item of conHora) {
+    const propio = ((aMinutos(item.hora!) - HORA_INICIO * 60) / 60) * ALTO_HORA;
+    const top = Math.max(propio, finAnterior);
+    enGrilla.push({ item, top });
+    finAnterior = top + ALTO_EVENTO + 2;
+  }
+
+  return { banda, enGrilla };
+}
+
+function WeekGrid({
+  gridDays,
   itemsByDay,
+  heroColors,
+  activeDay,
+  todayStr,
+  onPickDay,
   onSelectItem,
   onCreate,
 }: {
-  days: string[];
+  gridDays: string[];
   itemsByDay: Record<string, CalendarItem[]>;
+  heroColors: Record<string, string>;
+  activeDay: string;
+  todayStr: string;
+  onPickDay: (dayStr: string) => void;
   onSelectItem: (item: CalendarItem) => void;
-  onCreate: (dayStr: string) => void;
+  onCreate: (cuando: string) => void;
 }) {
+  const porDia = useMemo(
+    () => Object.fromEntries(gridDays.map((d) => [d, repartirDia(itemsByDay[d] ?? [])])),
+    [gridDays, itemsByDay]
+  );
+
+  const colorDe = (item: CalendarItem) =>
+    (item.brandId && heroColors[item.brandId]) || CALENDAR_EVENT_TYPE_DOT[item.type];
+
   return (
-    <div style={{ display: "grid", gap: "14px", gridTemplateColumns: days.length > 1 ? "repeat(7, 1fr)" : "1fr" }}>
-      {days.map((dayStr) => {
-        const items = itemsByDay[dayStr] ?? [];
-        const date = new Date(`${dayStr}T00:00:00`);
-        return (
-          <div key={dayStr} className={styles.agendaCol}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-              <span style={{ fontSize: "13px", fontWeight: 700, textTransform: "capitalize" }}>
-                {format(date, "EEE d", { locale: es })}
+    <div className={styles.calWeek}>
+      <div className={styles.calWeekHead}>
+        <div className={styles.calWeekGutterCell} />
+        {gridDays.map((dayStr) => {
+          const total = (itemsByDay[dayStr] ?? []).length;
+          const date = new Date(`${dayStr}T00:00:00`);
+          return (
+            <button
+              key={dayStr}
+              type="button"
+              onClick={() => onPickDay(dayStr)}
+              className={`${styles.calWeekDay} ${dayStr === activeDay ? styles.calWeekDayOn : ""}`}
+            >
+              <span className={styles.calWeekDow}>{format(date, "EEE", { locale: es })}</span>
+              <span className={styles.calWeekDate}>
+                <span className={dayStr === todayStr ? styles.calDaynumToday : undefined}>
+                  {Number(dayStr.slice(-2))}
+                </span>
+                {/* El contador cuenta el día ENTERO, banda incluida: si contara
+                    solo lo de la grilla, un martes con ocho piezas sin hora
+                    diría 0 y sería justo el día que hay que mirar. */}
+                {total > 0 && <span className={styles.calWeekCount}>{total}</span>}
               </span>
-              <button type="button" onClick={() => onCreate(dayStr)} className={styles.linkMore}>
-                <QosIcon name="plus" size={13} />
-              </button>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={styles.calWeekAllDay}>
+        <div className={styles.calWeekGutterCell}>
+          <span className={styles.calWeekGutterTag}>Sin hora</span>
+        </div>
+        {gridDays.map((dayStr) => {
+          const { banda } = porDia[dayStr];
+          return (
+            <div
+              key={dayStr}
+              className={`${styles.calWeekAllDayCell} ${dayStr === activeDay ? styles.calWeekColOn : ""}`}
+            >
+              {banda.slice(0, CHIPS_SIN_HORA).map((item) => {
+                const color = colorDe(item);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onSelectItem(item)}
+                    className={styles.calEv}
+                    style={
+                      {
+                        background: tinte(color, 0.12),
+                        borderLeft: `3px solid ${color}`,
+                        "--ev-color": color,
+                      } as React.CSSProperties
+                    }
+                    title={[item.brandName, CALENDAR_EVENT_TYPE_LABEL[item.type], item.hora, item.title]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  >
+                    <span className={styles.calEvIcon} style={{ color }}>
+                      <QosIcon name={CALENDAR_EVENT_TYPE_ICON[item.type]} size={11} />
+                    </span>
+                    {/* Un item de la banda normalmente no tiene hora. Cuando la
+                        tiene es porque cayó fuera de 8–20, y entonces la hora es
+                        justo el dato que explica por qué está acá. */}
+                    {item.hora && <span className={styles.calEvHora}>{item.hora}</span>}
+                    <span className={styles.calEvName}>{item.brandName ?? item.title}</span>
+                  </button>
+                );
+              })}
+              {banda.length > CHIPS_SIN_HORA && (
+                <button type="button" onClick={() => onPickDay(dayStr)} className={styles.calWeekMas}>
+                  +{banda.length - CHIPS_SIN_HORA} más
+                </button>
+              )}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {items.length > 0 ? (
-                items.map((item) => (
-                  <button key={item.id} type="button" onClick={() => onSelectItem(item)} className={styles.agendaItem}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span className={styles.dot} style={{ background: CALENDAR_EVENT_TYPE_DOT[item.type] }} />
-                      <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--ink-2)" }}>
-                        {/* horaCR devuelve null para los días sueltos: una
-                            publicación sale de content_pieces.publish_date, que
-                            es un `date` y no tiene hora. Antes se formateaba
-                            igual y mostraba "18:00" —medianoche UTC leída en
-                            CR—, que parecía una hora de verdad. */}
-                        {horaCR(item.date) ? `${horaCR(item.date)} · ` : ""}
-                        {CALENDAR_EVENT_TYPE_LABEL[item.type]}
-                      </span>
+          );
+        })}
+      </div>
+
+      <div className={styles.calWeekBody}>
+        <div className={styles.calWeekGutterCell}>
+          {HORAS.map((h) => (
+            <div key={h} className={styles.calWeekHour} style={{ height: ALTO_HORA }}>
+              <span>{etiquetaHora(h)}</span>
+            </div>
+          ))}
+        </div>
+        {gridDays.map((dayStr) => (
+          <div
+            key={dayStr}
+            className={`${styles.calWeekCol} ${dayStr === activeDay ? styles.calWeekColOn : ""}`}
+          >
+            {HORAS.map((h) => (
+              <button
+                key={h}
+                type="button"
+                className={styles.calWeekSlot}
+                style={{ height: ALTO_HORA }}
+                onClick={() => onCreate(`${dayStr}T${String(h).padStart(2, "0")}:00`)}
+                aria-label={`Nuevo evento el ${dayStr} a las ${h}:00`}
+              />
+            ))}
+            {porDia[dayStr].enGrilla.map(({ item, top }) => {
+              const color = colorDe(item);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectItem(item)}
+                  className={styles.calWeekEv}
+                  style={
+                    {
+                      top,
+                      height: ALTO_EVENTO,
+                      background: tinte(color, 0.12),
+                      borderLeft: `3px solid ${color}`,
+                      "--ev-color": color,
+                    } as React.CSSProperties
+                  }
+                  title={[item.brandName, CALENDAR_EVENT_TYPE_LABEL[item.type], item.hora, item.title]
+                    .filter(Boolean)
+                    .join(" · ")}
+                >
+                  <span className={styles.calWeekEvTop}>
+                    <QosIcon name={CALENDAR_EVENT_TYPE_ICON[item.type]} size={10} />
+                    {/* La hora va escrita SIEMPRE, aunque la altura del bloque
+                        ya la insinúe: con los choques apilados el segundo evento
+                        se dibuja más abajo que su hora real, así que el texto es
+                        lo único que no miente. */}
+                    <span className={styles.calEvHora}>{item.hora}</span>
+                  </span>
+                  <span className={styles.calWeekEvHero}>{item.brandName ?? item.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   VISTA DE DÍA
+   ============================================================ */
+
+function DayView({
+  dayStr,
+  items,
+  heroColors,
+  onSelectItem,
+  onCreate,
+}: {
+  dayStr: string;
+  items: CalendarItem[];
+  heroColors: Record<string, string>;
+  onSelectItem: (item: CalendarItem) => void;
+  onCreate: (cuando: string) => void;
+}) {
+  const date = new Date(`${dayStr}T00:00:00`);
+
+  /**
+   * Los tres números del encabezado se cuentan SOLO sobre las publicaciones,
+   * igual que el subtítulo que los precede. Una grabación no se publica en
+   * ningún lado, así que sumarla a "reels" contaría dos veces la misma pieza:
+   * la grabación y la publicación del mismo video salen del mismo `platform`.
+   */
+  const publicaciones = items.filter((i) => i.type === "publicacion");
+  const reels = publicaciones.filter((i) => i.platform === "reels").length;
+  // "posts" es todo lo que no es reel: instagram y tiktok. Van juntos porque en
+  // todo agosto hay 30 de instagram contra 1 de tiktok, y una tarjeta con un
+  // número que casi siempre dice 0 ocupa lugar sin decir nada.
+  const posts = publicaciones.filter((i) => i.platform && i.platform !== "reels").length;
+  // Pendiente + Corrección: "lo que todavía te falta de este día" (decisión de
+  // Evan, 2026-08-15). Corrección sola casi siempre daría 0 —6 piezas en todo
+  // agosto contra 41 pendientes— y pendiente sola dejaría afuera justo las que
+  // volvieron con cambios.
+  const porRevisar = publicaciones.filter(
+    (i) => i.approval === "pendiente" || i.approval === "correccion"
+  ).length;
+
+  const sinHora = items.filter((i) => !entraEnLaGrilla(i.hora));
+  const porHora = new Map<number, CalendarItem[]>();
+  for (const item of items) {
+    if (!entraEnLaGrilla(item.hora)) continue;
+    const h = Number(item.hora!.slice(0, 2));
+    const fila = porHora.get(h) ?? [];
+    fila.push(item);
+    porHora.set(h, fila);
+  }
+  for (const fila of porHora.values()) fila.sort((a, b) => a.hora!.localeCompare(b.hora!));
+
+  const fila = (item: CalendarItem) => {
+    const color = (item.brandId && heroColors[item.brandId]) || CALENDAR_EVENT_TYPE_DOT[item.type];
+    return (
+      <button
+        key={item.id}
+        type="button"
+        onClick={() => onSelectItem(item)}
+        className={styles.calDayItem}
+        style={{ background: tinte(color, 0.09), borderLeft: `3px solid ${color}` }}
+      >
+        <BrandAvatar
+          name={item.brandName ?? item.title}
+          logoUrl={item.brandLogoUrl}
+          size={34}
+          radius={9}
+          fit="contain"
+          color={color}
+        />
+        <span className={styles.calDayItemBody}>
+          <span className={styles.calDayItemTitle}>
+            {item.title}
+            {item.brandName ? ` — ${item.brandName}` : ""}
+          </span>
+          <span className={styles.calDayItemMeta}>
+            <QosIcon name={CALENDAR_EVENT_TYPE_ICON[item.type]} size={12} />
+            {[
+              item.hora,
+              item.type === "publicacion" ? null : CALENDAR_EVENT_TYPE_LABEL[item.type],
+              item.platform ? CONTENT_PLATFORM_LABEL[item.platform] : null,
+              item.responsibleName,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        </span>
+        {item.approval && (
+          <span
+            className={styles.calAgTag}
+            style={{ background: APPROVAL_QOS[item.approval].bg, color: APPROVAL_QOS[item.approval].fg }}
+          >
+            {CONTENT_APPROVAL_LABEL[item.approval]}
+          </span>
+        )}
+        <QosIcon name="chevR" size={15} />
+      </button>
+    );
+  };
+
+  return (
+    <div className={styles.calDay}>
+      <div className={styles.calDayHead}>
+        <div className={styles.calDayBadge}>
+          <span>{format(date, "d", { locale: es })}</span>
+          <span>{format(date, "MMM", { locale: es })}</span>
+        </div>
+        <div className={styles.calDayTitles}>
+          <h3>{format(date, "EEEE", { locale: es })}</h3>
+          <p>
+            {publicaciones.length === 1
+              ? "1 publicación agendada"
+              : `${publicaciones.length} publicaciones agendadas`}
+          </p>
+        </div>
+        <div className={styles.calDayStats}>
+          <div className={styles.calDayStat}>
+            <strong>{reels}</strong>
+            <span>reels</span>
+          </div>
+          <div className={styles.calDayStat}>
+            <strong>{posts}</strong>
+            <span>posts</span>
+          </div>
+          <div className={styles.calDayStat}>
+            <strong style={{ color: porRevisar > 0 ? "var(--warn)" : undefined }}>{porRevisar}</strong>
+            <span>por revisar</span>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.calDayBody}>
+        {/* La misma banda que la semana, con el mismo motivo: la mayoría de las
+            publicaciones no tiene hora. El 12 de agosto son las 8 de 8, así que
+            sin esta fila el día se veía completamente vacío. */}
+        {sinHora.length > 0 && (
+          <div className={styles.calDayRow}>
+            <div className={styles.calDayHourCell}>
+              <span className={styles.calWeekGutterTag}>Sin hora</span>
+            </div>
+            <div className={styles.calDayRowItems}>{sinHora.map(fila)}</div>
+          </div>
+        )}
+        {HORAS.map((h) => {
+          const deLaHora = porHora.get(h) ?? [];
+          return (
+            <div key={h} className={styles.calDayRow}>
+              <div className={styles.calDayHourCell}>{etiquetaHora(h)}</div>
+              {deLaHora.length > 0 ? (
+                <div className={styles.calDayRowItems}>{deLaHora.map(fila)}</div>
+              ) : (
+                // La hora vacía sigue siendo clickeable: es el "crear a las 3 pm"
+                // de la semana, y el guion le da algo que mirar para que no
+                // parezca que la fila se rompió.
+                <button
+                  type="button"
+                  onClick={() => onCreate(`${dayStr}T${String(h).padStart(2, "0")}:00`)}
+                  className={styles.calDayEmpty}
+                  aria-label={`Nuevo evento a las ${h}:00`}
+                >
+                  —
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AgendaDelDia({
+  dayStr,
+  items,
+  heroColors,
+  onSelectItem,
+}: {
+  dayStr: string;
+  items: CalendarItem[];
+  heroColors: Record<string, string>;
+  onSelectItem: (item: CalendarItem) => void;
+}) {
+  const date = new Date(`${dayStr}T00:00:00`);
+  const nivel = nivelDeCarga(items.length);
+  const publicaciones = items.filter((i) => i.type === "publicacion").length;
+
+  return (
+    <section className={styles.card}>
+      <div className={styles.cardPad}>
+        <div className={styles.pipeFiltersTag}>Agenda</div>
+        <div className={styles.calAgendaDate}>
+          <strong>{format(date, "d MMM", { locale: es })}</strong>
+          <span>{format(date, "EEEE", { locale: es })}</span>
+        </div>
+        <div className={styles.calAgendaChips}>
+          <span className={styles.chip}>
+            {/* Las dos formas enteras: el plural de "publicación" pierde la
+                tilde, así que pegarle "es" al singular da "publicaciónes". */}
+            {publicaciones === 0
+              ? "Sin publicaciones"
+              : `${publicaciones} ${publicaciones === 1 ? "publicación" : "publicaciones"}`}
+          </span>
+          <span
+            className={styles.badgeSt}
+            style={{ background: "var(--surface-3)", color: CARGA_COLOR[nivel] }}
+          >
+            <span className={styles.dot} style={{ background: CARGA_COLOR[nivel] }} />
+            {CARGA_LABEL[nivel]}
+          </span>
+        </div>
+
+        <div className={styles.calAgList}>
+          {items.length === 0 ? (
+            <p className={styles.calEmpty}>Nada agendado este día.</p>
+          ) : (
+            items.map((item) => {
+              const color = (item.brandId && heroColors[item.brandId]) || CALENDAR_EVENT_TYPE_DOT[item.type];
+              return (
+                <button key={item.id} type="button" onClick={() => onSelectItem(item)} className={styles.calAgItem}>
+                  <BrandAvatar
+                    name={item.brandName ?? item.title}
+                    logoUrl={item.brandLogoUrl}
+                    size={32}
+                    radius={9}
+                    fit="contain"
+                    // El respaldo de iniciales toma el color del Hero para que
+                    // el avatar, el punto del filtro y el chip de la grilla
+                    // digan lo mismo. Sin esto usaría su degradado por hash, que
+                    // solo tiene 5 variantes para 10 Heroes sin logo.
+                    color={color}
+                  />
+                  <div className={styles.calAgBody}>
+                    <div className={styles.calAgTitle}>{item.title}</div>
+                    {/* "08:40 · Publicación · Instagram" no entra en una línea
+                        con el rail en su piso de 300px, y "Publicación" es justo
+                        lo que ya dice el ícono de al lado. Se calla SOLO en las
+                        publicaciones, que son 116 de los 129 items del mes; una
+                        grabación o una reunión conservan la palabra, porque ahí
+                        el ícono solo no alcanza para distinguirlas de la
+                        publicación de la misma pieza, que va el mismo día. */}
+                    <div className={styles.calAgMeta}>
+                      <QosIcon name={CALENDAR_EVENT_TYPE_ICON[item.type]} size={12} />
+                      {[
+                        item.hora,
+                        item.type === "publicacion" ? null : CALENDAR_EVENT_TYPE_LABEL[item.type],
+                        item.platform ? CONTENT_PLATFORM_LABEL[item.platform] : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </div>
-                    <div style={{ marginTop: "4px", fontSize: "13px", fontWeight: 600 }}>{item.title}</div>
-                    {item.brandName && (
-                      // Acá el Hero ya venía en texto, pero sin logo no se
-                      // reconoce de un vistazo. Va más grande que en la grilla
-                      // del mes porque la columna de agenda tiene lugar.
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          marginTop: "3px",
-                          fontSize: "11.5px",
-                          color: "var(--ink-2)",
-                        }}
-                      >
-                        <BrandAvatar
-                          name={item.brandName}
-                          logoUrl={item.brandLogoUrl}
-                          size={18}
-                          width={item.brandLogoUrl ? 32 : 18}
-                          radius={5}
-                          fit="contain"
-                        />
-                        {item.brandName}
-                      </div>
-                    )}
-                    {/* El responsable venía calculado desde hace rato pero no se
-                        pintaba en ningún lado, así que el calendario no decía de
-                        quién era cada cosa. Va solo en la agenda (semana y día):
-                        en la grilla del mes la celda no tiene lugar. */}
+                    {item.brandName && <div className={styles.calAgHero}>{item.brandName}</div>}
                     {item.responsibleName && (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          marginTop: "5px",
-                          fontSize: "11.5px",
-                          color: "var(--ink-2)",
-                        }}
-                      >
+                      <div className={styles.calAgResp}>
                         <StaffAvatar
                           name={item.responsibleName}
                           avatarUrl={item.responsibleAvatarUrl}
@@ -304,15 +969,102 @@ function AgendaColumns({
                         {item.responsibleName}
                       </div>
                     )}
-                  </button>
-                ))
-              ) : (
-                <span style={{ fontSize: "12px", color: "var(--ink-3)" }}>Sin eventos</span>
-              )}
-            </div>
+                  </div>
+                  {item.approval && (
+                    <span
+                      className={styles.calAgTag}
+                      style={{
+                        background: APPROVAL_QOS[item.approval].bg,
+                        color: APPROVAL_QOS[item.approval].fg,
+                      }}
+                    >
+                      {CONTENT_APPROVAL_LABEL[item.approval]}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CargaDelMes({
+  refDateStr,
+  itemsByDay,
+  onPickDay,
+}: {
+  refDateStr: string;
+  itemsByDay: Record<string, CalendarItem[]>;
+  onPickDay: (dayStr: string) => void;
+}) {
+  const mes = refDateStr.slice(0, 7);
+  const dias = useMemo(() => {
+    const [anio, m] = mes.split("-").map(Number);
+    // Día 0 del mes siguiente = el último del actual. En UTC para que no se
+    // corra un día, igual que diaCorto.
+    const ultimo = new Date(Date.UTC(anio, m, 0)).getUTCDate();
+    return Array.from({ length: ultimo }, (_, i) => `${mes}-${String(i + 1).padStart(2, "0")}`);
+  }, [mes]);
+
+  const conteos = dias.map((d) => (itemsByDay[d] ?? []).length);
+  const total = conteos.reduce((a, b) => a + b, 0);
+  const pico = Math.max(0, ...conteos);
+  const libres = conteos.filter((n) => n === 0).length;
+
+  return (
+    <section className={styles.card}>
+      <div className={styles.cardPad}>
+        <div className={styles.pipeFiltersTag}>Carga del mes</div>
+        <div className={styles.calChart}>
+          {dias.map((d, i) => {
+            const nivel = nivelDeCarga(conteos[i]);
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => onPickDay(d)}
+                className={styles.calChartCol}
+                title={`${format(new Date(`${d}T00:00:00`), "d 'de' MMMM", { locale: es })} · ${conteos[i]} ${conteos[i] === 1 ? "item" : "items"}`}
+              >
+                <span
+                  className={styles.calChartBar}
+                  style={{
+                    // El piso de 3% es para que un día vacío siga siendo una
+                    // columna clickeable y no una franja de 0px.
+                    height: `${pico ? Math.max(3, (conteos[i] / pico) * 100) : 3}%`,
+                    background: nivel === "libre" ? "var(--line)" : CARGA_COLOR[nivel],
+                  }}
+                />
+              </button>
+            );
+          })}
+        </div>
+        <div className={styles.calChartAxis}>
+          <span>{format(new Date(`${mes}-01T00:00:00`), "d MMM", { locale: es })}</span>
+          <span>15</span>
+          <span>{dias.length}</span>
+        </div>
+        <div className={styles.calStats}>
+          <div className={styles.calStat}>
+            <strong>{total}</strong>
+            <span>este mes</span>
           </div>
-        );
-      })}
-    </div>
+          <div className={styles.calStat}>
+            <strong>{pico}</strong>
+            {/* "día más cargado" a secas se lee como una cuenta de días en
+                cuanto el número baja a 1 —"1 día más cargado"—, y es una cuenta
+                de items. Con "en el" queda bien en singular y en plural. */}
+            <span>en el día más cargado</span>
+          </div>
+          <div className={styles.calStat}>
+            <strong style={{ color: libres === 0 ? "var(--risk)" : undefined }}>{libres}</strong>
+            <span>{libres === 1 ? "día libre" : "días libres"}</span>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

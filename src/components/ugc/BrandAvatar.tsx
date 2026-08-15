@@ -42,6 +42,7 @@ export default function BrandAvatar({
   radius = 12,
   width,
   fit = "cover",
+  color,
 }: {
   name: string;
   logoUrl?: string | null;
@@ -49,6 +50,16 @@ export default function BrandAvatar({
   radius?: number;
   /** Ancho propio, para cajas rectangulares. Por defecto la caja es cuadrada. */
   width?: number;
+  /**
+   * Color plano para el respaldo de iniciales, en vez del degradado por hash.
+   *
+   * Lo usa quien ya tiene una paleta asignada por Hero (`coloresDeHeroes`) y
+   * necesita que el avatar diga lo mismo que el punto del filtro y el chip del
+   * calendario. El degradado por hash sigue siendo el default porque no toda
+   * pantalla tiene esa paleta a mano, pero solo ofrece 5 variantes: con 16
+   * Heroes —10 de ellos sin logo— se repiten de a tres.
+   */
+  color?: string | null;
   /**
    * "cover" llena la caja y recorta lo que sobra — bien para logos cuadrados.
    * "contain" muestra el logo entero — necesario para wordmarks horizontales,
@@ -70,7 +81,7 @@ export default function BrandAvatar({
         overflow: "hidden",
         display: "grid",
         placeItems: "center",
-        background: logoUrl ? "#fff" : gradientFor(label),
+        background: logoUrl ? "#fff" : color || gradientFor(label),
         color: "#fff",
         fontWeight: 700,
         fontSize: Math.max(11, Math.round(size * 0.36)),

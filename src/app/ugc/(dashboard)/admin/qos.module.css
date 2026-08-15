@@ -1964,11 +1964,14 @@
   border-color: var(--line-strong);
   color: var(--ink);
 }
+/* Sin `text-transform: capitalize`. Servía para "agosto 2026" → "Agosto 2026",
+   pero capitalize toca TODAS las palabras y los títulos de semana y día llevan
+   preposiciones: quedaban "Semana Del 13 De Agosto" y "Jueves 13 De Agosto".
+   La mayúscula inicial la pone el componente, que sabe dónde va. */
 .calMonth {
   font-family: var(--font-display);
   font-size: 19px;
   font-weight: 700;
-  text-transform: capitalize;
 }
 .calViewToggle {
   display: flex;
@@ -1983,7 +1986,7 @@
 }
 .calDow {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   background: var(--surface-3);
   border-bottom: 1px solid var(--line);
 }
@@ -1997,18 +2000,36 @@
   font-weight: 600;
   color: var(--ink-3);
 }
+/* `minmax(0, 1fr)` y NO `1fr` pelado. El mínimo automático de una pista de grid
+   es el contenido, así que con `1fr` las siete columnas se estiraban hasta el
+   nombre de Hero más largo del mes: medido, el cuerpo daba 1205px adentro de un
+   contenedor de 766 y `overflow: hidden` de .calGrid se comía dos días y medio
+   —sábado y domingo no se veían—. El encabezado no lo mostraba porque "LUN" y
+   "MAR" caben en cualquier ancho, así que las dos rejas quedaban desalineadas y
+   el síntoma parecía otro. El 0 de mínimo es lo que las deja achicarse. */
 .calBody {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 .calCell {
-  min-height: 112px;
+  /* Más alto que los 112px que tenía: la celda ahora carga tres chips, la fila
+     del número con sus etiquetas y el "+N más". Con 112 el tercer chip se salía
+     por abajo y pisaba la barra de carga. */
+  min-height: 132px;
   border-right: 1px solid var(--line-2);
   border-bottom: 1px solid var(--line-2);
-  padding: 7px 8px;
+  /* El padding de abajo le deja lugar a la barra de carga, que va absoluta
+     contra el borde inferior. */
+  padding: 7px 8px 10px;
   position: relative;
   transition: var(--t-fast);
   cursor: pointer;
+  /* Convierte la celda en contenedor de consulta para la regla de la hora, más
+     abajo. Hace falta una container query y no una media query porque lo que
+     decide si la hora entra es el ancho de LA CELDA, y ese depende de tres cosas
+     a la vez: la ventana, si el sidebar está plegado y cuánto se llevó el rail
+     elástico. Una media query solo conoce la primera. */
+  container-type: inline-size;
 }
 .calCellOut {
   background: var(--surface-2);
@@ -2016,17 +2037,57 @@
 .calCell:hover {
   background: var(--surface-2);
 }
+/* El día que está mirando el panel de la derecha. Va con box-shadow inset y no
+   con `border`: la celda es parte de una reja de bordes de 1px y cambiarle el
+   borde le corre el contenido un píxel, con lo que toda la fila baila al mover
+   la selección. */
+.calCellSel {
+  background: var(--b-50);
+  box-shadow: inset 0 0 0 2px var(--b-500);
+}
+.calCellSel:hover {
+  background: var(--b-50);
+}
+.calCellTop {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+  min-height: 24px;
+}
+/* Las dos etiquetas van a la izquierda y el número a la derecha (margin-left
+   auto), como en el mockup: el número es lo que se busca al barrer la grilla con
+   la vista y en la misma esquina de todas las celdas se encuentra solo. */
+.calFullTag,
+.calTodayTag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.calFullTag {
+  background: var(--risk-bg);
+  color: var(--risk);
+}
+.calTodayTag {
+  background: var(--b-100);
+  color: var(--b-600);
+}
 .calDaynum {
   font-size: 12px;
   font-weight: 600;
   color: var(--ink-2);
-  margin-bottom: 5px;
+  margin-left: auto;
   display: inline-flex;
   width: 24px;
   height: 24px;
   align-items: center;
   justify-content: center;
   border-radius: 7px;
+  flex-shrink: 0;
 }
 .calDaynumToday {
   background: var(--b-500);
@@ -2043,31 +2104,870 @@
   font-size: 11px;
   font-weight: 600;
   /* Más alto que los 3px que tenía: la celda del día también es clickeable
-     (abre "Nuevo evento"), así que errarle al chip por dos píxeles abría el
-     formulario de crear y parecía que el evento no respondía. */
+     (elige el día), así que errarle al chip por dos píxeles cambiaba la agenda
+     de la derecha y parecía que el evento no respondía. */
   padding: 5px 7px;
   border-radius: 6px;
   margin-bottom: 3px;
   cursor: pointer;
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
   width: 100%;
   text-align: left;
+  color: var(--ink);
   transition: var(--t-fast);
 }
+/* El ícono dice el tipo (calendario, cámara…) y va en el color del Hero, igual
+   que el borde izquierdo. El texto NO: varios colores de la paleta son
+   amarillos y naranjas, y sobre el fondo al 12% de su propio color no llegan al
+   contraste mínimo. Con el ícono y el borde el Hero se reconoce igual. */
+.calEvIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.calEvHora {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+  flex-shrink: 0;
+}
+/* En una celda angosta no entran las tres cosas del chip —ícono, hora y Hero— y
+   hay que soltar en orden. Se sueltan de menos a más útil:
+   1. El ÍCONO primero (≤140px). Es lo que menos varía: 116 de los 129 items de
+      agosto son publicaciones, así que el ícono repite el mismo dibujo casi
+      siempre. El borde izquierdo sigue diciendo de qué Hero es, y el tipo queda
+      en el tooltip y en la agenda de la derecha.
+   2. La HORA después (≤110px). Solo la tienen 29 de 129 items, así que soltarla
+      no le cambia nada a la mayoría de los chips.
+   El nombre del Hero no se suelta nunca: es lo único que distingue dos eventos
+   del mismo día.
+
+   OJO con los números: una container query mide el CONTENT-BOX del contenedor,
+   no su ancho total. La celda tiene 8px de padding a cada lado, así que 122 acá
+   son 138px de celda. La primera versión usaba 140/110 pensando en la celda
+   entera y los cortes caían 16px antes de lo previsto — a 1470 la hora ya no
+   salía cuando tenía lugar de sobra.
+   Medido con estos valores: 1920 y 1700 muestran las tres cosas; 1600, 1512 y
+   1470 sueltan el ícono y conservan la hora; de 1366 para abajo queda el Hero
+   solo. */
+@container (max-width: 122px) {
+  .calEvIcon {
+    display: none;
+  }
+}
+@container (max-width: 95px) {
+  .calEvHora {
+    display: none;
+  }
+}
+/* El que se recorta es el nombre, no el chip entero: con `overflow` en el chip
+   el ellipsis no aparece nunca —el que se pasa es un hijo flex, no el texto del
+   contenedor— y el nombre se cortaba a filo, sin puntos. */
+.calEvName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
 /* El chip no se veía clickeable: mismo fondo quieto pasara lo que pasara.
-   El anillo va en `currentColor` —que el chip define inline con el color de su
-   tipo— así que cada evento se resalta en su propio color sin repetir acá la
-   tabla de tipos. */
+   El anillo va en --ev-color, que el chip define inline con el color de su
+   Hero, así que cada evento se resalta en el suyo sin repetir acá la paleta. */
 .calEv:hover {
   box-shadow:
-    inset 0 0 0 1.5px currentColor,
+    inset 0 0 0 1.5px var(--ev-color, var(--line-strong)),
     0 2px 6px rgba(10, 11, 16, 0.1);
   transform: translateY(-1px);
 }
 .calEv:active {
   transform: translateY(0);
+}
+.calMas {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-3);
+  padding-left: 2px;
+}
+/* Crear un evento dejó de ser el clic en la celda —ahora eso elige el día—, así
+   que necesita su propio destino. Aparece al pasar el mouse por la celda y se
+   queda visible con el teclado (:focus-visible), que si no sería inalcanzable
+   sin mouse. Va abajo a la derecha porque es la parte de la celda que casi
+   nunca tiene chips: los tres se apilan desde arriba y a la izquierda. */
+.qosRoot .calAdd {
+  position: absolute;
+  right: 6px;
+  bottom: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: var(--t-fast);
+  cursor: pointer;
+}
+.calCell:hover .calAdd,
+.qosRoot .calAdd:focus-visible {
+  opacity: 1;
+}
+.qosRoot .calAdd:hover {
+  border-color: var(--b-500);
+  color: var(--b-500);
+}
+/* La barra de carga del día. El LARGO es relativo al día más cargado que se ve
+   —para poder comparar dos días de un vistazo— y el COLOR es de corte fijo, así
+   que rojo quiere decir lo mismo en agosto que en febrero. */
+.calLoad {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
+
+/* ============================================================
+   CALENDARIO — VISTA DE SEMANA
+   ============================================================
+   Tres rejas apiladas (encabezado, banda "sin hora", grilla horaria) que
+   comparten la MISMA plantilla de columnas. Es lo que las mantiene alineadas:
+   una sola reja no sirve porque la grilla de abajo necesita scroll y posiciones
+   absolutas, y el encabezado tiene que quedarse quieto. */
+.calWeek {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-sm);
+  /* `clip` y NO `hidden`, aunque recorten igual las esquinas redondeadas.
+     `overflow: hidden` convierte la caja en contenedor de scroll, y entonces el
+     encabezado sticky de acá abajo se ancla A LA TARJETA en vez de a la página:
+     medido, quedaba clavado 64px más abajo de su lugar, encima de la banda de
+     "sin hora" y dejando un hueco blanco arriba. `clip` recorta sin crear
+     contenedor de scroll, así que el sticky vuelve a mirar a la ventana. */
+  overflow: clip;
+}
+.calWeekHead,
+.calWeekAllDay,
+.calWeekBody {
+  display: grid;
+  /* 58px de regla de horas + 7 días. `minmax(0, 1fr)` y no `1fr`: el mínimo
+     automático de una pista es su contenido, y el título de un evento lo
+     estiraría hasta desbordar la tarjeta. Es el mismo bug que se midió en la
+     grilla del mes. */
+  grid-template-columns: 58px repeat(7, minmax(0, 1fr));
+}
+.calWeekHead {
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  /* El header del panel es fixed y mide 64px. Sin esto, al scrollear la semana
+     los días se meten debajo y se pierde de qué columna es cada bloque. */
+  top: 64px;
+  z-index: 2;
+}
+.qosRoot .calWeekDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 4px;
+  border-left: 1px solid var(--line-2);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .calWeekDay:hover {
+  background: var(--surface-2);
+}
+.qosRoot .calWeekDayOn {
+  background: var(--b-50);
+}
+.calWeekDow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.calWeekDate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  font-weight: 700;
+}
+/* El día de hoy reusa la pastilla violeta de la grilla del mes para que el
+   "hoy" se vea igual en las dos vistas. `.calDaynumToday` solo trae el color:
+   la caja de 24px vive en `.calDaynum`, que acá no aplica porque tiene un
+   `margin-left: auto` pensado para la esquina de la celda del mes. Sin estas
+   medidas la pastilla salía pegada al número, como un resaltado de texto. */
+.calWeekDate .calDaynumToday {
+  font-size: 15px;
+  display: inline-grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+}
+.calWeekCount {
+  font-size: 10.5px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  color: var(--b-700);
+  display: inline-grid;
+  place-items: center;
+}
+/* La banda de arriba. Es la que hace usable esta vista: 36 de los 49 items de
+   una semana real no tienen hora, así que sin ella martes y miércoles salían
+   vacíos con ocho piezas cada uno. */
+.calWeekAllDay {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.calWeekAllDayCell {
+  border-left: 1px solid var(--line-2);
+  padding: 6px 5px;
+  min-height: 44px;
+  /* Los chips de acá son los mismos `.calEv` de la grilla del mes, así que se
+     les aplica la misma escalera de la container query —primero cae el ícono,
+     después la hora—. Sin esto la celda no sería contenedor de consulta, la
+     regla no encontraría a quién medir y el chip nunca soltaría nada. */
+  container-type: inline-size;
+}
+.calWeekGutterCell {
+  padding: 6px 8px 6px 0;
+  text-align: right;
+}
+.calWeekGutterTag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  line-height: 1.2;
+  display: inline-block;
+}
+.qosRoot .calWeekMas {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-3);
+  padding: 2px;
+  cursor: pointer;
+}
+.qosRoot .calWeekMas:hover {
+  color: var(--b-600);
+  text-decoration: underline;
+}
+.calWeekCol {
+  border-left: 1px solid var(--line-2);
+  /* El ancla de los bloques, que van absolutos con su `top` calculado. */
+  position: relative;
+}
+.calWeekColOn {
+  background: var(--b-50);
+}
+/* Cada franja de una hora es también el botón de "crear acá": tocar las 3 pm
+   del jueves abre el formulario con esa fecha y esa hora puestas. */
+.qosRoot .calWeekSlot {
+  display: block;
+  width: 100%;
+  border-bottom: 1px solid var(--line-2);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .calWeekSlot:hover {
+  background: var(--b-50);
+  box-shadow: inset 0 0 0 1px var(--b-300);
+}
+.calWeekHour {
+  display: flex;
+  justify-content: flex-end;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  padding-right: 8px;
+  /* La etiqueta va arriba de su franja, pegada a la línea que la abre. */
+  align-items: flex-start;
+}
+/* El bloque es chico a propósito: dice QUÉ HORA y DE QUIÉN, y nada más. El
+   detalle vive en el panel del día, a la derecha. Con el bloque grande la
+   grilla se leía como un muro de tarjetas y no como un horario. */
+.qosRoot .calWeekEv {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 3px 5px;
+  border-radius: 5px;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--t-fast);
+  color: var(--ink);
+}
+.qosRoot .calWeekEv:hover {
+  box-shadow:
+    inset 0 0 0 1.5px var(--ev-color, var(--line-strong)),
+    0 2px 6px rgba(10, 11, 16, 0.1);
+  z-index: 1;
+}
+.calWeekEvTop {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-2);
+}
+.calWeekEvHero {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* `.calWeekEvTitle` se fue con la línea del título del bloque; el título vive
+   en el tooltip y en el panel del día. */
+
+/* ============================================================
+   CALENDARIO — VISTA DE DÍA
+   ============================================================
+   No es una grilla como la semana sino una LISTA agrupada por hora: con una
+   sola columna sobra ancho, así que cada evento puede ser una fila entera con
+   su Hero, su estado y su responsable. Por eso los choques de hora no necesitan
+   ninguna matemática de posiciones: dos eventos de las 12 son dos filas. */
+.calDay {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-sm);
+  overflow: clip;
+}
+.calDayHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.calDayBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: var(--r-md);
+  background: var(--b-500);
+  color: #fff;
+  flex-shrink: 0;
+  line-height: 1.05;
+}
+.calDayBadge span:first-child {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+.calDayBadge span:last-child {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.calDayTitles h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  /* Solo la primera: `capitalize` a secas rompería títulos con preposiciones,
+     que es el bug que ya se arregló en el encabezado de la pantalla. */
+  text-transform: none;
+}
+.calDayTitles h3::first-letter {
+  text-transform: uppercase;
+}
+.calDayTitles p {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.calDayStats {
+  margin-left: auto;
+  display: flex;
+  gap: 22px;
+  text-align: right;
+}
+.calDayStat {
+  display: flex;
+  flex-direction: column;
+}
+.calDayStat strong {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.calDayStat span {
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+.calDayRow {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 8px 16px 8px 0;
+  border-bottom: 1px solid var(--line-2);
+  min-height: 56px;
+}
+.calDayHourCell {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  text-align: right;
+  padding-top: 12px;
+}
+.calDayRowItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qosRoot .calDayItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  color: var(--ink);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .calDayItem:hover {
+  box-shadow: var(--sh-sm);
+  transform: translateX(2px);
+}
+.calDayItemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.calDayItemTitle {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.calDayItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+/* La hora sin nada sigue siendo el botón de "crear acá", igual que la franja de
+   la semana. El guion existe para que la fila no parezca rota. */
+.qosRoot .calDayEmpty {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .calDayEmpty:hover {
+  background: var(--b-50);
+  color: var(--b-600);
+}
+/* En modo acotado scrollea la lista de horas, no la página: el encabezado con
+   el día y los tres números se queda a la vista. */
+.calFit .calDay {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.calFit .calDayBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ---- El calendario a ancho completo ----
+   Mismo patrón que .pipeWide: la página se marca a sí misma y el layout
+   reacciona, en vez de que el layout conozca cada ruta. Pero acá SOLO se toca
+   el ancho, no el alto: la grilla del mes son seis filas de 132px y acotarlas a
+   la ventana las dejaría en 90px, o sea un chip y medio por día. La página
+   scrollea como siempre y el panel de la derecha se queda pegado (sticky).
+   El ancho sí hace falta: con el rail de 400px, centrado en 1400 la celda queda
+   en 135px y el nombre del Hero se corta en tres letras. */
+.main:has(.calWide) .content {
+  max-width: none;
+  padding: 20px 18px;
+}
+/* El panel va AL LADO de la grilla siempre que la ventana dé (decisión de Evan,
+   2026-08-15: "primero sale el calendario y debajo está lo demás" no es lo que
+   pidió el mockup). Por eso el rail es elástico y no 400px fijos: a 400 fijos el
+   corte tenía que estar en 1750px o las celdas quedaban en 128px, y abajo de eso
+   el panel se iba abajo — que es justo lo que Evan vio.
+   Con clamp() el rail cede ancho antes de rendirse: 400px cuando sobra, y hasta
+   300 cuando no. La grilla se queda con el resto. */
+.calLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 25%, 400px);
+  gap: 16px;
+  align-items: start;
+}
+.calRail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  /* El header del panel mide 64px y es fixed; sin este tope la tarjeta de
+     agenda se le mete debajo al scrollear. */
+  top: 78px;
+}
+
+/* ---- Semana: la pantalla se acota a la ventana ----
+   Pedido de Evan (2026-08-15): "todo se ve directamente en la pantalla, el
+   scroll se debe de ver en el calendario no en la pantalla completa".
+   Es la misma cadena de flex que usa el Pipeline (`.pipeWide`), pero con
+   marcador propio porque acá solo aplica a la vista de Semana. Cada eslabón
+   necesita `min-height: 0`: el mínimo automático de un item de flex es su
+   contenido, así que sin eso la cadena reparte un alto infinito y la grilla
+   vuelve a medir lo que miden sus 12 horas — que es exactamente el bug que
+   hacía scrollear la página entera. */
+.app:has(.calFit) {
+  height: 100vh;
+  /* La reja no declara filas y la implícita es `auto`, o sea que se estira con
+     su contenido AUNQUE el contenedor mida 100vh. `minmax(0, 1fr)` la fija al
+     alto del contenedor; el 0 de mínimo es el que la deja achicarse. */
+  grid-template-rows: minmax(0, 1fr);
+}
+.app:has(.calFit) .main {
+  min-height: 0;
+}
+.main:has(.calFit) .content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.calFit {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.calFit .calLayout {
+  flex: 1;
+  min-height: 0;
+  /* En modo acotado las dos columnas ocupan el alto entero y scrollean por
+     dentro, así que no van pegadas arriba como en el Mes. */
+  align-items: stretch;
+}
+.calFit .calWeek {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Con la pantalla acotada, el encabezado ya no se despega de nada: quien
+   scrollea es la grilla de abajo, y el encabezado está afuera de ella. Dejarlo
+   sticky solo abriría la puerta a que se corra 64px si la página llegara a
+   scrollear por otra cosa. */
+.calFit .calWeekHead {
+  position: static;
+}
+/* El único que scrollea: el encabezado de días y la banda "sin hora" quedan
+   fijos arriba y las horas corren por debajo. */
+.calFit .calWeekBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Con la página quieta, `sticky` no tiene contra qué pegarse: el rail pasa a
+   ser una columna de alto completo con su propio scroll. */
+.calFit .calRail {
+  position: static;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Y entonces la lista de la agenda no necesita su propio tope: scrollear dos
+   cajas anidadas hace que la rueda del mouse mueva la de adentro y parezca que
+   la de afuera está trabada. */
+.calFit .calAgList {
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* ---- Las pastillas de Hero ---- */
+.calHeroes {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+.calHeroes[data-pending="1"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.qosRoot .calHeroPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .calHeroPill:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+/* La pastilla prendida se pinta con el color de SU Hero (inline), así que acá
+   solo va lo que no depende del Hero. El color de texto se sube a tinta plena
+   porque el fondo teñido le baja el contraste al gris. */
+.qosRoot .calHeroPillOn {
+  color: var(--ink);
+  font-weight: 700;
+}
+.qosRoot .calHeroClear {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--b-600);
+  padding: 5px 4px;
+  cursor: pointer;
+}
+.qosRoot .calHeroClear:hover {
+  text-decoration: underline;
+}
+
+/* ---- Panel derecho: agenda del día ---- */
+.calAgendaDate {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+.calAgendaDate strong {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.calAgendaDate span {
+  font-size: 13px;
+  color: var(--ink-2);
+  text-transform: capitalize;
+}
+.calAgendaChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.calAgList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Un día lleno son 9 items: sin tope, la tarjeta de agenda empuja el gráfico
+     de carga fuera de la pantalla y el rail sticky deja de tener sentido. */
+  max-height: 420px;
+  overflow-y: auto;
+}
+.qosRoot .calAgItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .calAgItem:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--sh-sm);
+}
+.calAgBody {
+  min-width: 0;
+  flex: 1;
+}
+.calAgTitle {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.calAgMeta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.calAgHero {
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.calAgResp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.calAgTag {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--r-full);
+  white-space: nowrap;
+}
+.calEmpty {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  padding: 10px 0;
+}
+
+/* ---- Panel derecho: carga del mes ---- */
+.calChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 92px;
+  margin: 10px 0 6px;
+}
+.qosRoot .calChartCol {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: var(--t-fast);
+}
+.qosRoot .calChartCol:hover {
+  background: var(--surface-3);
+}
+.calChartBar {
+  width: 100%;
+  border-radius: 2px;
+  transition: var(--t-fast);
+}
+.calChartAxis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-2);
+}
+.calStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 12px;
+}
+.calStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.calStat strong {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.calStat span {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  line-height: 1.25;
+}
+
+/* Apilar es el último recurso, no el default: Evan quiere el panel al lado como
+   en el mockup. El corte quedó en 1100px, que es donde el rail ya no puede ceder
+   más (tocó su piso de 300px) y la grilla bajaría de ~90px por día — ahí un chip
+   no muestra ni tres letras del Hero y la pantalla deja de servir.
+   Arriba de 1100 el panel va siempre al lado, con la celda achicándose de a
+   poco: medido, 174px a 1920, 150px a 1700, 123px a 1470 y 100px a 1250. Con el
+   sidebar plegado (el botón ‹) son ~190px más para la grilla en cualquiera de
+   esos anchos.
+   Va después de las reglas base a propósito: en este archivo, con dos
+   selectores de la misma especificidad, gana el que está más abajo. */
+@media (max-width: 1100px) {
+  .calLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Apilado, acotar a la ventana sería contraproducente: el panel se va abajo
+     de la grilla, así que repartir el alto de la pantalla entre los dos dejaría
+     a la semana con ~200px, o sea tres horas. Acá vuelve a scrollear la página,
+     igual que el Pipeline desarma su cadena en móvil. */
+  .app:has(.calFit) {
+    height: auto;
+    grid-template-rows: none;
+  }
+  .main:has(.calFit) .content,
+  .calFit,
+  .calFit .calWeek,
+  .calFit .calDay {
+    display: block;
+    min-height: auto;
+  }
+  .calFit .calLayout {
+    flex: none;
+    min-height: auto;
+    align-items: start;
+  }
+  .calFit .calWeekBody,
+  .calFit .calDayBody,
+  .calFit .calRail {
+    flex: none;
+    min-height: auto;
+    overflow-y: visible;
+  }
+  .calRail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    /* Sin esto las dos tarjetas se estiran a la altura de la más alta, y la de
+       carga —que son tres números y un gráfico— queda con media pantalla de
+       blanco abajo para empatarle a la agenda de un día lleno. */
+    align-items: flex-start;
+  }
+  .calRail > * {
+    flex: 1 1 320px;
+  }
 }
 .agendaCol {
   background: var(--surface);
