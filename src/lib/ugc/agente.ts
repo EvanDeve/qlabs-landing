@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { COSTA_RICA_TZ, diaCR, sumarDias } from "@/lib/ugc/calendar";
 import type { ColumnaDelTablero } from "@/lib/ugc/tablero";
+import type { ItemDelTablero } from "@/lib/ugc/busqueda";
 import {
   type Agenda,
   type AgendaItem,
@@ -180,6 +181,30 @@ function lineaDeItem(item: AgendaItem, indice: number, hoyCR: string): string {
     : "";
 
   return `${indice + 1}. ${item.accion} "${item.titulo}"${heroe} — ${cuando}${prioridad}${riesgo}`;
+}
+
+/**
+ * Las tarjetas que se encontraron en el tablero, numeradas DESPUÉS de la agenda.
+ *
+ * La numeración es una sola lista y por eso arranca en `desde`: el modelo actúa
+ * sobre números, y si el 3 significara una cosa en un bloque y otra en el otro,
+ * la primera acción caería sobre la tarjeta equivocada.
+ *
+ * Se dice de quién es cada una porque son de cualquiera —eso es lo nuevo de este
+ * bloque— y sin eso el modelo no puede contestar "esa la tiene Daniel".
+ */
+function describirEncontradas(items: ItemDelTablero[], desde: number, hoyCR: string): string {
+  if (!items.length) return "";
+
+  const lineas = items.map((item, i) => {
+    const base = lineaDeItem(item, desde + i, hoyCR);
+    const donde = item.fecha && item.columna ? ` — en ${item.columna}` : "";
+    const quien = item.responsable ? ` — la tiene ${item.responsable}` : " — sin responsable";
+    return `${base}${donde}${quien}`;
+  });
+
+  return `OTRAS TARJETAS DEL TABLERO QUE CALZAN CON LO QUE PREGUNTÓ (no son de su agenda):
+${lineas.join("\n")}`;
 }
 
 function describirAgenda(agenda: Agenda, hoyCR: string): string {
@@ -422,6 +447,11 @@ export async function responderMensaje(opciones: {
   columnas: ColumnaDelTablero[];
   /** Nombres de agency_clients. Sin esto el agente no puede proponer piezas. */
   clientes: string[];
+  /**
+   * Tarjetas del tablero que calzan con lo que preguntó y NO están en su agenda.
+   * Ver busqueda.ts: es lo que le deja hablar de las 141 y no de un puñado.
+   */
+  encontradas?: ItemDelTablero[];
   historial: TurnoPrevio[];
   mensaje: string;
   /** Lo que quedó esperando un "dale" de esta persona, si hay algo. */
@@ -437,11 +467,15 @@ export async function responderMensaje(opciones: {
   now?: Date;
 }): Promise<RespuestaAgente> {
   const { nombre, agenda, columnas, clientes, historial, mensaje, pendiente } = opciones;
+  const encontradas = opciones.encontradas ?? [];
   const reporte = opciones.reporte ?? null;
   const ajustes = opciones.ajustes ?? AJUSTES_POR_DEFECTO;
   const now = opciones.now ?? new Date();
   const hoyCR = formatInTimeZone(now, COSTA_RICA_TZ, "yyyy-MM-dd");
-  const items = itemsDeAgenda(agenda);
+  // Una sola lista numerada: primero la agenda, después lo encontrado. El orden
+  // tiene que ser EXACTAMENTE el mismo con el que se valida la acción, o el
+  // número 12 sería una tarjeta en el prompt y otra al escribir.
+  const items = [...itemsDeAgenda(agenda), ...encontradas];
 
   const conversacion = historial
     .map((t) => `${t.quien === "agente" ? "VOS" : nombre.toUpperCase()}: ${t.texto}`)
@@ -464,6 +498,8 @@ Estás conversando con ${nombre} por WhatsApp. Hoy es ${hoyCR}.
 
 SUS PENDIENTES (referite a ellos por su número cuando ejecutes una acción):
 ${describirAgenda(agenda, hoyCR) || "(no tiene nada pendiente)"}
+
+${describirEncontradas(encontradas, itemsDeAgenda(agenda).length, hoyCR)}
 
 ${
   reporte
@@ -510,9 +546,16 @@ cierres con "y algunas más": si pregunta qué hay, quiere saber qué hay, y una
 que no nombraste es una que nadie va a hacer. Esta es la única excepción a
 escribir corto — numerar así no es una lista con viñetas, que sigue prohibida.
 
-Solo ves ${agenda.ventana.diasVencidas} días para atrás y ${agenda.ventana.diasProximas} para adelante. Si te
-pregunta por algo fuera de esa ventana, contestá lo que sí ves y decile hasta
-dónde llegás. Nunca des por completa una lista que no pudiste mirar entera.
+SU AGENDA llega ${agenda.ventana.diasVencidas} días para atrás y ${agenda.ventana.diasProximas} para adelante. El bloque de OTRAS
+TARJETAS no tiene esa ventana: son las del tablero entero que calzan con lo que
+te preguntó, de cualquier fecha y de cualquiera del equipo. Úsalas para contestar
+—en qué columna está algo, qué le queda a un Hero, quién lo tiene—.
+
+Ese bloque se arma con lo que menciona su mensaje, así que puede no traer todo lo
+que existe: si te pide una lista completa de algo que no calza con lo que ves,
+contestá lo que sí tenés y decile que mire el tablero. Nunca des por completa una
+lista que no pudiste mirar entera, y nunca inventes una tarjeta que no esté
+arriba.
 
 Los ítems marcados SIN FECHA son trabajo suyo que nadie fechó. No están
 atrasados: no los trates como tales. Si te dice cuándo va uno, ponele la fecha

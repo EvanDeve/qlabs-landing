@@ -22,6 +22,7 @@ import {
   partirEnMensajes,
   demoraDeEscritura,
 } from "@/lib/ugc/agente-publico";
+import { leerBusqueda, buscarEnElTablero, vale, type ItemDelTablero } from "@/lib/ugc/busqueda";
 import { CONTACTO_WA_NUEVO } from "@/lib/ugc/admin-alerts";
 import { getReporte, describirReporte } from "@/lib/ugc/reporte";
 import { diaCR } from "@/lib/ugc/calendar";
@@ -167,7 +168,7 @@ async function atenderEntrante(
     // al crear una pieza, y no se le carga trabajo nuevo a un cliente que se
     // fue. Si alguien igual dicta ese nombre, el agente no lo va a encontrar y
     // va a preguntar — que es la salida correcta.
-    admin.from("agency_clients").select("id, name").eq("archived", false).order("name"),
+    admin.from("agency_clients").select("id, name, archived").order("name"),
     admin
       .from("wa_messages")
       .select("direction, body")
@@ -190,7 +191,19 @@ async function atenderEntrante(
     miembro.staff_role === "director" ? armarReporteDirector(admin) : Promise.resolve(null),
   ]);
 
-  const items = itemsDeAgenda(agenda);
+  const itemsAgenda = itemsDeAgenda(agenda);
+
+  // El tablero entero, buscado con lo que menciona el mensaje. Va después de la
+  // agenda porque necesita saber qué ya se le está mostrando: la misma tarjeta
+  // con dos números es cómo el modelo mueve una y dice que movió la otra.
+  const encontradas = await buscarDelMensaje(admin, {
+    mensaje: texto,
+    heroes: clientes ?? [],
+    columnas: columnas ?? [],
+    yaEnAgenda: new Set(itemsAgenda.map((i) => i.key)),
+  });
+
+  const items = [...itemsAgenda, ...encontradas];
 
   // El más nuevo es el que acabamos de guardar; va aparte como `mensaje`.
   const historial: TurnoPrevio[] = (previos ?? [])
@@ -202,7 +215,11 @@ async function atenderEntrante(
     nombre: perfil?.display_name ?? "colega",
     agenda,
     columnas: columnas ?? [],
-    clientes: (clientes ?? []).map((c) => c.name),
+    // Para PROPONER una pieza nueva solo se ofrecen los Heroes activos: no se le
+    // carga trabajo a un cliente que se fue. Buscar sí los incluye a todos —
+    // preguntar por lo que quedó de un Hero archivado es legítimo.
+    clientes: (clientes ?? []).filter((c) => !c.archived).map((c) => c.name),
+    encontradas,
     historial,
     mensaje: texto,
     pendiente: propuesta ? { tipo: "crear", pieza: propuesta.pieza } : null,
@@ -215,13 +232,63 @@ async function atenderEntrante(
     accion,
     items,
     columnas: columnas ?? [],
-    clientes: clientes ?? [],
+    clientes: (clientes ?? []).filter((c) => !c.archived),
     propuesta,
   });
 
   // Estamos dentro de la ventana de 24 h por definición —acaban de escribir—
   // así que acá el agente habla libre, sin plantilla.
   await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, accion, resultado, items));
+}
+
+/**
+ * Las tarjetas del tablero que menciona el mensaje, con los nombres ya resueltos.
+ *
+ * Vive acá y no en busqueda.ts porque es la parte que sabe de dónde salen los
+ * nombres —Heroes, columnas y equipo— y ese es trabajo del webhook. En
+ * busqueda.ts queda la lógica, que es la que se puede probar sin base.
+ *
+ * Si algo falla se devuelve vacío: quedarse sin el bloque de búsqueda es que
+ * McLovin conteste solo sobre la agenda, como venía haciendo hasta hoy. Que se
+ * caiga el mensaje entero por una consulta de más sería mucho peor.
+ */
+async function buscarDelMensaje(
+  admin: Admin,
+  opciones: {
+    mensaje: string;
+    heroes: { id: string; name: string }[];
+    columnas: Columna[];
+    yaEnAgenda: Set<string>;
+  }
+): Promise<ItemDelTablero[]> {
+  try {
+    const busqueda = leerBusqueda(opciones.mensaje, opciones.heroes, opciones.columnas);
+    if (!vale(busqueda)) return [];
+
+    const encontradas = await buscarEnElTablero(admin, busqueda, {
+      yaEnAgenda: opciones.yaEnAgenda,
+      heroePorId: new Map(opciones.heroes.map((h) => [h.id, h.name])),
+      columnaPorId: new Map(opciones.columnas.map((c) => [c.id, c.name])),
+      columnasFinales: new Set(opciones.columnas.filter((c) => c.is_done).map((c) => c.id)),
+    });
+
+    // Los nombres del equipo se resuelven acá, sobre los dueños que de verdad
+    // aparecieron: pedir la tabla de perfiles antes de saber si la búsqueda
+    // trajo algo es una consulta que casi siempre sobra.
+    const owners = [...new Set(encontradas.map((i) => i.ownerId).filter((v): v is string => Boolean(v)))];
+    if (!owners.length) return encontradas;
+
+    const { data: perfiles } = await admin.from("profiles").select("id, display_name").in("id", owners);
+    const nombrePorId = new Map((perfiles ?? []).map((p) => [p.id, p.display_name]));
+
+    return encontradas.map((i) => ({
+      ...i,
+      responsable: i.ownerId ? nombrePorId.get(i.ownerId) ?? null : null,
+    }));
+  } catch (err) {
+    console.error("[agente/webhook] no se pudo buscar en el tablero:", err);
+    return [];
+  }
 }
 
 /**
