@@ -13,6 +13,9 @@
 
 const API_BASE = "https://api.twilio.com/2010-04-01";
 
+/** Cuánto se espera a Twilio por mensaje. Ver el `signal` de enviar(). */
+const TIMEOUT_MS = 10_000;
+
 export type EnvioResult =
   | { ok: true; sid: string }
   /**
@@ -59,6 +62,11 @@ async function enviar(params: Record<string, string>, to: string): Promise<Envio
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body,
+      // Sin techo, una llamada colgada se lleva puesta la función entera: en el
+      // cron eso es el recordatorio de TODOS los que venían después, porque se
+      // mandan en serie. El corte cae en el catch de abajo, que es el camino de
+      // "no sabemos si salió" — que es exactamente lo que pasó.
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
     const data = (await res.json()) as { sid?: string; message?: string; code?: number };

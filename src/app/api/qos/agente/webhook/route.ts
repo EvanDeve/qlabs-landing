@@ -27,6 +27,12 @@ import { CONTACTO_WA_NUEVO } from "@/lib/ugc/admin-alerts";
 import { getReporte, describirReporte } from "@/lib/ugc/reporte";
 import { diaCR } from "@/lib/ugc/calendar";
 import type { AgendaItem } from "@/lib/ugc/agenda";
+import {
+  columnaDestino,
+  columnaFinalDe,
+  columnaDeEntrada,
+  type ColumnaDelTablero,
+} from "@/lib/ugc/tablero";
 import type { WaActionKind } from "@/lib/database.types";
 
 // Lo que Twilio golpea cuando alguien del equipo le contesta al agente.
@@ -93,35 +99,71 @@ export async function POST(request: Request) {
   if (!telefono || !texto) return NextResponse.json({ ok: true });
 
   const admin = createAdminClient();
+  const messageSid = params.MessageSid ?? null;
 
+  /**
+   * De acá en adelante nada hace esperar a Twilio.
+   *
+   * Twilio corta el webhook a los 15 segundos y no le importa qué contestemos:
+   * lo único que mira es que contestemos rápido. Antes, leer la agenda,
+   * consultarle a Gemini, escribir en el tablero y mandar la respuesta pasaban
+   * TODO antes de contestarle — así que un Gemini lento se traducía en un
+   * `11200` del lado de Twilio y en un mensaje que nunca llegaba del lado de la
+   * persona, sin ningún error visible en la app.
+   *
+   * La rama de los desconocidos ya trabajaba así desde el principio; ahora es
+   * una sola puerta para las dos, y por eso `atenderDesconocido` ya no abre su
+   * propio after(): estaría anidando uno dentro de otro.
+   */
+  after(async () => {
+    try {
+      await atenderEntrante(admin, telefono, texto, messageSid);
+    } catch (err) {
+      console.error("[agente/webhook] no se pudo atender el mensaje:", err);
+    }
+  });
+
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * Quién escribió y qué se hace con eso. Corre siempre después de haberle
+ * contestado a Twilio.
+ */
+async function atenderEntrante(
+  admin: Admin,
+  telefono: string,
+  texto: string,
+  messageSid: string | null
+): Promise<void> {
   const { data: miembro } = await admin
     .from("staff_members")
     .select("profile_id, wa_opt_in, staff_role")
     .eq("phone_e164", telefono)
     .maybeSingle();
 
-  if (!miembro) {
-    await atenderDesconocido(admin, telefono, texto, params.MessageSid ?? null);
-    return NextResponse.json({ ok: true });
-  }
+  if (!miembro) return await atenderDesconocido(admin, telefono, texto, messageSid);
 
   await admin.from("wa_messages").insert({
     profile_id: miembro.profile_id,
     direction: "in",
     body: texto,
-    provider_sid: params.MessageSid ?? null,
+    provider_sid: messageSid,
     status: "received",
   });
 
   if (BAJAS.includes(texto.toLowerCase().replace(/[^a-záéíóúñ]/gi, ""))) {
     await admin.from("staff_members").update({ wa_opt_in: false }).eq("profile_id", miembro.profile_id);
     await responder(admin, miembro.profile_id, telefono, "Listo, no te escribo más. Si querés volver a activarlo, decile a alguien del equipo que te lo prenda en Q·OS.");
-    return NextResponse.json({ ok: true });
+    return;
   }
 
   const [{ data: perfil }, { data: columnas }, { data: clientes }, { data: previos }, ajustes] = await Promise.all([
     admin.from("profiles").select("display_name").eq("id", miembro.profile_id).maybeSingle(),
-    admin.from("content_columns").select("id, name, is_done").order("position"),
+    // `section` es lo que separa los tres carriles del tablero. Sin él, mover
+    // una tarjeta a "Terminado" es ambiguo —hay dos columnas con ese nombre— y
+    // dar algo por hecho puede mandarlo al carril equivocado.
+    admin.from("content_columns").select("id, name, is_done, section").order("position"),
     // Sin los archivados: esta lista es la de Heroes que McLovin puede nombrar
     // al crear una pieza, y no se le carga trabajo nuevo a un cliente que se
     // fue. Si alguien igual dicta ese nombre, el agente no lo va a encontrar y
@@ -136,16 +178,20 @@ export async function POST(request: Request) {
     getAjustesAgente(admin),
   ]);
 
-  const propuesta = await leerPropuestaViva(admin, miembro.profile_id);
-
-  const agenda = await getStaffAgenda(admin, miembro.profile_id, new Date(), ajustes.ventana);
-  const items = itemsDeAgenda(agenda);
-
-  // El estado de toda la agencia, solo si es director. El corte es
+  // Los tres en paralelo: no dependen uno del otro y encadenarlos eran tres
+  // viajes a Postgres en fila antes de poder siquiera empezar a redactar. Para
+  // un director, el reporte solo es el más lento de los tres, no la suma.
+  //
+  // El estado de la agencia se arma únicamente si es director. El corte es
   // `staff_members.staff_role` y no `profiles.role`, que es el mismo que usa el
-  // resto de Q·OS. Se arma acá y no siempre porque son dos consultas de más
-  // para un dato que el 60% del equipo no puede ver.
-  const reporte = miembro.staff_role === "director" ? await armarReporteDirector(admin) : null;
+  // resto de Q·OS.
+  const [propuesta, agenda, reporte] = await Promise.all([
+    leerPropuestaViva(admin, miembro.profile_id),
+    getStaffAgenda(admin, miembro.profile_id, new Date(), ajustes.ventana),
+    miembro.staff_role === "director" ? armarReporteDirector(admin) : Promise.resolve(null),
+  ]);
+
+  const items = itemsDeAgenda(agenda);
 
   // El más nuevo es el que acabamos de guardar; va aparte como `mensaje`.
   const historial: TurnoPrevio[] = (previos ?? [])
@@ -156,7 +202,7 @@ export async function POST(request: Request) {
   const { respuesta, accion } = await responderMensaje({
     nombre: perfil?.display_name ?? "colega",
     agenda,
-    columnas: (columnas ?? []).map((c) => c.name),
+    columnas: columnas ?? [],
     clientes: (clientes ?? []).map((c) => c.name),
     historial,
     mensaje: texto,
@@ -181,8 +227,6 @@ export async function POST(request: Request) {
   // Estamos dentro de la ventana de 24 h por definición —acaban de escribir—
   // así que acá el agente habla libre, sin plantilla.
   await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, accion, resultado, items, propuesta));
-
-  return NextResponse.json({ ok: true });
 }
 
 /**
@@ -303,47 +347,45 @@ async function atenderDesconocido(
     .reverse()
     .map((m) => ({ quien: m.direction === "in" ? "persona" : "agente", texto: m.body }));
 
-  // De acá en adelante nada tiene que hacer esperar a Twilio: la respuesta al
-  // webhook sale ya, y redactar y mandar ocurre después. Sin esto, la demora que
-  // hace que el agente no conteste en tres segundos competiría con el timeout de
-  // 15 s de Twilio, y un Gemini lento se traduciría en un 11200.
-  after(async () => {
-    const respuesta = await responderPublico({
-      cerebro: {
-        nombre: ajustes.nombre,
-        sobreQlabs: ajustes.sobreQlabs,
-        guionPublico: ajustes.guionPublico,
-        linkAgenda: ajustes.linkAgenda,
-      },
-      historial,
-      mensaje: texto,
+  // Redactar y mandar ya no compiten con el timeout de Twilio: esta función
+  // entera corre dentro del after() del POST, así que la petición ya se
+  // contestó. Antes el after() se abría acá; anidarlo dentro del de arriba
+  // sería pedirle a Next que difiera algo que ya está diferido.
+  const respuesta = await responderPublico({
+    cerebro: {
+      nombre: ajustes.nombre,
+      sobreQlabs: ajustes.sobreQlabs,
+      guionPublico: ajustes.guionPublico,
+      linkAgenda: ajustes.linkAgenda,
+    },
+    historial,
+    mensaje: texto,
+  });
+
+  // null = no hay nada cargado sobre Q Labs. Callarse es correcto: un agente
+  // sin información contestando igual improvisa, y lo que improvise queda
+  // dicho en nombre de la agencia.
+  if (!respuesta) {
+    console.warn("[agente/webhook] responder_desconocidos está prendido pero sobre_qlabs está vacío");
+    return;
+  }
+
+  for (const parte of partirEnMensajes(respuesta)) {
+    await esperar(demoraDeEscritura(parte));
+
+    const envio = await sendWhatsAppFreeform(telefono, parte);
+    await admin.from("wa_public_messages").insert({
+      phone_e164: telefono,
+      direction: "out",
+      body: parte,
+      provider_sid: envio.ok ? envio.sid : null,
+      status: envio.ok ? "sent" : "failed",
+      error: envio.ok ? null : envio.error,
     });
 
-    // null = no hay nada cargado sobre Q Labs. Callarse es correcto: un agente
-    // sin información contestando igual improvisa, y lo que improvise queda
-    // dicho en nombre de la agencia.
-    if (!respuesta) {
-      console.warn("[agente/webhook] responder_desconocidos está prendido pero sobre_qlabs está vacío");
-      return;
-    }
-
-    for (const parte of partirEnMensajes(respuesta)) {
-      await esperar(demoraDeEscritura(parte));
-
-      const envio = await sendWhatsAppFreeform(telefono, parte);
-      await admin.from("wa_public_messages").insert({
-        phone_e164: telefono,
-        direction: "out",
-        body: parte,
-        provider_sid: envio.ok ? envio.sid : null,
-        status: envio.ok ? "sent" : "failed",
-        error: envio.ok ? null : envio.error,
-      });
-
-      // Si el primero no salió, el segundo llegaría suelto y sin contexto.
-      if (!envio.ok) break;
-    }
-  });
+    // Si el primero no salió, el segundo llegaría suelto y sin contexto.
+    if (!envio.ok) break;
+  }
 }
 
 const esperar = (ms: number) => new Promise((listo) => setTimeout(listo, ms));
@@ -438,7 +480,7 @@ async function leerPropuestaViva(admin: Admin, profileId: string): Promise<Propu
 // Ejecución
 // ---------------------------------------------------------------
 
-type Columna = { id: string; name: string; is_done: boolean };
+type Columna = ColumnaDelTablero;
 type Cliente = { id: string; name: string };
 
 type Contexto = {
@@ -461,6 +503,16 @@ type Contexto = {
 type ResultadoAccion = { aplicada: boolean; nota?: string };
 
 /**
+ * Lo que devolvió una escritura sobre el tablero o el calendario.
+ *
+ * Antes era un booleano. Dejó de alcanzar cuando una escritura puede fallar por
+ * un motivo que la persona puede corregir —pedir una columna de otro carril— y
+ * no solo por un error de Postgres: "no pude tocar el tablero" no le dice a
+ * nadie qué hacer distinto la próxima vez.
+ */
+type ResultadoEdicion = { ok: boolean; nota?: string };
+
+/**
  * Ejecuta la acción, con el segundo candado.
  *
  * El primero es que el modelo solo puede nombrar NÚMEROS de la agenda que se le
@@ -480,11 +532,11 @@ async function aplicarAccion(admin: Admin, ctx: Contexto): Promise<ResultadoAcci
   try {
     if (accion.tipo === "proponer_pieza") return await abrirPropuesta(admin, ctx, accion.pieza);
     if (accion.tipo === "descartar") return { aplicada: await cerrarPropuesta(admin, ctx, "descartada") };
-    if (accion.tipo === "confirmar") return { aplicada: await ejecutarConfirmado(admin, ctx) };
+    if (accion.tipo === "confirmar") return await ejecutarConfirmado(admin, ctx);
     // Cerrar es la única de las tres que saca la tarjeta de la vista, así que
     // pregunta antes en vez de escribir. Ver el comentario de `Pendiente`.
     if (accion.tipo === "marcar_hecho") return await abrirCierre(admin, ctx, accion.item);
-    return { aplicada: await editarItem(admin, ctx, accion) };
+    return await editarItem(admin, ctx, accion);
   } catch (err) {
     console.error("[agente/webhook] no se pudo aplicar la acción:", err);
     await registrar(admin, ctx.profileId, kindDe(accion), { accion }, "fallida", {
@@ -645,11 +697,11 @@ function mismoRef(a: AgendaRef, b: AgendaRef): boolean {
 }
 
 /** Un "dale" cierra lo que haya quedado esperando: una pieza nueva o un cierre. */
-async function ejecutarConfirmado(admin: Admin, ctx: Contexto): Promise<boolean> {
-  if (!ctx.propuesta) return false;
+async function ejecutarConfirmado(admin: Admin, ctx: Contexto): Promise<ResultadoAccion> {
+  if (!ctx.propuesta) return { aplicada: false };
   return ctx.propuesta.tipo === "cerrar"
     ? await cerrarItemConfirmado(admin, ctx, ctx.propuesta)
-    : await crearPiezaConfirmada(admin, ctx);
+    : { aplicada: await crearPiezaConfirmada(admin, ctx) };
 }
 
 /**
@@ -663,7 +715,7 @@ async function cerrarItemConfirmado(
   admin: Admin,
   ctx: Contexto,
   propuesta: Extract<PropuestaViva, { tipo: "cerrar" }>
-): Promise<boolean> {
+): Promise<ResultadoAccion> {
   // Se busca por el id y no por `key`: una pieza aparece dos veces en la agenda
   // (grabar y publicar) con keys distintas, y cerrarla es lo mismo desde
   // cualquiera de las dos.
@@ -675,20 +727,21 @@ async function cerrarItemConfirmado(
       .from("wa_agent_actions")
       .update({ status: "fallida", error: "la pieza ya no estaba en la agenda", resolved_at: new Date().toISOString() })
       .eq("id", propuesta.id);
-    return false;
+    return { aplicada: false, nota: "Esa ya no estaba en tu agenda — la habrán cerrado desde Q·OS." };
   }
 
-  const ok = await escribirEdicion(admin, ctx, { tipo: "marcar_hecho", item: 0 }, item);
+  const { ok, nota } = await escribirEdicion(admin, ctx, { tipo: "marcar_hecho", item: 0 }, item);
   await admin
     .from("wa_agent_actions")
     .update({
       status: ok ? "ejecutada" : "fallida",
+      ...(ok ? {} : { error: nota ?? "no se pudo cerrar" }),
       target_table: propuesta.ref.kind === "piece" ? "content_pieces" : "calendar_events",
       target_id: propuesta.ref.kind === "piece" ? propuesta.ref.pieceId : propuesta.ref.eventId,
       resolved_at: new Date().toISOString(),
     })
     .eq("id", propuesta.id);
-  return ok;
+  return { aplicada: ok, nota };
 }
 
 async function crearPiezaConfirmada(admin: Admin, ctx: Contexto): Promise<boolean> {
@@ -711,9 +764,12 @@ async function crearPiezaConfirmada(admin: Admin, ctx: Contexto): Promise<boolea
     return await crearGrabacionConfirmada(admin, ctx, propuesta.id, cliente.id, propuesta.pieza);
   }
 
-  // La primera columna del tablero es donde entra lo que recién se anota: el
-  // orden lo define el equipo y `position` ya viene ordenada de la consulta.
-  const primera = ctx.columnas[0];
+  // La primera columna DEL CARRIL DE VIDEO es donde entra un video que se acaba
+  // de anotar. No la primera del tablero: el carril de guiones arranca antes por
+  // posición, así que lo que se pedía por chat nacía en "Cronogramas" —una
+  // columna que es para los cronogramas mensuales del Hero, no para videos
+  // sueltos— y no aparecía nunca donde el equipo lo iba a buscar.
+  const primera = columnaDeEntrada(ctx.columnas);
   if (!primera) return false;
 
   const { data: pieza, error } = await admin
@@ -822,11 +878,11 @@ async function editarItem(
   admin: Admin,
   ctx: Contexto,
   accion: Extract<AccionAgente, { item: number }>
-): Promise<boolean> {
+): Promise<ResultadoAccion> {
   const item = ctx.items[accion.item - 1];
-  if (!item) return false;
+  if (!item) return { aplicada: false };
 
-  const ok = await escribirEdicion(admin, ctx, accion, item);
+  const { ok, nota } = await escribirEdicion(admin, ctx, accion, item);
   await registrar(
     admin,
     ctx.profileId,
@@ -838,9 +894,11 @@ async function editarItem(
           targetTable: item.ref.kind === "piece" ? "content_pieces" : "calendar_events",
           targetId: item.ref.kind === "piece" ? item.ref.pieceId : item.ref.eventId,
         }
-      : {}
+      : // El motivo va a la bitácora y no solo al chat: el panel es donde se
+        // mira por qué algo no se hizo cuando la conversación ya quedó atrás.
+        { error: nota ?? "no se pudo escribir" }
   );
-  return ok;
+  return { aplicada: ok, nota };
 }
 
 async function escribirEdicion(
@@ -848,7 +906,7 @@ async function escribirEdicion(
   ctx: Contexto,
   accion: Extract<AccionAgente, { item: number }>,
   item: AgendaItem
-): Promise<boolean> {
+): Promise<ResultadoEdicion> {
   if (item.ref.kind === "piece") {
     const { data: pieza } = await admin
       .from("content_pieces")
@@ -856,30 +914,22 @@ async function escribirEdicion(
       .eq("id", item.ref.pieceId)
       .eq("owner_id", ctx.profileId)
       .maybeSingle();
-    if (!pieza) return false;
+    if (!pieza) return { ok: false };
 
     if (accion.tipo === "mover_pieza") {
-      const columna = ctx.columnas.find((c) => c.name === accion.columna);
-      if (!columna) return false;
-      const { error } = await admin.from("content_pieces").update({ column_id: columna.id }).eq("id", pieza.id);
-      return !error;
+      const destino = columnaDestino(ctx.columnas, pieza.column_id, accion.columna);
+      if (!destino.ok) return destino;
+      const { error } = await admin.from("content_pieces").update({ column_id: destino.columna.id }).eq("id", pieza.id);
+      return { ok: !error };
     }
     if (accion.tipo === "marcar_hecho") {
-      // "Hecho" en el tablero de la agencia es la columna marcada is_done, no
-      // un estado aparte. Si nadie la marcó, no hay a dónde mover.
-      //
-      // Pero hay MÁS DE UNA: el tablero corre dos carriles, el del guion (que
-      // cierra en "Guiones finalizados") y el del video (que cierra en
-      // "Publicado"). Se busca la primera is_done de la columna actual en
-      // adelante; con un find() sobre todo el tablero, dar por hecho un video
-      // que estaba en "Terminado" lo mandaba PARA ATRÁS, a la de guiones.
-      const actual = ctx.columnas.findIndex((c) => c.id === pieza.column_id);
-      const terminada =
-        ctx.columnas.slice(actual >= 0 ? actual : 0).find((c) => c.is_done) ??
-        [...ctx.columnas].reverse().find((c) => c.is_done);
-      if (!terminada) return false;
-      const { error } = await admin.from("content_pieces").update({ column_id: terminada.id }).eq("id", pieza.id);
-      return !error;
+      // "Hecho" es la columna is_done DEL CARRIL de la tarjeta, no un estado
+      // aparte ni la primera que aparezca en el tablero. El porqué, con el caso
+      // que lo rompía, está en columnaFinalDe().
+      const final = columnaFinalDe(ctx.columnas, pieza.column_id);
+      if (!final.ok) return final;
+      const { error } = await admin.from("content_pieces").update({ column_id: final.columna.id }).eq("id", pieza.id);
+      return { ok: !error };
     }
     // Reprogramar toca la fecha que originó el aviso, no las dos: el campo
     // viene del ítem, no de lo que el modelo haya querido elegir.
@@ -888,7 +938,7 @@ async function escribirEdicion(
       .from("content_pieces")
       .update(item.ref.campo === "publish_date" ? { publish_date: accion.fecha } : { record_date: accion.fecha })
       .eq("id", pieza.id);
-    return !error;
+    return { ok: !error };
   }
 
   const { data: evento } = await admin
@@ -897,21 +947,21 @@ async function escribirEdicion(
     .eq("id", item.ref.eventId)
     .eq("responsible_id", ctx.profileId)
     .maybeSingle();
-  if (!evento) return false;
+  if (!evento) return { ok: false };
 
   if (accion.tipo === "marcar_hecho") {
     const { error } = await admin.from("calendar_events").update({ status: "hecho" }).eq("id", evento.id);
-    return !error;
+    return { ok: !error };
   }
   if (accion.tipo === "reprogramar") {
     const { error } = await admin
       .from("calendar_events")
       .update({ starts_at: `${accion.fecha}T15:00:00Z` })
       .eq("id", evento.id);
-    return !error;
+    return { ok: !error };
   }
   // mover_pieza sobre un evento no existe.
-  return false;
+  return { ok: false, nota: "Eso es un evento del calendario, no una tarjeta del tablero: no tiene columna a la que moverlo." };
 }
 
 // ---------------------------------------------------------------

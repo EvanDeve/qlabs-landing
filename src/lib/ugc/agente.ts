@@ -2,6 +2,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { COSTA_RICA_TZ, diaCR, sumarDias } from "@/lib/ugc/calendar";
+import type { ColumnaDelTablero } from "@/lib/ugc/tablero";
 import {
   type Agenda,
   type AgendaItem,
@@ -204,6 +205,17 @@ function describirAgenda(agenda: Agenda, hoyCR: string): string {
     .join("\n\n");
 }
 
+/**
+ * Cuánto se espera a Gemini antes de dar por perdida la respuesta.
+ *
+ * Sin techo, una llamada colgada se lleva puesta la función entera: el
+ * recordatorio de la mañana nunca sale y la conversación se queda muda, en los
+ * dos casos sin ningún error visible. Con techo, un cuelgue cae donde ya
+ * sabemos caer —el resumen determinista, o el "se me trabó algo de este lado"—
+ * que es feo pero llega.
+ */
+const TIMEOUT_GEMINI_MS = 12_000;
+
 export async function pedirleAGemini(prompt: string, json: boolean): Promise<string | null> {
   if (!process.env.GEMINI_API_KEY) {
     console.warn("[agente] falta GEMINI_API_KEY — se usa el texto determinista");
@@ -212,10 +224,13 @@ export async function pedirleAGemini(prompt: string, json: boolean): Promise<str
   try {
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = client.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      ...(json ? { generationConfig: { responseMimeType: "application/json" } } : {}),
-    });
+    const model = client.getGenerativeModel(
+      {
+        model: "gemini-2.5-flash",
+        ...(json ? { generationConfig: { responseMimeType: "application/json" } } : {}),
+      },
+      { timeout: TIMEOUT_GEMINI_MS }
+    );
     const texto = (await model.generateContent(prompt)).response.text().trim();
     return texto || null;
   } catch (err) {
@@ -366,6 +381,25 @@ export function normalizarTitulo(texto: string): string {
 export type TurnoPrevio = { quien: "agente" | "persona"; texto: string };
 
 /**
+ * Las columnas agrupadas por carril, para el prompt.
+ *
+ * El carril no es decoración: el tablero corre tres —guion, video e it— y hay
+ * NOMBRES REPETIDOS entre ellos. Hoy existen dos columnas llamadas "Terminado",
+ * una de video y otra de it, así que "pasalo a Terminado" sin el carril a la
+ * vista es una instrucción que el modelo resuelve al azar.
+ *
+ * La ambigüedad igual se termina de cerrar al escribir —ver columnaDestino() en
+ * tablero.ts—. Esto es para que el modelo no proponga el disparate de entrada.
+ */
+function describirColumnas(columnas: ColumnaDelTablero[]): string {
+  const porCarril = new Map<string, string[]>();
+  for (const c of columnas) {
+    porCarril.set(c.section, [...(porCarril.get(c.section) ?? []), c.name]);
+  }
+  return [...porCarril.entries()].map(([carril, nombres]) => `- ${carril}: ${nombres.join(", ")}`).join("\n");
+}
+
+/**
  * Lo que la persona todavía puede confirmar con un "dale".
  *
  * Son dos cosas distintas con el mismo mecanismo. Crear inventa una fila a
@@ -390,7 +424,8 @@ export const PROPUESTA_VIGENCIA_MS = 30 * 60 * 1000;
 export async function responderMensaje(opciones: {
   nombre: string;
   agenda: Agenda;
-  columnas: string[];
+  /** Todas las columnas del tablero, con su carril. Ver ColumnaDelTablero. */
+  columnas: ColumnaDelTablero[];
   /** Nombres de agency_clients. Sin esto el agente no puede proponer piezas. */
   clientes: string[];
   historial: TurnoPrevio[];
@@ -455,7 +490,14 @@ bloque, decilo en vez de estimarlo.
 
 `
     : ""
-}COLUMNAS DEL TABLERO: ${columnas.join(", ")}
+}COLUMNAS DEL TABLERO, por carril:
+${describirColumnas(columnas)}
+
+Una tarjeta solo se mueve entre columnas de SU MISMO carril: un video no va a una
+columna de guiones por más que el nombre suene parecido. Hay nombres repetidos
+entre carriles, así que mirá en cuál está parada la tarjeta antes de elegir a
+dónde la mandás. Si te piden moverla a una columna de otro carril, decíselo en
+vez de hacerlo.
 
 CLIENTES DE LA AGENCIA: ${clientes.length ? clientes.join(", ") : "(ninguno cargado)"}
 
@@ -522,7 +564,11 @@ Formas válidas de accion:
       respuesta,
       accion: validarAccion(parseado.accion, {
         cantidadItems: items.length,
-        columnas,
+        // Solo los nombres: acá se valida que la columna EXISTA en algún lado.
+        // Cuál de las repetidas es —y si es del carril correcto— lo decide
+        // columnaDestino() al escribir, que es la única que sabe dónde está
+        // parada la tarjeta.
+        columnas: columnas.map((c) => c.name),
         clientes,
         hoyCR,
         hayPendiente: pendiente !== null,
