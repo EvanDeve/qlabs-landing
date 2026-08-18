@@ -331,16 +331,21 @@ export type AccionAgente =
 export type RespuestaAgente = { respuesta: string; accion: AccionAgente };
 
 /**
- * La línea que dice qué se tocó, con el dato del sistema y no del modelo.
+ * Lo que se tocó, dicho con el dato del sistema y no con la prosa del modelo.
  *
  * El 2026-08-03 Daniel leyó "Pura vida." después de que le cerraran la tarjeta
  * equivocada, y el error recién salió a la luz cuando aparecieron dos tarjetas.
- * El modelo puede escribir cualquier cosa en su prosa —o nada—; esto sale de la
- * acción que de verdad se ejecutó, así que un error se ve en el mismo mensaje.
+ * El modelo puede escribir cualquier cosa —o nada—; esto sale de la acción que
+ * de verdad se ejecutó, así que un error se ve en el mismo mensaje.
+ *
+ * Va SIN paréntesis y escrito como lo escribiría un compañero, porque es el
+ * mensaje y no una nota al pie: el paréntesis era la marca de sistema más
+ * visible que quedaba. Y el prompt le prohíbe al modelo repetir lo que hizo,
+ * así que esta línea no compite con la suya — antes salían las dos, "ya cierro
+ * la de X" y abajo "(Listo: di por terminada X)".
  *
  * Devuelve null para las acciones que no tocan el tablero: no hay nada que
- * confirmar, y un paréntesis de más en cada respuesta convierte el aviso en
- * ruido que se deja de leer — que es justo lo que hay que evitar.
+ * contar, y una línea de más en cada respuesta es ruido que se deja de leer.
  */
 export function describirLoHecho(accion: AccionAgente, items: AgendaItem[]): string | null {
   if (accion.tipo !== "mover_pieza" && accion.tipo !== "marcar_hecho" && accion.tipo !== "reprogramar") {
@@ -349,20 +354,13 @@ export function describirLoHecho(accion: AccionAgente, items: AgendaItem[]): str
   const item = items[accion.item - 1];
   if (!item) return null;
   const titulo = item.titulo;
-  const heroe = item.heroe ? ` (${item.heroe})` : "";
+  const heroe = item.heroe ? ` — ${item.heroe}` : "";
 
-  if (accion.tipo === "mover_pieza") return `Listo: moví "${titulo}" a ${accion.columna}.`;
-  // Cerrar todavía NO pasó: acá solo se abrió la pregunta. Decir "listo" sería
-  // exactamente la mentira que esta línea existe para evitar. Se nombra la
-  // tarjeta con su Hero porque es el momento de cazar el error —después la
-  // tarjeta ya no está a la vista.
-  if (accion.tipo === "marcar_hecho") return `Confirmame y la cierro: "${titulo}"${heroe}.`;
-  return `Listo: "${titulo}" queda para el ${accion.fecha}.`;
-}
-
-/** Lo que se escribe cuando un "dale" termina de cerrar la tarjeta. */
-export function describirCierreHecho(titulo: string): string {
-  return `Listo: di por terminada "${titulo}".`;
+  if (accion.tipo === "mover_pieza") return `Listo, moví ${titulo} a ${accion.columna}.`;
+  // Cerrar se nombra con el Hero: es la única de las tres que saca la tarjeta de
+  // la vista, así que este mensaje es la última oportunidad de cazar el error.
+  if (accion.tipo === "marcar_hecho") return `Listo, cerré ${titulo}${heroe}.`;
+  return `Listo, ${titulo} queda para el ${accion.fecha}.`;
 }
 
 /**
@@ -400,23 +398,19 @@ function describirColumnas(columnas: ColumnaDelTablero[]): string {
 }
 
 /**
- * Lo que la persona todavía puede confirmar con un "dale".
+ * Lo que la persona todavía puede confirmar con un "dale": crear algo nuevo.
  *
- * Son dos cosas distintas con el mismo mecanismo. Crear inventa una fila a
- * partir de texto que el modelo entendió de oído. Cerrar no inventa nada, pero
- * SACA la tarjeta del tablero — y con ella, de la agenda del agente: el
- * 2026-08-03 esa desaparición fue lo que hizo que treinta segundos después
- * McLovin ya no la viera y propusiera crearla de nuevo. Una acción que se borra
- * a sí misma de la vista tiene que preguntar antes.
+ * Es el único caso que pregunta antes, y no por ser peligroso sino porque un
+ * compañero hace lo mismo: cuando le dictás una tarjeta, repite lo que entendió
+ * —título, cliente, fecha— antes de anotarla. Todo lo demás cae sobre algo que
+ * ya existe y se hace de una.
  *
- * Mover y reprogramar no están acá a propósito: son reversibles, son las de
- * todos los días, y la línea de "qué toqué" ya muestra el error en el mismo
- * mensaje. Pedirles confirmación sería cobrarle dos mensajes al equipo por el
- * caso que ya está cubierto.
+ * Cerrar preguntaba, y se le sacó el 2026-08-18 a pedido de Evan: pedirle
+ * permiso a alguien que acaba de decirte que ya terminó el video es lo más
+ * parecido a un bot que quedaba. Lo que protege ahora es la línea de "qué
+ * toqué", que nombra la tarjeta y su Hero en el mismo mensaje.
  */
-export type Pendiente =
-  | { tipo: "crear"; pieza: PropuestaPieza }
-  | { tipo: "cerrar"; titulo: string };
+export type Pendiente = { tipo: "crear"; pieza: PropuestaPieza };
 
 /** Cuánto vive una propuesta sin contestar. Ver esValidaParaConfirmar(). */
 export const PROPUESTA_VIGENCIA_MS = 30 * 60 * 1000;
@@ -453,20 +447,15 @@ export async function responderMensaje(opciones: {
     .map((t) => `${t.quien === "agente" ? "VOS" : nombre.toUpperCase()}: ${t.texto}`)
     .join("\n");
 
-  // El cierre del bloque es el mismo para las dos: lo que cambia es QUÉ está
-  // esperando, no cómo se contesta.
   const comoSeContesta = `Si en su mensaje acepta, usá {"tipo":"confirmar"}. Si dice que no o cambia de
 tema, {"tipo":"descartar"}. Si solo pregunta algo, contestá con
 {"tipo":"ninguna"} y sigue en pie.`;
 
   const bloquePendiente = !pendiente
     ? ""
-    : pendiente.tipo === "crear"
-      ? `LE PROPUSISTE ESTO Y ESTÁS ESPERANDO QUE TE DIGA SÍ O NO:
+    : `LE PROPUSISTE ESTO Y ESTÁS ESPERANDO QUE TE DIGA SÍ O NO:
 ${describirPropuesta(pendiente.pieza, hoyCR)} (fecha exacta: ${pendiente.pieza.fecha})
-${comoSeContesta} Si pide cambiarle algo, proponé de nuevo con los datos corregidos.`
-      : `LE PREGUNTASTE SI DA POR TERMINADA "${pendiente.titulo}" Y ESTÁS ESPERANDO QUE TE DIGA SÍ O NO:
-${comoSeContesta}`;
+${comoSeContesta} Si pide cambiarle algo, proponé de nuevo con los datos corregidos.`;
 
   const crudo = await pedirleAGemini(
     `${armarPersona(ajustes)}
@@ -534,10 +523,15 @@ Con "tipo":"publicar" anotás un video en el tablero; con "tipo":"grabar" anotá
 una jornada de grabación en el calendario. Las grabaciones se planean una vez al
 mes para varios videos a la vez, así que no son una tarjeta del tablero.
 
-Dar algo por terminado tampoco pasa en el acto: mandá "marcar_hecho" y en tu
-texto preguntale si la cierra, nombrándola. Recién con su "dale" se cierra. Es
-la única de las tres que saca la tarjeta del tablero, así que si te equivocaste
-de cuál, después ya no está a la vista para darse cuenta.
+Si te dice que ya terminó algo, cerralo de una con "marcar_hecho". No le pidas
+que te lo confirme: acaba de decírtelo. Pero tiene que quedar clarísimo CUÁL
+cerraste, y de eso se encarga el sistema.
+
+NUNCA cuentes en tu texto lo que acabás de hacer —"ya la moví", "la cierro",
+"queda para el viernes"—. Esa línea la escribe el sistema debajo de la tuya, con
+lo que de verdad pasó, y si la decís vos salen las dos diciendo lo mismo. Vos
+contestá lo que te preguntó, o no digas nada si no hay nada que contestar: un
+"dale" tuyo alcanza.
 
 Si te pide anotar algo nuevo, NO lo creás en el acto: proponelo con
 "proponer_pieza" y escribile una línea corta preguntándole si va así. NO repitas

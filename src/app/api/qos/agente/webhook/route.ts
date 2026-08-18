@@ -4,13 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { firmaValida } from "@/lib/whatsapp/firma";
 import { sendWhatsAppFreeform, normalizarTelefonoCR } from "@/lib/whatsapp/twilio";
-import { getStaffAgenda, itemsDeAgenda, type AgendaRef } from "@/lib/ugc/agenda";
+import { getStaffAgenda, itemsDeAgenda } from "@/lib/ugc/agenda";
 import {
   responderMensaje,
   getAjustesAgente,
   describirPropuesta,
   describirLoHecho,
-  describirCierreHecho,
   normalizarTitulo,
   esValidaParaConfirmar,
   type AccionAgente,
@@ -206,11 +205,7 @@ async function atenderEntrante(
     clientes: (clientes ?? []).map((c) => c.name),
     historial,
     mensaje: texto,
-    pendiente: !propuesta
-      ? null
-      : propuesta.tipo === "cerrar"
-        ? { tipo: "cerrar", titulo: propuesta.titulo }
-        : { tipo: "crear", pieza: propuesta.pieza },
+    pendiente: propuesta ? { tipo: "crear", pieza: propuesta.pieza } : null,
     reporte,
     ajustes,
   });
@@ -226,7 +221,7 @@ async function atenderEntrante(
 
   // Estamos dentro de la ventana de 24 h por definición —acaban de escribir—
   // así que acá el agente habla libre, sin plantilla.
-  await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, accion, resultado, items, propuesta));
+  await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, accion, resultado, items));
 }
 
 /**
@@ -433,14 +428,10 @@ async function responder(admin: Admin, profileId: string, telefono: string, text
 /**
  * La fila de wa_agent_actions que quedó esperando un "dale".
  *
- * Guarda el `ref` de la pieza a cerrar y no el número del ítem: cuando la
- * persona conteste, la agenda ya puede haberse re-armado y el 3 de hace un
- * minuto puede ser otra tarjeta. Es el mismo motivo por el que crear usa lo
- * guardado y no lo que el modelo repita.
+ * Solo puede ser una pieza a crear. Cerrar también esperaba confirmación hasta
+ * el 2026-08-18; ahora se hace de una — ver el comentario de `Pendiente`.
  */
-type PropuestaViva =
-  | { id: string; tipo: "crear"; pieza: PropuestaPieza }
-  | { id: string; tipo: "cerrar"; ref: AgendaRef; titulo: string };
+type PropuestaViva = { id: string; tipo: "crear"; pieza: PropuestaPieza };
 
 /**
  * La propuesta que esta persona todavía puede confirmar con un "dale".
@@ -455,6 +446,10 @@ async function leerPropuestaViva(admin: Admin, profileId: string): Promise<Propu
     .select("id, kind, payload, created_at")
     .eq("profile_id", profileId)
     .eq("status", "propuesta")
+    // Solo las de crear. Pueden quedar filas viejas de 'marcar_hecho' abiertas
+    // de cuando cerrar preguntaba, y su payload tiene otra forma: sin este
+    // filtro, un "dale" las leería como si fueran una pieza a crear.
+    .in("kind", ["crear_pieza", "crear_evento"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -469,10 +464,6 @@ async function leerPropuestaViva(admin: Admin, profileId: string): Promise<Propu
     return null;
   }
 
-  if (data.kind === "marcar_hecho") {
-    const payload = data.payload as unknown as { ref: AgendaRef; titulo: string };
-    return { id: data.id, tipo: "cerrar", ref: payload.ref, titulo: payload.titulo };
-  }
   return { id: data.id, tipo: "crear", pieza: data.payload as unknown as PropuestaPieza };
 }
 
@@ -532,10 +523,7 @@ async function aplicarAccion(admin: Admin, ctx: Contexto): Promise<ResultadoAcci
   try {
     if (accion.tipo === "proponer_pieza") return await abrirPropuesta(admin, ctx, accion.pieza);
     if (accion.tipo === "descartar") return { aplicada: await cerrarPropuesta(admin, ctx, "descartada") };
-    if (accion.tipo === "confirmar") return await ejecutarConfirmado(admin, ctx);
-    // Cerrar es la única de las tres que saca la tarjeta de la vista, así que
-    // pregunta antes en vez de escribir. Ver el comentario de `Pendiente`.
-    if (accion.tipo === "marcar_hecho") return await abrirCierre(admin, ctx, accion.item);
+    if (accion.tipo === "confirmar") return { aplicada: await crearPiezaConfirmada(admin, ctx) };
     return await editarItem(admin, ctx, accion);
   } catch (err) {
     console.error("[agente/webhook] no se pudo aplicar la acción:", err);
@@ -652,28 +640,6 @@ async function abrirPropuesta(admin: Admin, ctx: Contexto, pieza: PropuestaPieza
   return { aplicada: id !== null };
 }
 
-/**
- * Deja anotado qué se va a cerrar, sin cerrar nada todavía.
- *
- * Guarda el `ref` y el título, no el número del ítem: para cuando llegue el
- * "dale", la agenda se re-arma y ese número puede apuntar a otra tarjeta.
- */
-async function abrirCierre(admin: Admin, ctx: Contexto, indice: number): Promise<ResultadoAccion> {
-  const item = ctx.items[indice - 1];
-  if (!item) return { aplicada: false };
-
-  if (ctx.propuesta) await cerrarPropuesta(admin, ctx, "reemplazada");
-
-  const id = await registrar(
-    admin,
-    ctx.profileId,
-    "marcar_hecho",
-    { ref: item.ref, titulo: item.titulo },
-    "propuesta"
-  );
-  return { aplicada: id !== null };
-}
-
 async function cerrarPropuesta(admin: Admin, ctx: Contexto, status: "descartada" | "reemplazada"): Promise<boolean> {
   if (!ctx.propuesta) return false;
   const { error } = await admin
@@ -690,60 +656,14 @@ async function cerrarPropuesta(admin: Admin, ctx: Contexto, status: "descartada"
  * modelo devuelve junto con el "confirmar", la persona estaría confirmando un
  * texto y el sistema guardando otro, sin que nada fallara de forma visible.
  */
-function mismoRef(a: AgendaRef, b: AgendaRef): boolean {
-  if (a.kind === "piece" && b.kind === "piece") return a.pieceId === b.pieceId;
-  if (a.kind === "event" && b.kind === "event") return a.eventId === b.eventId;
-  return false;
-}
-
-/** Un "dale" cierra lo que haya quedado esperando: una pieza nueva o un cierre. */
-async function ejecutarConfirmado(admin: Admin, ctx: Contexto): Promise<ResultadoAccion> {
-  if (!ctx.propuesta) return { aplicada: false };
-  return ctx.propuesta.tipo === "cerrar"
-    ? await cerrarItemConfirmado(admin, ctx, ctx.propuesta)
-    : { aplicada: await crearPiezaConfirmada(admin, ctx) };
-}
 
 /**
- * Cierra la pieza guardada, revalidando que siga siendo de esa persona.
+ * Crea la pieza a partir de lo GUARDADO, nunca de lo que el modelo reescriba.
  *
- * La revalidación no es de más: entre la pregunta y el "dale" pasan minutos, y
- * el cliente es service-role —se saltea RLS—, así que este chequeo ocupa el
- * lugar de la policy igual que en editarItem().
+ * Es el punto entero del diseño de dos turnos: si acá se usaran los datos que el
+ * modelo devuelve junto con el "confirmar", la persona estaría confirmando un
+ * texto y el sistema guardando otro, sin que nada fallara de forma visible.
  */
-async function cerrarItemConfirmado(
-  admin: Admin,
-  ctx: Contexto,
-  propuesta: Extract<PropuestaViva, { tipo: "cerrar" }>
-): Promise<ResultadoAccion> {
-  // Se busca por el id y no por `key`: una pieza aparece dos veces en la agenda
-  // (grabar y publicar) con keys distintas, y cerrarla es lo mismo desde
-  // cualquiera de las dos.
-  const item = ctx.items.find((i) => mismoRef(i.ref, propuesta.ref));
-  // Si ya no está en la agenda —la cerraron desde Q·OS mientras tanto— no hay
-  // nada que hacer, y decir que se cerró sería mentir.
-  if (!item) {
-    await admin
-      .from("wa_agent_actions")
-      .update({ status: "fallida", error: "la pieza ya no estaba en la agenda", resolved_at: new Date().toISOString() })
-      .eq("id", propuesta.id);
-    return { aplicada: false, nota: "Esa ya no estaba en tu agenda — la habrán cerrado desde Q·OS." };
-  }
-
-  const { ok, nota } = await escribirEdicion(admin, ctx, { tipo: "marcar_hecho", item: 0 }, item);
-  await admin
-    .from("wa_agent_actions")
-    .update({
-      status: ok ? "ejecutada" : "fallida",
-      ...(ok ? {} : { error: nota ?? "no se pudo cerrar" }),
-      target_table: propuesta.ref.kind === "piece" ? "content_pieces" : "calendar_events",
-      target_id: propuesta.ref.kind === "piece" ? propuesta.ref.pieceId : propuesta.ref.eventId,
-      resolved_at: new Date().toISOString(),
-    })
-    .eq("id", propuesta.id);
-  return { aplicada: ok, nota };
-}
-
 async function crearPiezaConfirmada(admin: Admin, ctx: Contexto): Promise<boolean> {
   const propuesta = ctx.propuesta;
   if (!propuesta || propuesta.tipo !== "crear") return false;
@@ -983,9 +903,7 @@ function redactarSalida(
   respuesta: string,
   accion: AccionAgente,
   resultado: ResultadoAccion,
-  items: AgendaItem[],
-  /** Lo que estaba esperando confirmación ANTES de aplicar, para poder nombrarlo. */
-  pendiente: PropuestaViva | null
+  items: AgendaItem[]
 ): string {
   const { aplicada, nota } = resultado;
 
@@ -995,26 +913,21 @@ function redactarSalida(
   // el 2026-08-18 — "Ya cierro la de Prueba entrecote" y justo debajo "No pude
   // cerrarla". De las dos frases, la única que sabe lo que de verdad pasó es
   // ésta. Las notas están escritas como mensajes completos, en su voz.
-  if (nota) return aplicada ? `${respuesta}\n\n(${nota})` : nota;
+  if (nota) return aplicada ? `${respuesta}\n\n${nota}` : nota;
 
   if (accion.tipo === "proponer_pieza") {
     return aplicada
       ? `${respuesta}\n\n${describirPropuesta(accion.pieza, diaCR(new Date()))}`
-      : `${respuesta}\n\n(No me quedó anotado, mejor cargalo desde Q·OS.)`;
+      : `${respuesta}\n\nNo me quedó anotado, mejor cargalo desde Q·OS.`;
   }
   if (aplicada) {
-    if (accion.tipo === "confirmar" && pendiente?.tipo === "cerrar") {
-      return `${respuesta}\n\n(${describirCierreHecho(pendiente.titulo)})`;
-    }
+    // Sin paréntesis: esta línea es parte del mensaje, no una nota al pie. El
+    // modelo tiene prohibido contar lo que hizo, así que no se pisan.
     const hecho = describirLoHecho(accion, items);
-    return hecho ? `${respuesta}\n\n(${hecho})` : respuesta;
+    return hecho ? `${respuesta}\n\n${hecho}` : respuesta;
   }
-  if (accion.tipo === "confirmar") {
-    return pendiente?.tipo === "cerrar"
-      ? `${respuesta}\n\n(Ojo: no pude cerrarla, hacelo vos desde Q·OS.)`
-      : `${respuesta}\n\n(Ojo: no pude crearla, cargala vos desde Q·OS.)`;
-  }
+  if (accion.tipo === "confirmar") return `${respuesta}\n\nOjo, no pude crearla — cargala vos desde Q·OS.`;
   if (accion.tipo === "descartar") return respuesta;
   if (accion.tipo === "ninguna") return respuesta;
-  return `${respuesta}\n\n(Ojo: no pude tocar el tablero, hacelo vos desde Q·OS.)`;
+  return `${respuesta}\n\nOjo, no pude tocar el tablero — hacelo vos desde Q·OS.`;
 }

@@ -6,7 +6,6 @@ import {
   resolverCliente,
   describirPropuesta,
   describirLoHecho,
-  describirCierreHecho,
   normalizarTitulo,
   esValidaParaConfirmar,
   fechaEnRango,
@@ -371,20 +370,27 @@ describe("describirLoHecho", () => {
 
   it("nombra la pieza que se movió y a dónde fue", () => {
     const texto = describirLoHecho({ tipo: "mover_pieza", item: 2, columna: "Publicado" }, items);
-    expect(texto).toBe('Listo: moví "Unboxing ramen" a Publicado.');
+    expect(texto).toBe("Listo, moví Unboxing ramen a Publicado.");
   });
 
-  // Cerrar pide confirmación, así que en este punto TODAVÍA no pasó. Decir
-  // "listo" acá sería la mentira exacta que esta línea existe para evitar.
-  it("al pedir cerrar avisa que falta el dale, y no que ya cerró", () => {
+  // Cerrar ya no pregunta (2026-08-18): pasa en el acto. Como es la única que
+  // saca la tarjeta de la vista, esta línea es la última oportunidad de cazar un
+  // error, así que nombra la tarjeta Y su Hero.
+  it("al cerrar nombra la tarjeta y su Hero, porque después ya no se ve", () => {
     const texto = describirLoHecho({ tipo: "marcar_hecho", item: 1 }, items);
-    expect(texto).toContain('"Reel de brunch"');
-    expect(texto).toContain("Delitalia");
-    expect(texto).not.toMatch(/listo|terminada/i);
+    expect(texto).toBe("Listo, cerré Reel de brunch — Delitalia.");
   });
 
-  it("recién con el dale se dice que quedó terminada", () => {
-    expect(describirCierreHecho("Reel de brunch")).toBe('Listo: di por terminada "Reel de brunch".');
+  // El paréntesis era la marca de sistema más visible que quedaba: un compañero
+  // no habla entre paréntesis. Ver describirLoHecho().
+  it("no habla entre paréntesis", () => {
+    for (const accion of [
+      { tipo: "mover_pieza", item: 1, columna: "Publicado" },
+      { tipo: "marcar_hecho", item: 1 },
+      { tipo: "reprogramar", item: 1, fecha: "2026-08-09" },
+    ] as const) {
+      expect(describirLoHecho(accion, items)).not.toMatch(/[()]/);
+    }
   });
 
   it("dice la fecha nueva al reprogramar", () => {
@@ -392,8 +398,8 @@ describe("describirLoHecho", () => {
     expect(texto).toContain("2026-08-09");
   });
 
-  // Un paréntesis en cada mensaje se vuelve ruido y se deja de leer, así que
-  // solo se avisa de lo que de verdad tocó el tablero.
+  // Una línea de más en cada mensaje se vuelve ruido y se deja de leer, así que
+  // solo se cuenta lo que de verdad tocó el tablero.
   it("no dice nada cuando la acción no toca el tablero", () => {
     expect(describirLoHecho({ tipo: "ninguna" }, items)).toBeNull();
     expect(describirLoHecho({ tipo: "descartar" }, items)).toBeNull();
