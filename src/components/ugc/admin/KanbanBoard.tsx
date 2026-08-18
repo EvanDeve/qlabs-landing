@@ -279,10 +279,9 @@ export default function KanbanBoard({
               ? 0
               : localPieces.filter((p) => p.column_id === columnModal.id).length
           }
-          isOnlyDoneColumn={
+          esUnicaDelCarril={
             columnModal !== "nueva" &&
-            columnModal.is_done &&
-            columns.filter((c) => c.is_done).length === 1
+            columns.filter((c) => c.section === columnModal.section).length === 1
           }
           seccionAbierta={seccion}
           onClose={() => setColumnModal(null)}

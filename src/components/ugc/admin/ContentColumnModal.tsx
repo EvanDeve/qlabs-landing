@@ -22,7 +22,7 @@ export default function ContentColumnModal({
   column,
   totalColumns,
   pieceCount,
-  isOnlyDoneColumn,
+  esUnicaDelCarril,
   seccionAbierta,
   onClose,
 }: {
@@ -30,8 +30,11 @@ export default function ContentColumnModal({
   totalColumns: number;
   /** Cuántas piezas tiene, para avisar a dónde se van si se borra. */
   pieceCount: number;
-  /** Es la única columna marcada como "publicadas": no se puede soltar. */
-  isOnlyDoneColumn: boolean;
+  /**
+   * Es la única columna de su carril: borrarla dejaría el carril sin ninguna, y
+   * sus piezas se mudarían a la columna de al lado, que sería de OTRO carril.
+   */
+  esUnicaDelCarril: boolean;
   /**
    * La pestaña desde la que se abrió el modal; null en "Todo". Es el default
    * de una columna nueva: crear una columna estando en IT y que aparezca en
@@ -47,11 +50,21 @@ export default function ContentColumnModal({
     null
   );
   const [color, setColor] = useState(column?.color ?? COLORES_COLUMNA[1]);
+  // El carril en estado y no solo en el <select>: las dos banderas que quedan
+  // son de video —esperar al cliente, "ya está grabado"— y en una columna de IT
+  // o de guiones no significan nada. Que aparezcan y desaparezcan al cambiar el
+  // carril es lo que hace que no haya que explicarlo.
+  const [seccion, setSeccion] = useState<PipelineSection>(
+    column?.section ?? seccionAbierta ?? SECCION_POR_DEFECTO
+  );
+  const esVideo = seccion === "video";
 
   // Dos razones para no poder borrar: que sea la última del tablero (no habría
-  // desde dónde crear otra), o que sea la única que significa "publicado" (el
-  // Pase de servicio se quedaría sin nada que contar).
-  const puedeBorrar = editando && totalColumns > 1 && !isOnlyDoneColumn;
+  // desde dónde crear otra) o la única de su carril (sus piezas terminarían en
+  // el carril de al lado). Ya NO hay una tercera por la bandera de "publicadas":
+  // esa la mantiene la base sola, y si se borra la última columna de un carril,
+  // la que queda antes pasa a ser la que cierra.
+  const puedeBorrar = editando && totalColumns > 1 && !esUnicaDelCarril;
 
   return (
     <div className={styles.modalOverlay} onClick={() => !pending && onClose()}>
@@ -117,7 +130,8 @@ export default function ContentColumnModal({
             <label>Sección</label>
             <select
               name="section"
-              defaultValue={column?.section ?? seccionAbierta ?? SECCION_POR_DEFECTO}
+              value={seccion}
+              onChange={(e) => setSeccion(e.target.value as PipelineSection)}
               className={styles.selectInp}
               style={{ width: "100%" }}
             >
@@ -154,9 +168,14 @@ export default function ContentColumnModal({
             </div>
           </div>
 
-          {/* Estas dos banderas son las que mantienen vivos los cálculos del
-              módulo. Sin ellas, renombrar una columna descuadraría el Pase de
-              servicio en silencio. */}
+          {/* Cuál columna CIERRA el carril ya no se marca: es la última, y la
+              base lo mantiene sola (migración 20260818140000). Era una casilla
+              con vocabulario de video —"publicadas"— que había que encontrar en
+              cada carril nuevo, y el de IT nació sin ella: McLovin no tenía a
+              dónde mover una tarea terminada y nadie se enteró hasta que se lo
+              pidieron por WhatsApp.
+
+              Las dos que quedan sí son decisiones del equipo, y solo de video. */}
           <div
             className={styles.field}
             style={{
@@ -164,33 +183,9 @@ export default function ContentColumnModal({
               border: "1px solid var(--b-100)",
               borderRadius: "var(--r-sm)",
               padding: "12px",
+              display: esVideo ? undefined : "none",
             }}
           >
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                name="is_done"
-                defaultChecked={column?.is_done ?? false}
-                disabled={isOnlyDoneColumn}
-              />
-              Las piezas acá están publicadas
-            </label>
-            <p style={{ fontSize: "12.5px", color: "var(--ink-2)", margin: "4px 0 12px" }}>
-              De acá salen los &ldquo;Publicados&rdquo; del mes: meta, ritmo y riesgo de cada Hero.
-              {isOnlyDoneColumn && (
-                <>
-                  {" "}
-                  <b>
-                    Es la única columna marcada así, por eso no se puede desmarcar ni borrar. Marcá
-                    otra primero.
-                  </b>
-                </>
-              )}
-            </p>
-            {/* El checkbox deshabilitado no viaja en el formulario, y sin esto
-                guardar cualquier otro campo apagaría la bandera sin querer. */}
-            {isOnlyDoneColumn && <input type="hidden" name="is_done" value="on" />}
-
             <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
               <input
                 type="checkbox"

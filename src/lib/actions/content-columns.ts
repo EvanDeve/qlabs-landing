@@ -44,7 +44,10 @@ export async function createContentColumnAction(
     color: String(formData.get("color") ?? "#6d54f3"),
     sop_code: String(formData.get("sop_code") ?? "").trim() || null,
     owner_role: String(formData.get("owner_role") ?? "").trim() || null,
-    is_done: formData.get("is_done") === "on",
+    // is_done no se manda: lo decide la posición dentro del carril y lo
+    // mantiene el trigger de 20260818140000. Una columna nueva nace al final,
+    // así que es la que pasa a cerrar su carril — que es lo que uno espera al
+    // agregar un paso más.
     is_pending_approval: formData.get("is_pending_approval") === "on",
     is_ready: formData.get("is_ready") === "on",
     section: parseSeccionColumna(formData.get("section")),
@@ -69,24 +72,6 @@ export async function updateContentColumnAction(
   if (!id) return { error: "Columna inválida." };
   if (!name) return { error: "Ponele un nombre a la columna." };
 
-  const isDone = formData.get("is_done") === "on";
-
-  // Desmarcar la última columna "publicadas" rompe el Pase de servicio igual
-  // que borrarla: quedaría sin ninguna de la que contar. Se avisa en vez de
-  // dejar que los números se descuadren en silencio.
-  if (!isDone) {
-    const { data: hechas } = await supabase
-      .from("content_columns")
-      .select("id")
-      .eq("is_done", true);
-    if (hechas?.length === 1 && hechas[0].id === id) {
-      return {
-        error:
-          "Tiene que haber al menos una columna marcada como publicadas — de ahí salen los publicados del mes. Marcá otra primero.",
-      };
-    }
-  }
-
   const { error } = await supabase
     .from("content_columns")
     .update({
@@ -94,7 +79,7 @@ export async function updateContentColumnAction(
       color: String(formData.get("color") ?? "#6d54f3"),
       sop_code: String(formData.get("sop_code") ?? "").trim() || null,
       owner_role: String(formData.get("owner_role") ?? "").trim() || null,
-      is_done: isDone,
+      // is_done queda afuera a propósito: ver createContentColumnAction.
       is_pending_approval: formData.get("is_pending_approval") === "on",
       is_ready: formData.get("is_ready") === "on",
       section: parseSeccionColumna(formData.get("section")),
@@ -121,22 +106,32 @@ export async function deleteContentColumnAction(formData: FormData) {
 
   const { data: columnas } = await supabase
     .from("content_columns")
-    .select("id, position, is_done")
+    .select("id, position, section")
     .order("position", { ascending: true });
 
   // Un tablero sin columnas no tendría desde dónde crear la primera.
   if (!columnas || columnas.length <= 1) return;
 
-  // Tiene que quedar SIEMPRE una columna que signifique "publicado". Sin ella
-  // el Pase de servicio contaría 0 publicados para todos los Heroes y el ritmo
-  // y el riesgo saldrían mal, sin ningún error visible. El modal ya no ofrece
-  // el botón en este caso; esto es la red por si llega igual.
   const objetivo = columnas.find((c) => c.id === id);
-  if (objetivo?.is_done && columnas.filter((c) => c.is_done).length === 1) return;
+  if (!objetivo) return;
 
-  const i = columnas.findIndex((c) => c.id === id);
-  if (i === -1) return;
-  const destino = columnas[i === 0 ? 1 : i - 1];
+  // Las piezas se mudan DENTRO del carril. Antes se mudaban a la columna de al
+  // lado por posición, que con tres carriles pegados uno detrás del otro podía
+  // ser de otro: borrar "Sin Empezar" —la primera de IT— mandaba sus tareas a
+  // "Publicado", la última de video.
+  //
+  // Y si es la única de su carril no hay a dónde mudarlas: se corta acá en vez
+  // de dejarlas caer en el carril de al lado. El modal ya no ofrece el botón en
+  // ese caso; esto es la red por si llega igual.
+  const delCarril = columnas.filter((c) => c.section === objetivo.section);
+  if (delCarril.length <= 1) return;
+
+  const i = delCarril.findIndex((c) => c.id === id);
+  const destino = delCarril[i === 0 ? 1 : i - 1];
+
+  // Ya no hace falta cuidar que quede alguna columna marcada como "publicadas":
+  // la última de cada carril lo es por regla, y al borrar la última, la anterior
+  // pasa a serlo sola. Ver la migración 20260818140000.
 
   const { error: errorMudanza } = await supabase
     .from("content_pieces")
@@ -151,7 +146,14 @@ export async function deleteContentColumnAction(formData: FormData) {
   revalidar();
 }
 
-/** Reordenar columnas: recibe los ids en el orden nuevo. */
+/**
+ * Reordenar columnas: recibe los ids en el orden nuevo.
+ *
+ * ⚠️ Espera TODOS los ids del tablero, no los de una pestaña: asigna posiciones
+ * 0..n por índice, así que con un subconjunto las posiciones chocarían entre
+ * carriles — y desde 20260818140000 la posición es lo que decide qué columna
+ * cierra cada carril. Hoy no la llama nadie.
+ */
 export async function reorderContentColumnsAction(formData: FormData) {
   const { supabase, user } = await requireAdmin();
   if (!user) return;
