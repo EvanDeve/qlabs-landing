@@ -3,8 +3,10 @@ import { createHmac } from "node:crypto";
 import { firmaValida } from "@/lib/whatsapp/firma";
 import {
   validarAccion,
-  resolverCliente,
+  resolverNombre,
   describirPropuesta,
+  describirEvento,
+  HORA_POR_DEFECTO,
   describirLoHecho,
   normalizarTitulo,
   esValidaParaConfirmar,
@@ -81,6 +83,7 @@ const CTX: ContextoValidacion = {
   cantidadItems: 3,
   columnas: ["Guion", "Grabación", "Publicado"],
   clientes: ["Zonna", "Kosta Asiatika", "La Arboleda"],
+  equipo: ["Evan", "Daniel", "Andrés"],
   hoyCR: HOY,
   hayPendiente: false,
 };
@@ -148,12 +151,12 @@ describe("validarAccion", () => {
 // Crear es la única acción donde el modelo escribe datos de cero. Todo lo que
 // produce pasa por acá antes de llegar a ser una fila.
 describe("validarAccion — proponer una pieza nueva", () => {
-  const pieza = { titulo: "Reel de brunch de domingo", cliente: "Zonna", fecha: "2026-08-06", tipo: "grabar" };
+  const pieza = { titulo: "Reel de brunch de domingo", cliente: "Zonna", fecha: "2026-08-06" };
 
   it("acepta una propuesta completa", () => {
     expect(validarAccion({ tipo: "proponer_pieza", pieza }, ctx())).toEqual({
       tipo: "proponer_pieza",
-      pieza: { titulo: "Reel de brunch de domingo", cliente: "Zonna", fecha: "2026-08-06", tipo: "grabar" },
+      pieza: { titulo: "Reel de brunch de domingo", cliente: "Zonna", fecha: "2026-08-06" },
     });
   });
 
@@ -211,14 +214,6 @@ describe("validarAccion — proponer una pieza nueva", () => {
     }
   });
 
-  it("descarta un tipo de pieza que no es grabar ni publicar", () => {
-    for (const tipo of ["editar", "", "GRABAR", 1]) {
-      expect(validarAccion({ tipo: "proponer_pieza", pieza: { ...pieza, tipo } }, ctx())).toEqual({
-        tipo: "ninguna",
-      });
-    }
-  });
-
   it("no se cae si la pieza no es un objeto", () => {
     for (const basura of [null, undefined, "Zonna el jueves", 42, []]) {
       expect(validarAccion({ tipo: "proponer_pieza", pieza: basura }, ctx())).toEqual({ tipo: "ninguna" });
@@ -267,30 +262,30 @@ describe("resolverCliente", () => {
   const REALES = ["Zonna Gastrobar", "La Árboleda", "La Bontá", "La Maremmana", "Entrecote", "Kosta Asiatika"];
 
   it("resuelve el nombre corto que usa la gente", () => {
-    expect(resolverCliente("Zonna", REALES)).toBe("Zonna Gastrobar");
-    expect(resolverCliente("entrecot", REALES)).toBe("Entrecote");
+    expect(resolverNombre("Zonna", REALES)).toBe("Zonna Gastrobar");
+    expect(resolverNombre("entrecot", REALES)).toBe("Entrecote");
   });
 
   it("no se traba con las tildes", () => {
-    expect(resolverCliente("la arboleda", REALES)).toBe("La Árboleda");
-    expect(resolverCliente("La Bonta", REALES)).toBe("La Bontá");
+    expect(resolverNombre("la arboleda", REALES)).toBe("La Árboleda");
+    expect(resolverNombre("La Bonta", REALES)).toBe("La Bontá");
   });
 
   it("acepta el nombre completo tal cual", () => {
-    expect(resolverCliente("Kosta Asiatika", REALES)).toBe("Kosta Asiatika");
-    expect(resolverCliente("  ZONNA GASTROBAR  ", REALES)).toBe("Zonna Gastrobar");
+    expect(resolverNombre("Kosta Asiatika", REALES)).toBe("Kosta Asiatika");
+    expect(resolverNombre("  ZONNA GASTROBAR  ", REALES)).toBe("Zonna Gastrobar");
   });
 
   // Lo importante: la ambigüedad termina en una pregunta, nunca en una pieza
   // cargada al cliente equivocado.
   it("devuelve null si hay más de un candidato", () => {
-    expect(resolverCliente("La", REALES)).toBeNull();
+    expect(resolverNombre("La", REALES)).toBeNull();
   });
 
   it("devuelve null si no se parece a ninguno", () => {
-    expect(resolverCliente("El Bar de la Esquina", REALES)).toBeNull();
-    expect(resolverCliente("", REALES)).toBeNull();
-    expect(resolverCliente("   ", REALES)).toBeNull();
+    expect(resolverNombre("El Bar de la Esquina", REALES)).toBeNull();
+    expect(resolverNombre("", REALES)).toBeNull();
+    expect(resolverNombre("   ", REALES)).toBeNull();
   });
 });
 
@@ -309,12 +304,139 @@ describe("fechaEnRango", () => {
 
 // Esta línea es lo único que la persona lee antes de decir que sí, así que
 // tiene que ser legible y no dejar la fecha ambigua.
+// Un evento es lo único que el agente escribe con HORA, y la hora es donde este
+// repo ya se quemó una vez (ver la migración 20260801000000). Todo lo que entre
+// mal acá termina en una reunión a la que no va nadie.
+describe("validarAccion — proponer un evento", () => {
+  const evento = {
+    titulo: "Reunión de arranque",
+    tipo: "reunion",
+    cliente: "Kosta Asiatika",
+    fecha: "2026-08-06",
+    hora: "15:00",
+    responsable: "Daniel",
+  };
+
+  it("acepta un evento completo y normaliza los nombres a como están cargados", () => {
+    const accion = validarAccion(
+      { tipo: "proponer_evento", evento: { ...evento, cliente: "kosta", responsable: "daniel" } },
+      ctx()
+    );
+    expect(accion).toEqual({
+      tipo: "proponer_evento",
+      evento: { ...evento, cliente: "Kosta Asiatika", responsable: "Daniel" },
+    });
+  });
+
+  // Una reunión de equipo no es de ningún Hero, y un evento sin responsable
+  // dicho queda a nombre de quien lo pide. Los dos nulls son legítimos.
+  it("acepta un evento interno, sin cliente y sin responsable", () => {
+    const accion = validarAccion(
+      { tipo: "proponer_evento", evento: { ...evento, cliente: null, responsable: null } },
+      ctx()
+    );
+    expect(accion).toMatchObject({ tipo: "proponer_evento", evento: { cliente: null, responsable: null } });
+  });
+
+  it("descarta los cinco tipos que no existen", () => {
+    for (const tipo of ["almuerzo", "", "REUNION", 1, null]) {
+      expect(validarAccion({ tipo: "proponer_evento", evento: { ...evento, tipo } }, ctx())).toEqual({
+        tipo: "ninguna",
+      });
+    }
+  });
+
+  // Que la reunión le caiga a otra persona es peor que no crearla: esa persona
+  // no se entera de que la tiene y quien la pidió cree que quedó.
+  it("descarta un responsable que no está en el equipo", () => {
+    expect(
+      validarAccion({ tipo: "proponer_evento", evento: { ...evento, responsable: "Fernando" } }, ctx())
+    ).toEqual({ tipo: "ninguna" });
+  });
+
+  it("descarta un cliente que no existe, igual que en una pieza", () => {
+    expect(
+      validarAccion({ tipo: "proponer_evento", evento: { ...evento, cliente: "El Bar de la Esquina" } }, ctx())
+    ).toEqual({ tipo: "ninguna" });
+  });
+
+  // Sin hora dictada el evento igual se crea: la pone el sistema. Lo que no
+  // puede pasar es que una hora inventada por el modelo entre como si se la
+  // hubieran dicho.
+  it("una hora mal formada se descarta sola, sin tumbar el evento", () => {
+    for (const hora of ["3pm", "25:00", "15:70", "15", ""]) {
+      expect(validarAccion({ tipo: "proponer_evento", evento: { ...evento, hora } }, ctx())).toMatchObject({
+        tipo: "proponer_evento",
+        evento: { hora: null },
+      });
+    }
+  });
+
+  it("acepta la medianoche y el último minuto del día", () => {
+    for (const hora of ["00:00", "23:59"]) {
+      expect(validarAccion({ tipo: "proponer_evento", evento: { ...evento, hora } }, ctx())).toMatchObject({
+        evento: { hora },
+      });
+    }
+  });
+
+  it("no se cae si el evento no es un objeto", () => {
+    for (const basura of [null, undefined, "reunión el martes", 42, []]) {
+      expect(validarAccion({ tipo: "proponer_evento", evento: basura }, ctx())).toEqual({ tipo: "ninguna" });
+    }
+  });
+});
+
+describe("validarAccion — cancelar un evento", () => {
+  it("acepta un número que está en la lista", () => {
+    expect(validarAccion({ tipo: "cancelar_evento", item: 2 }, ctx())).toEqual({
+      tipo: "cancelar_evento",
+      item: 2,
+    });
+  });
+
+  it("descarta un número que no se le mostró", () => {
+    for (const item of [0, 99, -1, 1.5, "2"]) {
+      expect(validarAccion({ tipo: "cancelar_evento", item }, ctx())).toEqual({ tipo: "ninguna" });
+    }
+  });
+});
+
+describe("describirEvento", () => {
+  const base = {
+    titulo: "Reunión de arranque",
+    tipo: "reunion" as const,
+    cliente: "Kosta Asiatika",
+    fecha: "2026-08-06",
+    hora: "15:00",
+    responsable: "Daniel",
+  };
+
+  it("dice qué, para quién, cuándo, a qué hora y de quién es", () => {
+    const texto = describirEvento(base, "2026-08-01");
+    expect(texto).toContain("Reunión");
+    expect(texto).toContain("Kosta Asiatika");
+    expect(texto).toContain("15:00");
+    expect(texto).toContain("Daniel");
+  });
+
+  // Un evento sin hora visible es el que después aparece a las 9 de la mañana
+  // sin que nadie sepa por qué.
+  it("muestra la hora por defecto cuando no se dictó ninguna", () => {
+    expect(describirEvento({ ...base, hora: null }, "2026-08-01")).toContain(HORA_POR_DEFECTO);
+  });
+
+  it("dice que es interna cuando no tiene Hero", () => {
+    expect(describirEvento({ ...base, cliente: null }, "2026-08-01")).toContain("interna");
+  });
+});
+
 describe("describirPropuesta", () => {
   const pieza = { titulo: "Reel de brunch", cliente: "Zonna", fecha: "2026-08-06", tipo: "grabar" } as const;
 
   it("dice qué, para quién y cuándo", () => {
     const texto = describirPropuesta(pieza, HOY);
-    expect(texto).toContain("Grabar");
+    expect(texto).toContain("Publicar");
     expect(texto).toContain("Reel de brunch");
     expect(texto).toContain("Zonna");
     expect(texto).toContain("6");

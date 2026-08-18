@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { fromZonedTime } from "date-fns-tz";
+import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { firmaValida } from "@/lib/whatsapp/firma";
@@ -12,8 +12,11 @@ import {
   describirLoHecho,
   normalizarTitulo,
   esValidaParaConfirmar,
+  describirEvento,
+  HORA_POR_DEFECTO,
   type AccionAgente,
   type PropuestaPieza,
+  type PropuestaEvento,
   type TurnoPrevio,
 } from "@/lib/ugc/agente";
 import {
@@ -160,7 +163,8 @@ async function atenderEntrante(
     return;
   }
 
-  const [{ data: perfil }, { data: columnas }, { data: clientes }, { data: previos }, ajustes] = await Promise.all([
+  const [{ data: perfil }, { data: columnas }, { data: clientes }, { data: previos }, ajustes, { data: equipo }] =
+    await Promise.all([
     admin.from("profiles").select("display_name").eq("id", miembro.profile_id).maybeSingle(),
     // `section` es lo que separa los tres carriles del tablero. Sin él, mover
     // una tarjeta a "Terminado" es ambiguo —hay dos columnas con ese nombre— y
@@ -178,6 +182,10 @@ async function atenderEntrante(
       .order("created_at", { ascending: false })
       .limit(11),
     getAjustesAgente(admin),
+    // El equipo, para poder ponerle responsable a un evento. Sale de
+    // staff_members y no de la vista staff_directory: esa filtra por sesión de
+    // admin y acá el cliente es service-role, así que devolvería cero filas.
+    admin.from("staff_members").select("profile_id").eq("active", true),
   ]);
 
   // Los tres en paralelo: no dependen uno del otro y encadenarlos eran tres
@@ -208,6 +216,17 @@ async function atenderEntrante(
 
   const items = [...itemsAgenda, ...encontradas];
 
+  // Los nombres del equipo: son los que el modelo puede escribir como
+  // responsable de un evento. Se resuelven contra `profiles` porque
+  // staff_members solo guarda el id.
+  const { data: perfilesEquipo } = await admin
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", (equipo ?? []).map((m) => m.profile_id));
+  const nombresDelEquipo = (perfilesEquipo ?? [])
+    .filter((p): p is { id: string; display_name: string } => Boolean(p.display_name))
+    .map((p) => ({ id: p.id, nombre: p.display_name }));
+
   // El más nuevo es el que acabamos de guardar; va aparte como `mensaje`.
   const historial: TurnoPrevio[] = (previos ?? [])
     .slice(1)
@@ -222,10 +241,15 @@ async function atenderEntrante(
     // carga trabajo a un cliente que se fue. Buscar sí los incluye a todos —
     // preguntar por lo que quedó de un Hero archivado es legítimo.
     clientes: (clientes ?? []).filter((c) => !c.archived).map((c) => c.name),
+    equipo: nombresDelEquipo.map((p) => p.nombre),
     encontradas,
     historial,
     mensaje: texto,
-    pendiente: propuesta ? { tipo: "crear", pieza: propuesta.pieza } : null,
+    pendiente: !propuesta
+      ? null
+      : propuesta.tipo === "crear"
+        ? { tipo: "crear", pieza: propuesta.pieza }
+        : { tipo: "crear_evento", evento: propuesta.evento },
     reporte,
     ajustes,
   });
@@ -238,6 +262,7 @@ async function atenderEntrante(
     heroesArchivados: new Set((clientes ?? []).filter((c) => c.archived).map((c) => c.id)),
     columnas: columnas ?? [],
     clientes: (clientes ?? []).filter((c) => !c.archived),
+    equipo: nombresDelEquipo,
     propuesta,
   });
 
@@ -505,7 +530,9 @@ async function responder(admin: Admin, profileId: string, telefono: string, text
  * Solo puede ser una pieza a crear. Cerrar también esperaba confirmación hasta
  * el 2026-08-18; ahora se hace de una — ver el comentario de `Pendiente`.
  */
-type PropuestaViva = { id: string; tipo: "crear"; pieza: PropuestaPieza };
+type PropuestaViva =
+  | { id: string; tipo: "crear"; pieza: PropuestaPieza }
+  | { id: string; tipo: "crear_evento"; evento: PropuestaEvento };
 
 /**
  * La propuesta que esta persona todavía puede confirmar con un "dale".
@@ -538,6 +565,14 @@ async function leerPropuestaViva(admin: Admin, profileId: string): Promise<Propu
     return null;
   }
 
+  // El kind dice qué forma tiene el payload. Una fila vieja de cuando las
+  // grabaciones eran piezas con `tipo: "grabar"` no trae los campos de evento,
+  // así que se descarta en vez de crear algo a medias con un "dale".
+  if (data.kind === "crear_evento") {
+    const evento = data.payload as unknown as PropuestaEvento;
+    if (!evento?.tipo || !evento?.fecha) return null;
+    return { id: data.id, tipo: "crear_evento", evento };
+  }
   return { id: data.id, tipo: "crear", pieza: data.payload as unknown as PropuestaPieza };
 }
 
@@ -561,6 +596,8 @@ type Contexto = {
   items: (AgendaItem & { responsable?: string | null; ajena?: boolean })[];
   columnas: Columna[];
   clientes: Cliente[];
+  /** El equipo activo, para poder asignarle un evento a alguien por su nombre. */
+  equipo: { id: string; nombre: string }[];
   /** Los Heroes archivados: de un cliente que se fue no se toca nada. */
   heroesArchivados: Set<string>;
   propuesta: PropuestaViva | null;
@@ -657,8 +694,10 @@ async function aplicarAccion(admin: Admin, ctx: Contexto): Promise<ResultadoAcci
 
   try {
     if (accion.tipo === "proponer_pieza") return await abrirPropuesta(admin, ctx, accion.pieza);
+    if (accion.tipo === "proponer_evento") return await abrirPropuestaDeEvento(admin, ctx, accion.evento);
+    if (accion.tipo === "cancelar_evento") return await cancelarEvento(admin, ctx, accion.item);
     if (accion.tipo === "descartar") return { aplicada: await cerrarPropuesta(admin, ctx, "descartada") };
-    if (accion.tipo === "confirmar") return { aplicada: await crearPiezaConfirmada(admin, ctx) };
+    if (accion.tipo === "confirmar") return { aplicada: await ejecutarConfirmado(admin, ctx) };
     return await editarItem(admin, ctx, accion);
   } catch (err) {
     console.error("[agente/webhook] no se pudo aplicar la acción:", err);
@@ -673,10 +712,12 @@ function kindDe(accion: AccionAgente): WaActionKind {
   if (accion.tipo === "mover_pieza" || accion.tipo === "marcar_hecho" || accion.tipo === "reprogramar") {
     return accion.tipo;
   }
-  // Una propuesta sabe su destino por `tipo`; el resto de los casos que caen
-  // acá (confirmar, descartar, ninguna) se registran solo cuando fallan y no
-  // tienen destino propio, así que quedan como 'crear_pieza'.
-  if (accion.tipo === "proponer_pieza" && accion.pieza.tipo === "grabar") return "crear_evento";
+  // Cancelar un evento se registra como 'reprogramar': es la bandera más cercana
+  // de las que existen y no vale una migración del enum por una etiqueta.
+  if (accion.tipo === "cancelar_evento") return "reprogramar";
+  if (accion.tipo === "proponer_evento") return "crear_evento";
+  // El resto de los casos que caen acá (confirmar, descartar, ninguna) se
+  // registran solo cuando fallan y no tienen destino propio.
   return "crear_pieza";
 }
 
@@ -750,29 +791,86 @@ async function abrirPropuesta(admin: Admin, ctx: Contexto, pieza: PropuestaPieza
   // Antes de proponer nada: si ya está en el tablero, no se abre la propuesta.
   // Avisar acá y no al confirmar es lo que corresponde — la persona se entera
   // antes de decir "dale", no después de tener dos tarjetas.
-  if (pieza.tipo === "publicar") {
-    const cliente = ctx.clientes.find((c) => c.name === pieza.cliente);
-    const repetida = cliente ? await piezaYaExistente(admin, cliente.id, pieza.titulo) : null;
-    if (repetida) {
-      return {
-        aplicada: false,
-        nota: `Ojo: "${repetida}" ya está en el tablero de ${pieza.cliente}, así que no la anoté de nuevo. Si igual querés otra, cargala desde Q·OS.`,
-      };
-    }
+  const cliente = ctx.clientes.find((c) => c.name === pieza.cliente);
+  const repetida = cliente ? await piezaYaExistente(admin, cliente.id, pieza.titulo) : null;
+  if (repetida) {
+    return {
+      aplicada: false,
+      nota: `Ojo: "${repetida}" ya está en el tablero de ${pieza.cliente}, así que no la anoté de nuevo. Si igual querés otra, cargala desde Q·OS.`,
+    };
   }
 
   if (ctx.propuesta) await cerrarPropuesta(admin, ctx, "reemplazada");
-  // El kind se decide acá, en la propuesta, y no al ejecutarla: el destino ya
-  // está definido por `tipo` y así la bitácora dice desde el primer registro
-  // qué se iba a crear, aunque la persona nunca conteste.
+  // El kind se decide acá, en la propuesta, y no al ejecutarla: así la bitácora
+  // dice desde el primer registro qué se iba a crear, aunque nunca contesten.
   const id = await registrar(
     admin,
     ctx.profileId,
-    pieza.tipo === "grabar" ? "crear_evento" : "crear_pieza",
+    "crear_pieza",
     pieza as unknown as Record<string, unknown>,
     "propuesta"
   );
   return { aplicada: id !== null };
+}
+
+/**
+ * Guarda el evento que se va a crear, sin crear nada todavía.
+ *
+ * No hay chequeo de repetido como en las piezas: dos reuniones con el mismo
+ * título el mismo día son raras pero legítimas —una a la mañana y otra a la
+ * tarde—, y bloquear la segunda sería negarse a algo que existe de verdad. El
+ * duplicado de una pieza sí se bloquea porque ahí lo que se repite es trabajo.
+ */
+async function abrirPropuestaDeEvento(
+  admin: Admin,
+  ctx: Contexto,
+  evento: PropuestaEvento
+): Promise<ResultadoAccion> {
+  if (ctx.propuesta) await cerrarPropuesta(admin, ctx, "reemplazada");
+  const id = await registrar(
+    admin,
+    ctx.profileId,
+    "crear_evento",
+    evento as unknown as Record<string, unknown>,
+    "propuesta"
+  );
+  return { aplicada: id !== null };
+}
+
+/**
+ * Suspende un evento del calendario.
+ *
+ * Pasa a `pausado` y no se borra: un evento cancelado sigue siendo información
+ * —se sabe que estaba y que se cayó—, y borrarlo desde un chat sería la única
+ * acción del agente sin vuelta atrás. Sale de la agenda igual, porque esta solo
+ * mira los que están en `programado`.
+ */
+async function cancelarEvento(admin: Admin, ctx: Contexto, indice: number): Promise<ResultadoAccion> {
+  const item = ctx.items[indice - 1];
+  if (!item) return { aplicada: false };
+
+  if (item.ref.kind !== "event") {
+    return {
+      aplicada: false,
+      nota: "Eso es una tarjeta del tablero, no un evento: no se cancela. Decime si la movés de columna o la damos por terminada.",
+    };
+  }
+
+  const { error } = await admin
+    .from("calendar_events")
+    .update({ status: "pausado" })
+    .eq("id", item.ref.eventId);
+
+  await registrar(
+    admin,
+    ctx.profileId,
+    "reprogramar",
+    { accion: { tipo: "cancelar_evento" }, titulo: item.titulo },
+    error ? "fallida" : "ejecutada",
+    error ? { error: error.message } : { targetTable: "calendar_events", targetId: item.ref.eventId }
+  );
+
+  return error ? { aplicada: false } : { aplicada: true, nota: `Listo, cancelé ${item.titulo}.` };
 }
 
 async function cerrarPropuesta(admin: Admin, ctx: Contexto, status: "descartada" | "reemplazada"): Promise<boolean> {
@@ -782,6 +880,14 @@ async function cerrarPropuesta(admin: Admin, ctx: Contexto, status: "descartada"
     .update({ status, resolved_at: new Date().toISOString() })
     .eq("id", ctx.propuesta.id);
   return !error;
+}
+
+/** Un "dale" ejecuta lo que haya quedado esperando: una tarjeta o un evento. */
+async function ejecutarConfirmado(admin: Admin, ctx: Contexto): Promise<boolean> {
+  if (!ctx.propuesta) return false;
+  return ctx.propuesta.tipo === "crear_evento"
+    ? await crearEventoConfirmado(admin, ctx, ctx.propuesta.id, ctx.propuesta.evento)
+    : await crearPiezaConfirmada(admin, ctx);
 }
 
 /**
@@ -805,19 +911,6 @@ async function crearPiezaConfirmada(admin: Admin, ctx: Contexto): Promise<boolea
 
   const cliente = ctx.clientes.find((c) => c.name === propuesta.pieza.cliente);
   if (!cliente) return false;
-
-  // Una grabación no es una pieza del tablero: es un hito que ocurre un día.
-  // Se planea una vez al mes para todos los videos a la vez, así que no tiene
-  // sentido como tarjeta —cruzaría el pipeline entero sin producirse ella
-  // misma— y por eso los videos ya no llevan fecha de grabación. Va al
-  // calendario, que es donde viven los hitos.
-  //
-  // Sigue apareciendo en la agenda de quien la anotó: getStaffAgenda lee
-  // calendar_events por responsible_id + status 'programado' igual que lee las
-  // piezas por owner_id.
-  if (propuesta.pieza.tipo === "grabar") {
-    return await crearGrabacionConfirmada(admin, ctx, propuesta.id, cliente.id, propuesta.pieza);
-  }
 
   // La primera columna DEL CARRIL DE VIDEO es donde entra un video que se acaba
   // de anotar. No la primera del tablero: el carril de guiones arranca antes por
@@ -858,60 +951,68 @@ async function crearPiezaConfirmada(admin: Admin, ctx: Contexto): Promise<boolea
 }
 
 /**
- * La hora que se le pone a una grabación anotada por WhatsApp.
+ * Crea el evento guardado, con lo que se dictó y no con lo que el modelo repita.
  *
- * `calendar_events.starts_at` es un instante, no un día: por eso esa columna no
- * se convirtió a `date` en 20260801000000, a diferencia de las fechas de las
- * piezas. Pero por chat nadie dicta la hora —se dice "el jueves"—, así que hay
- * que elegir una. Son las 9am de Costa Rica, el mismo valor de arranque que usó
- * la migración que movió las grabaciones de agosto al calendario, y se edita
- * desde el calendario como cualquier otro evento.
+ * Reemplaza a la vieja crearGrabacionConfirmada(), que solo sabía hacer una cosa:
+ * una grabación, a las 9 de la mañana, a nombre de quien la pedía y colgada de un
+ * Hero obligatorio. Ahora los cuatro son datos del evento.
  */
-const HORA_GRABACION_CR = "09:00:00";
-
-async function crearGrabacionConfirmada(
-  admin: Admin,
-  ctx: Contexto,
-  propuestaId: string,
-  brandId: string,
-  pieza: PropuestaPieza
-): Promise<boolean> {
+async function crearEventoConfirmado(admin: Admin, ctx: Contexto, propuestaId: string, evento: PropuestaEvento) {
   // fromZonedTime interpreta el día+hora EN Costa Rica y devuelve el instante.
   // Un `new Date("2026-08-05T09:00:00")` lo leería en la zona del servidor, que
-  // en Vercel es UTC, y la grabación quedaría a las 3am hora de acá.
-  const startsAt = fromZonedTime(`${pieza.fecha} ${HORA_GRABACION_CR}`, COSTA_RICA_TZ).toISOString();
+  // en Vercel es UTC, y la reunión de las 3 de la tarde quedaría a las 9 de la
+  // mañana del día siguiente.
+  const hora = evento.hora ?? HORA_POR_DEFECTO;
+  const startsAt = fromZonedTime(`${evento.fecha} ${hora}:00`, COSTA_RICA_TZ).toISOString();
 
-  const { data: evento, error } = await admin
+  const brandId = evento.cliente ? ctx.clientes.find((c) => c.name === evento.cliente)?.id ?? null : null;
+  // Un nombre que no resuelve NO cae en quien lo pidió: la validación ya lo
+  // habría descartado, y si igual llegara acá, asignárselo a otro sería peor
+  // que no crearlo. `?? ctx.profileId` cubre el caso legítimo de no haber
+  // dictado responsable.
+  const responsableId = evento.responsable
+    ? ctx.equipo.find((m) => m.nombre === evento.responsable)?.id ?? ctx.profileId
+    : ctx.profileId;
+
+  const { data: creado, error } = await admin
     .from("calendar_events")
     .insert({
-      type: "grabacion",
+      type: evento.tipo,
       brand_id: brandId,
-      title: pieza.titulo,
+      title: evento.titulo,
       starts_at: startsAt,
-      // Mismo criterio que owner_id en una pieza: queda a nombre de quien la
-      // pidió, para que le aparezca en su propia agenda.
-      responsible_id: ctx.profileId,
+      responsible_id: responsableId,
       status: "programado",
       created_by_agent: true,
       // Sin pieza asociada a propósito: la FK es `on delete cascade`, así que
-      // apuntar a una pieza haría que borrarla se llevara puesta la jornada de
-      // grabación, que no depende de ningún video en particular.
+      // apuntar a una pieza haría que borrarla se llevara puesto el evento.
       content_piece_id: null,
     })
     .select("id")
     .single();
 
-  if (error || !evento) return await marcarPropuestaFallida(admin, propuestaId, error?.message);
+  if (error || !creado) return await marcarPropuestaFallida(admin, propuestaId, error?.message);
 
   await admin
     .from("wa_agent_actions")
     .update({
       status: "ejecutada",
       target_table: "calendar_events",
-      target_id: evento.id,
+      target_id: creado.id,
       resolved_at: new Date().toISOString(),
     })
     .eq("id", propuestaId);
+
+  // Si el evento quedó a nombre de otro, esa persona tiene que enterarse: es
+  // trabajo que le acaba de aparecer en la agenda sin que ella lo pidiera.
+  if (responsableId !== ctx.profileId) {
+    await avisarAlDueno(
+      admin,
+      ctx,
+      { id: creado.id, owner_id: responsableId, title: evento.titulo },
+      "te dejó un evento en el calendario"
+    );
+  }
 
   return true;
 }
@@ -932,7 +1033,7 @@ async function marcarPropuestaFallida(admin: Admin, propuestaId: string, mensaje
 async function editarItem(
   admin: Admin,
   ctx: Contexto,
-  accion: Extract<AccionAgente, { item: number }>
+  accion: Exclude<Extract<AccionAgente, { item: number }>, { tipo: "cancelar_evento" }>
 ): Promise<ResultadoAccion> {
   const item = ctx.items[accion.item - 1];
   if (!item) return { aplicada: false };
@@ -981,7 +1082,9 @@ async function editarItem(
 async function escribirEdicion(
   admin: Admin,
   ctx: Contexto,
-  accion: Extract<AccionAgente, { item: number }>,
+  // Sin cancelar_evento: ese tiene su propia función porque no pasa por la
+  // revalidación de tarjeta, solo cambia el estado de un evento.
+  accion: Exclude<Extract<AccionAgente, { item: number }>, { tipo: "cancelar_evento" }>,
   item: AgendaItem
 ): Promise<ResultadoEdicion> {
   if (item.ref.kind === "piece") {
@@ -1032,7 +1135,7 @@ async function escribirEdicion(
 
   const { data: evento } = await admin
     .from("calendar_events")
-    .select("id")
+    .select("id, starts_at")
     .eq("id", item.ref.eventId)
     .maybeSingle();
   if (!evento) return { ok: false };
@@ -1042,9 +1145,17 @@ async function escribirEdicion(
     return { ok: !error };
   }
   if (accion.tipo === "reprogramar") {
+    // La hora que tenía se conserva. Antes se escribía un `T15:00:00Z` fijo —las
+    // 9 de la mañana de Costa Rica— así que pasar una reunión de las 3 de la
+    // tarde para el día siguiente la mandaba a las 9, sin que nadie lo pidiera y
+    // sin que el mensaje lo dijera.
+    //
+    // Se lee en hora de CR y se vuelve a armar en CR: la columna es un instante,
+    // y hacer la cuenta en UTC corre el evento seis horas cada vez que se toca.
+    const hora = formatInTimeZone(new Date(evento.starts_at), COSTA_RICA_TZ, "HH:mm:ss");
     const { error } = await admin
       .from("calendar_events")
-      .update({ starts_at: `${accion.fecha}T15:00:00Z` })
+      .update({ starts_at: fromZonedTime(`${accion.fecha} ${hora}`, COSTA_RICA_TZ).toISOString() })
       .eq("id", evento.id);
     return { ok: !error };
   }
@@ -1087,6 +1198,15 @@ function redactarSalida(
     return aplicada
       ? `${respuesta}\n\n${describirPropuesta(accion.pieza, diaCR(new Date()))}`
       : `${respuesta}\n\nNo me quedó anotado, mejor cargalo desde Q·OS.`;
+  }
+  if (accion.tipo === "proponer_evento") {
+    // La línea del evento la arma el sistema por lo mismo que la de la pieza: es
+    // lo único que garantiza que la hora que la persona lee sea la que se va a
+    // guardar. Si el modelo escribiera "el martes" de su lado, el "dale" no
+    // estaría confirmando nada.
+    return aplicada
+      ? `${respuesta}\n\n${describirEvento(accion.evento, diaCR(new Date()))}`
+      : `${respuesta}\n\nNo me quedó anotado, mejor cargalo desde el calendario.`;
   }
   if (aplicada) {
     // Sin paréntesis: esta línea es parte del mensaje, no una nota al pie. El

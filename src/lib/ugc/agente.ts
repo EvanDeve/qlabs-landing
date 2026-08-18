@@ -1,6 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
+import type { Database, CalendarEventType } from "@/lib/database.types";
 import { COSTA_RICA_TZ, diaCR, sumarDias } from "@/lib/ugc/calendar";
 import type { ColumnaDelTablero } from "@/lib/ugc/tablero";
 import type { ItemDelTablero } from "@/lib/ugc/busqueda";
@@ -331,8 +331,43 @@ export type PropuestaPieza = {
   cliente: string;
   /** YYYY-MM-DD. */
   fecha: string;
-  tipo: "grabar" | "publicar";
 };
+
+/**
+ * Un evento del calendario dictado por chat.
+ *
+ * Antes esto era un caso de PropuestaPieza con `tipo: "grabar"`, y de ahí salían
+ * sus tres límites: solo podía ser una grabación, siempre a las 9 de la mañana y
+ * siempre a nombre de quien la pedía. Una reunión con un cliente el martes a las
+ * 3 —que es lo que la gente de verdad quiere anotar— no entraba.
+ *
+ * Es una acción aparte y no un campo más de la pieza porque son dos cosas
+ * distintas: una tarjeta del tablero se trabaja durante días y cruza columnas,
+ * un evento ocurre un día a una hora. Compartir la forma obligaba a que el
+ * modelo eligiera entre "publicar" y "publicacion", que se leen igual.
+ */
+export type PropuestaEvento = {
+  titulo: string;
+  tipo: CalendarEventType;
+  /** Nombre EXACTO de un agency_clients, o null si es interna del equipo. */
+  cliente: string | null;
+  /** YYYY-MM-DD. */
+  fecha: string;
+  /** HH:mm en hora de Costa Rica. Null si no la dictaron: ver HORA_POR_DEFECTO. */
+  hora: string | null;
+  /** Nombre de alguien del equipo, o null para quien lo está pidiendo. */
+  responsable: string | null;
+};
+
+/**
+ * La hora de un evento que nadie dictó.
+ *
+ * Por chat se dice "el jueves", no "el jueves a las nueve". Hay que elegir una y
+ * son las 9 de Costa Rica, que es el mismo valor con el que la migración de
+ * agosto movió las grabaciones al calendario. Se corrige desde el calendario
+ * como cualquier otro evento.
+ */
+export const HORA_POR_DEFECTO = "09:00";
 
 /**
  * Lo que el agente puede hacer, y nada más.
@@ -354,6 +389,9 @@ export type AccionAgente =
   | { tipo: "marcar_hecho"; item: number }
   | { tipo: "reprogramar"; item: number; fecha: string }
   | { tipo: "proponer_pieza"; pieza: PropuestaPieza }
+  | { tipo: "proponer_evento"; evento: PropuestaEvento }
+  /** Suspender un evento del calendario. Solo eventos: una tarjeta no se cancela. */
+  | { tipo: "cancelar_evento"; item: number }
   | { tipo: "confirmar" }
   | { tipo: "descartar" };
 
@@ -446,7 +484,9 @@ function describirColumnas(columnas: ColumnaDelTablero[]): string {
  * parecido a un bot que quedaba. Lo que protege ahora es la línea de "qué
  * toqué", que nombra la tarjeta y su Hero en el mismo mensaje.
  */
-export type Pendiente = { tipo: "crear"; pieza: PropuestaPieza };
+export type Pendiente =
+  | { tipo: "crear"; pieza: PropuestaPieza }
+  | { tipo: "crear_evento"; evento: PropuestaEvento };
 
 /** Cuánto vive una propuesta sin contestar. Ver esValidaParaConfirmar(). */
 export const PROPUESTA_VIGENCIA_MS = 30 * 60 * 1000;
@@ -458,6 +498,8 @@ export async function responderMensaje(opciones: {
   columnas: ColumnaDelTablero[];
   /** Nombres de agency_clients. Sin esto el agente no puede proponer piezas. */
   clientes: string[];
+  /** Nombres del equipo, para poder ponerle responsable a un evento. */
+  equipo: string[];
   /**
    * Tarjetas del tablero que calzan con lo que preguntó y NO están en su agenda.
    * Ver busqueda.ts: es lo que le deja hablar de las 141 y no de un puñado.
@@ -477,7 +519,7 @@ export async function responderMensaje(opciones: {
   ajustes?: AjustesAgente;
   now?: Date;
 }): Promise<RespuestaAgente> {
-  const { nombre, agenda, columnas, clientes, historial, mensaje, pendiente } = opciones;
+  const { nombre, agenda, columnas, clientes, equipo, historial, mensaje, pendiente } = opciones;
   const encontradas = opciones.encontradas ?? [];
   const reporte = opciones.reporte ?? null;
   const ajustes = opciones.ajustes ?? AJUSTES_POR_DEFECTO;
@@ -499,7 +541,11 @@ tema, {"tipo":"descartar"}. Si solo pregunta algo, contestá con
   const bloquePendiente = !pendiente
     ? ""
     : `LE PROPUSISTE ESTO Y ESTÁS ESPERANDO QUE TE DIGA SÍ O NO:
-${describirPropuesta(pendiente.pieza, hoyCR)} (fecha exacta: ${pendiente.pieza.fecha})
+${
+  pendiente.tipo === "crear"
+    ? `${describirPropuesta(pendiente.pieza, hoyCR)} (fecha exacta: ${pendiente.pieza.fecha})`
+    : `${describirEvento(pendiente.evento, hoyCR)} (fecha exacta: ${pendiente.evento.fecha})`
+}
 ${comoSeContesta} Si pide cambiarle algo, proponé de nuevo con los datos corregidos.`;
 
   const crudo = await pedirleAGemini(
@@ -536,6 +582,8 @@ dónde la mandás. Si te piden moverla a una columna de otro carril, decíselo e
 vez de hacerlo.
 
 CLIENTES DE LA AGENCIA: ${clientes.length ? clientes.join(", ") : "(ninguno cargado)"}
+
+EL EQUIPO: ${equipo.length ? equipo.join(", ") : "(nadie cargado)"}
 
 ${conversacion ? `LO QUE SE DIJERON ANTES:\n${conversacion}\n` : ""}${bloquePendiente ? `${bloquePendiente}\n\n` : ""}MENSAJE NUEVO DE ${nombre.toUpperCase()}: ${mensaje}
 
@@ -577,9 +625,25 @@ atrasados: no los trates como tales. Si te dice cuándo va uno, ponele la fecha
 con "reprogramar". Si la lista dice que hay más sin fecha de las que ves, decí
 el total, no inventes los nombres que faltan.
 
-Con "tipo":"publicar" anotás un video en el tablero; con "tipo":"grabar" anotás
-una jornada de grabación en el calendario. Las grabaciones se planean una vez al
-mes para varios videos a la vez, así que no son una tarjeta del tablero.
+Hay DOS cosas que podés anotar y no son lo mismo:
+
+- Un VIDEO va al tablero, con "proponer_pieza". Se trabaja durante días y cruza
+  columnas. Lleva Hero obligatorio y una fecha de publicación.
+- Un EVENTO va al calendario, con "proponer_evento". Ocurre un día, a una hora, y
+  se termina ahí: una grabación, una reunión, una entrega. Las grabaciones se
+  planean una vez al mes para varios videos a la vez, así que NO son tarjetas.
+
+En un evento: el "tipo" es uno de grabacion, reunion, entrega, publicacion o
+guion. El "cliente" va en null si es interna del equipo —una reunión de equipo no
+es de ningún Hero— y si te dicen uno tiene que ser de la lista. La "hora" va en
+"HH:mm" SOLO si te la dijeron; si no te la dijeron va null y no la inventes. El
+"responsable" es alguien del equipo escrito igual que en la lista, o null para
+quien te está escribiendo; si el nombre que te dicen no está en la lista,
+preguntá en vez de elegir vos.
+
+Para SUSPENDER un evento —"cancelá la reunión del martes", "esa grabación no va"—
+mandá "cancelar_evento" con su número. Solo sirve para eventos del calendario;
+una tarjeta del tablero no se cancela, se mueve o se da por terminada.
 
 Si te dice que ya terminó algo, cerralo de una con "marcar_hecho". No le pidas
 que te lo confirme: acaba de decírtelo. Pero tiene que quedar clarísimo CUÁL
@@ -591,9 +655,9 @@ lo que de verdad pasó, y si la decís vos salen las dos diciendo lo mismo. Vos
 contestá lo que te preguntó, o no digas nada si no hay nada que contestar: un
 "dale" tuyo alcanza.
 
-Si te pide anotar algo nuevo, NO lo creás en el acto: proponelo con
-"proponer_pieza" y escribile una línea corta preguntándole si va así. NO repitas
-el título, el cliente ni la fecha en tu texto: esos los agrega el sistema debajo
+Si te pide anotar algo nuevo, NO lo creás en el acto: proponelo —con
+"proponer_pieza" o "proponer_evento", según sea— y escribile una línea corta
+preguntándole si va así. NO repitas el título, el cliente ni la fecha en tu texto: esos los agrega el sistema debajo
 de tu mensaje, tal cual van a quedar guardados. El cliente tiene que ser uno de
 la lista de arriba, escrito igual; si no te dijo cuál, preguntale en vez de
 elegir vos.
@@ -605,7 +669,9 @@ Formas válidas de accion:
   {"tipo":"mover_pieza","item":N,"columna":"nombre exacto de una columna"}
   {"tipo":"marcar_hecho","item":N}
   {"tipo":"reprogramar","item":N,"fecha":"YYYY-MM-DD"}
-  {"tipo":"proponer_pieza","pieza":{"titulo":"...","cliente":"nombre exacto","fecha":"YYYY-MM-DD","tipo":"grabar"|"publicar"}}
+  {"tipo":"proponer_pieza","pieza":{"titulo":"...","cliente":"nombre exacto","fecha":"YYYY-MM-DD"}}
+  {"tipo":"proponer_evento","evento":{"titulo":"...","tipo":"grabacion"|"reunion"|"entrega"|"publicacion"|"guion","cliente":"nombre exacto"|null,"fecha":"YYYY-MM-DD","hora":"HH:mm"|null,"responsable":"nombre del equipo"|null}}
+  {"tipo":"cancelar_evento","item":N}
   {"tipo":"confirmar"}
   {"tipo":"descartar"}`,
     true
@@ -627,6 +693,7 @@ Formas válidas de accion:
         // columnaDestino() al escribir, que es la única que sabe dónde está
         // parada la tarjeta.
         columnas: columnas.map((c) => c.name),
+        equipo,
         clientes,
         hoyCR,
         hayPendiente: pendiente !== null,
@@ -661,13 +728,53 @@ export function describirPropuesta(pieza: PropuestaPieza, hoyCR?: string): strin
     timeZone: "UTC",
   });
 
-  return `${pieza.tipo === "grabar" ? "Grabar" : "Publicar"} “${pieza.titulo}” · ${pieza.cliente} · ${cuando}`;
+  return `Publicar “${pieza.titulo}” · ${pieza.cliente} · ${cuando}`;
 }
+
+/**
+ * Cómo se le muestra un evento a la persona antes de que lo confirme.
+ *
+ * Mismo criterio que describirPropuesta: esta línea la agrega el sistema, no el
+ * modelo, y es lo único que garantiza que lo que se lee sea lo que se guarda.
+ * Dice la hora SIEMPRE —también la de por defecto— porque un evento sin hora
+ * visible es el que después aparece a las 9 de la mañana sin que nadie sepa por
+ * qué.
+ */
+export function describirEvento(evento: PropuestaEvento, hoyCR?: string): string {
+  const [anio, mes, dia] = evento.fecha.split("-").map(Number);
+  const cuando = new Date(Date.UTC(anio, mes - 1, dia)).toLocaleDateString("es-CR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    ...(hoyCR && hoyCR.slice(0, 4) !== String(anio) ? { year: "numeric" as const } : {}),
+    timeZone: "UTC",
+  });
+
+  const partes = [
+    `${ETIQUETA_DE_EVENTO[evento.tipo]} “${evento.titulo}”`,
+    evento.cliente ?? "interna",
+    `${cuando} ${evento.hora ?? HORA_POR_DEFECTO}`,
+  ];
+  if (evento.responsable) partes.push(evento.responsable);
+
+  return partes.join(" · ");
+}
+
+/** Cómo se nombra cada tipo de evento cuando se le habla a una persona. */
+const ETIQUETA_DE_EVENTO: Record<CalendarEventType, string> = {
+  grabacion: "Grabación",
+  reunion: "Reunión",
+  entrega: "Entrega",
+  publicacion: "Publicación",
+  guion: "Guion",
+};
 
 export type ContextoValidacion = {
   cantidadItems: number;
   columnas: string[];
   clientes: string[];
+  /** Nombres del equipo, para poder asignarle un evento a alguien. */
+  equipo: string[];
   /** Hoy en Costa Rica, 'yyyy-MM-dd'. Ancla el rango de fechas aceptables. */
   hoyCR: string;
   hayPendiente: boolean;
@@ -718,6 +825,15 @@ export function validarAccion(accion: unknown, ctx: ContextoValidacion): AccionA
     return pieza ? { tipo: "proponer_pieza", pieza } : { tipo: "ninguna" };
   }
 
+  if (a.tipo === "proponer_evento") {
+    const evento = validarEvento(a.evento, ctx);
+    return evento ? { tipo: "proponer_evento", evento } : { tipo: "ninguna" };
+  }
+
+  if (a.tipo === "cancelar_evento" && itemValido) {
+    return { tipo: "cancelar_evento", item };
+  }
+
   return { tipo: "ninguna" };
 }
 
@@ -737,15 +853,57 @@ function validarPropuesta(valor: unknown, ctx: ContextoValidacion): PropuestaPie
   if (titulo.length < 3 || titulo.length > 120) return null;
 
   if (typeof p.cliente !== "string") return null;
-  const cliente = resolverCliente(p.cliente, ctx.clientes);
+  const cliente = resolverNombre(p.cliente, ctx.clientes);
   if (!cliente) return null;
 
   if (typeof p.fecha !== "string" || !FORMATO_DIA.test(p.fecha)) return null;
   if (!fechaEnRango(p.fecha, ctx.hoyCR)) return null;
 
-  if (p.tipo !== "grabar" && p.tipo !== "publicar") return null;
+  return { titulo, cliente, fecha: p.fecha };
+}
 
-  return { titulo, cliente, fecha: p.fecha, tipo: p.tipo };
+const TIPOS_DE_EVENTO: CalendarEventType[] = ["publicacion", "grabacion", "reunion", "entrega", "guion"];
+
+const FORMATO_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Un evento dictado por chat, campo por campo.
+ *
+ * El cliente y el responsable se resuelven contra las listas reales y se
+ * devuelven con la grafía de la base, igual que en una pieza. La diferencia es
+ * que acá los dos pueden faltar a propósito: una reunión de equipo no es de
+ * ningún Hero, y un evento sin responsable dicho queda a nombre de quien lo
+ * pide. Un nombre que NO matchea sí es motivo de descartar la propuesta entera:
+ * es preferible que pregunte a que la reunión le caiga a otra persona.
+ */
+function validarEvento(valor: unknown, ctx: ContextoValidacion): PropuestaEvento | null {
+  if (!valor || typeof valor !== "object") return null;
+  const e = valor as Record<string, unknown>;
+
+  const titulo = typeof e.titulo === "string" ? e.titulo.trim() : "";
+  if (titulo.length < 3 || titulo.length > 120) return null;
+
+  if (typeof e.tipo !== "string" || !TIPOS_DE_EVENTO.includes(e.tipo as CalendarEventType)) return null;
+
+  if (typeof e.fecha !== "string" || !FORMATO_DIA.test(e.fecha)) return null;
+  if (!fechaEnRango(e.fecha, ctx.hoyCR)) return null;
+
+  // Sin cliente es una interna; con un cliente que no existe, no hay propuesta.
+  let cliente: string | null = null;
+  if (typeof e.cliente === "string" && e.cliente.trim()) {
+    cliente = resolverNombre(e.cliente, ctx.clientes);
+    if (!cliente) return null;
+  }
+
+  let responsable: string | null = null;
+  if (typeof e.responsable === "string" && e.responsable.trim()) {
+    responsable = resolverNombre(e.responsable, ctx.equipo);
+    if (!responsable) return null;
+  }
+
+  const hora = typeof e.hora === "string" && FORMATO_HORA.test(e.hora) ? e.hora : null;
+
+  return { titulo, tipo: e.tipo as CalendarEventType, cliente, fecha: e.fecha, hora, responsable };
 }
 
 /** Sin tildes, sin mayúsculas, sin espacios de más. Para comparar, nunca para guardar. */
@@ -759,7 +917,10 @@ function normalizar(texto: string): string {
 }
 
 /**
- * De cómo alguien nombra un cliente al nombre con el que está cargado.
+ * De cómo alguien nombra algo al nombre con el que está cargado.
+ *
+ * Vale para los Heroes y para el equipo: el problema es el mismo —nadie escribe
+ * el nombre completo— y la salida ante la duda también, que es preguntar.
  *
  * El match exacto no alcanza contra los datos reales: en la base están "Zonna
  * Gastrobar", "La Árboleda" y "Entrecote", y nadie escribe eso por WhatsApp —
@@ -771,14 +932,14 @@ function normalizar(texto: string): string {
  * null: preferimos que pregunte a que elija. La ambigüedad tiene que terminar en
  * una pregunta, nunca en una pieza cargada al cliente equivocado.
  */
-export function resolverCliente(entrada: string, clientes: string[]): string | null {
+export function resolverNombre(entrada: string, opciones: string[]): string | null {
   const buscado = normalizar(entrada);
   if (!buscado) return null;
 
-  const exacto = clientes.find((c) => normalizar(c) === buscado);
+  const exacto = opciones.find((c) => normalizar(c) === buscado);
   if (exacto) return exacto;
 
-  const candidatos = clientes.filter((c) => {
+  const candidatos = opciones.filter((c) => {
     const nombre = normalizar(c);
     return nombre.includes(buscado) || buscado.includes(nombre);
   });

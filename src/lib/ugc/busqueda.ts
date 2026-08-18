@@ -49,6 +49,13 @@ const VACIAS = new Set([
   "hacer", "hice", "listo", "lista", "todo", "toda", "todos", "todas", "algo", "cosa", "cosas",
   "semana", "mes", "dia", "día", "hoy", "mañana", "ayer", "ahora", "luego", "despues", "después",
   "mclovin", "please", "gracias",
+  // Los verbos con los que se pide algo. Son lo primero de cada mensaje —
+  // "cancelá la grabación", "pasalo a revisión"— y buscarlos en los títulos solo
+  // puede traer ruido: lo que la persona quiere encontrar es lo que viene
+  // DESPUÉS del verbo.
+  "cancela", "cancelá", "cancelar", "mover", "movelo", "movela", "pasalo", "pasala", "pasar",
+  "cerra", "cerrá", "cerrar", "cierra", "anota", "anotá", "anotar", "agenda", "agendá", "agendar",
+  "programa", "programá", "programar", "reprograma", "reprogramá", "poner", "ponele", "meter",
 ]);
 
 export type Busqueda = {
@@ -227,7 +234,99 @@ export async function buscarEnElTablero(
     }
   }
 
-  return ordenarPorRelevancia(items).slice(0, TOPE_RESULTADOS);
+  const eventos = await buscarEventos(supabase, busqueda, contexto);
+
+  return ordenarPorRelevancia([...items, ...eventos]).slice(0, TOPE_RESULTADOS);
+}
+
+/**
+ * Los eventos del calendario que calzan con lo que preguntó.
+ *
+ * Va aparte de las piezas porque `calendar_events` es otra tabla con otra forma
+ * —un instante en vez de un día, `responsible_id` en vez de `owner_id`— pero
+ * sale como el mismo AgendaItem: para el modelo, un evento y una tarjeta se
+ * nombran igual y se actúa sobre ellos por número.
+ *
+ * Solo los `programado`: uno ya hecho o cancelado no es algo sobre lo que se
+ * pueda pedir nada, y llenarían el cupo con historia.
+ */
+async function buscarEventos(
+  supabase: SupabaseClient<Database>,
+  busqueda: Busqueda,
+  contexto: {
+    yaEnAgenda: Set<string>;
+    heroePorId: Map<string, string>;
+    profileId: string;
+  }
+): Promise<(ItemDelTablero & { cerrada: boolean })[]> {
+  const campos = "id, title, type, brand_id, starts_at, responsible_id";
+  const consultas = [];
+
+  if (busqueda.heroIds.length) {
+    consultas.push(
+      supabase
+        .from("calendar_events")
+        .select(campos)
+        .eq("status", "programado")
+        .in("brand_id", busqueda.heroIds)
+        .limit(TOPE_RESULTADOS)
+    );
+  }
+  if (busqueda.palabras.length) {
+    consultas.push(
+      supabase
+        .from("calendar_events")
+        .select(campos)
+        .eq("status", "programado")
+        .or(busqueda.palabras.map((p) => `title.ilike.*${p}*`).join(","))
+        .limit(TOPE_RESULTADOS)
+    );
+  }
+  if (!consultas.length) return [];
+
+  const resultados = await Promise.all(consultas);
+  const vistos = new Set<string>();
+  const items: (ItemDelTablero & { cerrada: boolean })[] = [];
+
+  for (const { data, error } of resultados) {
+    if (error) {
+      console.error("[busqueda] no se pudo buscar en el calendario:", error.message);
+      continue;
+    }
+    for (const e of data ?? []) {
+      if (vistos.has(e.id) || contexto.yaEnAgenda.has(`event-${e.id}`)) continue;
+      vistos.add(e.id);
+
+      items.push({
+        key: `tablero-event-${e.id}`,
+        ref: { kind: "event", eventId: e.id },
+        titulo: e.title,
+        heroe: e.brand_id ? contexto.heroePorId.get(e.brand_id) ?? null : null,
+        fecha: e.starts_at,
+        // Un evento SÍ tiene hora de verdad, a diferencia de una pieza.
+        conHora: true,
+        accion:
+          e.type === "grabacion"
+            ? "Grabar"
+            : e.type === "publicacion"
+              ? "Publicar"
+              : e.type === "entrega"
+                ? "Entrega"
+                : "Reunión",
+        // Un evento no vive en una columna: no hay carril que mostrar.
+        columna: null,
+        prioridad: null,
+        enRiesgo: false,
+        ownerId: e.responsible_id,
+        responsable: null,
+        ajena: e.responsible_id !== null && e.responsible_id !== contexto.profileId,
+        // Los `programado` nunca están cerrados: por eso se filtran arriba.
+        cerrada: false,
+      });
+    }
+  }
+
+  return items;
 }
 
 /**
