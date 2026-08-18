@@ -95,6 +95,13 @@ export default async function AdminDashboardPage({
   // que salen meta, ritmo y riesgo del Pase de servicio— tienen que seguir
   // dando lo mismo.
   const doneColumnIds = new Set(columns.filter((c) => c.is_done).map((c) => c.id));
+  // Lo que cuenta como PUBLICADO es la columna final del carril de video y solo
+  // esa. Los otros carriles también cierran en una columna is_done, así que sin
+  // este corte una tarea de IT terminada —o un cronograma aprobado— entraría en
+  // los publicados del mes de su Hero.
+  const publishedColumnIds = new Set(
+    columns.filter((c) => c.is_done && c.section === "video").map((c) => c.id)
+  );
   const approvalColumnIds = new Set(
     columns.filter((c) => c.is_pending_approval).map((c) => c.id)
   );
@@ -118,7 +125,7 @@ export default async function AdminDashboardPage({
     pieces.filter(
       (p) =>
         p.brand_id === heroId &&
-        doneColumnIds.has(p.column_id) &&
+        publishedColumnIds.has(p.column_id) &&
         p.publish_date &&
         diaCR(p.publish_date).slice(0, 7) === mesCR
     ).length;

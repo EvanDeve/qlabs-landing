@@ -145,7 +145,7 @@ export async function getReporte(
       supabase.from("agency_clients").select("id, name, archived"),
       supabase.from("content_pieces").select("id, title, brand_id, column_id, owner_id, publish_date"),
       supabase.from("hero_calendar_months").select("hero_id, status, target").eq("month", `${mesCR}-01`),
-      supabase.from("content_columns").select("id, is_done, is_pending_approval"),
+      supabase.from("content_columns").select("id, is_done, is_pending_approval, section"),
       // Los videos del cronograma de este mes: son la meta mientras siga
       // pendiente. Ver metaDelMes.
       supabase.from("calendar_month_items").select("hero_id").eq("month", `${mesCR}-01`),
@@ -163,6 +163,13 @@ export async function getReporte(
   // Qué cuenta como publicado lo declara la columna y NUNCA su nombre: el
   // equipo las renombra y estas cuentas tienen que seguir dando lo mismo.
   const terminadas = new Set((columnas ?? []).filter((c) => c.is_done).map((c) => c.id));
+  // "Publicado" es un video que salió al aire, y eso solo pasa en el carril de
+  // video. Los otros dos carriles también tienen columna final —guiones cierra
+  // en "Cronogramas aprobados", IT en "Terminado"— y contarlas acá metería una
+  // tarea de infraestructura terminada dentro de la meta mensual del Hero.
+  const publicadas = new Set(
+    (columnas ?? []).filter((c) => c.is_done && c.section === "video").map((c) => c.id)
+  );
   const deAprobacion = new Set((columnas ?? []).filter((c) => c.is_pending_approval).map((c) => c.id));
   const activas = piezas.filter((p) => !terminadas.has(p.column_id));
   const cronogramaPorHero = new Map((meses ?? []).map((r) => [r.hero_id, r]));
@@ -183,7 +190,7 @@ export async function getReporte(
     const publicados = piezas.filter(
       (p) =>
         p.brand_id === hero.id &&
-        terminadas.has(p.column_id) &&
+        publicadas.has(p.column_id) &&
         p.publish_date &&
         diaCR(p.publish_date).slice(0, 7) === mesCR
     ).length;
