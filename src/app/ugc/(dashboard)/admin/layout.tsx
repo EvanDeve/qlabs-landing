@@ -36,7 +36,8 @@ export default async function AdminLayout({
   // equipo deja de mirar.
   const archivedHeroIds = new Set((heroes ?? []).filter((h) => h.archived).map((h) => h.id));
   const heroesActivos = (heroes ?? []).filter((h) => !h.archived);
-  const piezasActivas = (activePieces ?? []).filter((p) => !archivedHeroIds.has(p.brand_id));
+  // Una tarjeta sin Hero nunca es de un Hero archivado: es interna y se queda.
+  const piezasActivas = (activePieces ?? []).filter((p) => !p.brand_id || !archivedHeroIds.has(p.brand_id));
 
   // El grupo Sistema es solo de directores: ahí viven los teléfonos del
   // equipo, las conversaciones de WhatsApp y el cerebro del agente. Esto solo

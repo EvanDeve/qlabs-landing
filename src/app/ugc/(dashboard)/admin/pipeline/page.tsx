@@ -111,7 +111,7 @@ export default async function PipelinePage({
   );
   const visibles = verArchivados
     ? piezasCrudas ?? []
-    : (piezasCrudas ?? []).filter((p) => !archivedHeroIds.has(p.brand_id));
+    : (piezasCrudas ?? []).filter((p) => !p.brand_id || !archivedHeroIds.has(p.brand_id));
 
   // "Atrasadas" significa "se pasó la fecha y TODAVÍA no salió", no "la fecha
   // ya pasó". Sin esta parte, el filtro devolvía las publicadas del mes pasado

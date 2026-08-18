@@ -88,7 +88,7 @@ export default async function AdminDashboardPage({
   const archivedHeroIds = new Set(
     (agencyClients ?? []).filter((c) => c.archived).map((c) => c.id)
   );
-  const pieces = (contentPieces ?? []).filter((p) => !archivedHeroIds.has(p.brand_id));
+  const pieces = (contentPieces ?? []).filter((p) => !p.brand_id || !archivedHeroIds.has(p.brand_id));
   const columns = contentColumns ?? [];
   // Qué cuenta como publicado y qué como pendiente de aprobación lo declara la
   // columna, NO su nombre: el equipo puede renombrarlas y estas cuentas —de las

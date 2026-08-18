@@ -43,7 +43,7 @@ export default async function CronogramasPage() {
 
   const publicados = new Map<string, number>();
   for (const p of piezas ?? []) {
-    if (!p.calendar_month || !terminadas.has(p.column_id)) continue;
+    if (!p.brand_id || !p.calendar_month || !terminadas.has(p.column_id)) continue;
     const k = clave(p.brand_id, p.calendar_month);
     publicados.set(k, (publicados.get(k) ?? 0) + 1);
   }

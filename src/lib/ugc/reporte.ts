@@ -154,7 +154,8 @@ export async function getReporte(
   // El filtro de archivados se aplica UNA vez, como en el Dashboard: filtrar
   // caso por caso es cómo un número se queda viejo y contradice a los otros.
   const archivados = new Set((clientes ?? []).filter((c) => c.archived).map((c) => c.id));
-  const piezas = (piezasCrudas ?? []).filter((p) => !archivados.has(p.brand_id));
+  // Sin Hero no hay Hero archivado: una tarea interna se queda en el reporte.
+  const piezas = (piezasCrudas ?? []).filter((p) => !p.brand_id || !archivados.has(p.brand_id));
   const heroes = (clientes ?? []).filter((c) => !c.archived);
   const nombreDeHero = new Map((clientes ?? []).map((c) => [c.id, c.name]));
   const nombreDePersona = new Map(equipo.map((m) => [m.profileId, m.nombre]));
@@ -173,7 +174,7 @@ export async function getReporte(
 
   const pieza = (p: (typeof piezas)[number]): PiezaReporte => ({
     titulo: p.title,
-    hero: nombreDeHero.get(p.brand_id) ?? "sin Hero",
+    hero: (p.brand_id ? nombreDeHero.get(p.brand_id) : null) ?? "sin Hero",
     fecha: p.publish_date ? diaCR(p.publish_date) : null,
     responsable: p.owner_id ? (nombreDePersona.get(p.owner_id) ?? null) : null,
   });

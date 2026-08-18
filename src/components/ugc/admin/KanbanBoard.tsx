@@ -352,7 +352,7 @@ function Column({
             // regla que silencia el aviso de McLovin — si el color y el WhatsApp
             // no coincidieran, uno de los dos sobra.
             sinApuro={column.is_done || column.is_ready}
-            brand={brandById.get(piece.brand_id)}
+            brand={piece.brand_id ? brandById.get(piece.brand_id) : undefined}
             owner={piece.owner_id ? staffById.get(piece.owner_id) : undefined}
             onSelect={onSelect}
           />
@@ -421,20 +421,29 @@ function Card({
             distinguía nada. BrandAvatar cae a las iniciales sobre un degradado
             derivado del nombre cuando el Hero no subió logo — nunca queda un
             hueco, y la misma marca siempre se ve igual. */}
+        {/* Sin Hero no se dibuja un avatar vacío: es una tarea interna del
+            carril de IT y no es de ningún cliente. El hueco se llena con la
+            palabra, que dice más que un círculo con las iniciales de nadie. */}
         <span className={styles.kcHero}>
-          {/* Caja ancha con "contain": los logos de los Heroes son wordmarks
-              horizontales (Dulce Chilena, Snowty), y en un cuadrado con cover
-              quedaban como una mancha. Sin logo, BrandAvatar cae a iniciales
-              sobre un degradado derivado del nombre. */}
-          <BrandAvatar
-            name={brand?.name ?? ""}
-            logoUrl={brand?.logoUrl}
-            size={22}
-            width={brand?.logoUrl ? 44 : 22}
-            radius={6}
-            fit="contain"
-          />
-          {brand?.name ?? ""}
+          {brand ? (
+            <>
+              {/* Caja ancha con "contain": los logos de los Heroes son wordmarks
+                  horizontales (Dulce Chilena, Snowty), y en un cuadrado con cover
+                  quedaban como una mancha. Sin logo, BrandAvatar cae a iniciales
+                  sobre un degradado derivado del nombre. */}
+              <BrandAvatar
+                name={brand.name}
+                logoUrl={brand.logoUrl}
+                size={22}
+                width={brand.logoUrl ? 44 : 22}
+                radius={6}
+                fit="contain"
+              />
+              {brand.name}
+            </>
+          ) : (
+            "Interna"
+          )}
         </span>
         <span className={styles.kcNum}>{piece.code}</span>
         {/* El Drive del Hero, para no tener que ir al expediente a buscarlo. Es

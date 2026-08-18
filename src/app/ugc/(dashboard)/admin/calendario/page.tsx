@@ -64,8 +64,12 @@ export default async function CalendarioPage({
       // clase de conversión implícita que causó el corrimiento de un día.
       supabase
         .from("content_pieces")
+        // El carril viene con la pieza para poder dejar afuera las tareas de
+        // IT: su fecha es "para cuándo tiene que estar lista", no una salida al
+        // aire, y este calendario es el de publicaciones — el mismo que mira el
+        // equipo para saber qué sale esta semana.
         .select(
-          "id, title, brand_id, owner_id, publish_date, record_date, publish_time, platform, approval"
+          "id, title, brand_id, owner_id, publish_date, record_date, publish_time, platform, approval, content_columns!inner(section)"
         )
         .or(
           `and(publish_date.gte.${gridDays[0]},publish_date.lte.${gridDays[gridDays.length - 1]}),and(record_date.gte.${gridDays[0]},record_date.lte.${gridDays[gridDays.length - 1]})`
@@ -107,6 +111,8 @@ export default async function CalendarioPage({
   }
 
   for (const piece of contentPieces ?? []) {
+    const col = Array.isArray(piece.content_columns) ? piece.content_columns[0] : piece.content_columns;
+    if (col?.section === "it") continue;
     if (piece.publish_date && piece.publish_date >= gridDays[0] && piece.publish_date <= gridDays[gridDays.length - 1]) {
       items.push({
         id: `piece-publish-${piece.id}`,
@@ -122,8 +128,10 @@ export default async function CalendarioPage({
         platform: piece.platform,
         approval: piece.approval,
         brandId: piece.brand_id,
-        brandName: brandNameById.get(piece.brand_id) ?? null,
-        brandLogoUrl: brandLogoById.get(piece.brand_id) ?? null,
+        // Sin Hero no hay nombre ni logo que buscar: es una tarea interna, y
+        // dibujarla sin marca es exactamente lo que corresponde.
+        brandName: piece.brand_id ? brandNameById.get(piece.brand_id) ?? null : null,
+        brandLogoUrl: piece.brand_id ? brandLogoById.get(piece.brand_id) ?? null : null,
         createdByAgent: false,
         // Antes iba null fijo: la pieza traía dueño pero el calendario no lo
         // pedía, así que una publicación no decía de quién era. Ahora sale del
@@ -147,8 +155,8 @@ export default async function CalendarioPage({
         platform: piece.platform,
         approval: piece.approval,
         brandId: piece.brand_id,
-        brandName: brandNameById.get(piece.brand_id) ?? null,
-        brandLogoUrl: brandLogoById.get(piece.brand_id) ?? null,
+        brandName: piece.brand_id ? brandNameById.get(piece.brand_id) ?? null : null,
+        brandLogoUrl: piece.brand_id ? brandLogoById.get(piece.brand_id) ?? null : null,
         createdByAgent: false,
         responsibleName: piece.owner_id ? staffNameById.get(piece.owner_id) ?? null : null,
         responsibleAvatarUrl: piece.owner_id ? staffAvatarById.get(piece.owner_id) ?? null : null,

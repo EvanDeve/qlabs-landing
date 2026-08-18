@@ -48,6 +48,8 @@ export default async function HeroesPage() {
   const nextPublishByBrandId = new Map<string, string>();
   const activeCountByBrandId = new Map<string, number>();
   for (const piece of contentPieces ?? []) {
+    // Una tarea interna no tiene expediente en el que aparecer.
+    if (!piece.brand_id) continue;
     if (!columnById.get(piece.column_id)?.is_done) {
       latestStageByBrandId.set(piece.brand_id, piece.column_id);
       activeCountByBrandId.set(piece.brand_id, (activeCountByBrandId.get(piece.brand_id) ?? 0) + 1);

@@ -11,7 +11,9 @@ export async function createContentPieceAction(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  const brandId = String(formData.get("brand_id") ?? "");
+  // Vacío es válido: una tarea del carril de IT no es de ningún cliente. El
+  // formulario de video igual lo manda como required.
+  const brandId = String(formData.get("brand_id") ?? "").trim() || null;
   const title = String(formData.get("title") ?? "").trim();
   const code = String(formData.get("code") ?? "").trim();
   const platform = String(formData.get("platform") ?? "instagram") as ContentPlatform;
@@ -34,7 +36,7 @@ export async function createContentPieceAction(formData: FormData) {
 
   // El código dejó de ser obligatorio: pedirlo siempre solo lograba que se
   // inventaran códigos de relleno para poder crear la pieza.
-  if (!brandId || !title || !columnId) return;
+  if (!title || !columnId) return;
 
   await supabase.from("content_pieces").insert({
     brand_id: brandId,
@@ -46,6 +48,7 @@ export async function createContentPieceAction(formData: FormData) {
     owner_id: ownerId,
     publish_date: publishDateRaw || null,
     record_date: recordDateRaw || null,
+    notes: String(formData.get("notes") ?? "").trim() || null,
   });
 
   revalidatePath("/ugc/admin/pipeline");
@@ -103,10 +106,12 @@ export async function updateContentPieceAction(formData: FormData) {
     .eq("id", pieceId)
     .single();
 
-  // El Hero se puede corregir desde el drawer. Si el campo no viene (formulario
-  // viejo o recorte de otro origen) se deja el que ya tenía: mandar null acá
-  // rompería la pieza, brand_id es NOT NULL.
-  const brandId = String(formData.get("brand_id") ?? "").trim() || null;
+  // El Hero se puede corregir —y ahora también quitar: una tarea de IT no es de
+  // nadie—. Se distingue "el formulario no mandó el campo" de "lo mandó vacío a
+  // propósito": lo primero deja el que ya tenía, lo segundo lo borra. Sin esa
+  // distinción, un formulario viejo le borraría el Hero a una pieza de video.
+  const brandIdRaw = formData.get("brand_id");
+  const brandId = brandIdRaw !== null ? String(brandIdRaw).trim() || null : null;
   // Mismo criterio que brand_id: title es NOT NULL, así que un formulario que
   // no mande el campo —o que lo mande vacío— deja el que ya tenía en vez de
   // borrarle el nombre a la pieza. El código sí puede quedar vacío a propósito.
@@ -137,7 +142,7 @@ export async function updateContentPieceAction(formData: FormData) {
   await supabase
     .from("content_pieces")
     .update({
-      ...(brandId ? { brand_id: brandId } : {}),
+      ...(brandIdRaw !== null ? { brand_id: brandId } : {}),
       ...(title ? { title } : {}),
       ...(codeRaw !== null ? { code: String(codeRaw).trim() || null } : {}),
       owner_id: ownerId,

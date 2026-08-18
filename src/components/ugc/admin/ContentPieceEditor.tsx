@@ -43,7 +43,7 @@ export default function ContentPieceEditor({
   const [columnId, setColumnId] = useState(piece.column_id);
   // El Hero vive en estado y no solo en el <select> para que el encabezado del
   // drawer diga la marca elegida apenas se cambia, y no la que tenía al abrir.
-  const [brandId, setBrandId] = useState(piece.brand_id);
+  const [brandId, setBrandId] = useState(piece.brand_id ?? "");
   // Título y código también en estado, por lo mismo: el encabezado los muestra
   // arriba y KanbanBoard no reabre el drawer con la pieza nueva al revalidar
   // (selectedPiece es una copia del momento del clic), así que sin esto el
@@ -58,6 +58,22 @@ export default function ContentPieceEditor({
   const [saved, setSaved] = useState(false);
   const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
   const current = columns.find((c) => c.id === columnId);
+
+  /**
+   * Una tarjeta del carril de IT no es un video: es una tarea interna.
+   *
+   * No tiene guion, ni plataforma, ni hora de salida, ni aprobación del cliente
+   * — mostrarle esos quince campos a quien solo necesita anotar "para cuándo
+   * tiene que estar lista" es la forma más rápida de que el carril no se use.
+   * Lo que sí lleva: título, para cuándo, quién la tiene, qué tan urgente es,
+   * el detalle y un link.
+   *
+   * Los campos que no se dibujan viajan igual como hidden, con el valor que ya
+   * tenían: el server action escribe TODO lo que lee del formulario, así que un
+   * campo ausente se guardaría como null. Es el mismo motivo por el que
+   * record_date ya viajaba así.
+   */
+  const esTarea = current?.section === "it";
 
   // Solo los pasos del carril al que pertenece la pieza. Un video no atraviesa
   // las columnas de IT ni las de cronogramas, así que dibujarlas lo haría ver
@@ -168,27 +184,37 @@ export default function ContentPieceEditor({
           ancha, y la ficha queda al costado. En una sola columna el guion
           empujaba los quince campos de metadatos fuera de pantalla, que es
           justamente lo que hacía incómodo el panel lateral. */}
-      <form onSubmit={handleSave} className={styles.pieceGrid}>
+      <form
+        onSubmit={handleSave}
+        className={styles.pieceGrid}
+        // Sin guion no hay columna ancha que llenar: la ficha sola estirada a
+        // dos columnas deja media pantalla vacía y se lee como que falta algo.
+        style={esTarea ? { gridTemplateColumns: "minmax(0, 620px)" } : undefined}
+      >
         <input type="hidden" name="id" value={piece.id} />
 
-        <div>
-          <GuionSection piece={piece} approval={approval} />
+        {esTarea ? (
+          <CamposDeVideoOcultos piece={piece} />
+        ) : (
+          <div>
+            <GuionSection piece={piece} approval={approval} />
 
-          {/* Las notas de producción van acá abajo y no en la ficha: se
-              escriben junto con el guion —locación, utilería, quién sale— y no
-              al configurar la pieza. */}
-          <div className={styles.field}>
-            <label htmlFor="piece-notes">Apuntes</label>
-            <textarea
-              id="piece-notes"
-              name="notes"
-              rows={4}
-              defaultValue={piece.notes ?? ""}
-              placeholder="Locación, utilería, quién sale…"
-              className={styles.inp}
-            />
+            {/* Las notas de producción van acá abajo y no en la ficha: se
+                escriben junto con el guion —locación, utilería, quién sale— y no
+                al configurar la pieza. */}
+            <div className={styles.field}>
+              <label htmlFor="piece-notes">Apuntes</label>
+              <textarea
+                id="piece-notes"
+                name="notes"
+                rows={4}
+                defaultValue={piece.notes ?? ""}
+                placeholder="Locación, utilería, quién sale…"
+                className={styles.inp}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className={`${styles.card} ${styles.cardPad}`}>
           <div className={styles.sectionHead}>
@@ -211,30 +237,36 @@ export default function ContentPieceEditor({
                   className={styles.inp}
                 />
               </div>
-              <div className={styles.field} style={{ width: "120px" }}>
-                <label htmlFor="piece-code">Código</label>
-                <input
-                  id="piece-code"
-                  name="code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="LB-042"
-                  className={styles.inp}
-                />
-              </div>
+              {!esTarea && (
+                <div className={styles.field} style={{ width: "120px" }}>
+                  <label htmlFor="piece-code">Código</label>
+                  <input
+                    id="piece-code"
+                    name="code"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="LB-042"
+                    className={styles.inp}
+                  />
+                </div>
+              )}
             </div>
 
             {/* El Hero se puede corregir después de crear la pieza: antes
                 quedaba fijo y una pieza cargada en la marca equivocada solo se
                 arreglaba borrándola y volviéndola a crear. */}
             <div className={styles.field}>
-              <label>Hero</label>
+              <label>Hero{esTarea ? " (opcional)" : ""}</label>
               <select
                 name="brand_id"
                 value={brandId}
                 onChange={(e) => setBrandId(e.target.value)}
                 className={styles.inp}
               >
+                {/* Una tarea interna no es de ningún cliente. La opción existe
+                    solo en el carril de IT: en video, una pieza sin Hero no se
+                    sabría a quién facturarle ni en qué expediente mirarla. */}
+                {esTarea && <option value="">Sin Hero — interna</option>}
                 {brands.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name}
@@ -264,17 +296,17 @@ export default function ContentPieceEditor({
                   <option value="alta">Alta</option>
                 </select>
               </div>
-              <div className={styles.field} style={{ flex: 1 }}>
-                <label>Plataforma</label>
-                <select name="platform" defaultValue={piece.platform} className={styles.inp}>
-                  <option value="instagram">Instagram</option>
-                  <option value="tiktok">TikTok</option>
-                  <option value="reels">Reels</option>
-                </select>
+              <div className={styles.field} style={esTarea ? { display: "none" } : { flex: 1 }}>
+                  <label>Plataforma</label>
+                  <select name="platform" defaultValue={piece.platform} className={styles.inp}>
+                    <option value="instagram">Instagram</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="reels">Reels</option>
+                  </select>
               </div>
             </div>
 
-            <div className={styles.field}>
+            <div className={styles.field} style={esTarea ? { display: "none" } : undefined}>
               <label>Aprobación</label>
               <select
                 name="approval"
@@ -302,7 +334,11 @@ export default function ContentPieceEditor({
                 20260801000000, y meterle una hora lo reabriría entero. */}
             <div style={{ display: "flex", gap: "12px" }}>
               <div className={styles.field} style={{ flex: 1 }}>
-                <label htmlFor="piece-publish-date">Publicación</label>
+                {/* Es la misma columna con dos significados según el carril: un
+                    video sale al aire ese día, una tarea tiene que estar lista.
+                    Llamarla "Publicación" en IT es lo que hacía que McLovin
+                    dijera "la publicación de Prueba entrecote". */}
+                <label htmlFor="piece-publish-date">{esTarea ? "Lista para" : "Publicación"}</label>
                 <input
                   id="piece-publish-date"
                   type="date"
@@ -311,7 +347,7 @@ export default function ContentPieceEditor({
                   className={styles.inp}
                 />
               </div>
-              <div className={styles.field} style={{ width: "130px" }}>
+              <div className={styles.field} style={esTarea ? { display: "none" } : { width: "130px" }}>
                 <label htmlFor="piece-publish-time">Hora</label>
                 <input
                   id="piece-publish-time"
@@ -323,14 +359,42 @@ export default function ContentPieceEditor({
               </div>
             </div>
 
-            <LinkField
-              label="Link Drive"
-              name="drive_url"
-              value={piece.drive_url}
-              icon="drive"
-              placeholder="https://drive.google.com/..."
-            />
-            <LinkField label="Link video final" name="final_url" value={piece.final_url} icon="play" />
+            {esTarea ? (
+              <>
+                <LinkField
+                  label="Link"
+                  name="drive_url"
+                  value={piece.drive_url}
+                  icon="external"
+                  placeholder="El ticket, el repo, el panel…"
+                />
+                {/* En un video los apuntes viven junto al guion, que es cuando
+                    se escriben. En una tarea son el enunciado: qué hay que
+                    tocar y dónde. */}
+                <div className={styles.field}>
+                  <label htmlFor="piece-notes">Apuntes</label>
+                  <textarea
+                    id="piece-notes"
+                    name="notes"
+                    rows={5}
+                    defaultValue={piece.notes ?? ""}
+                    placeholder="Qué hay que hacer, dónde, con qué acceso…"
+                    className={styles.inp}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <LinkField
+                  label="Link Drive"
+                  name="drive_url"
+                  value={piece.drive_url}
+                  icon="drive"
+                  placeholder="https://drive.google.com/..."
+                />
+                <LinkField label="Link video final" name="final_url" value={piece.final_url} icon="play" />
+              </>
+            )}
 
             {/* La página no se cierra al guardar, así que sin este aviso no hay
                 ninguna señal de que el cambio entró. */}
@@ -465,6 +529,29 @@ const APROBACION_DEL_GUION: Record<ContentPiece["approval"], { texto: string; co
  * video final— y con los cuatro campos abiertos siempre, esas quedan a dos
  * pantallas de scroll.
  */
+/**
+ * Lo que una tarea de IT no muestra pero tampoco puede perder.
+ *
+ * El server action escribe TODOS los campos que lee del formulario, y lo que no
+ * viene vale "" — o sea null. Sin estos hidden, abrir una tarjeta en el carril
+ * de IT y guardarla le borraría el guion, el link del documento y el del video
+ * final a una pieza que alguna vez estuvo en video.
+ *
+ * Es el mismo mecanismo que ya usaba record_date, generalizado.
+ */
+function CamposDeVideoOcultos({ piece }: { piece: ContentPiece }) {
+  return (
+    <>
+      <input type="hidden" name="script_hook" value={piece.script_hook ?? ""} />
+      <input type="hidden" name="script_idea" value={piece.script_idea ?? ""} />
+      <input type="hidden" name="script_desarrollo" value={piece.script_desarrollo ?? ""} />
+      <input type="hidden" name="script_cta" value={piece.script_cta ?? ""} />
+      <input type="hidden" name="script_url" value={piece.script_url ?? ""} />
+      <input type="hidden" name="final_url" value={piece.final_url ?? ""} />
+    </>
+  );
+}
+
 function GuionSection({ piece, approval }: { piece: ContentPiece; approval: ContentPiece["approval"] }) {
   const [abierto, setAbierto] = useState(true);
   const estado = APROBACION_DEL_GUION[approval];

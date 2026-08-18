@@ -20,11 +20,15 @@ export default function NewContentPieceModal({
   columnId: string;
   onClose: () => void;
 }) {
+  // El carril decide qué se pregunta. Una tarea de IT necesita cuatro datos;
+  // pedirle plataforma y código es pedirle que invente dos.
+  const esTarea = columns.find((c) => c.id === columnId)?.section === "it";
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
-          <h2 style={{ fontSize: "18px" }}>Nueva pieza</h2>
+          <h2 style={{ fontSize: "18px" }}>{esTarea ? "Nueva tarea" : "Nueva pieza"}</h2>
           <button type="button" onClick={onClose} className={styles.drawerClose}>
             <QosIcon name="x" size={16} />
           </button>
@@ -37,8 +41,9 @@ export default function NewContentPieceModal({
         <form action={createContentPieceAction} onSubmit={onClose}>
           <input type="hidden" name="column_id" value={columnId} />
           <div className={styles.field}>
-            <label>Hero</label>
-            <select name="brand_id" required className={styles.inp}>
+            <label>Hero{esTarea ? " (opcional)" : ""}</label>
+            <select name="brand_id" required={!esTarea} defaultValue={esTarea ? "" : undefined} className={styles.inp}>
+              {esTarea && <option value="">Sin Hero — interna</option>}
               {brands.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -47,10 +52,12 @@ export default function NewContentPieceModal({
             </select>
           </div>
 
-          <div className={styles.field}>
-            <label>Código (opcional)</label>
-            <input name="code" placeholder="LB-042" className={styles.inp} />
-          </div>
+          {!esTarea && (
+            <div className={styles.field}>
+              <label>Código (opcional)</label>
+              <input name="code" placeholder="LB-042" className={styles.inp} />
+            </div>
+          )}
 
           <div className={styles.field}>
             <label>Título</label>
@@ -58,14 +65,16 @@ export default function NewContentPieceModal({
           </div>
 
           <div style={{ display: "flex", gap: "12px" }}>
-            <div className={styles.field} style={{ flex: 1 }}>
-              <label>Plataforma</label>
-              <select name="platform" className={styles.inp}>
-                <option value="instagram">Instagram</option>
-                <option value="tiktok">TikTok</option>
-                <option value="reels">Reels</option>
-              </select>
-            </div>
+            {!esTarea && (
+              <div className={styles.field} style={{ flex: 1 }}>
+                <label>Plataforma</label>
+                <select name="platform" className={styles.inp}>
+                  <option value="instagram">Instagram</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="reels">Reels</option>
+                </select>
+              </div>
+            )}
             <div className={styles.field} style={{ flex: 1 }}>
               <label>Prioridad</label>
               <select name="priority" defaultValue="media" className={styles.inp}>
@@ -92,12 +101,19 @@ export default function NewContentPieceModal({
               para todos los videos a la vez, así que no es un dato de la pieza
               sino un hito: vive en el calendario como evento tipo Grabación. */}
           <div className={styles.field}>
-            <label>Publicación</label>
+            <label>{esTarea ? "Lista para" : "Publicación"}</label>
             <input type="date" name="publish_date" className={styles.inp} />
           </div>
 
+          {esTarea && (
+            <div className={styles.field}>
+              <label>Apuntes</label>
+              <textarea name="notes" rows={3} placeholder="Qué hay que hacer, dónde…" className={styles.inp} />
+            </div>
+          )}
+
           <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-            Crear pieza
+            {esTarea ? "Crear tarea" : "Crear pieza"}
           </button>
         </form>
       </div>

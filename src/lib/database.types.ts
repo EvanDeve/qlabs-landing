@@ -613,7 +613,7 @@ export interface Database {
       content_pieces: {
         Row: {
           id: string;
-          brand_id: string;
+          brand_id: string | null;
           title: string;
           code: string | null;
           column_id: string;
@@ -652,7 +652,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          brand_id: string;
+          brand_id: string | null;
           title: string;
           code?: string | null;
           column_id: string;
