@@ -58,6 +58,13 @@ export default async function ArmarCronogramaPage({
       .select("*")
       .eq("hero_id", heroId)
       .eq("month", mes)
+      // El cronograma se lee como un calendario y no como la bitácora de carga:
+      // el orden lo manda la fecha de publicación, con la hora de desempate y
+      // la posición de creación al final para que dos videos del mismo momento
+      // no se intercambien entre recargas. Los que todavía no tienen fecha van
+      // últimos: son justo los que faltan por definir.
+      .order("publish_date", { ascending: true, nullsFirst: false })
+      .order("publish_time", { ascending: true, nullsFirst: false })
       .order("position", { ascending: true }),
   ]);
 
