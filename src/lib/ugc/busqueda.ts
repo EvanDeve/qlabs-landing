@@ -124,6 +124,15 @@ export type ItemDelTablero = AgendaItem & {
   ownerId: string | null;
   /** El nombre de quien la tiene. La agenda no lo lleva: todo lo suyo es suyo. */
   responsable: string | null;
+  /**
+   * Es de OTRA persona del equipo.
+   *
+   * No alcanza con mirar si hay responsable: una tarjeta puede ser tuya y estar
+   * acá igual, porque cayó fuera de la ventana de tu agenda. Sin esta
+   * distinción, McLovin te contestaba "ya le avisé a Evan" hablándote de vos en
+   * tercera persona — y encima mintiendo, porque a uno mismo no se le avisa.
+   */
+  ajena: boolean;
 };
 
 /**
@@ -142,6 +151,8 @@ export async function buscarEnElTablero(
     columnaPorId: Map<string, string>;
     /** Las columnas que cierran cada carril. Lo cerrado se muestra al final. */
     columnasFinales: Set<string>;
+    /** Quién está preguntando, para saber qué es suyo y qué es de otro. */
+    profileId: string;
   }
 ): Promise<ItemDelTablero[]> {
   if (!vale(busqueda)) return [];
@@ -210,6 +221,7 @@ export async function buscarEnElTablero(
         enRiesgo: false,
         ownerId: p.owner_id,
         responsable: null,
+        ajena: p.owner_id !== null && p.owner_id !== contexto.profileId,
       });
 
     }

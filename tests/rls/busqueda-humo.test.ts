@@ -33,6 +33,9 @@ async function contexto() {
       heroePorId: new Map((heroes ?? []).map((h) => [h.id, h.name])),
       columnaPorId: new Map((columnas ?? []).map((c) => [c.id, c.name])),
       columnasFinales: new Set((columnas ?? []).filter((c) => c.is_done).map((c) => c.id)),
+      // Un profileId que no es de nadie: así todo lo que vuelva cuenta como
+      // ajeno, que es el caso que hay que mirar cuando se prueba la búsqueda.
+      profileId: "00000000-0000-0000-0000-000000000000",
     },
   };
 }

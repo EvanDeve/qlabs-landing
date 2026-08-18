@@ -393,6 +393,38 @@ describe("describirLoHecho", () => {
     }
   });
 
+  // Desde que cualquiera puede tocar cualquier tarjeta, quien la mueve tiene que
+  // saber que al dueño ya se le avisó: si no, o va a contárselo aparte o se
+  // queda con la duda de si el otro se enteró.
+  it("avisa que se le avisó al dueño cuando la tarjeta era de otro", () => {
+    const ajena = [{ ...item("Reel de brunch"), responsable: "Daniel", ajena: true }];
+
+    expect(describirLoHecho({ tipo: "mover_pieza", item: 1, columna: "Publicado" }, ajena)).toContain(
+      "Ya le avisé a Daniel."
+    );
+    expect(describirLoHecho({ tipo: "marcar_hecho", item: 1 }, ajena)).toContain("Ya le avisé a Daniel.");
+    expect(describirLoHecho({ tipo: "reprogramar", item: 1, fecha: "2026-08-09" }, ajena)).toContain(
+      "Ya le avisé a Daniel."
+    );
+  });
+
+  // Una tarjeta propia no genera aviso, así que decir que se avisó sería mentir.
+  it("no dice nada de avisos cuando la tarjeta es suya", () => {
+    expect(describirLoHecho({ tipo: "mover_pieza", item: 1, columna: "Publicado" }, items)).not.toMatch(/avis/i);
+  });
+
+  // El caso que se cuela: una tarjeta TUYA que aparece por búsqueda —porque cayó
+  // fuera de la ventana de tu agenda— trae responsable igual. Sin mirar `ajena`,
+  // McLovin te contestaba "ya le avisé a Evan" hablándote de vos en tercera
+  // persona, y mintiendo: a uno mismo no se le avisa.
+  it("no avisa de uno mismo cuando la tarjeta encontrada es suya", () => {
+    const propiaEncontrada = [{ ...item("Reel de brunch"), responsable: "Evan", ajena: false }];
+    const texto = describirLoHecho({ tipo: "mover_pieza", item: 1, columna: "Publicado" }, propiaEncontrada);
+
+    expect(texto).not.toMatch(/avis/i);
+    expect(texto).not.toContain("Evan");
+  });
+
   it("dice la fecha nueva al reprogramar", () => {
     const texto = describirLoHecho({ tipo: "reprogramar", item: 1, fecha: "2026-08-09" }, items);
     expect(texto).toContain("2026-08-09");

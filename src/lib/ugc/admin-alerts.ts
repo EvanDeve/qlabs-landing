@@ -9,6 +9,15 @@ export const VERIFICATION_PENDING = "verification_pending";
 /** Alguien de afuera escribió por primera vez al WhatsApp del negocio. */
 export const CONTACTO_WA_NUEVO = "contacto_wa_nuevo";
 
+/**
+ * Alguien del equipo movió, reprogramó o cerró una tarjeta que es de otro,
+ * pidiéndoselo a McLovin por WhatsApp.
+ *
+ * Existe desde que cualquiera puede tocar cualquier tarjeta: sin el aviso, el
+ * dueño se entera por casualidad de que su video ya figuraba publicado.
+ */
+export const PIEZA_TOCADA = "pieza_tocada";
+
 export type PendingVerification = {
   profileId: string;
   role: "creator" | "brand";

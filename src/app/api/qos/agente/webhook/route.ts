@@ -23,6 +23,8 @@ import {
   demoraDeEscritura,
 } from "@/lib/ugc/agente-publico";
 import { leerBusqueda, buscarEnElTablero, vale, type ItemDelTablero } from "@/lib/ugc/busqueda";
+import { ventanaAbierta } from "@/lib/ugc/recordatorios";
+import { PIEZA_TOCADA } from "@/lib/ugc/admin-alerts";
 import { CONTACTO_WA_NUEVO } from "@/lib/ugc/admin-alerts";
 import { getReporte, describirReporte } from "@/lib/ugc/reporte";
 import { diaCR } from "@/lib/ugc/calendar";
@@ -201,6 +203,7 @@ async function atenderEntrante(
     heroes: clientes ?? [],
     columnas: columnas ?? [],
     yaEnAgenda: new Set(itemsAgenda.map((i) => i.key)),
+    profileId: miembro.profile_id,
   });
 
   const items = [...itemsAgenda, ...encontradas];
@@ -229,8 +232,10 @@ async function atenderEntrante(
 
   const resultado = await aplicarAccion(admin, {
     profileId: miembro.profile_id,
+    nombre: perfil?.display_name ?? "alguien del equipo",
     accion,
     items,
+    heroesArchivados: new Set((clientes ?? []).filter((c) => c.archived).map((c) => c.id)),
     columnas: columnas ?? [],
     clientes: (clientes ?? []).filter((c) => !c.archived),
     propuesta,
@@ -259,6 +264,7 @@ async function buscarDelMensaje(
     heroes: { id: string; name: string }[];
     columnas: Columna[];
     yaEnAgenda: Set<string>;
+    profileId: string;
   }
 ): Promise<ItemDelTablero[]> {
   try {
@@ -270,12 +276,13 @@ async function buscarDelMensaje(
       heroePorId: new Map(opciones.heroes.map((h) => [h.id, h.name])),
       columnaPorId: new Map(opciones.columnas.map((c) => [c.id, c.name])),
       columnasFinales: new Set(opciones.columnas.filter((c) => c.is_done).map((c) => c.id)),
+      profileId: opciones.profileId,
     });
 
     // Los nombres del equipo se resuelven acá, sobre los dueños que de verdad
     // aparecieron: pedir la tabla de perfiles antes de saber si la búsqueda
     // trajo algo es una consulta que casi siempre sobra.
-    const owners = [...new Set(encontradas.map((i) => i.ownerId).filter((v): v is string => Boolean(v)))];
+    const owners = [...new Set(encontradas.filter((i) => i.ajena).map((i) => i.ownerId).filter((v): v is string => Boolean(v)))];
     if (!owners.length) return encontradas;
 
     const { data: perfiles } = await admin.from("profiles").select("id, display_name").in("id", owners);
@@ -543,12 +550,73 @@ type Cliente = { id: string; name: string };
 
 type Contexto = {
   profileId: string;
+  /** Cómo se llama quien pidió la acción. Va en el aviso al dueño de la tarjeta. */
+  nombre: string;
   accion: AccionAgente;
-  items: AgendaItem[];
+  /**
+   * La agenda de quien escribe MÁS lo que se encontró en el tablero. Las
+   * segundas traen `responsable`, que es de quién es la tarjeta — la agenda no
+   * lo lleva porque todo lo suyo es suyo.
+   */
+  items: (AgendaItem & { responsable?: string | null; ajena?: boolean })[];
   columnas: Columna[];
   clientes: Cliente[];
+  /** Los Heroes archivados: de un cliente que se fue no se toca nada. */
+  heroesArchivados: Set<string>;
   propuesta: PropuestaViva | null;
 };
+
+/**
+ * Le avisa al dueño de la tarjeta que alguien más se la tocó.
+ *
+ * Es la contracara de haber abierto los permisos. Con el candado de propiedad,
+ * el tablero de cada uno solo lo cambiaba esa persona; ahora lo cambia
+ * cualquiera desde un chat que el dueño no ve, y enterarse por casualidad de
+ * que tu video "ya estaba publicado" es cómo se pierde la confianza en el
+ * tablero. La bitácora ya guardaba quién lo pidió, pero había que ir a buscarla.
+ *
+ * Dos capas, igual que el aviso de cronograma: la notificación in-app se crea
+ * SIEMPRE —es la que garantiza que el aviso no se pierda— y el WhatsApp se
+ * intenta encima, solo para quien tenga la ventana de 24 h abierta. Fuera de esa
+ * ventana Meta exige plantilla y no hay ninguna para esto.
+ *
+ * Todo best-effort: que falle el aviso no puede deshacer lo que ya se escribió.
+ */
+async function avisarAlDueno(
+  admin: Admin,
+  ctx: Contexto,
+  pieza: { id: string; owner_id: string | null; title: string },
+  queHizo: string
+): Promise<void> {
+  // Nadie se avisa a sí mismo, y una tarjeta sin dueño no tiene a quién avisar.
+  if (!pieza.owner_id || pieza.owner_id === ctx.profileId) return;
+
+  try {
+    await admin.from("notifications").insert({
+      profile_id: pieza.owner_id,
+      type: PIEZA_TOCADA,
+      payload: { piece_id: pieza.id, title: pieza.title, quien: ctx.nombre, que: queHizo },
+    });
+
+    if (!(await ventanaAbierta(admin, pieza.owner_id))) return;
+
+    const { data: dueno } = await admin
+      .from("staff_members")
+      .select("phone_e164, wa_opt_in")
+      .eq("profile_id", pieza.owner_id)
+      .maybeSingle();
+    if (!dueno?.phone_e164 || !dueno.wa_opt_in) return;
+
+    await responder(
+      admin,
+      pieza.owner_id,
+      dueno.phone_e164,
+      `Ojo, ${ctx.nombre} ${queHizo}: ${pieza.title}.`
+    );
+  } catch (err) {
+    console.error("[agente/webhook] no se pudo avisar al dueño:", err);
+  }
+}
 
 /**
  * Lo que de verdad pasó al aplicar la acción.
@@ -874,7 +942,10 @@ async function editarItem(
     admin,
     ctx.profileId,
     kindDe(accion),
-    { accion, titulo: item.titulo },
+    // El dueño va a la bitácora cuando la tarjeta era de otro: desde que
+    // cualquiera puede tocar cualquier cosa, "quién lo pidió" ya no cuenta la
+    // historia entera — hay que poder ver sobre el trabajo de quién cayó.
+    { accion, titulo: item.titulo, ...(item.responsable ? { dueno: item.responsable } : {}) },
     ok ? "ejecutada" : "fallida",
     ok
       ? {
@@ -888,6 +959,25 @@ async function editarItem(
   return { aplicada: ok, nota };
 }
 
+/**
+ * Escribe sobre una tarjeta o un evento, con los candados que reemplazaron al
+ * de propiedad.
+ *
+ * Hasta el 2026-08-18 acá había un `.eq("owner_id", profileId)`: solo podías
+ * tocar lo tuyo. Se cayó por decisión de Evan —cualquiera del equipo mueve
+ * cualquier cosa, que es lo que hace que el tablero se pueda manejar sin
+ * abrirlo—. Pero ese filtro no era solo un permiso: también era la red que
+ * atajaba al modelo cuando confundía una tarjeta con otra, porque lo ajeno
+ * simplemente no se movía.
+ *
+ * Lo que ocupa su lugar son tres cosas distintas y ninguna es opcional:
+ *   1. La tarjeta existe de verdad (el modelo nunca ve un id, pero igual se
+ *      revalida contra la base antes de escribir: el cliente es service-role y
+ *      se saltea RLS).
+ *   2. Su Hero no está archivado — de un cliente que se fue no se toca nada.
+ *   3. La columna destino es del carril de la tarjeta (ver tablero.ts).
+ * Y encima, el dueño se entera: ver avisarAlDueno().
+ */
 async function escribirEdicion(
   admin: Admin,
   ctx: Contexto,
@@ -897,17 +987,25 @@ async function escribirEdicion(
   if (item.ref.kind === "piece") {
     const { data: pieza } = await admin
       .from("content_pieces")
-      .select("id, column_id")
+      .select("id, column_id, owner_id, brand_id, title")
       .eq("id", item.ref.pieceId)
-      .eq("owner_id", ctx.profileId)
       .maybeSingle();
     if (!pieza) return { ok: false };
+
+    // De un Hero archivado no se toca nada: dejó de ser cliente y su tablero
+    // queda como quedó. Es el mismo criterio que usa la agenda para no
+    // recordarlo todos los días.
+    if (pieza.brand_id && ctx.heroesArchivados.has(pieza.brand_id)) {
+      return { ok: false, nota: "Esa es de un Hero archivado, así que no le toco nada." };
+    }
 
     if (accion.tipo === "mover_pieza") {
       const destino = columnaDestino(ctx.columnas, pieza.column_id, accion.columna);
       if (!destino.ok) return destino;
       const { error } = await admin.from("content_pieces").update({ column_id: destino.columna.id }).eq("id", pieza.id);
-      return { ok: !error };
+      if (error) return { ok: false };
+      await avisarAlDueno(admin, ctx, pieza, `la movió a ${destino.columna.name}`);
+      return { ok: true };
     }
     if (accion.tipo === "marcar_hecho") {
       // "Hecho" es la columna is_done DEL CARRIL de la tarjeta, no un estado
@@ -916,7 +1014,9 @@ async function escribirEdicion(
       const final = columnaFinalDe(ctx.columnas, pieza.column_id);
       if (!final.ok) return final;
       const { error } = await admin.from("content_pieces").update({ column_id: final.columna.id }).eq("id", pieza.id);
-      return { ok: !error };
+      if (error) return { ok: false };
+      await avisarAlDueno(admin, ctx, pieza, "la dio por terminada");
+      return { ok: true };
     }
     // Reprogramar toca la fecha que originó el aviso, no las dos: el campo
     // viene del ítem, no de lo que el modelo haya querido elegir.
@@ -925,14 +1025,15 @@ async function escribirEdicion(
       .from("content_pieces")
       .update(item.ref.campo === "publish_date" ? { publish_date: accion.fecha } : { record_date: accion.fecha })
       .eq("id", pieza.id);
-    return { ok: !error };
+    if (error) return { ok: false };
+    await avisarAlDueno(admin, ctx, pieza, `la pasó para el ${accion.fecha}`);
+    return { ok: true };
   }
 
   const { data: evento } = await admin
     .from("calendar_events")
     .select("id")
     .eq("id", item.ref.eventId)
-    .eq("responsible_id", ctx.profileId)
     .maybeSingle();
   if (!evento) return { ok: false };
 

@@ -199,7 +199,11 @@ function describirEncontradas(items: ItemDelTablero[], desde: number, hoyCR: str
   const lineas = items.map((item, i) => {
     const base = lineaDeItem(item, desde + i, hoyCR);
     const donde = item.fecha && item.columna ? ` — en ${item.columna}` : "";
-    const quien = item.responsable ? ` — la tiene ${item.responsable}` : " — sin responsable";
+    const quien = !item.ajena
+      ? " — es suya"
+      : item.responsable
+        ? ` — la tiene ${item.responsable}`
+        : " — sin responsable";
     return `${base}${donde}${quien}`;
   });
 
@@ -372,7 +376,10 @@ export type RespuestaAgente = { respuesta: string; accion: AccionAgente };
  * Devuelve null para las acciones que no tocan el tablero: no hay nada que
  * contar, y una línea de más en cada respuesta es ruido que se deja de leer.
  */
-export function describirLoHecho(accion: AccionAgente, items: AgendaItem[]): string | null {
+export function describirLoHecho(
+  accion: AccionAgente,
+  items: (AgendaItem & { responsable?: string | null; ajena?: boolean })[]
+): string | null {
   if (accion.tipo !== "mover_pieza" && accion.tipo !== "marcar_hecho" && accion.tipo !== "reprogramar") {
     return null;
   }
@@ -380,12 +387,16 @@ export function describirLoHecho(accion: AccionAgente, items: AgendaItem[]): str
   if (!item) return null;
   const titulo = item.titulo;
   const heroe = item.heroe ? ` — ${item.heroe}` : "";
+  // Si la tarjeta era de otro, se dice que ya le avisamos. Cierra el círculo de
+  // haber abierto los permisos: quien la movió sabe que el dueño se enteró, y no
+  // tiene que ir a contárselo aparte ni quedarse con la duda.
+  const avisado = item.ajena && item.responsable ? ` Ya le avisé a ${item.responsable}.` : "";
 
-  if (accion.tipo === "mover_pieza") return `Listo, moví ${titulo} a ${accion.columna}.`;
+  if (accion.tipo === "mover_pieza") return `Listo, moví ${titulo} a ${accion.columna}.${avisado}`;
   // Cerrar se nombra con el Hero: es la única de las tres que saca la tarjeta de
   // la vista, así que este mensaje es la última oportunidad de cazar el error.
-  if (accion.tipo === "marcar_hecho") return `Listo, cerré ${titulo}${heroe}.`;
-  return `Listo, ${titulo} queda para el ${accion.fecha}.`;
+  if (accion.tipo === "marcar_hecho") return `Listo, cerré ${titulo}${heroe}.${avisado}`;
+  return `Listo, ${titulo} queda para el ${accion.fecha}.${avisado}`;
 }
 
 /**
@@ -550,6 +561,10 @@ SU AGENDA llega ${agenda.ventana.diasVencidas} días para atrás y ${agenda.vent
 TARJETAS no tiene esa ventana: son las del tablero entero que calzan con lo que
 te preguntó, de cualquier fecha y de cualquiera del equipo. Úsalas para contestar
 —en qué columna está algo, qué le queda a un Hero, quién lo tiene—.
+
+Sobre esas tarjetas también podés ACTUAR: moverlas, reprogramarlas o darlas por
+terminadas, aunque sean de otra persona del equipo. Se le avisa al dueño solo,
+así que no hace falta que se lo aclares ni que le pidas permiso.
 
 Ese bloque se arma con lo que menciona su mensaje, así que puede no traer todo lo
 que existe: si te pide una lista completa de algo que no calza con lo que ves,

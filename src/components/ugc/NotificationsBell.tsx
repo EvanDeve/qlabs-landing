@@ -58,6 +58,19 @@ function describe(notification: Notification): { text: string; href: string } {
     };
   }
 
+  // Alguien del equipo le tocó una tarjeta suya desde el chat de McLovin. El
+  // texto dice QUIÉN y QUÉ, que es lo único que hace falta para reaccionar: si
+  // estuvo mal, se abre la tarjeta desde acá.
+  if (notification.type === "pieza_tocada") {
+    const quien = String(payload.quien ?? "Alguien del equipo");
+    const que = String(payload.que ?? "la tocó");
+    const titulo = String(payload.title ?? "una tarjeta tuya");
+    return {
+      text: `${quien} ${que}: ${titulo}`,
+      href: `/ugc/admin/pipeline/${payload.piece_id}`,
+    };
+  }
+
   if (notification.type === "verification_pending") {
     const name = String(payload.subject_name ?? "Alguien");
     const roleLabel = payload.subject_role === "brand" ? "marca" : "creador";

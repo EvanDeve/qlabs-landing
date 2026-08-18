@@ -50,9 +50,14 @@ function describirAccion(kind: string, payload: Record<string, unknown>): string
   const accion = (payload.accion ?? {}) as Record<string, unknown>;
   const titulo = typeof payload.titulo === "string" ? `"${payload.titulo}"` : "un pendiente";
 
-  if (kind === "mover_pieza") return `Mover ${titulo} a ${accion.columna ?? "otra columna"}`;
-  if (kind === "marcar_hecho") return `Marcar ${titulo} como hecho`;
-  if (kind === "reprogramar") return `Reprogramar ${titulo} para el ${accion.fecha ?? "?"}`;
+  // De quién era la tarjeta, si no era de quien lo pidió. Desde que cualquiera
+  // puede tocar cualquier cosa, "quién lo pidió" dejó de contar la historia
+  // entera: lo que hay que poder auditar es sobre el trabajo de quién cayó.
+  const dueno = typeof payload.dueno === "string" ? ` · era de ${payload.dueno}` : "";
+
+  if (kind === "mover_pieza") return `Mover ${titulo} a ${accion.columna ?? "otra columna"}${dueno}`;
+  if (kind === "marcar_hecho") return `Marcar ${titulo} como hecho${dueno}`;
+  if (kind === "reprogramar") return `Reprogramar ${titulo} para el ${accion.fecha ?? "?"}${dueno}`;
   return kind;
 }
 
