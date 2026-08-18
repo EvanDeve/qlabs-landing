@@ -78,7 +78,10 @@ export type WaActionKind =
   // al calendario. Las filas viejas conservan 'crear_pieza' aunque hayan sido
   // grabaciones — ver 20260802400000.
   | "crear_pieza"
-  | "crear_evento";
+  | "crear_evento"
+  // Cambiarle los campos a una tarjeta que ya existe: prioridad, plataforma,
+  // hora, dueño, título, aprobación, apuntes. Ver 20260818160000.
+  | "editar_pieza";
 export type WaActionStatus =
   | "propuesta"
   | "ejecutada"

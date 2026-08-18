@@ -17,6 +17,7 @@ import {
   type AccionAgente,
   type PropuestaPieza,
   type PropuestaEvento,
+  type CambiosDePieza,
   type TurnoPrevio,
 } from "@/lib/ugc/agente";
 import {
@@ -233,7 +234,7 @@ async function atenderEntrante(
     .reverse()
     .map((m) => ({ quien: m.direction === "in" ? "persona" : "agente", texto: m.body }));
 
-  const { respuesta, accion } = await responderMensaje({
+  const { respuesta, acciones } = await responderMensaje({
     nombre: perfil?.display_name ?? "colega",
     agenda,
     columnas: columnas ?? [],
@@ -254,21 +255,28 @@ async function atenderEntrante(
     ajustes,
   });
 
-  const resultado = await aplicarAccion(admin, {
-    profileId: miembro.profile_id,
-    nombre: perfil?.display_name ?? "alguien del equipo",
-    accion,
-    items,
-    heroesArchivados: new Set((clientes ?? []).filter((c) => c.archived).map((c) => c.id)),
-    columnas: columnas ?? [],
-    clientes: (clientes ?? []).filter((c) => !c.archived),
-    equipo: nombresDelEquipo,
-    propuesta,
-  });
+  // En serie y en el orden que las dijo: dos escrituras sobre la misma tarjeta
+  // en paralelo se pisarían, y el orden es el que la persona tiene en la cabeza
+  // cuando lee lo que se hizo.
+  const hechas: { accion: AccionAgente; resultado: ResultadoAccion }[] = [];
+  for (const accion of acciones) {
+    const resultado = await aplicarAccion(admin, {
+      profileId: miembro.profile_id,
+      nombre: perfil?.display_name ?? "alguien del equipo",
+      accion,
+      items,
+      heroesArchivados: new Set((clientes ?? []).filter((c) => c.archived).map((c) => c.id)),
+      columnas: columnas ?? [],
+      clientes: (clientes ?? []).filter((c) => !c.archived),
+      equipo: nombresDelEquipo,
+      propuesta,
+    });
+    hechas.push({ accion, resultado });
+  }
 
   // Estamos dentro de la ventana de 24 h por definición —acaban de escribir—
   // así que acá el agente habla libre, sin plantilla.
-  await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, accion, resultado, items));
+  await responder(admin, miembro.profile_id, telefono, redactarSalida(respuesta, hechas, items));
 }
 
 /**
@@ -696,6 +704,7 @@ async function aplicarAccion(admin: Admin, ctx: Contexto): Promise<ResultadoAcci
     if (accion.tipo === "proponer_pieza") return await abrirPropuesta(admin, ctx, accion.pieza);
     if (accion.tipo === "proponer_evento") return await abrirPropuestaDeEvento(admin, ctx, accion.evento);
     if (accion.tipo === "cancelar_evento") return await cancelarEvento(admin, ctx, accion.item);
+    if (accion.tipo === "editar_pieza") return await cambiarCampos(admin, ctx, accion.item, accion.cambios);
     if (accion.tipo === "descartar") return { aplicada: await cerrarPropuesta(admin, ctx, "descartada") };
     if (accion.tipo === "confirmar") return { aplicada: await ejecutarConfirmado(admin, ctx) };
     return await editarItem(admin, ctx, accion);
@@ -1029,11 +1038,94 @@ async function marcarPropuestaFallida(admin: Admin, propuestaId: string, mensaje
   return false;
 }
 
+/**
+ * Cambia los campos de una tarjeta: prioridad, plataforma, hora, dueño, título,
+ * aprobación y apuntes.
+ *
+ * Los apuntes se AGREGAN a lo que había. Es el único campo que se comporta así y
+ * la razón es que se dicta de a poco —"anotale que el chef pidió grabar en la
+ * cocina nueva"— sin saber qué hay escrito del otro lado. Pisarlos sería borrar
+ * lo que alguien anotó ayer sin que ninguno de los dos se entere.
+ */
+async function cambiarCampos(
+  admin: Admin,
+  ctx: Contexto,
+  indice: number,
+  cambios: CambiosDePieza
+): Promise<ResultadoAccion> {
+  const item = ctx.items[indice - 1];
+  if (!item) return { aplicada: false };
+
+  if (item.ref.kind !== "piece") {
+    return {
+      aplicada: false,
+      nota: "Eso es un evento del calendario y no tiene esos campos. Se edita desde el calendario de Q·OS.",
+    };
+  }
+
+  const { data: pieza } = await admin
+    .from("content_pieces")
+    .select("id, owner_id, brand_id, title, notes")
+    .eq("id", item.ref.pieceId)
+    .maybeSingle();
+  if (!pieza) return { aplicada: false };
+
+  if (pieza.brand_id && ctx.heroesArchivados.has(pieza.brand_id)) {
+    return { aplicada: false, nota: "Esa es de un Hero archivado, así que no le toco nada." };
+  }
+
+  const responsableId = cambios.responsable
+    ? ctx.equipo.find((m) => m.nombre === cambios.responsable)?.id
+    : undefined;
+
+  const { error } = await admin
+    .from("content_pieces")
+    .update({
+      ...(cambios.titulo ? { title: cambios.titulo } : {}),
+      ...(cambios.prioridad ? { priority: cambios.prioridad } : {}),
+      ...(cambios.plataforma ? { platform: cambios.plataforma } : {}),
+      ...(cambios.aprobacion ? { approval: cambios.aprobacion } : {}),
+      ...(cambios.hora ? { publish_time: `${cambios.hora}:00` } : {}),
+      ...(responsableId ? { owner_id: responsableId } : {}),
+      ...(cambios.notas
+        ? { notes: pieza.notes?.trim() ? `${pieza.notes.trim()}\n${cambios.notas}` : cambios.notas }
+        : {}),
+    })
+    .eq("id", pieza.id);
+
+  await registrar(
+    admin,
+    ctx.profileId,
+    "editar_pieza",
+    { cambios, titulo: pieza.title, ...(item.responsable ? { dueno: item.responsable } : {}) },
+    error ? "fallida" : "ejecutada",
+    error ? { error: error.message } : { targetTable: "content_pieces", targetId: pieza.id }
+  );
+
+  if (error) return { aplicada: false };
+
+  // Reasignar es lo único de acá que le cambia el trabajo a otra persona: la
+  // tarjeta le aparece en SU agenda. Los demás campos le avisan al dueño de
+  // siempre, que es quien la tiene que producir.
+  const destinatario = responsableId ?? pieza.owner_id;
+  await avisarAlDueno(
+    admin,
+    ctx,
+    { id: pieza.id, owner_id: destinatario, title: pieza.title },
+    responsableId ? "te pasó una tarjeta" : "le cambió algo a una tarjeta tuya"
+  );
+
+  return { aplicada: true };
+}
+
 /** Las tres acciones que caen sobre algo que ya existía en la agenda. */
 async function editarItem(
   admin: Admin,
   ctx: Contexto,
-  accion: Exclude<Extract<AccionAgente, { item: number }>, { tipo: "cancelar_evento" }>
+  accion: Exclude<
+    Extract<AccionAgente, { item: number }>,
+    { tipo: "cancelar_evento" } | { tipo: "editar_pieza" }
+  >
 ): Promise<ResultadoAccion> {
   const item = ctx.items[accion.item - 1];
   if (!item) return { aplicada: false };
@@ -1082,9 +1174,11 @@ async function editarItem(
 async function escribirEdicion(
   admin: Admin,
   ctx: Contexto,
-  // Sin cancelar_evento: ese tiene su propia función porque no pasa por la
-  // revalidación de tarjeta, solo cambia el estado de un evento.
-  accion: Exclude<Extract<AccionAgente, { item: number }>, { tipo: "cancelar_evento" }>,
+  // Sin cancelar_evento ni editar_pieza: los dos tienen su propia función.
+  accion: Exclude<
+    Extract<AccionAgente, { item: number }>,
+    { tipo: "cancelar_evento" } | { tipo: "editar_pieza" }
+  >,
   item: AgendaItem
 ): Promise<ResultadoEdicion> {
   if (item.ref.kind === "piece") {
@@ -1180,42 +1274,48 @@ async function escribirEdicion(
  */
 function redactarSalida(
   respuesta: string,
+  hechas: { accion: AccionAgente; resultado: ResultadoAccion }[],
+  items: (AgendaItem & { responsable?: string | null; ajena?: boolean })[]
+): string {
+  const lineas = hechas.map(({ accion, resultado }) => lineaDeAccion(accion, resultado, items)).filter(Boolean);
+  return [respuesta, ...lineas].join("\n\n");
+}
+
+/**
+ * La línea de UNA acción: qué se hizo, o por qué no se pudo.
+ *
+ * Cada acción trae la suya, así que un mensaje con tres pedidos donde falló el
+ * segundo se lee como tres renglones y uno dice qué pasó. Un "listo" general
+ * cuando algo falló es la peor salida posible: la persona se va creyendo que su
+ * tablero quedó como pidió.
+ */
+function lineaDeAccion(
   accion: AccionAgente,
   resultado: ResultadoAccion,
-  items: AgendaItem[]
+  items: (AgendaItem & { responsable?: string | null; ajena?: boolean })[]
 ): string {
   const { aplicada, nota } = resultado;
 
-  // Cuando algo NO se pudo hacer, la explicación va SOLA: la prosa del modelo se
-  // escribió antes de ejecutar, dando por hecho que iba a salir bien, así que
-  // pegarle la explicación abajo produce el mensaje contradictorio que Evan leyó
-  // el 2026-08-18 — "Ya cierro la de Prueba entrecote" y justo debajo "No pude
-  // cerrarla". De las dos frases, la única que sabe lo que de verdad pasó es
-  // ésta. Las notas están escritas como mensajes completos, en su voz.
-  if (nota) return aplicada ? `${respuesta}\n\n${nota}` : nota;
+  // Cuando algo NO se pudo hacer, la explicación va sola: la prosa del modelo se
+  // escribió antes de ejecutar, dando por hecho que iba a salir bien. Pegarle la
+  // explicación abajo produce el mensaje que se contradice — "ya cierro la de X"
+  // y justo debajo "no pude cerrarla".
+  if (nota) return nota;
 
   if (accion.tipo === "proponer_pieza") {
     return aplicada
-      ? `${respuesta}\n\n${describirPropuesta(accion.pieza, diaCR(new Date()))}`
-      : `${respuesta}\n\nNo me quedó anotado, mejor cargalo desde Q·OS.`;
+      ? describirPropuesta(accion.pieza, diaCR(new Date()))
+      : "No me quedó anotado, mejor cargalo desde Q·OS.";
   }
   if (accion.tipo === "proponer_evento") {
     // La línea del evento la arma el sistema por lo mismo que la de la pieza: es
-    // lo único que garantiza que la hora que la persona lee sea la que se va a
-    // guardar. Si el modelo escribiera "el martes" de su lado, el "dale" no
-    // estaría confirmando nada.
+    // lo único que garantiza que la hora que la persona lee sea la que se guarda.
     return aplicada
-      ? `${respuesta}\n\n${describirEvento(accion.evento, diaCR(new Date()))}`
-      : `${respuesta}\n\nNo me quedó anotado, mejor cargalo desde el calendario.`;
+      ? describirEvento(accion.evento, diaCR(new Date()))
+      : "No me quedó anotado, mejor cargalo desde el calendario.";
   }
-  if (aplicada) {
-    // Sin paréntesis: esta línea es parte del mensaje, no una nota al pie. El
-    // modelo tiene prohibido contar lo que hizo, así que no se pisan.
-    const hecho = describirLoHecho(accion, items);
-    return hecho ? `${respuesta}\n\n${hecho}` : respuesta;
-  }
-  if (accion.tipo === "confirmar") return `${respuesta}\n\nOjo, no pude crearla — cargala vos desde Q·OS.`;
-  if (accion.tipo === "descartar") return respuesta;
-  if (accion.tipo === "ninguna") return respuesta;
-  return `${respuesta}\n\nOjo, no pude tocar el tablero — hacelo vos desde Q·OS.`;
+  if (aplicada) return describirLoHecho(accion, items) ?? "";
+  if (accion.tipo === "confirmar") return "Ojo, no pude crearla — cargala vos desde Q·OS.";
+  if (accion.tipo === "descartar" || accion.tipo === "ninguna") return "";
+  return "Ojo, no pude tocar el tablero — hacelo vos desde Q·OS.";
 }

@@ -3,6 +3,8 @@ import { createHmac } from "node:crypto";
 import { firmaValida } from "@/lib/whatsapp/firma";
 import {
   validarAccion,
+  validarAcciones,
+  MAX_ACCIONES,
   resolverNombre,
   describirPropuesta,
   describirEvento,
@@ -428,6 +430,118 @@ describe("describirEvento", () => {
 
   it("dice que es interna cuando no tiene Hero", () => {
     expect(describirEvento({ ...base, cliente: null }, "2026-08-01")).toContain("interna");
+  });
+});
+
+describe("validarAccion — editar los campos de una tarjeta", () => {
+  it("acepta varios campos a la vez y normaliza el responsable", () => {
+    const accion = validarAccion(
+      { tipo: "editar_pieza", item: 1, cambios: { prioridad: "alta", responsable: "daniel" } },
+      ctx()
+    );
+    expect(accion).toEqual({
+      tipo: "editar_pieza",
+      item: 1,
+      cambios: { prioridad: "alta", responsable: "Daniel" },
+    });
+  });
+
+  // Que un campo mal escrito arrastre a los que venían bien es castigar lo que
+  // sí se entendió: la persona pidió dos cosas y una era válida.
+  it("descarta el campo inválido y deja entrar los buenos", () => {
+    const accion = validarAccion(
+      { tipo: "editar_pieza", item: 1, cambios: { prioridad: "urgentísima", plataforma: "tiktok" } },
+      ctx()
+    );
+    expect(accion).toEqual({ tipo: "editar_pieza", item: 1, cambios: { plataforma: "tiktok" } });
+  });
+
+  // Reasignar a la persona equivocada es peor que no reasignar: el que la pidió
+  // cree que quedó hecho y el que la recibió no se enteró.
+  it("descarta un responsable que no está en el equipo", () => {
+    const accion = validarAccion(
+      { tipo: "editar_pieza", item: 1, cambios: { responsable: "Fernando", prioridad: "baja" } },
+      ctx()
+    );
+    expect(accion).toEqual({ tipo: "editar_pieza", item: 1, cambios: { prioridad: "baja" } });
+  });
+
+  // Un update sin campos le diría a la persona que se cambió algo que no cambió.
+  it("sin ningún campo válido no hay acción", () => {
+    for (const cambios of [{}, { prioridad: "altísima" }, { hora: "3pm" }, null, "alta"]) {
+      expect(validarAccion({ tipo: "editar_pieza", item: 1, cambios }, ctx())).toEqual({ tipo: "ninguna" });
+    }
+  });
+
+  it("no acepta un título de dos letras: es como se nombra la tarjeta después", () => {
+    expect(validarAccion({ tipo: "editar_pieza", item: 1, cambios: { titulo: "ab" } }, ctx())).toEqual({
+      tipo: "ninguna",
+    });
+  });
+});
+
+// Nadie escribe una cosa por mensaje. Antes se ejecutaba la primera y las otras
+// se perdían en silencio — peor que fallar, porque el mensaje contestaba que sí.
+describe("validarAcciones — varias cosas en un mensaje", () => {
+  const mover = { tipo: "mover_pieza", item: 1, columna: "Publicado" };
+  const cerrar = { tipo: "marcar_hecho", item: 2 };
+  const fechar = { tipo: "reprogramar", item: 3, fecha: "2026-08-15" };
+
+  it("acepta una acción suelta, que es lo que el modelo devuelve casi siempre", () => {
+    expect(validarAcciones(mover, ctx())).toEqual([mover]);
+  });
+
+  it("acepta la lista y conserva el orden en que las dijo", () => {
+    expect(validarAcciones([mover, cerrar, fechar], ctx())).toEqual([mover, cerrar, fechar]);
+  });
+
+  it("las inválidas se caen una por una, sin arrastrar a las buenas", () => {
+    const acciones = validarAcciones(
+      [mover, { tipo: "mover_pieza", item: 99, columna: "Publicado" }, cerrar],
+      ctx()
+    );
+    expect(acciones).toEqual([mover, cerrar]);
+  });
+
+  // "pasá TODO lo de Por editar a revisión" son once tarjetas movidas de un
+  // tirón. Con tope se hacen las primeras y la persona decide el resto.
+  it("corta en el tope, por más que pida diez cosas", () => {
+    const muchas = Array.from({ length: 10 }, (_, i) => ({
+      tipo: "mover_pieza",
+      item: (i % 3) + 1,
+      columna: "Publicado",
+    }));
+    expect(validarAcciones(muchas, ctx()).length).toBeLessThanOrEqual(MAX_ACCIONES);
+  });
+
+  // El índice único de wa_agent_actions solo admite una propuesta viva, y dos
+  // "¿va así?" en el mismo mensaje dejan un "dale" que no se sabe a cuál contesta.
+  it("deja pasar una sola propuesta por mensaje", () => {
+    const pieza = { titulo: "Reel de brunch", cliente: "Zonna", fecha: "2026-08-06" };
+    const evento = {
+      titulo: "Reunión de arranque",
+      tipo: "reunion",
+      cliente: null,
+      fecha: "2026-08-06",
+      hora: null,
+      responsable: null,
+    };
+    const acciones = validarAcciones(
+      [{ tipo: "proponer_pieza", pieza }, { tipo: "proponer_evento", evento }, mover],
+      ctx()
+    );
+    expect(acciones.filter((a) => a.tipo.startsWith("proponer_"))).toHaveLength(1);
+    expect(acciones).toContainEqual(mover);
+  });
+
+  it("no repite la misma acción sobre el mismo ítem", () => {
+    expect(validarAcciones([mover, mover, cerrar], ctx())).toEqual([mover, cerrar]);
+  });
+
+  it("un mensaje sin acciones devuelve la lista vacía", () => {
+    expect(validarAcciones({ tipo: "ninguna" }, ctx())).toEqual([]);
+    expect(validarAcciones(null, ctx())).toEqual([]);
+    expect(validarAcciones([], ctx())).toEqual([]);
   });
 });
 

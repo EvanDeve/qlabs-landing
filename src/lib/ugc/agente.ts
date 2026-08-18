@@ -1,6 +1,12 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, CalendarEventType } from "@/lib/database.types";
+import type {
+  Database,
+  CalendarEventType,
+  ContentPriority,
+  ContentPlatform,
+  ContentApproval,
+} from "@/lib/database.types";
 import { COSTA_RICA_TZ, diaCR, sumarDias } from "@/lib/ugc/calendar";
 import type { ColumnaDelTablero } from "@/lib/ugc/tablero";
 import type { ItemDelTablero } from "@/lib/ugc/busqueda";
@@ -383,11 +389,38 @@ export const HORA_POR_DEFECTO = "09:00";
  * escritura la desbloquea un `confirmar` en un turno posterior, y usa los datos
  * guardados en wa_agent_actions, no los que el modelo repita.
  */
+/**
+ * Lo que se puede cambiar de una tarjeta que ya existe.
+ *
+ * Es UNA acción con campos opcionales y no siete acciones distintas, por dos
+ * razones. Para el modelo, elegir entre "cambiar_prioridad", "cambiar_dueño" y
+ * cinco más es una decisión de más en cada mensaje; nombrar el campo dentro de
+ * una sola acción es lo que ya sabe hacer. Y para nosotros, "ponele alta y
+ * pasásela a Daniel" es un solo cambio sobre la misma tarjeta.
+ *
+ * Todo campo que no venga se deja como está. Lo que no se puede hacer desde acá
+ * es dejar una tarjeta SIN dueño: quitar un responsable no es algo que se pida
+ * por chat, y un `null` mal leído lo haría solo.
+ */
+export type CambiosDePieza = {
+  titulo?: string;
+  prioridad?: ContentPriority;
+  plataforma?: ContentPlatform;
+  /** HH:mm de Costa Rica. La hora a la que sale, aparte del día. */
+  hora?: string;
+  /** Nombre de alguien del equipo. */
+  responsable?: string;
+  aprobacion?: ContentApproval;
+  /** Se AGREGA a lo que ya había escrito, nunca lo reemplaza. */
+  notas?: string;
+};
+
 export type AccionAgente =
   | { tipo: "ninguna" }
   | { tipo: "mover_pieza"; item: number; columna: string }
   | { tipo: "marcar_hecho"; item: number }
   | { tipo: "reprogramar"; item: number; fecha: string }
+  | { tipo: "editar_pieza"; item: number; cambios: CambiosDePieza }
   | { tipo: "proponer_pieza"; pieza: PropuestaPieza }
   | { tipo: "proponer_evento"; evento: PropuestaEvento }
   /** Suspender un evento del calendario. Solo eventos: una tarjeta no se cancela. */
@@ -395,7 +428,21 @@ export type AccionAgente =
   | { tipo: "confirmar" }
   | { tipo: "descartar" };
 
-export type RespuestaAgente = { respuesta: string; accion: AccionAgente };
+export type RespuestaAgente = { respuesta: string; acciones: AccionAgente[] };
+
+/**
+ * Cuántas cosas se pueden pedir en un mensaje.
+ *
+ * Nadie escribe una cosa por mensaje: escribe "mové el de Zonna a revisión, el
+ * de Kosta pasalo al viernes y dale por hecho el de Snowty". Hasta hoy el prompt
+ * pedía UNA acción y las otras dos se perdían en silencio — peor que fallar,
+ * porque el mensaje contestaba que sí.
+ *
+ * El tope existe para el caso opuesto: "pasá todo lo de Por editar a revisión"
+ * son once tarjetas movidas de un tirón y sin confirmación. Con tope, se hacen
+ * las primeras y se dice cuántas quedaron — y la persona decide.
+ */
+export const MAX_ACCIONES = 4;
 
 /**
  * Lo que se tocó, dicho con el dato del sistema y no con la prosa del modelo.
@@ -418,7 +465,12 @@ export function describirLoHecho(
   accion: AccionAgente,
   items: (AgendaItem & { responsable?: string | null; ajena?: boolean })[]
 ): string | null {
-  if (accion.tipo !== "mover_pieza" && accion.tipo !== "marcar_hecho" && accion.tipo !== "reprogramar") {
+  if (
+    accion.tipo !== "mover_pieza" &&
+    accion.tipo !== "marcar_hecho" &&
+    accion.tipo !== "reprogramar" &&
+    accion.tipo !== "editar_pieza"
+  ) {
     return null;
   }
   const item = items[accion.item - 1];
@@ -430,11 +482,32 @@ export function describirLoHecho(
   // tiene que ir a contárselo aparte ni quedarse con la duda.
   const avisado = item.ajena && item.responsable ? ` Ya le avisé a ${item.responsable}.` : "";
 
+  if (accion.tipo === "editar_pieza") return `Listo, en ${titulo}: ${describirCambios(accion.cambios)}.${avisado}`;
   if (accion.tipo === "mover_pieza") return `Listo, moví ${titulo} a ${accion.columna}.${avisado}`;
   // Cerrar se nombra con el Hero: es la única de las tres que saca la tarjeta de
   // la vista, así que este mensaje es la última oportunidad de cazar el error.
   if (accion.tipo === "marcar_hecho") return `Listo, cerré ${titulo}${heroe}.${avisado}`;
   return `Listo, ${titulo} queda para el ${accion.fecha}.${avisado}`;
+}
+
+/**
+ * Qué se cambió, en palabras.
+ *
+ * Sale de los campos que de verdad entraron a la base y no de los que el modelo
+ * dijo que iba a tocar: si escribió mal un nombre y ese campo se descartó, acá
+ * no aparece. Es lo que hace que "se la pasé a Daniel" solo se lea cuando de
+ * verdad quedó a nombre de Daniel.
+ */
+function describirCambios(cambios: CambiosDePieza): string {
+  const partes: string[] = [];
+  if (cambios.titulo) partes.push(`ahora se llama ${cambios.titulo}`);
+  if (cambios.prioridad) partes.push(`prioridad ${cambios.prioridad}`);
+  if (cambios.plataforma) partes.push(cambios.plataforma);
+  if (cambios.hora) partes.push(`sale ${cambios.hora}`);
+  if (cambios.responsable) partes.push(`se la pasé a ${cambios.responsable}`);
+  if (cambios.aprobacion) partes.push(cambios.aprobacion);
+  if (cambios.notas) partes.push("le agregué los apuntes");
+  return partes.join(", ");
 }
 
 /**
@@ -588,9 +661,16 @@ EL EQUIPO: ${equipo.length ? equipo.join(", ") : "(nadie cargado)"}
 ${conversacion ? `LO QUE SE DIJERON ANTES:\n${conversacion}\n` : ""}${bloquePendiente ? `${bloquePendiente}\n\n` : ""}MENSAJE NUEVO DE ${nombre.toUpperCase()}: ${mensaje}
 
 Contestale. Si de lo que dice se desprende que hay que tocar el tablero o el
-calendario, elegí UNA acción; si no, "ninguna". Nunca inventes un número de
+calendario, elegí la acción; si no, "ninguna". Nunca inventes un número de
 pendiente que no esté arriba. Si no estás seguro de a cuál se refiere, no
 ejecutes nada y preguntale.
+
+Si en UN mensaje te pide varias cosas —"mové el de Zonna a revisión, el de Kosta
+pasalo al viernes y el de Snowty ya está publicado"— mandalas todas en "acciones",
+en el orden en que las dijo. Casi siempre es una sola; no partas un pedido en
+varias acciones para que parezca más. Como mucho entran ${MAX_ACCIONES}: si te
+pide algo masivo —"pasá TODO lo de Por editar a revisión"— no lo hagas, decile
+cuántas son y pedile que te diga cuáles.
 
 Lo que te salió mal antes en esta conversación puede andar ahora: el tablero lo
 tocan varias personas y su configuración cambia durante el día. NUNCA te niegues
@@ -641,6 +721,11 @@ es de ningún Hero— y si te dicen uno tiene que ser de la lista. La "hora" va 
 quien te está escribiendo; si el nombre que te dicen no está en la lista,
 preguntá en vez de elegir vos.
 
+Para cambiarle CAMPOS a una tarjeta que ya existe —prioridad, plataforma, hora de
+publicación, dueño, título, aprobación o apuntes— usá "editar_pieza" con solo los
+campos que te pidieron. Los apuntes se AGREGAN a los que ya tenía, así que
+mandá solo lo nuevo. Para el dueño escribí un nombre de la lista del equipo.
+
 Para SUSPENDER un evento —"cancelá la reunión del martes", "esa grabación no va"—
 mandá "cancelar_evento" con su número. Solo sirve para eventos del calendario;
 una tarjeta del tablero no se cancela, se mueve o se da por terminada.
@@ -663,12 +748,13 @@ la lista de arriba, escrito igual; si no te dijo cuál, preguntale en vez de
 elegir vos.
 
 Devolvé JSON exacto:
-{"respuesta": "lo que le escribís", "accion": {"tipo": "ninguna"}}
-Formas válidas de accion:
+{"respuesta": "lo que le escribís", "acciones": [{"tipo": "ninguna"}]}
+Formas válidas de cada acción:
   {"tipo":"ninguna"}
   {"tipo":"mover_pieza","item":N,"columna":"nombre exacto de una columna"}
   {"tipo":"marcar_hecho","item":N}
   {"tipo":"reprogramar","item":N,"fecha":"YYYY-MM-DD"}
+  {"tipo":"editar_pieza","item":N,"cambios":{"prioridad":"alta"|"media"|"baja","plataforma":"instagram"|"tiktok"|"reels","hora":"HH:mm","responsable":"nombre del equipo","aprobacion":"pendiente"|"correccion"|"revisado","titulo":"...","notas":"..."}}
   {"tipo":"proponer_pieza","pieza":{"titulo":"...","cliente":"nombre exacto","fecha":"YYYY-MM-DD"}}
   {"tipo":"proponer_evento","evento":{"titulo":"...","tipo":"grabacion"|"reunion"|"entrega"|"publicacion"|"guion","cliente":"nombre exacto"|null,"fecha":"YYYY-MM-DD","hora":"HH:mm"|null,"responsable":"nombre del equipo"|null}}
   {"tipo":"cancelar_evento","item":N}
@@ -678,15 +764,17 @@ Formas válidas de accion:
   );
 
   const respaldo = "Perdón, se me trabó algo de este lado. ¿Me lo repetís?";
-  if (!crudo) return { respuesta: respaldo, accion: { tipo: "ninguna" } };
+  if (!crudo) return { respuesta: respaldo, acciones: [] };
 
   try {
-    const parseado = JSON.parse(crudo) as Partial<RespuestaAgente>;
+    const parseado = JSON.parse(crudo) as { respuesta?: unknown; accion?: unknown; acciones?: unknown };
     const respuesta =
       typeof parseado.respuesta === "string" && parseado.respuesta.trim() ? parseado.respuesta.trim() : respaldo;
     return {
       respuesta,
-      accion: validarAccion(parseado.accion, {
+      // `accion` en singular sigue aceptándose: es lo que devuelve el modelo la
+      // mayoría de las veces, porque la mayoría de los mensajes piden una cosa.
+      acciones: validarAcciones(parseado.acciones ?? parseado.accion, {
         cantidadItems: items.length,
         // Solo los nombres: acá se valida que la columna EXISTA en algún lado.
         // Cuál de las repetidas es —y si es del carril correcto— lo decide
@@ -701,7 +789,7 @@ Formas válidas de accion:
     };
   } catch {
     console.error("[agente] respuesta del modelo no era JSON:", crudo.slice(0, 200));
-    return { respuesta: respaldo, accion: { tipo: "ninguna" } };
+    return { respuesta: respaldo, acciones: [] };
   }
 }
 
@@ -788,6 +876,48 @@ const DIAS_PASADO_MAX = 7;
 const FORMATO_DIA = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
+ * Las acciones de un mensaje, validadas y acotadas.
+ *
+ * Acepta tanto una acción suelta como una lista: el modelo devuelve lo uno o lo
+ * otro según cómo entienda el pedido, y obligarlo a envolver siempre en un array
+ * agrega una forma más que puede equivocar.
+ *
+ * Tres reglas al recortar:
+ *   - Las inválidas se caen una por una. Que "movelo a Inventada" arrastre al
+ *     "y cerrá el otro" que venía en el mismo mensaje sería castigar lo que sí
+ *     estaba bien.
+ *   - Una sola propuesta por mensaje: el índice único de wa_agent_actions solo
+ *     admite una viva por persona, y dos "¿va así?" en el mismo mensaje dejan un
+ *     "dale" que no se sabe a cuál contesta.
+ *   - Nunca dos veces sobre el mismo ítem con la misma acción.
+ */
+export function validarAcciones(valor: unknown, ctx: ContextoValidacion): AccionAgente[] {
+  const crudas = Array.isArray(valor) ? valor : [valor];
+  const acciones: AccionAgente[] = [];
+  const vistas = new Set<string>();
+  let yaHayPropuesta = false;
+
+  for (const cruda of crudas) {
+    if (acciones.length >= MAX_ACCIONES) break;
+
+    const accion = validarAccion(cruda, ctx);
+    if (accion.tipo === "ninguna") continue;
+
+    const esPropuesta = accion.tipo === "proponer_pieza" || accion.tipo === "proponer_evento";
+    if (esPropuesta && yaHayPropuesta) continue;
+    if (esPropuesta) yaHayPropuesta = true;
+
+    const huella = "item" in accion ? `${accion.tipo}:${accion.item}` : accion.tipo;
+    if (vistas.has(huella)) continue;
+    vistas.add(huella);
+
+    acciones.push(accion);
+  }
+
+  return acciones;
+}
+
+/**
  * Todo lo que no encaje EXACTO se degrada a "ninguna".
  *
  * Un modelo que devuelve algo raro tiene que terminar en que no pasa nada, no
@@ -818,6 +948,13 @@ export function validarAccion(accion: unknown, ctx: ContextoValidacion): AccionA
   // diciéndolo.
   if ((a.tipo === "confirmar" || a.tipo === "descartar") && ctx.hayPendiente) {
     return { tipo: a.tipo };
+  }
+
+  if (a.tipo === "editar_pieza" && itemValido) {
+    const cambios = validarCambios(a.cambios, ctx);
+    // Sin ningún campo válido no hay nada que hacer: escribir un update vacío
+    // sería decirle a la persona que se cambió algo que no se cambió.
+    return cambios ? { tipo: "editar_pieza", item, cambios } : { tipo: "ninguna" };
   }
 
   if (a.tipo === "proponer_pieza") {
@@ -863,6 +1000,51 @@ function validarPropuesta(valor: unknown, ctx: ContextoValidacion): PropuestaPie
 }
 
 const TIPOS_DE_EVENTO: CalendarEventType[] = ["publicacion", "grabacion", "reunion", "entrega", "guion"];
+const PRIORIDADES: ContentPriority[] = ["baja", "media", "alta"];
+const PLATAFORMAS: ContentPlatform[] = ["instagram", "tiktok", "reels"];
+const APROBACIONES: ContentApproval[] = ["pendiente", "correccion", "revisado"];
+
+/**
+ * Los campos de una edición, uno por uno.
+ *
+ * Cada campo se valida solo: si el modelo manda tres y uno viene mal, entran los
+ * otros dos. Se descarta el campo, nunca la acción entera — que alguien pida
+ * "ponele alta y pasásela a Daniel" y no pase NADA porque escribió mal el nombre
+ * es peor que hacer la mitad y decir qué se hizo.
+ *
+ * Devuelve null solo si no quedó ningún campo en pie.
+ */
+function validarCambios(valor: unknown, ctx: ContextoValidacion): CambiosDePieza | null {
+  if (!valor || typeof valor !== "object") return null;
+  const c = valor as Record<string, unknown>;
+  const cambios: CambiosDePieza = {};
+
+  if (typeof c.titulo === "string") {
+    const titulo = c.titulo.trim();
+    // Mismo largo que al crear: el título es cómo se nombra la tarjeta, y uno de
+    // dos letras la vuelve imposible de encontrar después.
+    if (titulo.length >= 3 && titulo.length <= 120) cambios.titulo = titulo;
+  }
+  if (typeof c.prioridad === "string" && PRIORIDADES.includes(c.prioridad as ContentPriority)) {
+    cambios.prioridad = c.prioridad as ContentPriority;
+  }
+  if (typeof c.plataforma === "string" && PLATAFORMAS.includes(c.plataforma as ContentPlatform)) {
+    cambios.plataforma = c.plataforma as ContentPlatform;
+  }
+  if (typeof c.aprobacion === "string" && APROBACIONES.includes(c.aprobacion as ContentApproval)) {
+    cambios.aprobacion = c.aprobacion as ContentApproval;
+  }
+  if (typeof c.hora === "string" && FORMATO_HORA.test(c.hora)) cambios.hora = c.hora;
+  if (typeof c.responsable === "string" && c.responsable.trim()) {
+    const nombre = resolverNombre(c.responsable, ctx.equipo);
+    // Un nombre que no resuelve se descarta como campo: la tarjeta igual recibe
+    // los otros cambios, y reasignarla a la persona equivocada sería peor.
+    if (nombre) cambios.responsable = nombre;
+  }
+  if (typeof c.notas === "string" && c.notas.trim()) cambios.notas = c.notas.trim();
+
+  return Object.keys(cambios).length ? cambios : null;
+}
 
 const FORMATO_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
