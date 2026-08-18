@@ -41,15 +41,21 @@ export default async function HeroesPage() {
     : { data: [] };
 
   // Qué columna significa "publicado" lo dice su bandera is_done, no el nombre.
-  const { data: columns } = await supabase.from("content_columns").select("id, name, is_done");
+  const { data: columns } = await supabase.from("content_columns").select("id, name, is_done, section");
   const columnById = new Map((columns ?? []).map((c) => [c.id, c]));
+  // El expediente de un Hero es su contenido: en qué etapa va su video y cuándo
+  // sale el próximo. Una tarea de IT cargada a su nombre no es una etapa suya —
+  // con ella, la lista podía decir que Entrecote está "En Progreso", que es una
+  // columna del carril de infraestructura.
+  const deVideo = new Set((columns ?? []).filter((c) => c.section === "video").map((c) => c.id));
 
   const latestStageByBrandId = new Map<string, string>();
   const nextPublishByBrandId = new Map<string, string>();
   const activeCountByBrandId = new Map<string, number>();
   for (const piece of contentPieces ?? []) {
-    // Una tarea interna no tiene expediente en el que aparecer.
-    if (!piece.brand_id) continue;
+    // Una tarea interna no tiene expediente en el que aparecer, y una de IT con
+    // Hero tampoco cuenta como contenido suyo.
+    if (!piece.brand_id || !deVideo.has(piece.column_id)) continue;
     if (!columnById.get(piece.column_id)?.is_done) {
       latestStageByBrandId.set(piece.brand_id, piece.column_id);
       activeCountByBrandId.set(piece.brand_id, (activeCountByBrandId.get(piece.brand_id) ?? 0) + 1);

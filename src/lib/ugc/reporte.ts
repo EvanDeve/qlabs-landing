@@ -154,8 +154,13 @@ export async function getReporte(
   // El filtro de archivados se aplica UNA vez, como en el Dashboard: filtrar
   // caso por caso es cómo un número se queda viejo y contradice a los otros.
   const archivados = new Set((clientes ?? []).filter((c) => c.archived).map((c) => c.id));
-  // Sin Hero no hay Hero archivado: una tarea interna se queda en el reporte.
-  const piezas = (piezasCrudas ?? []).filter((p) => !p.brand_id || !archivados.has(p.brand_id));
+  // Y el mismo corte por carril que el Dashboard, porque esto ES el Dashboard
+  // dicho por WhatsApp: si los dos no cuentan lo mismo, un director recibe un
+  // número por chat y ve otro en pantalla. Solo video.
+  const deVideo = new Set((columnas ?? []).filter((c) => c.section === "video").map((c) => c.id));
+  const piezas = (piezasCrudas ?? []).filter(
+    (p) => deVideo.has(p.column_id) && (!p.brand_id || !archivados.has(p.brand_id))
+  );
   const heroes = (clientes ?? []).filter((c) => !c.archived);
   const nombreDeHero = new Map((clientes ?? []).map((c) => [c.id, c.name]));
   const nombreDePersona = new Map(equipo.map((m) => [m.profileId, m.nombre]));
@@ -163,13 +168,6 @@ export async function getReporte(
   // Qué cuenta como publicado lo declara la columna y NUNCA su nombre: el
   // equipo las renombra y estas cuentas tienen que seguir dando lo mismo.
   const terminadas = new Set((columnas ?? []).filter((c) => c.is_done).map((c) => c.id));
-  // "Publicado" es un video que salió al aire, y eso solo pasa en el carril de
-  // video. Los otros dos carriles también tienen columna final —guiones cierra
-  // en "Cronogramas aprobados", IT en "Terminado"— y contarlas acá metería una
-  // tarea de infraestructura terminada dentro de la meta mensual del Hero.
-  const publicadas = new Set(
-    (columnas ?? []).filter((c) => c.is_done && c.section === "video").map((c) => c.id)
-  );
   const deAprobacion = new Set((columnas ?? []).filter((c) => c.is_pending_approval).map((c) => c.id));
   const activas = piezas.filter((p) => !terminadas.has(p.column_id));
   const cronogramaPorHero = new Map((meses ?? []).map((r) => [r.hero_id, r]));
@@ -190,7 +188,7 @@ export async function getReporte(
     const publicados = piezas.filter(
       (p) =>
         p.brand_id === hero.id &&
-        publicadas.has(p.column_id) &&
+        terminadas.has(p.column_id) &&
         p.publish_date &&
         diaCR(p.publish_date).slice(0, 7) === mesCR
     ).length;

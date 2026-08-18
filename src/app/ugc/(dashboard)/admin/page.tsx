@@ -88,20 +88,28 @@ export default async function AdminDashboardPage({
   const archivedHeroIds = new Set(
     (agencyClients ?? []).filter((c) => c.archived).map((c) => c.id)
   );
-  const pieces = (contentPieces ?? []).filter((p) => !p.brand_id || !archivedHeroIds.has(p.brand_id));
   const columns = contentColumns ?? [];
+  /**
+   * El Dashboard es el tablero de VIDEO y nada más.
+   *
+   * El pipeline corre tres carriles —guion, video e IT— y esta pantalla mide uno
+   * solo: meta del mes, ritmo, atrasadas, publicados, carga del equipo. Meter una
+   * tarea de infraestructura o una tarjeta de cronograma ahí adentro no es un
+   * número más grande, es un número que ya no significa lo que dice.
+   *
+   * El corte va acá, en el origen, y no KPI por KPI: son ocho tarjetas, dos
+   * listas y el Pase de servicio saliendo todos de `pieces`, y filtrar caso por
+   * caso es exactamente cómo uno se queda viejo y contradice a los otros.
+   */
+  const videoColumnIds = new Set(columns.filter((c) => c.section === "video").map((c) => c.id));
+  const pieces = (contentPieces ?? []).filter(
+    (p) => videoColumnIds.has(p.column_id) && (!p.brand_id || !archivedHeroIds.has(p.brand_id))
+  );
   // Qué cuenta como publicado y qué como pendiente de aprobación lo declara la
   // columna, NO su nombre: el equipo puede renombrarlas y estas cuentas —de las
   // que salen meta, ritmo y riesgo del Pase de servicio— tienen que seguir
   // dando lo mismo.
   const doneColumnIds = new Set(columns.filter((c) => c.is_done).map((c) => c.id));
-  // Lo que cuenta como PUBLICADO es la columna final del carril de video y solo
-  // esa. Los otros carriles también cierran en una columna is_done, así que sin
-  // este corte una tarea de IT terminada —o un cronograma aprobado— entraría en
-  // los publicados del mes de su Hero.
-  const publishedColumnIds = new Set(
-    columns.filter((c) => c.is_done && c.section === "video").map((c) => c.id)
-  );
   const approvalColumnIds = new Set(
     columns.filter((c) => c.is_pending_approval).map((c) => c.id)
   );
@@ -125,7 +133,7 @@ export default async function AdminDashboardPage({
     pieces.filter(
       (p) =>
         p.brand_id === heroId &&
-        publishedColumnIds.has(p.column_id) &&
+        doneColumnIds.has(p.column_id) &&
         p.publish_date &&
         diaCR(p.publish_date).slice(0, 7) === mesCR
     ).length;
