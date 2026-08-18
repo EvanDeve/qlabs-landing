@@ -51,7 +51,7 @@ export type AgendaItem = {
    * exactamente cuando `fecha` es null, y obliga a que quien la muestre elija
    * otra forma de nombrarla en vez de inventarle un verbo.
    */
-  accion: "Publicar" | "Grabar" | "Reunión" | "Entrega" | null;
+  accion: "Publicar" | "Grabar" | "Reunión" | "Entrega" | "Tarea" | null;
   /** Columna del tablero donde está parada. Los eventos no tienen. */
   columna: string | null;
   prioridad: ContentPriority | null;
@@ -164,7 +164,7 @@ export async function getStaffAgenda(
       // equipo puede renombrarlas y buscar por texto se rompería en silencio
       // (ver el comentario largo de 20260727200000_content_columns.sql).
       .select(
-        "id, title, brand_id, publish_date, record_date, priority, content_columns!inner(name, is_done, is_ready)"
+        "id, title, brand_id, publish_date, record_date, priority, content_columns!inner(name, is_done, is_ready, section)"
       )
       .eq("owner_id", profileId)
       .eq("content_columns.is_done", false),
@@ -201,6 +201,11 @@ export async function getStaffAgenda(
     // uno-a-uno de uno-a-muchos y la deja como array en algunos casos.
     const col = Array.isArray(p.content_columns) ? p.content_columns[0] : p.content_columns;
     const columna = col?.name ?? null;
+    // Una tarjeta del carril de IT no se publica: se termina. Su fecha es
+    // "cuándo tiene que estar lista", no una salida al aire, y llamarla
+    // publicación —como se hacía— es decirle a alguien que su tarea de
+    // infraestructura sale en Instagram el jueves.
+    const esTarea = col?.section === "it";
 
     // La pieza está "sin terminar" si su columna no la declara ni lista ni
     // publicada. El `!inner` ya filtró is_done, así que en la práctica lo que
@@ -242,7 +247,7 @@ export async function getStaffAgenda(
         heroe,
         fecha: p.publish_date,
         conHora: false,
-        accion: "Publicar",
+        accion: esTarea ? "Tarea" : "Publicar",
         columna,
         prioridad: p.priority,
         enRiesgo,

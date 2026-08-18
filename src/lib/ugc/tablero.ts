@@ -39,6 +39,19 @@ export function columnasDelCarril(columnas: ColumnaDelTablero[], columnId: strin
   return carril ? columnas.filter((c) => c.section === carril) : [];
 }
 
+/**
+ * Cómo se llama cada carril cuando hay que decírselo a una persona.
+ *
+ * `it` en crudo se lee como una palabra en inglés en medio de una frase en
+ * español: "el carril de it no tiene…". El valor de la columna es un
+ * identificador, no un texto para mostrar.
+ */
+export const NOMBRE_DE_CARRIL: Record<PipelineSection, string> = {
+  guion: "guiones",
+  video: "video",
+  it: "IT",
+};
+
 export type Destino = { ok: true; columna: ColumnaDelTablero } | { ok: false; nota: string };
 
 /**
@@ -88,7 +101,7 @@ export function columnaFinalDe(columnas: ColumnaDelTablero[], columnIdActual: st
   return {
     ok: false,
     nota: carril
-      ? `No pude cerrarla: el carril de ${carril} no tiene ninguna columna marcada como terminada. Eso se marca desde Q·OS, editando la columna.`
+      ? `No pude cerrarla: en el carril de ${NOMBRE_DE_CARRIL[carril]} no hay ninguna columna marcada como terminada, así que no tengo a dónde moverla. Eso se marca una vez desde Q·OS, editando la columna.`
       : "No pude cerrarla: no encontré el carril de esa tarjeta.",
   };
 }

@@ -988,7 +988,14 @@ function redactarSalida(
   pendiente: PropuestaViva | null
 ): string {
   const { aplicada, nota } = resultado;
-  if (nota) return `${respuesta}\n\n(${nota})`;
+
+  // Cuando algo NO se pudo hacer, la explicación va SOLA: la prosa del modelo se
+  // escribió antes de ejecutar, dando por hecho que iba a salir bien, así que
+  // pegarle la explicación abajo produce el mensaje contradictorio que Evan leyó
+  // el 2026-08-18 — "Ya cierro la de Prueba entrecote" y justo debajo "No pude
+  // cerrarla". De las dos frases, la única que sabe lo que de verdad pasó es
+  // ésta. Las notas están escritas como mensajes completos, en su voz.
+  if (nota) return aplicada ? `${respuesta}\n\n(${nota})` : nota;
 
   if (accion.tipo === "proponer_pieza") {
     return aplicada
