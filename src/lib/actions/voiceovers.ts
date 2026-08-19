@@ -31,5 +31,5 @@ export async function deleteVoiceoverAction(id: string) {
 
   await supabase.from("voiceovers").delete().eq("id", id).eq("owner_id", user.id);
 
-  revalidatePath("/ugc/admin/voz");
+  revalidatePath("/admin/voz");
 }

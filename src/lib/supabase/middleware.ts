@@ -2,10 +2,14 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/database.types";
 
+// OJO: "/admin" cubre también "/admin/login" por prefijo, así que la puerta
+// se excluye a mano — si no, entrar sin sesión rebota a sí misma en bucle.
+const PUBLIC_PATHS = ["/admin/login"];
+
 const PROTECTED_PREFIXES = [
   "/ugc/creador",
   "/ugc/marca",
-  "/ugc/admin",
+  "/admin",
   "/ugc/onboarding",
   "/ugc/pendiente",
 ];
@@ -41,12 +45,18 @@ export async function updateSession(request: NextRequest) {
   // público del creador (y "/ugc/marcas/..." vs "/ugc/marca") quedaba detrás del
   // login: justo las dos páginas pensadas para compartirse por fuera de la app.
   const { pathname } = request.nextUrl;
-  const isProtected = PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
+  const isProtected =
+    !PUBLIC_PATHS.includes(pathname) &&
+    PROTECTED_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
 
   if (isProtected && !user) {
-    const loginUrl = new URL("/ugc/login", request.url);
+    // Cada árbol rebota a su propia puerta: el equipo no tiene por qué pasar
+    // por el login del marketplace (con su paso de "¿sos creador o marca?")
+    // para entrar a Q·OS.
+    const login = pathname === "/admin" || pathname.startsWith("/admin/") ? "/admin/login" : "/ugc/login";
+    const loginUrl = new URL(login, request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }

@@ -3,7 +3,7 @@ import type { AppRole } from "@/lib/database.types";
 export const ROLE_DASHBOARD: Record<AppRole, string> = {
   creator: "/ugc/creador",
   brand: "/ugc/marca",
-  admin: "/ugc/admin",
+  admin: "/admin",
 };
 
 export const ROLE_DASHBOARD_LABEL: Record<AppRole, string> = {

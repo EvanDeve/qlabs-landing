@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { approveApplicationAction } from "@/lib/actions/applications";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export default function ApproveWithRatingForm({
   applicationId,

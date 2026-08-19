@@ -46,13 +46,18 @@ Reglas RLS críticas:
 ```
 /                  → Landing marketing de Q Labs (incluye sección UGC·CRC / #ecosistema)
 /ugc               → Vista pública del marketplace
-/ugc/login         → Auth (login/registro con selección de rol)
+/ugc/login         → Auth del marketplace (login/registro con selección de rol)
 /ugc/creador/*     → Dashboard del creador (protegido, rol creator)
 /ugc/marca/*       → Dashboard de la marca (protegido, rol brand)
-/ugc/admin         → Panel admin (protegido, rol admin)
+/admin/login       → Puerta de Q·OS (solo correo + contraseña, sin registro)
+/admin/*           → Q·OS, el panel del equipo (protegido, rol admin)
 ```
 
-**Punto de entrada al marketplace:** el nav de la landing tiene un único link "UGC·CRC" → `/ugc`. Desde ahí, la vista pública del marketplace tiene sus propios CTAs de registro que llevan a `/ugc/login?intent=marca|creador`, que a su vez redirige directo al dashboard correspondiente si ya hay sesión activa. La landing permanece 100% estática; el middleware (`src/proxy.ts` — Next.js 16 renombró `middleware.ts` a `proxy.ts`) solo actúa sobre `/ugc/*`.
+**Q·OS no cuelga de `/ugc`.** El panel del equipo vivía en `/ugc/admin/*` por herencia del orden en que se construyó el proyecto, no por diseño: no es parte del marketplace y no comparte su puerta. Hoy es un árbol aparte con su propio login. Las rutas viejas siguen redirigiendo con un 308 permanente definido en `next.config.ts`, y conviene dejarlo puesto: McLovin ya mandó links a `/ugc/admin/*` por WhatsApp y esos mensajes son texto plano en el teléfono de cada uno. Las notificaciones de adentro de la app no dependen del redirect — `notifications` no guarda la URL, la arma al renderizar a partir de `type` + `payload`.
+
+**Punto de entrada al marketplace:** el nav de la landing tiene un único link "UGC·CRC" → `/ugc`. Desde ahí, la vista pública del marketplace tiene sus propios CTAs de registro que llevan a `/ugc/login?intent=marca|creador`, que a su vez redirige directo al dashboard correspondiente si ya hay sesión activa. La landing permanece 100% estática; el middleware (`src/proxy.ts` — Next.js 16 renombró `middleware.ts` a `proxy.ts`) actúa sobre `/ugc/*` y `/admin/*`, y rebota a cada uno a su propio login.
+
+**Quién entra por dónde:** las dos puertas usan el mismo `signInAction`, que decide el destino con `destinoDeSesion`. Por eso una cuenta de creador que entre por `/admin/login` termina en `/ugc/creador` sin ver ningún error: no se le confirma que ahí adentro haya algo. Al equipo lo da de alta un director desde Equipo → Invitar; `/admin/login` no ofrece registro.
 
 ## Alcance EXACTO de Fase 1 (no construyas más que esto)
 

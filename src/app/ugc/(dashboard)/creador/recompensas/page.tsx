@@ -13,7 +13,7 @@ import {
   COLOR_NIVEL,
   type Nivel,
 } from "@/lib/ugc/loyalty";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

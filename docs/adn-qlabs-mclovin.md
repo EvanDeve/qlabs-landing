@@ -210,7 +210,7 @@ La versión que generó Gemini tenía la energía correcta pero cuatro puntos ch
 ---
 ---
 
-# PARTE III — CAMPOS FINALES PARA EL PANEL (`/ugc/admin/mclovin`)
+# PARTE III — CAMPOS FINALES PARA EL PANEL (`/admin/mclovin`)
 
 Los `[CORCHETES]` son los huecos que Evan y Andrés deben cerrar. Mientras existan, McLovin aplica la regla 4: no inventa, redirige a la reunión.
 

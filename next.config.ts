@@ -9,6 +9,19 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "210mb",
     },
   },
+
+  async redirects() {
+    return [
+      // Q·OS se mudó de /ugc/admin a /admin. Esto no es cortesía para los
+      // bookmarks: McLovin ya mandó por WhatsApp links a /ugc/admin/pipeline/<id>
+      // y a /ugc/admin/marketplace, y esos mensajes son texto plano en el
+      // teléfono de cada uno — no hay forma de reescribirlos. Sin este redirect
+      // dan 404. Las notificaciones de adentro de la app sí quedaron al día
+      // solas: `notifications` no guarda la URL, la arma al renderizar.
+      { source: "/ugc/admin", destination: "/admin", permanent: true },
+      { source: "/ugc/admin/:path*", destination: "/admin/:path*", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

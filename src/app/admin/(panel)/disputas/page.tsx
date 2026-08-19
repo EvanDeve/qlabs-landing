@@ -1,7 +1,7 @@
 import { requireDirector } from "@/lib/auth/require-director";
 import ResolveDisputeForm from "@/components/ugc/admin/ResolveDisputeForm";
 import { creatorPayout } from "@/lib/ugc/payout";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * El link que se le manda al Hero por WhatsApp para que revise y apruebe.

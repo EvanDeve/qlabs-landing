@@ -26,7 +26,7 @@ export async function requireDirector() {
     .maybeSingle();
 
   if (staffMember?.staff_role !== "director" || !staffMember.active) {
-    redirect("/ugc/admin");
+    redirect("/admin");
   }
 
   return { user, supabase };

@@ -7,7 +7,7 @@ import type { Database } from "@/lib/database.types";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import NotificationsBell from "@/components/ugc/NotificationsBell";
 import { signOutAction } from "@/lib/actions/auth";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 // ^ el CSS module vive físicamente bajo admin/ porque ahí lo importan otros
 // ~15 componentes de admin; moverlo implicaría tocar todos esos imports por
 // una razón puramente cosmética. QosShell ya no es admin-only, pero el
@@ -50,7 +50,7 @@ export type QosNavItem = {
    * No se dibuja en el menú, pero sí cuenta para saber en qué página se está.
    *
    * Sin esto, una ruta que no está en navItems cae en el fallback por prefijo y
-   * como "/ugc/admin" es prefijo de TODO, la pantalla de perfil se anunciaría
+   * como "/admin" es prefijo de TODO, la pantalla de perfil se anunciaría
    * como "Dashboard" y encima dejaría iluminado el item equivocado.
    */
   hidden?: boolean;
@@ -252,7 +252,7 @@ export default function QosShell({
             <div>
               {/* El segundo escalón sale del grupo del item activo y solo cae en
                   `section` si el item no tiene grupo. Con `section` fijo, el
-                  rastro se contradecía con el menú: /ugc/admin/transcripcion
+                  rastro se contradecía con el menú: /admin/transcripcion
                   decía "Operación" y el item vive en "Herramientas". */}
               <div className={styles.tbCrumb}>
                 <span>Q Labs</span>

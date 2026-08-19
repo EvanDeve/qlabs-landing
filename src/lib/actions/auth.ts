@@ -2,16 +2,17 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { destinoDeSesion } from "@/lib/ugc/estado-cuenta";
+import { destinoDeSesion, destinoConNext } from "@/lib/ugc/estado-cuenta";
 
 export type AuthActionState = { error: string } | { message: string } | null;
 
 // El onboarding a medias (rol puesto por el trigger pero sin perfil todavía) y
 // la cuenta sin verificar los resuelve `destinoDeSesion`, compartido con la
 // página de login, el onboarding y el nav público.
-async function redirectAfterLogin(userId: string): Promise<never> {
+async function redirectAfterLogin(userId: string, next?: string): Promise<never> {
   const supabase = await createClient();
-  redirect(await destinoDeSesion(supabase, userId));
+  const destino = await destinoDeSesion(supabase, userId);
+  redirect(destinoConNext(destino, next));
 }
 
 export async function signInAction(
@@ -20,6 +21,7 @@ export async function signInAction(
 ): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+  const next = String(formData.get("next") ?? "") || undefined;
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -29,7 +31,7 @@ export async function signInAction(
     return { error: "Email o contraseña incorrectos." };
   }
 
-  return await redirectAfterLogin(data.user.id);
+  return await redirectAfterLogin(data.user.id, next);
 }
 
 export async function signUpAction(
@@ -108,6 +110,24 @@ export async function signInWithGoogleAction(intent?: string) {
 
 export async function signOutAction() {
   const supabase = await createClient();
+
+  // El rol se lee ANTES de cerrar la sesión: después, `getUser` ya no devuelve
+  // a nadie y no habría con qué decidir a qué puerta volver. Este action lo
+  // comparten los tres paneles (QosShell es el mismo componente), así que el
+  // destino no se puede clavar.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let esAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    esAdmin = profile?.role === "admin";
+  }
+
   await supabase.auth.signOut();
-  redirect("/ugc/login");
+  redirect(esAdmin ? "/admin/login" : "/ugc/login");
 }

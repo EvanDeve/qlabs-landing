@@ -8,7 +8,7 @@ import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
 import { creatorPayout } from "@/lib/ugc/payout";
 import type { ApplicationStatus } from "@/lib/database.types";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type FeedCampaign = {
   id: string;

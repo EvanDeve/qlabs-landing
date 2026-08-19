@@ -28,11 +28,11 @@ async function admin() {
 }
 
 function revalidar(heroId: string, mes: string) {
-  revalidatePath("/ugc/admin/cronogramas");
-  revalidatePath(`/ugc/admin/cronogramas/${heroId}/${mes}`);
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin");
-  revalidatePath(`/ugc/admin/heroes/${heroId}`);
+  revalidatePath("/admin/cronogramas");
+  revalidatePath(`/admin/cronogramas/${heroId}/${mes}`);
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin");
+  revalidatePath(`/admin/heroes/${heroId}`);
 }
 
 /**
@@ -65,7 +65,7 @@ export async function crearCronogramaAction(formData: FormData) {
   await crearTarjetaDelCronograma(supabase, heroId, mes);
 
   revalidar(heroId, mes);
-  redirect(`/ugc/admin/cronogramas/${heroId}/${mes}`);
+  redirect(`/admin/cronogramas/${heroId}/${mes}`);
 }
 
 /**
@@ -260,7 +260,7 @@ export async function borrarCronogramaAction(heroId: string, mesRaw: string) {
   await supabase.from("hero_calendar_months").delete().eq("hero_id", heroId).eq("month", mes);
 
   revalidar(heroId, mes);
-  redirect("/ugc/admin/cronogramas");
+  redirect("/admin/cronogramas");
 }
 
 export async function borrarVideoAction(id: string, heroId: string, mesRaw: string) {

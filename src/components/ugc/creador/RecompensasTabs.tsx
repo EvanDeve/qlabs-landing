@@ -3,7 +3,7 @@
 import { useState } from "react";
 import CuponesGrid, { type CuponVista } from "./CuponesGrid";
 import MisCupones, { type MiCupon } from "./MisCupones";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * Dos vistas del mismo módulo: lo que puedo conseguir y lo que ya tengo.

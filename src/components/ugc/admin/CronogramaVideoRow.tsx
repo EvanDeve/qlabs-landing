@@ -7,7 +7,7 @@ import { horaCorta, estadoDelGuion } from "@/lib/ugc/cronograma";
 import { diaCorto } from "@/lib/ugc/calendar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type Item = Database["public"]["Tables"]["calendar_month_items"]["Row"];
 

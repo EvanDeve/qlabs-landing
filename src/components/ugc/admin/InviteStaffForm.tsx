@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { inviteStaffAction, type InviteStaffState } from "@/lib/actions/staff";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 import type { StaffRole } from "@/lib/database.types";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 const STAFF_ROLES = Object.keys(STAFF_ROLE_LABEL) as StaffRole[];
 

@@ -7,7 +7,7 @@ import { CALENDAR_EVENT_TYPE_LABEL, COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { createCalendarEventAction, updateCalendarEventAction, deleteCalendarEventAction } from "@/lib/actions/calendar-events";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type Option = { id: string; name: string };
 
@@ -47,7 +47,7 @@ export default function CalendarEventModal({
         </div>
 
         {/* De dónde salió. Va el origen y no el nombre del agente: ese se edita
-            desde /ugc/admin/mclovin y acá quedaría desactualizado sin que nadie
+            desde /admin/mclovin y acá quedaría desactualizado sin que nadie
             se entere. Mismo criterio que la tarjeta del pipeline. */}
         {item?.createdByAgent && (
           <p
@@ -75,7 +75,7 @@ export default function CalendarEventModal({
               editala desde el Pipeline.
             </p>
             {item.brandId && (
-              <Link href={`/ugc/admin/heroes/${item.brandId}`} className={`${styles.btn} ${styles.btnPrimary}`} style={{ alignSelf: "flex-start" }}>
+              <Link href={`/admin/heroes/${item.brandId}`} className={`${styles.btn} ${styles.btnPrimary}`} style={{ alignSelf: "flex-start" }}>
                 Ver Hero
               </Link>
             )}

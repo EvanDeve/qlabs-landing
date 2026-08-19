@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import NewHeroModal from "./NewHeroModal";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export default function NewHeroButton() {
   const [open, setOpen] = useState(false);

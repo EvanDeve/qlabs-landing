@@ -182,7 +182,7 @@ export function vistaDelPipeline(query: string): string {
 /** El tablero tal como lo dejó quien entró a la pieza. */
 export function hrefDelPipeline(volver: string | undefined): string {
   const vista = vistaDelPipeline(volver ?? "");
-  return vista ? `/ugc/admin/pipeline?${vista}` : "/ugc/admin/pipeline";
+  return vista ? `/admin/pipeline?${vista}` : "/admin/pipeline";
 }
 
 /**

@@ -16,7 +16,7 @@ import {
 import type { PipelineSection } from "@/lib/database.types";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export default function ContentColumnModal({
   column,

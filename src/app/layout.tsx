@@ -22,7 +22,7 @@ const playfair = Playfair_Display({
   style: ["italic"],
 });
 
-// Q·OS (módulo interno /ugc/admin) usa su propia identidad visual — ver
+// Q·OS (módulo interno /admin) usa su propia identidad visual — ver
 // Q-OS-Centro-de-Mando.html — distinta del resto de la app a pedido del usuario.
 const outfit = Outfit({
   variable: "--font-outfit",

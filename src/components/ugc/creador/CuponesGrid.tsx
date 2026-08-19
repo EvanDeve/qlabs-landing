@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { reclamarCuponAction, type ReclamarState } from "@/lib/actions/loyalty";
 import { LABEL_TIPO_CUPON, LEYENDA_EVENTO } from "@/lib/ugc/loyalty";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export type CuponVista = {
   id: string;

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { submitDeliveryAction } from "@/lib/actions/deliveries";
 import { DELIVERIES_BUCKET, MAX_DELIVERY_FILE_BYTES } from "@/lib/ugc/deliveries";
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * El archivo sube DIRECTO a Supabase Storage desde el navegador y al server

@@ -6,7 +6,7 @@ import {
   testReminderAction,
   type WhatsAppSettingsState,
 } from "@/lib/actions/staff";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 const HORAS = Array.from({ length: 24 }, (_, h) => h);
 

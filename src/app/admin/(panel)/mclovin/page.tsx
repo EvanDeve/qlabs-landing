@@ -6,7 +6,7 @@ import { VENTANA_POR_DEFECTO } from "@/lib/ugc/agenda";
 import { SOBRE_QLABS_ARRANQUE, GUION_ARRANQUE, armarCerebroPublico } from "@/lib/ugc/agente-publico";
 import McLovinForm from "@/components/ugc/admin/McLovinForm";
 import type { WaActionStatus } from "@/lib/database.types";
-import styles from "../qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

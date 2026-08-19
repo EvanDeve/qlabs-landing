@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AuthForm from "@/components/ugc/AuthForm";
-import { destinoDeSesion, RUTA_PENDIENTE } from "@/lib/ugc/estado-cuenta";
+import { destinoDeSesion, destinoConNext } from "@/lib/ugc/estado-cuenta";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +24,7 @@ export default async function LoginPage({
 
   if (user) {
     const destino = await destinoDeSesion(supabase, user.id);
-    // `next` solo se respeta si la cuenta ya puede entrar al panel. Si no, gana
-    // el destino: si no, un link con ?next=/ugc/creador dejaría a una cuenta sin
-    // verificar aterrizando en el panel (el layout la rebota igual, pero de esa
-    // forma el rebote es visible y confuso).
-    redirect(destino === "/ugc/onboarding" || destino === RUTA_PENDIENTE ? destino : next ?? destino);
+    redirect(destinoConNext(destino, next));
   }
 
   return (

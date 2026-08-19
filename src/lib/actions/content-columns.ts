@@ -9,9 +9,9 @@ export type ColumnState = { error: string } | null;
 // Las columnas cambian los números de todo el módulo (Dashboard, Heroes,
 // Pase de servicio), así que se revalida ancho.
 function revalidar() {
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin");
-  revalidatePath("/ugc/admin/heroes", "layout");
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin");
+  revalidatePath("/admin/heroes", "layout");
 }
 
 async function requireAdmin() {

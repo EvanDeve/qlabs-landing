@@ -17,7 +17,7 @@ import {
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type Fila = Database["public"]["Tables"]["creator_transcriptions"]["Row"];
 

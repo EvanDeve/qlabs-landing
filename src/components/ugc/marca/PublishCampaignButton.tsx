@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { publishCampaignAction } from "@/lib/actions/campaigns";
 import { useToast } from "@/components/ugc/Toaster";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * Publicar un borrador desde el detalle de la campaña.

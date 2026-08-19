@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { diaCR, horaCR, diaCorto } from "@/lib/ugc/calendar";
 import { porDia, type Conversacion, type MensajeChat } from "@/lib/ugc/conversaciones";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * Las conversaciones de McLovin, con la forma de WhatsApp y los colores de Q·OS.

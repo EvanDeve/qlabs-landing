@@ -50,7 +50,7 @@ Cerrar es la única acción que **saca la tarjeta de la vista**, así que ahora 
 
 ### 5. Que el ritmo se configure sin programador
 
-Entrá a **`/ugc/admin/mclovin`** (necesitás ser director, y lo sos). Abajo hay una sección nueva, **"Cuánto ve"**, con tres números:
+Entrá a **`/admin/mclovin`** (necesitás ser director, y lo sos). Abajo hay una sección nueva, **"Cuánto ve"**, con tres números:
 
 - **Días hacia adelante** — hoy 3. Es lo que entra en "lo que se viene".
 - **Días hacia atrás** — hoy 30. Hasta dónde busca lo atrasado.
@@ -75,7 +75,7 @@ Probá las tres preguntas:
 **Tres cosas que queremos que mires con lupa acá:**
 
 1. **Que conteste solo lo que preguntaste.** No tiene que vomitarte el reporte entero cada vez.
-2. **Que los números coincidan con el Dashboard** (`/ugc/admin`). Ya lo verificamos y coincidían exacto, pero sos el que va a notar si algo se ve raro. Si el WhatsApp y la pantalla dicen cosas distintas, avisá de inmediato: es lo peor que puede pasar acá, porque se deja de creer en los dos.
+2. **Que los números coincidan con el Dashboard** (`/admin`). Ya lo verificamos y coincidían exacto, pero sos el que va a notar si algo se ve raro. Si el WhatsApp y la pantalla dicen cosas distintas, avisá de inmediato: es lo peor que puede pasar acá, porque se deja de creer en los dos.
 3. **Cómo habla de la gente.** Le pedimos que hable de las piezas y no de las personas — "a Daniel le quedan 4 atrasadas" y nunca "Daniel va atrasado". Si en algún momento te suena a que está juzgando a alguien, copiá el mensaje tal cual y mandalo.
 
 ---
@@ -98,7 +98,7 @@ Y en `guion_publico`:
 
 > Si duda en agendar, no le inventés urgencia. Lo único cierto es que el equipo es chico y trabaja con pocos negocios a la vez, así que la agenda es limitada de verdad.
 
-**Andá a `/ugc/admin/mclovin`, leelo completo y decinos qué falta o qué sacarías.** Podés editarlo vos mismo ahí — no hace falta pedirle nada a nadie, y no requiere que se vuelva a publicar el sitio.
+**Andá a `/admin/mclovin`, leelo completo y decinos qué falta o qué sacarías.** Podés editarlo vos mismo ahí — no hace falta pedirle nada a nadie, y no requiere que se vuelva a publicar el sitio.
 
 ### Lo que decidimos NO meterle, y por qué
 

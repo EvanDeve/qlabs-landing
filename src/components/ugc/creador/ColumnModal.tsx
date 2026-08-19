@@ -11,7 +11,7 @@ import { COLORES_COLUMNA } from "@/lib/ugc/creator-task";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import type { TaskColumn } from "./CreatorTaskBoard";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export default function ColumnModal({
   column,

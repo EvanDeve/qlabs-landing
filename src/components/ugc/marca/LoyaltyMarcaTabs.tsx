@@ -13,7 +13,7 @@ import { LABEL_TIPO_CUPON, LEYENDA_EVENTO } from "@/lib/ugc/loyalty";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import EscanearQR from "./EscanearQR";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export type CuponMarca = {
   id: string;

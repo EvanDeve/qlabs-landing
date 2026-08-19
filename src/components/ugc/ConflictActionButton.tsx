@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { cancelApplicationAction, disputeApplicationAction } from "@/lib/actions/conflicts";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 // Cancelar o disputar exigen un motivo escrito: la contraparte lo recibe por
 // correo y, en el caso de la disputa, es lo único con lo que Q Labs va a

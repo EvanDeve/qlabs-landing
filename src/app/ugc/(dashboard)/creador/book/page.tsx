@@ -3,7 +3,7 @@ import PortfolioUploadForm from "@/components/ugc/creador/PortfolioUploadForm";
 import PortfolioGrid from "@/components/ugc/creador/PortfolioGrid";
 import { PORTFOLIO_BUCKET } from "@/lib/ugc/portfolio";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

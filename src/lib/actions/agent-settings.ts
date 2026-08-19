@@ -117,6 +117,6 @@ export async function saveAgentSettingsAction(
     return { error: "No se pudo guardar. Intentá de nuevo." };
   }
 
-  revalidatePath("/ugc/admin/mclovin");
+  revalidatePath("/admin/mclovin");
   return { message: "Guardado. Va a usarlo en el próximo mensaje." };
 }

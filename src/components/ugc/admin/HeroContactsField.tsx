@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import type { HeroContact } from "@/lib/database.types";
 

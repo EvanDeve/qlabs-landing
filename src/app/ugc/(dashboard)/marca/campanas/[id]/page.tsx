@@ -16,7 +16,7 @@ import {
 import ConflictActionButton from "@/components/ugc/ConflictActionButton";
 import { hasUsageRights, usageRightsChips } from "@/lib/ugc/usage-rights";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 import { displayHandle } from "@/lib/ugc/handles";
 
 export const dynamic = "force-dynamic";

@@ -61,8 +61,8 @@ export async function updateStaffProfileAction(
 
   // Ancho y de layout: la cara aparece en el pie de la sidebar (que es el
   // layout, no la página), en las tarjetas del Pipeline, en el Calendario y en
-  // Equipo. Revalidar solo /ugc/admin/perfil dejaría la foto vieja en todo el
+  // Equipo. Revalidar solo /admin/perfil dejaría la foto vieja en todo el
   // resto hasta la próxima navegación dura.
-  revalidatePath("/ugc/admin", "layout");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }

@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendTransactionalEmail, getUserEmail } from "@/lib/email/resend";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.qlabsmethod.com";
-const MARKETPLACE_URL = `${SITE_URL}/ugc/admin/marketplace`;
+const MARKETPLACE_URL = `${SITE_URL}/admin/marketplace`;
 
 export const VERIFICATION_PENDING = "verification_pending";
 

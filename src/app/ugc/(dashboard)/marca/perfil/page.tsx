@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import BrandProfileEditForm from "@/components/ugc/marca/BrandProfileEditForm";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

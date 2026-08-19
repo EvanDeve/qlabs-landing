@@ -30,7 +30,7 @@ import {
  * nada de eso.
  *
  * Este texto es el DEFAULT, no la última palabra: se puede reescribir desde
- * /ugc/admin/mclovin sin tocar código. Lo que no se puede reescribir desde ahí
+ * /admin/mclovin sin tocar código. Lo que no se puede reescribir desde ahí
  * son las REGLAS_FIJAS de abajo.
  */
 export const PERSONA_SEED = `

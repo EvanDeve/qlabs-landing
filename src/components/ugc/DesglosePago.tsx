@@ -1,5 +1,5 @@
 import { desglosePago } from "@/lib/ugc/payout";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * Presupuesto → comisión → neto, con las mismas tres cifras para la marca y

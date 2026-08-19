@@ -27,8 +27,8 @@ export async function createCalendarEventAction(formData: FormData) {
     responsible_id: responsibleId,
   });
 
-  revalidatePath("/ugc/admin/calendario");
-  revalidatePath("/ugc/admin");
+  revalidatePath("/admin/calendario");
+  revalidatePath("/admin");
 }
 
 export async function deleteCalendarEventAction(id: string) {
@@ -40,8 +40,8 @@ export async function deleteCalendarEventAction(id: string) {
 
   await supabase.from("calendar_events").delete().eq("id", id);
 
-  revalidatePath("/ugc/admin/calendario");
-  revalidatePath("/ugc/admin");
+  revalidatePath("/admin/calendario");
+  revalidatePath("/admin");
 }
 
 export async function updateCalendarEventAction(formData: FormData) {
@@ -73,6 +73,6 @@ export async function updateCalendarEventAction(formData: FormData) {
     })
     .eq("id", id);
 
-  revalidatePath("/ugc/admin/calendario");
-  revalidatePath("/ugc/admin");
+  revalidatePath("/admin/calendario");
+  revalidatePath("/admin");
 }

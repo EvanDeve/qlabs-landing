@@ -9,7 +9,7 @@ import { LANGUAGE_OPTIONS, languageLabel } from "@/lib/ugc/languages";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 import ImageCropModal from "@/components/ugc/ImageCropModal";
 import { useToast } from "@/components/ugc/Toaster";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 // Los botones de esta pantalla eran los únicos del panel hechos con clases
 // sueltas de Tailwind (`rounded-pill`): convivían dos lenguajes de botón en el
 // mismo producto. Van al mismo sistema `.btn` que usa el resto (radio 11px).

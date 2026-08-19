@@ -13,7 +13,10 @@ export async function requireRole(role: AppRole) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/ugc/login");
+    // Cada rol rebota a su propia puerta. El middleware ya hace este mismo
+    // desvío; acá se repite porque este gate también corre en las llamadas
+    // que no pasan por el proxy (server actions, handlers de API).
+    redirect(role === "admin" ? "/admin/login" : "/ugc/login");
   }
 
   const { data: profile } = await supabase

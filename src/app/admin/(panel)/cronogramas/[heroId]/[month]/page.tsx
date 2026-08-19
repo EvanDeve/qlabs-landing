@@ -8,7 +8,7 @@ import { parseMes, nombreDeMes, estadoDelGuion } from "@/lib/ugc/cronograma";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CronogramaVideoRow from "@/components/ugc/admin/CronogramaVideoRow";
 import CronogramaShareLink from "@/components/ugc/admin/CronogramaShareLink";
-import styles from "../../../qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +89,7 @@ export default async function ArmarCronogramaPage({
           así que sin esto no se sabría de qué Hero y de qué mes es la pantalla.
           El link de vuelta va arriba, compensando su padding lateral. */}
       <div style={{ marginBottom: "16px" }}>
-        <Link href="/ugc/admin/cronogramas" className={styles.linkMore} style={{ marginLeft: "-8px" }}>
+        <Link href="/admin/cronogramas" className={styles.linkMore} style={{ marginLeft: "-8px" }}>
           <QosIcon name="chevL" size={13} /> Todos los cronogramas
         </Link>
         <h2 className={styles.sectionHeadBig} style={{ textTransform: "capitalize", margin: "6px 0 4px" }}>

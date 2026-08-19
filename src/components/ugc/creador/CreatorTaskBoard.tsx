@@ -16,7 +16,7 @@ import { PLATFORM_LABEL, dueLabel, daysUntil } from "@/lib/ugc/creator-task";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CreatorTaskModal from "./CreatorTaskModal";
 import ColumnModal from "./ColumnModal";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export type CreatorTask = Database["public"]["Tables"]["creator_tasks"]["Row"];
 export type TaskColumn = Database["public"]["Tables"]["creator_task_columns"]["Row"];

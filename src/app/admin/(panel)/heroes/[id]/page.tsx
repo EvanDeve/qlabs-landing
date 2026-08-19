@@ -5,7 +5,7 @@ import { updateHeroProfileAction, setHeroArchivedAction } from "@/lib/actions/he
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import HeroLogoField from "@/components/ugc/admin/HeroLogoField";
 import HeroContactsField from "@/components/ugc/admin/HeroContactsField";
-import styles from "../../qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,7 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div>
-      <Link href="/ugc/admin/heroes" className={styles.backBtn}>
+      <Link href="/admin/heroes" className={styles.backBtn}>
         <QosIcon name="chevL" size={14} /> Heroes
       </Link>
 
@@ -256,7 +256,7 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ id:
               <p>La define el cronograma de cada mes, no este expediente.</p>
             </div>
             <div className={styles.settingsControl}>
-              <Link href="/ugc/admin/cronogramas" className={styles.linkMore}>
+              <Link href="/admin/cronogramas" className={styles.linkMore}>
                 Ver cronogramas <QosIcon name="chevR" size={13} />
               </Link>
             </div>

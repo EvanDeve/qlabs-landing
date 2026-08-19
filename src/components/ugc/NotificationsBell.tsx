@@ -11,7 +11,7 @@ import { QosIcon } from "@/lib/ugc/qos-icons";
 // La campana solo se monta dentro de QosShell (admin, marca y creador), así que
 // se viste con el sistema de ahí y no con las clases del landing: era el último
 // control de la barra superior que seguía siendo un círculo con Font Awesome.
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 
@@ -46,7 +46,7 @@ function describe(notification: Notification): { text: string; href: string } {
   if (notification.type === "application_disputed") {
     return {
       text: `Disputa abierta en "${campaignTitle}"`,
-      href: "/ugc/admin/disputas",
+      href: "/admin/disputas",
     };
   }
 
@@ -54,7 +54,7 @@ function describe(notification: Notification): { text: string; href: string } {
     const preview = String(payload.preview ?? "").trim();
     return {
       text: `Escribió un número nuevo al WhatsApp${preview ? `: “${preview}”` : ""}`,
-      href: "/ugc/admin/mclovin",
+      href: "/admin/mclovin",
     };
   }
 
@@ -67,7 +67,7 @@ function describe(notification: Notification): { text: string; href: string } {
     const titulo = String(payload.title ?? "una tarjeta tuya");
     return {
       text: `${quien} ${que}: ${titulo}`,
-      href: `/ugc/admin/pipeline/${payload.piece_id}`,
+      href: `/admin/pipeline/${payload.piece_id}`,
     };
   }
 
@@ -76,7 +76,7 @@ function describe(notification: Notification): { text: string; href: string } {
     const roleLabel = payload.subject_role === "brand" ? "marca" : "creador";
     return {
       text: `${name} (${roleLabel}) terminó el registro y está esperando verificación`,
-      href: "/ugc/admin/marketplace",
+      href: "/admin/marketplace",
     };
   }
 

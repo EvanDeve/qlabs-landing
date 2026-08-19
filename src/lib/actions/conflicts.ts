@@ -49,7 +49,7 @@ function revalidarAmbosLados(campaignId: string) {
   revalidatePath("/ugc/creador/aplicaciones");
   revalidatePath("/ugc/marca/ugc");
   revalidatePath(`/ugc/marca/campanas/${campaignId}`);
-  revalidatePath("/ugc/admin/marketplace");
+  revalidatePath("/admin/marketplace");
 }
 
 export async function cancelApplicationAction(
@@ -203,7 +203,7 @@ export async function resolveDisputeAction(
   if (error) return { error: "No se pudo resolver. Intentá de nuevo." };
 
   revalidarAmbosLados(application.campaign_id);
-  revalidatePath("/ugc/admin/disputas");
+  revalidatePath("/admin/disputas");
 
   const { data: campaign } = await supabase
     .from("campaigns")

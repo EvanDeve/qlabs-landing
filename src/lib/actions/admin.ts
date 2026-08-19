@@ -28,7 +28,7 @@ export async function setCreatorVerifiedAction(formData: FormData) {
     await avisarResultadoVerificacion({ profileId, role: "creator", aprobada: true });
   }
 
-  revalidatePath("/ugc/admin/marketplace");
+  revalidatePath("/admin/marketplace");
 }
 
 export async function setBrandVerifiedAction(formData: FormData) {
@@ -53,7 +53,7 @@ export async function setBrandVerifiedAction(formData: FormData) {
   }
 
   // El sello aparece en el feed, la vitrina y el perfil público de la marca.
-  revalidatePath("/ugc/admin/marketplace");
+  revalidatePath("/admin/marketplace");
   revalidatePath("/ugc/creador");
   revalidatePath("/ugc");
 }
@@ -102,7 +102,7 @@ export async function setCreatorRejectedAction(formData: FormData) {
       motivo: res.motivo,
     });
   }
-  revalidatePath("/ugc/admin/marketplace");
+  revalidatePath("/admin/marketplace");
 }
 
 export async function setBrandRejectedAction(formData: FormData) {
@@ -115,7 +115,7 @@ export async function setBrandRejectedAction(formData: FormData) {
       motivo: res.motivo,
     });
   }
-  revalidatePath("/ugc/admin/marketplace");
+  revalidatePath("/admin/marketplace");
   revalidatePath("/ugc/creador");
   revalidatePath("/ugc");
 }
@@ -132,5 +132,5 @@ export async function markCampaignCompletedAction(formData: FormData) {
 
   await supabase.from("campaigns").update({ status: "completed" }).eq("id", campaignId);
 
-  revalidatePath("/ugc/admin/marketplace");
+  revalidatePath("/admin/marketplace");
 }

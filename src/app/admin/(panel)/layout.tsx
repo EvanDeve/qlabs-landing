@@ -1,7 +1,13 @@
 import { requireRole } from "@/lib/auth/require-role";
 import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
+import Toaster from "@/components/ugc/Toaster";
 import SelectorDeMes from "@/components/ugc/admin/SelectorDeMes";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
+
+// Q·OS dejó de colgar de /ugc, así que este es ahora el único layout que corre
+// sobre el panel del equipo: el Toaster y el force-dynamic los ponía el layout
+// compartido de /ugc/(dashboard), que quedó del otro lado de la mudanza.
+export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({
   children,
@@ -54,50 +60,50 @@ export default async function AdminLayout({
     : { count: 0 };
 
   const navItems: QosNavItem[] = [
-    { href: "/ugc/admin", label: "Dashboard", icon: "grid", group: "Operación" },
+    { href: "/admin", label: "Dashboard", icon: "grid", group: "Operación" },
     {
-      href: "/ugc/admin/pipeline",
+      href: "/admin/pipeline",
       label: "Pipeline",
       icon: "columns",
       group: "Operación",
       count: piezasActivas.length,
     },
-    { href: "/ugc/admin/calendario", label: "Calendario", icon: "calendar", group: "Operación" },
+    { href: "/admin/calendario", label: "Calendario", icon: "calendar", group: "Operación" },
 
     // Va pegada al Calendario y antes de Heroes: los items de un mismo grupo
     // tienen que ir seguidos en el array, porque QosShell abre un grupo nuevo
     // cada vez que cambia el valor de `group`.
-    { href: "/ugc/admin/cronogramas", label: "Cronogramas", icon: "book", group: "Operación" },
-    { href: "/ugc/admin/heroes", label: "Heroes", icon: "users", group: "Operación", count: heroesActivos.length },
+    { href: "/admin/cronogramas", label: "Cronogramas", icon: "book", group: "Operación" },
+    { href: "/admin/heroes", label: "Heroes", icon: "users", group: "Operación", count: heroesActivos.length },
 
     // Misma herramienta que la del creador, sobre el material propio del
     // equipo. No da acceso a las transcripciones de los creadores: la policy
     // filtra por `creator_id = auth.uid()` para todos por igual.
-    { href: "/ugc/admin/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
+    { href: "/admin/transcripcion", label: "Transcripción", icon: "doc", group: "Herramientas" },
 
     // El otro extremo del mismo flujo: Transcripción convierte video en guion,
     // Voz convierte ese guion en audio. Van juntas porque se usan seguidas.
-    { href: "/ugc/admin/voz", label: "Voz", icon: "play", group: "Herramientas" },
+    { href: "/admin/voz", label: "Voz", icon: "play", group: "Herramientas" },
 
     // No va en el menú: se entra tocando la propia cara en el pie de la
     // sidebar. Está en la lista para que el título de la barra diga "Mi perfil"
     // y no herede "Dashboard" por prefijo.
-    { href: "/ugc/admin/perfil", label: "Mi perfil", icon: "users", group: "Herramientas", hidden: true },
+    { href: "/admin/perfil", label: "Mi perfil", icon: "users", group: "Herramientas", hidden: true },
 
     // Los grupos del sidebar se cortan por orden del array: todo lo de
     // "Sistema" va junto y al final, o aparecería un segundo encabezado
     // "Sistema" más abajo.
     ...(director
       ? ([
-          { href: "/ugc/admin/equipo", label: "Equipo", icon: "briefcase", group: "Sistema" },
+          { href: "/admin/equipo", label: "Equipo", icon: "briefcase", group: "Sistema" },
           // McLovin lleva la chispa y no el globo de chat: el globo ahora es
           // del Chat, y dos items pegados con el mismo icono no se distinguen.
-          { href: "/ugc/admin/mclovin", label: "McLovin", icon: "sparkle", group: "Sistema" },
-          { href: "/ugc/admin/chat", label: "Chat", icon: "chat", group: "Sistema" },
-          { href: "/ugc/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
-          { href: "/ugc/admin/loyalty", label: "Loyalty Loop", icon: "book", group: "Sistema" },
+          { href: "/admin/mclovin", label: "McLovin", icon: "sparkle", group: "Sistema" },
+          { href: "/admin/chat", label: "Chat", icon: "chat", group: "Sistema" },
+          { href: "/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
+          { href: "/admin/loyalty", label: "Loyalty Loop", icon: "book", group: "Sistema" },
           {
-            href: "/ugc/admin/disputas",
+            href: "/admin/disputas",
             label: "Disputas",
             icon: "megaphone",
             group: "Sistema",
@@ -108,16 +114,18 @@ export default async function AdminLayout({
   ];
 
   return (
-    <QosShell
-      navItems={navItems}
-      notifications={notifications ?? []}
-      userName={profile?.display_name ?? "Sin nombre"}
-      userAvatarUrl={profile?.avatar_url ?? null}
-      profileHref="/ugc/admin/perfil"
-      userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
-      topbarActions={<SelectorDeMes />}
-    >
-      {children}
-    </QosShell>
+    <Toaster>
+      <QosShell
+        navItems={navItems}
+        notifications={notifications ?? []}
+        userName={profile?.display_name ?? "Sin nombre"}
+        userAvatarUrl={profile?.avatar_url ?? null}
+        profileHref="/admin/perfil"
+        userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
+        topbarActions={<SelectorDeMes />}
+      >
+        {children}
+      </QosShell>
+    </Toaster>
   );
 }

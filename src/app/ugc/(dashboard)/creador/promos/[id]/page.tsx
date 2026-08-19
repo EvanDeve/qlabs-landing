@@ -7,7 +7,7 @@ import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
 import DesglosePago from "@/components/ugc/DesglosePago";
 import { hasUsageRights, usageRightsChips } from "@/lib/ugc/usage-rights";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

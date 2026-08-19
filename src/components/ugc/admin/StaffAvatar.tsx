@@ -1,4 +1,4 @@
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * La cara de un miembro del equipo: foto si subió una, y si no la inicial sobre

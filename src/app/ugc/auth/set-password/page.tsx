@@ -56,7 +56,7 @@ export default function SetPasswordPage() {
       return;
     }
 
-    router.replace("/ugc/admin");
+    router.replace("/admin");
   }
 
   return (

@@ -50,7 +50,7 @@ export async function inviteStaffAction(
     .from("staff_members")
     .upsert({ profile_id: data.user.id, staff_role: staffRole, color }, { onConflict: "profile_id" });
 
-  revalidatePath("/ugc/admin/equipo");
+  revalidatePath("/admin/equipo");
   return { message: `Invitación enviada a ${email}.` };
 }
 
@@ -70,7 +70,7 @@ export async function upsertStaffMemberAction(formData: FormData) {
     .from("staff_members")
     .upsert({ profile_id: profileId, staff_role: staffRole, color }, { onConflict: "profile_id" });
 
-  revalidatePath("/ugc/admin/equipo");
+  revalidatePath("/admin/equipo");
 }
 
 // Borra la cuenta completa del colaborador (auth.users), lo que cascadea a
@@ -85,7 +85,7 @@ export async function deleteStaffMemberAction(profileId: string) {
   const admin = createAdminClient();
   await admin.auth.admin.deleteUser(profileId);
 
-  revalidatePath("/ugc/admin/equipo");
+  revalidatePath("/admin/equipo");
 }
 
 export type WhatsAppSettingsState = { error: string } | { message: string } | null;
@@ -143,7 +143,7 @@ export async function saveWhatsAppSettingsAction(
 
   if (error) return { error: "No se pudo guardar. Intentá de nuevo." };
 
-  revalidatePath("/ugc/admin/equipo");
+  revalidatePath("/admin/equipo");
   return { message: optIn ? "Guardado. Recibe recordatorios." : "Guardado. Recordatorios apagados." };
 }
 
@@ -193,7 +193,7 @@ export async function testReminderAction(
     reminderHour: miembro.reminder_hour,
   });
 
-  revalidatePath("/ugc/admin/equipo");
+  revalidatePath("/admin/equipo");
 
   if (resultado.estado === "enviado") return { message: "Enviado. Revisá el WhatsApp." };
   if (resultado.estado === "salteado") {
@@ -220,5 +220,5 @@ export async function setStaffActiveAction(formData: FormData) {
 
   await supabase.from("staff_members").update({ active }).eq("profile_id", profileId);
 
-  revalidatePath("/ugc/admin/equipo");
+  revalidatePath("/admin/equipo");
 }

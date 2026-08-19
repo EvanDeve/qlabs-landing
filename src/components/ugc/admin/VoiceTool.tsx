@@ -15,7 +15,7 @@ import {
 } from "@/lib/ugc/voz";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * Lo que la pantalla necesita de un voiceover. Es una forma propia y no la Row

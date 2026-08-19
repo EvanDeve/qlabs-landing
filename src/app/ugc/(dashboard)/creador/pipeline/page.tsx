@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getOrSeedColumns } from "@/lib/actions/creator-tasks";
 import CreatorTaskBoard from "@/components/ugc/creador/CreatorTaskBoard";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

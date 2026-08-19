@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export default function ConfirmDeleteButton({
   action,

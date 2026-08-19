@@ -13,7 +13,7 @@ import {
   USAGE_SCOPE_DESC,
   USAGE_DURATION_LABEL,
 } from "@/lib/ugc/usage-rights";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /** Dónde se guarda el borrador del navegador. */
 const BORRADOR_KEY = "ugc:campana-borrador";

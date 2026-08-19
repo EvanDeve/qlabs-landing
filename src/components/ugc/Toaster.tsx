@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type Tono = "ok" | "error";
 type Toast = { id: number; texto: string; tono: Tono };

@@ -164,7 +164,7 @@ riesgo de que el agente afirme algo falso.
 
 ## Cómo probar lo que escribas
 
-En `/ugc/admin/mclovin`, después de guardar, hay un bloque **"El cerebro
+En `/admin/mclovin`, después de guardar, hay un bloque **"El cerebro
 armado"**: muestra el prompt completo tal cual lo lee el modelo, con las reglas
 fijas y tu texto juntos. Leelo entero antes de dar por bueno el contenido — ahí
 se ven las contradicciones entre lo que escribiste y lo que ya está en código.

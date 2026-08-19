@@ -5,7 +5,7 @@ import { QosIcon } from "@/lib/ugc/qos-icons";
 import { diaCR } from "@/lib/ugc/calendar";
 import NewHeroButton from "@/components/ugc/admin/NewHeroButton";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
-import styles from "../qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -127,7 +127,7 @@ function HeroCard({
 
   return (
     <div className={styles.hcard}>
-      <Link href={`/ugc/admin/heroes/${client.id}`}>
+      <Link href={`/admin/heroes/${client.id}`}>
         <div className={styles.hcardTop}>
           {client.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { saveAgentSettingsAction, type AgentSettingsState } from "@/lib/actions/agent-settings";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * El cerebro de McLovin, editable sin redeployar.

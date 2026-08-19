@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { canjearAction, type CanjeState } from "@/lib/actions/cupones";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * El botón que quema el código, para la pantalla a la que lleva el QR.

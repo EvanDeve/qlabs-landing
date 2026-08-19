@@ -64,3 +64,29 @@ export async function destinoDeSesion(
 
   return fila.verified ? ROLE_DASHBOARD[role] : RUTA_PENDIENTE;
 }
+
+/**
+ * Aplica el `next` de un login sobre el destino que le toca a la sesión.
+ *
+ * `next` es de dónde venía quien rebotó al login (lo pone el middleware) y es
+ * texto que llega por la URL, así que no se puede obedecer a ciegas:
+ *
+ * - Solo se respeta si la cuenta ya puede entrar a un panel. Si no, un link con
+ *   ?next=/ugc/creador dejaría a una cuenta sin verificar aterrizando adentro
+ *   (el layout la rebota igual, pero el rebote se ve y confunde).
+ * - Tiene que ser una ruta del propio sitio. Sin esto, ?next=https://otro.sitio
+ *   o ?next=//otro.sitio convierten el login en un redirector abierto: un link
+ *   con el dominio de Q Labs que termina en otro lado.
+ * - Y tiene que caer dentro del árbol al que esa cuenta entra, para que un
+ *   creador con ?next=/admin/equipo no se vaya a chocar contra el panel del
+ *   equipo.
+ */
+export function destinoConNext(destino: string, next?: string): string {
+  if (!next) return destino;
+  if (destino === "/ugc/onboarding" || destino === RUTA_PENDIENTE) return destino;
+  if (!next.startsWith("/") || next.startsWith("//")) return destino;
+  if (next !== destino && !next.startsWith(`${destino}/`) && !next.startsWith(`${destino}?`)) {
+    return destino;
+  }
+  return next;
+}

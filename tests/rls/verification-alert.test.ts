@@ -72,7 +72,7 @@ describe("aviso de verificación pendiente", () => {
     expect(enviados[0].subject).toContain(MARCA_DE_PRUEBA);
     expect(enviados[0].subject).toContain("marca");
     expect(enviados[0].html).toContain("no puede entrar al panel");
-    expect(enviados[0].html).toContain("/ugc/admin/marketplace");
+    expect(enviados[0].html).toContain("/admin/marketplace");
   });
 
   it("le cambia el texto según sea creador o marca", async () => {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { crearCronogramaAction } from "@/lib/actions/cronogramas";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * "Crear cronograma": elegís Hero y mes, y caés en la pantalla de armado.

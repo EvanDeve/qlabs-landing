@@ -3,7 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import ImageCropModal from "@/components/ugc/ImageCropModal";
 import { updateStaffProfileAction, type StaffProfileState } from "@/lib/actions/staff-profile";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * Nombre y foto propios. Es la única pantalla de Q·OS que una persona edita

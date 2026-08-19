@@ -10,7 +10,7 @@ import {
   MAX_PORTFOLIO_FILE_BYTES,
 } from "@/lib/ugc/portfolio";
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * El archivo sube DIRECTO a Supabase Storage desde el navegador y al server

@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { updateApplicationStatusAction } from "@/lib/actions/applications";
 import { useToast } from "@/components/ugc/Toaster";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * Aceptar o rechazar a un aplicante.

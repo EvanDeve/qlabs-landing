@@ -8,7 +8,7 @@ import {
   setCreatorVerifiedAction,
 } from "@/lib/actions/admin";
 import type { EstadoCuenta } from "@/lib/ugc/estado-cuenta";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /**
  * Los botones de estado de una cuenta del marketplace, para creadores y marcas.

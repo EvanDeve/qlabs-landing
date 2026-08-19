@@ -4,7 +4,7 @@ import { createContentPieceAction } from "@/lib/actions/content-pieces";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import type { ContentColumn } from "@/lib/ugc/content-columns";
 import type { BrandOption, StaffOption } from "./KanbanBoard";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export default function NewContentPieceModal({
   brands,

@@ -51,9 +51,9 @@ export async function createContentPieceAction(formData: FormData) {
     notes: String(formData.get("notes") ?? "").trim() || null,
   });
 
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin");
-  revalidatePath(`/ugc/admin/heroes/${brandId}`);
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin");
+  revalidatePath(`/admin/heroes/${brandId}`);
 }
 
 export async function deleteContentPieceAction(pieceId: string) {
@@ -71,10 +71,10 @@ export async function deleteContentPieceAction(pieceId: string) {
 
   await supabase.from("content_pieces").delete().eq("id", pieceId);
 
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin/calendario");
-  revalidatePath("/ugc/admin");
-  if (current?.brand_id) revalidatePath(`/ugc/admin/heroes/${current.brand_id}`);
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin/calendario");
+  revalidatePath("/admin");
+  if (current?.brand_id) revalidatePath(`/admin/heroes/${current.brand_id}`);
 }
 
 export async function updateContentPieceColumnAction(pieceId: string, columnId: string) {
@@ -86,8 +86,8 @@ export async function updateContentPieceColumnAction(pieceId: string, columnId: 
 
   await supabase.from("content_pieces").update({ column_id: columnId }).eq("id", pieceId);
 
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin");
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin");
 }
 
 export async function updateContentPieceAction(formData: FormData) {
@@ -160,13 +160,13 @@ export async function updateContentPieceAction(formData: FormData) {
     })
     .eq("id", pieceId);
 
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin");
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin");
   // El calendario muestra las piezas por fecha de publicación: si acá se movió
   // la fecha, su caché también quedó vieja.
-  revalidatePath("/ugc/admin/calendario");
+  revalidatePath("/admin/calendario");
   // Los dos expedientes: la pieza sale de uno y entra en el otro cuando se
   // corrige el Hero.
-  if (current?.brand_id) revalidatePath(`/ugc/admin/heroes/${current.brand_id}`);
-  if (brandId && brandId !== current?.brand_id) revalidatePath(`/ugc/admin/heroes/${brandId}`);
+  if (current?.brand_id) revalidatePath(`/admin/heroes/${current.brand_id}`);
+  if (brandId && brandId !== current?.brand_id) revalidatePath(`/admin/heroes/${brandId}`);
 }

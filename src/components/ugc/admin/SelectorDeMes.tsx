@@ -2,10 +2,10 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { mesCR } from "@/lib/ugc/cronograma";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 /** La única pantalla que mira un mes. Fuera de acá el control no significa nada. */
-const RUTA = "/ugc/admin";
+const RUTA = "/admin";
 
 /**
  * El mes que mira el Dashboard, en la barra superior.

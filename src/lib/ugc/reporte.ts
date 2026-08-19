@@ -6,7 +6,7 @@ import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 /**
  * El estado de la agencia, en un solo lugar.
  *
- * Esto vivía suelto dentro del Dashboard (`/ugc/admin/page.tsx`, 493 líneas) y
+ * Esto vivía suelto dentro del Dashboard (`/admin/page.tsx`, 493 líneas) y
  * salió de ahí cuando McLovin tuvo que contestar lo mismo por WhatsApp. El
  * motivo de extraerlo y no reescribirlo aparte: "atrasada", "por debajo del
  * ritmo" y "publicados del mes" son definiciones con filo —dependen de

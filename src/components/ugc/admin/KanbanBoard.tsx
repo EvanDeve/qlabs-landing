@@ -22,7 +22,7 @@ import PipelineFilters, { type FiltrosPipeline } from "./PipelineFilters";
 import { useRouter, useSearchParams } from "next/navigation";
 import NewContentPieceModal from "./NewContentPieceModal";
 import ContentColumnModal from "./ContentColumnModal";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
 // logoUrl y driveUrl son opcionales: NewContentPieceModal usa este mismo tipo
@@ -178,7 +178,7 @@ export default function KanbanBoard({
 
     const volver = vista.toString();
     router.push(
-      `/ugc/admin/pipeline/${p.id}${volver ? `?volver=${encodeURIComponent(volver)}` : ""}`
+      `/admin/pipeline/${p.id}${volver ? `?volver=${encodeURIComponent(volver)}` : ""}`
     );
   }
 
@@ -490,7 +490,7 @@ function Card({
         <span className={`${styles.prio} ${styles[PRIO_CLASS[piece.priority]]}`}>{piece.priority}</span>
         <span className={styles.tag}>{piece.platform}</span>
         {/* Una pieza que nadie cargó a mano tiene que decirlo. Va el origen y
-            no el nombre del agente: el nombre se edita desde /ugc/admin/mclovin
+            no el nombre del agente: el nombre se edita desde /admin/mclovin
             y acá quedaría desactualizado sin que nadie se entere. */}
         {piece.created_by_agent && (
           <span className={styles.tag} title="Se anotó por WhatsApp, no desde el tablero">

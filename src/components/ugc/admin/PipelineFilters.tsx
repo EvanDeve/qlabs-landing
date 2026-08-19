@@ -8,7 +8,7 @@ import { CONTENT_PRIORITY_DOT, FILTROS_FECHA, type FiltroFecha } from "@/lib/ugc
 import { diaCorto } from "@/lib/ugc/calendar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import FiltroDropdown from "@/components/ugc/admin/FiltroDropdown";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type Option = { id: string; name: string; color?: string };
 

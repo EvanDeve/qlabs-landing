@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { updateApplicationStatusAction } from "@/lib/actions/applications";
 import { CAMPAIGN_STATUS_LABEL, CAMPAIGN_STATUS_STYLE } from "@/lib/ugc/campaign-status";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type Campaign = {
   id: string;

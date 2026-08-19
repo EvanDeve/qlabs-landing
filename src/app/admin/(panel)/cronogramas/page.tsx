@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { mesCR, nombreDeMes, sumarMeses } from "@/lib/ugc/cronograma";
 import NuevoCronogramaButton from "@/components/ugc/admin/NuevoCronogramaButton";
-import styles from "../qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +124,7 @@ export default async function CronogramasPage() {
                 return (
                   <Link
                     key={k}
-                    href={`/ugc/admin/cronogramas/${f.hero_id}/${f.month}`}
+                    href={`/admin/cronogramas/${f.hero_id}/${f.month}`}
                     className={styles.cronoRow}
                   >
                     <span className={styles.cronoName}>{nombreDeHero.get(f.hero_id) ?? "Hero borrado"}</span>

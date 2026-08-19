@@ -7,7 +7,7 @@ import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
 import { riesgoDeHero, metaDelMes } from "@/lib/ugc/reporte";
 // El selector de mes vive en la barra superior (lo monta el layout), no acá.
 import { mesCR as mesCRDe, parseMes, diasDelMes, nombreDeMes } from "@/lib/ugc/cronograma";
-import styles from "./qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -384,7 +384,7 @@ export default async function AdminDashboardPage({
             <div className={styles.sectionHead}>
               <h2>Estado de las cuentas</h2>
               <div className={styles.sectionHeadAct}>
-                <Link href="/ugc/admin/heroes" className={styles.linkMore}>
+                <Link href="/admin/heroes" className={styles.linkMore}>
                   Ver todas
                 </Link>
               </div>
@@ -414,7 +414,7 @@ export default async function AdminDashboardPage({
                 {sortedHeroStats.map(({ hero, target, published, deficit, calendarApproved, sinCronograma, risk }) => (
                   <tr key={hero.id}>
                     <td>
-                      <Link href={`/ugc/admin/heroes/${hero.id}`} className={styles.acctHero}>
+                      <Link href={`/admin/heroes/${hero.id}`} className={styles.acctHero}>
                         {hero.logo_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={hero.logo_url} alt={hero.name} className={styles.heroMono} style={{ objectFit: "cover" }} />
@@ -431,7 +431,7 @@ export default async function AdminDashboardPage({
                           uno vacío y ya aprobado, con meta 0. Lleva a armarlo. */}
                       {sinCronograma ? (
                         <Link
-                          href="/ugc/admin/cronogramas"
+                          href="/admin/cronogramas"
                           className={`${styles.calBtn} ${styles.calBtnPend}`}
                           title={`${hero.name} no tiene cronograma de ${monthName}`}
                         >

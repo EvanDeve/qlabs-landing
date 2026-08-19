@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { createHeroAction, type CreateHeroState } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import HeroLogoField from "./HeroLogoField";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export default function NewHeroModal({ onClose }: { onClose: () => void }) {
   const [state, formAction, isPending] = useActionState<CreateHeroState, FormData>(createHeroAction, null);

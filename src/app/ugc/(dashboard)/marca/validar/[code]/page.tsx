@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buscarReclamoPorCodigo } from "@/lib/ugc/loyalty-marca";
 import { fechaLarga, LEYENDA_EVENTO } from "@/lib/ugc/loyalty";
 import ConfirmarCanje from "@/components/ugc/marca/ConfirmarCanje";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

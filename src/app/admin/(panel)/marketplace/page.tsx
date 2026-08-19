@@ -5,7 +5,7 @@ import VerificacionAcciones from "@/components/ugc/admin/VerificacionAcciones";
 import { estadoCuenta, type EstadoCuenta } from "@/lib/ugc/estado-cuenta";
 import { APPLICATION_STATUS_LABEL } from "@/lib/ugc/application-status";
 import { CAMPAIGN_STATUS_LABEL } from "@/lib/ugc/campaign-status";
-import styles from "../qos.module.css";
+import styles from "@/styles/qos.module.css";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 
 export const dynamic = "force-dynamic";

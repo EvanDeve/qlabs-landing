@@ -7,7 +7,7 @@ import { COUPON_IMAGE_BUCKET, MAX_COUPON_IMAGE_BYTES } from "@/lib/ugc/coupon-im
 import { subirArchivoDirecto, pesoLegible } from "@/lib/ugc/uploads";
 import { createClient } from "@/lib/supabase/client";
 import { LEYENDA_EVENTO, LABEL_TIPO_CUPON } from "@/lib/ugc/loyalty";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export type CuponEditable = {
   id: string;

@@ -9,7 +9,7 @@ import {
 } from "@/lib/ugc/content-meta";
 import { parseSeccion } from "@/lib/ugc/content-columns";
 import type { ContentPriority } from "@/lib/database.types";
-import styles from "../qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

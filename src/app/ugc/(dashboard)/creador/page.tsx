@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { creatorPayout } from "@/lib/ugc/payout";
 import { daysUntil, dueLabel } from "@/lib/ugc/creator-task";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

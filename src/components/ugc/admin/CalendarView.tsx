@@ -22,7 +22,7 @@ import BrandAvatar from "@/components/ugc/BrandAvatar";
 import StaffAvatar from "./StaffAvatar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CalendarEventModal from "./CalendarEventModal";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type ViewMode = "month" | "week" | "day";
 type Option = { id: string; name: string };

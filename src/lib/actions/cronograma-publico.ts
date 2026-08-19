@@ -227,8 +227,8 @@ export async function marcarVistoAction(token: string) {
 
 function revalidarTodo(token: string, heroId: string, mes: string) {
   revalidatePath(`/ugc/cronograma/${token}`);
-  revalidatePath(`/ugc/admin/cronogramas/${heroId}/${mes}`);
-  revalidatePath("/ugc/admin/cronogramas");
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin");
+  revalidatePath(`/admin/cronogramas/${heroId}/${mes}`);
+  revalidatePath("/admin/cronogramas");
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin");
 }

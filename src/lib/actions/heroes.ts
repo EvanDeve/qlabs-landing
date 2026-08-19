@@ -73,8 +73,8 @@ export async function createHeroAction(
     return { error: "No se pudo crear el Hero. Intentá de nuevo." };
   }
 
-  revalidatePath("/ugc/admin/heroes");
-  redirect(`/ugc/admin/heroes/${data.id}`);
+  revalidatePath("/admin/heroes");
+  redirect(`/admin/heroes/${data.id}`);
 }
 
 /**
@@ -102,21 +102,21 @@ export async function setHeroArchivedAction(formData: FormData) {
 
   // Los mismos cuatro lugares que el delete: el Dashboard cambia de KPIs y de
   // Pase de servicio, y el Pipeline y el Calendario cambian de selects.
-  revalidatePath("/ugc/admin/heroes");
-  revalidatePath(`/ugc/admin/heroes/${id}`);
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin/calendario");
-  revalidatePath("/ugc/admin");
+  revalidatePath("/admin/heroes");
+  revalidatePath(`/admin/heroes/${id}`);
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin/calendario");
+  revalidatePath("/admin");
 }
 
 export async function deleteHeroAction(id: string) {
   const supabase = await createClient();
   await supabase.from("agency_clients").delete().eq("id", id);
 
-  revalidatePath("/ugc/admin/heroes");
-  revalidatePath("/ugc/admin/pipeline");
-  revalidatePath("/ugc/admin/calendario");
-  revalidatePath("/ugc/admin");
+  revalidatePath("/admin/heroes");
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin/calendario");
+  revalidatePath("/admin");
 }
 
 export async function updateHeroProfileAction(formData: FormData) {
@@ -159,9 +159,9 @@ export async function updateHeroProfileAction(formData: FormData) {
     })
     .eq("id", id);
 
-  revalidatePath("/ugc/admin/heroes");
-  revalidatePath(`/ugc/admin/heroes/${id}`);
-  revalidatePath("/ugc/admin");
+  revalidatePath("/admin/heroes");
+  revalidatePath(`/admin/heroes/${id}`);
+  revalidatePath("/admin");
 }
 
 /**
@@ -193,7 +193,7 @@ export async function toggleCalendarMonthAction(heroId: string, monthRaw?: strin
   // Sin cronograma no hay nada que aprobar. Antes esto hacía un upsert que lo
   // creaba de la nada; con la meta saliendo del cronograma, eso dejaba un mes
   // "aprobado" con cero videos y meta 0 — un Hero sin planificar figurando
-  // como que cumplió. El cronograma se arma en /ugc/admin/cronogramas.
+  // como que cumplió. El cronograma se arma en /admin/cronogramas.
   if (!existing) return;
 
   const approving = existing.status !== "aprobado";
@@ -212,6 +212,6 @@ export async function toggleCalendarMonthAction(heroId: string, monthRaw?: strin
     .eq("hero_id", heroId)
     .eq("month", month);
 
-  revalidatePath("/ugc/admin");
-  revalidatePath("/ugc/admin/cronogramas");
+  revalidatePath("/admin");
+  revalidatePath("/admin/cronogramas");
 }

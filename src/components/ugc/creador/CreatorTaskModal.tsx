@@ -11,7 +11,7 @@ import { PLATFORMS, PLATFORM_LABEL } from "@/lib/ugc/creator-task";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import type { CreatorTask, TaskColumn } from "./CreatorTaskBoard";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 // Un solo modal para crear y para editar: los campos son los mismos y tener dos
 // componentes casi idénticos garantiza que se desincronicen.

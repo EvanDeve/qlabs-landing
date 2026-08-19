@@ -5,7 +5,7 @@ import { deletePortfolioItemAction, movePortfolioItemAction } from "@/lib/action
 import { PORTFOLIO_CATEGORIES, PORTFOLIO_CATEGORY_LABEL } from "@/lib/ugc/portfolio";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import MediaLightbox, { type LightboxItem } from "@/components/ugc/MediaLightbox";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type PortfolioTile = {
   id: string;

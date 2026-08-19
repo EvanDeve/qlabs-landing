@@ -9,7 +9,7 @@ import { nextColumn, type ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import type { BrandOption, StaffOption } from "./KanbanBoard";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type ContentPiece = Database["public"]["Tables"]["content_pieces"]["Row"];
 
@@ -743,7 +743,7 @@ function LinkField({
  * URL para abrir en otra pestaña, o null si no hay nada que abrir.
  *
  * Un link pegado como "drive.google.com/..." sin esquema se leería como ruta
- * relativa y llevaría a /ugc/admin/drive.google.com — de ahí el https:// de
+ * relativa y llevaría a /admin/drive.google.com — de ahí el https:// de
  * relleno. Se descartan esquemas raros (javascript:, data:) para no meter un
  * link ejecutable en el drawer.
  */

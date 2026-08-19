@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { resolveDisputeAction, type ConflictActionState } from "@/lib/actions/conflicts";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 // Resolver una disputa manda correo a las dos partes, así que la nota es
 // obligatoria: es el registro de por qué se decidió lo que se decidió.

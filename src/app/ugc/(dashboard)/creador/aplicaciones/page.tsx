@@ -10,7 +10,7 @@ import {
 import ConflictActionButton from "@/components/ugc/ConflictActionButton";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { creatorPayout } from "@/lib/ugc/payout";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 

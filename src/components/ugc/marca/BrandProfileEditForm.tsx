@@ -5,7 +5,7 @@ import { updateBrandProfileAction, type UpdateBrandProfileState } from "@/lib/ac
 import { useToast } from "@/components/ugc/Toaster";
 import ImageCropModal from "@/components/ugc/ImageCropModal";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 type BrandProfile = {
   brand_name: string;

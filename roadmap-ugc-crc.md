@@ -20,7 +20,7 @@ qlabsmethod.com          → UN SOLO proyecto Next.js:
   /ugc                   → El marketplace (vista pública)
   /ugc/creador/*         → Dashboard del creador
   /ugc/marca/*           → Dashboard de la marca
-  /ugc/admin             → Panel admin Q Labs
+  /admin             → Panel admin Q Labs
   /recursos/*            → Blog SEO (Fase 3)
 ```
 
@@ -222,7 +222,7 @@ Reglas RLS críticas:
 /ugc/login         → Auth (login/registro con selección de rol)
 /ugc/creador/*     → Dashboard del creador (protegido, rol creator)
 /ugc/marca/*       → Dashboard de la marca (protegido, rol brand)
-/ugc/admin         → Panel admin (protegido, rol admin)
+/admin         → Panel admin (protegido, rol admin)
 ```
 
 **Punto de entrada al marketplace:** la landing (/) tiene una sección UGC·CRC — el "puente de los dos héroes" del diseño — y AHÍ viven los CTAs principales: "Iniciar sesión", "Publicar campaña" (marca) y "Aplicar como creador". Esos botones redirigen a /ugc/login, o directo al dashboard correspondiente si ya hay sesión activa. La vista pública /ugc también tiene sus propios CTAs de registro.
@@ -235,7 +235,7 @@ Reglas RLS críticas:
 4. **Flujo marca (/ugc/marca):** dashboard con sidebar (Mis campañas / Crear campaña / Aplicantes / Perfil). Crear campaña: título, brief, presupuesto en CRC, entregables (tags seleccionables: Reel, TikTok, Stories, Fotos con cantidad), audiencia ideal, deadline en días. Publicar. Ver lista con conteo de aplicantes. Ver aplicantes de una campaña con su perfil. Aceptar o rechazar aplicaciones.
 5. **Flujo creador (/ugc/creador):** dashboard con sidebar (Feed de promos / Mis aplicaciones / Perfil). Feed de campañas publicadas con brief completo. Aplicar con mensaje opcional. Tracker de aplicaciones con estados: pendiente → en revisión → aceptada/rechazada.
 6. **Notificaciones:** in-app (campana en nav) + email vía Resend: a la marca cuando llega aplicación nueva, al creador cuando cambia el estado de su aplicación.
-7. **Admin (/ugc/admin):** ruta protegida (solo rol admin) para: verificar creadores (toggle verified), ver todas las campañas y aplicaciones, marcar matches como completados.
+7. **Admin (/admin):** ruta protegida (solo rol admin) para: verificar creadores (toggle verified), ver todas las campañas y aplicaciones, marcar matches como completados.
 
 **Explícitamente FUERA de Fase 1:** pagos in-app (se coordinan por fuera), subida de portfolio/book, niveles/XP/gamificación, Academia, Feed de contenido, suscripción Marca Pro, blog. Estos vienen en Fases 2-3 — no dejes stubs ni tablas a medias para ellos.
 

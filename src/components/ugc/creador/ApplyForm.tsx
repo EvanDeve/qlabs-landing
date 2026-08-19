@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { applyToCampaignAction, type ApplyActionState } from "@/lib/actions/applications";
-import styles from "@/app/ugc/(dashboard)/admin/qos.module.css";
+import styles from "@/styles/qos.module.css";
 
 export default function ApplyForm({ campaignId }: { campaignId: string }) {
   const [state, formAction, pending] = useActionState<ApplyActionState, FormData>(
