@@ -119,20 +119,33 @@ export default function CalendarEventModal({
 
             <div className={styles.field}>
               <label>Responsable (opcional)</label>
-              <select name="responsible_id" defaultValue="" className={styles.inp}>
+              {/* Preseleccionado con el responsable que el evento YA tiene. Iba
+                  fijo en "": abrir un evento asignado mostraba "Sin asignar" y
+                  guardar mandaba null, así que cualquier edición —cambiarle la
+                  hora, por ejemplo— lo desasignaba en silencio. */}
+              <select name="responsible_id" defaultValue={item?.responsibleId ?? ""} className={styles.inp}>
                 <option value="">Sin asignar</option>
                 {staff.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
                 ))}
+                {/* Quien ya no está en el equipo no viene en `staff` y sin esta
+                    opción el <select> caería en "Sin asignar", borrándolo al
+                    guardar. Aparece solo si el evento es suyo. */}
+                {item?.responsibleId && !staff.some((s) => s.id === item.responsibleId) && (
+                  <option value={item.responsibleId}>{item.responsibleName ?? "Fuera del equipo"}</option>
+                )}
               </select>
             </div>
 
             {item && (
               <div className={styles.field}>
                 <label>Estado</label>
-                <select name="status" defaultValue="programado" className={styles.inp}>
+                {/* Mismo caso que el responsable: estaba fijo en "programado",
+                    así que editar una grabación ya marcada como hecha la
+                    devolvía a programada sin avisar. */}
+                <select name="status" defaultValue={item.status ?? "programado"} className={styles.inp}>
                   <option value="programado">Programado</option>
                   <option value="hecho">Hecho</option>
                   <option value="pausado">Pausado</option>

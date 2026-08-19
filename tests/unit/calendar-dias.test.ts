@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diaCR, diaCorto, entraEnLaGrilla, nivelDeCarga, sumarDias } from "@/lib/ugc/calendar";
+import { diaCR, diaCorto, entraEnLaGrilla, horaCR, instanteCR, nivelDeCarga, sumarDias } from "@/lib/ugc/calendar";
 
 // El bug que estas pruebas cuidan: una pieza puesta para el 1 de agosto se veía
 // en todos lados —Kanban, Calendario y el WhatsApp del agente— como del 31 de
@@ -144,5 +144,45 @@ describe("entraEnLaGrilla", () => {
   it("no se confunde con el minuto", () => {
     expect(entraEnLaGrilla("08:40")).toBe(true);
     expect(entraEnLaGrilla("16:41")).toBe(true);
+  });
+});
+
+// El otro lado del mismo problema: diaCR/horaCR LEEN un instante, instanteCR lo
+// ESCRIBE. El bug fue guardar con `new Date('2026-08-26T08:00')`, que lee el
+// string en la zona del proceso: en la Mac del equipo (CR) daba bien y en Vercel
+// (UTC) guardaba las 08:00 como 08:00Z, o sea las 2 de la madrugada en CR.
+//
+// El equipo lo reportó como "se borran los horarios": 02:00 cae fuera de la
+// franja 8–20 que dibuja la grilla, así que la grabación se iba a la banda
+// "Sin hora" y la hora parecía haberse perdido.
+//
+// Estas pruebas NO dependen de la zona de quien las corre — es justamente la
+// propiedad que se rompió.
+describe("instanteCR", () => {
+  it("interpreta la hora en Costa Rica y no en la zona del proceso", () => {
+    // 08:00 en CR (UTC-6) son las 14:00Z. Con el bug daba '2026-08-26T08:00:00Z'.
+    expect(instanteCR("2026-08-26T08:00")).toBe("2026-08-26T14:00:00.000Z");
+  });
+
+  it("no cambia de día una hora de la mañana temprano", () => {
+    // EL caso feo: con el bug, 05:00 se guardaba como 05:00Z = 23:00 del 25 en
+    // CR, y la grabación aparecía el día anterior.
+    expect(instanteCR("2026-08-26T05:00")).toBe("2026-08-26T11:00:00.000Z");
+    expect(diaCR(instanteCR("2026-08-26T05:00"))).toBe("2026-08-26");
+  });
+
+  it("la hora que se guarda es la que se vuelve a leer", () => {
+    // La ida y vuelta completa: lo que la persona tipea es lo que el calendario
+    // le muestra después. Sin esto, reabrir y volver a guardar corría el evento
+    // otras seis horas cada vez.
+    for (const tipeado of ["2026-08-26T00:00", "2026-08-26T09:30", "2026-08-26T21:01", "2026-12-31T23:59"]) {
+      const [dia, hora] = tipeado.split("T");
+      expect(diaCR(instanteCR(tipeado))).toBe(dia);
+      expect(horaCR(instanteCR(tipeado))).toBe(hora);
+    }
+  });
+
+  it("acepta el valor con segundos que manda un input con step", () => {
+    expect(instanteCR("2026-08-26T08:00:00")).toBe("2026-08-26T14:00:00.000Z");
   });
 });

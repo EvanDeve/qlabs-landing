@@ -104,8 +104,13 @@ export default async function CalendarioPage({
       brandLogoUrl: event.brand_id ? brandLogoById.get(event.brand_id) ?? null : null,
       createdByAgent: event.created_by_agent,
       responsibleName: event.responsible_id ? staffNameById.get(event.responsible_id) ?? null : null,
+      // El id va aunque la persona ya no esté en staff_directory: el nombre de
+      // arriba saldría null y el <select> del modal no la tendría entre sus
+      // opciones, pero perder el id igual haría que guardar la desasignara.
+      responsibleId: event.responsible_id,
       responsibleAvatarUrl: event.responsible_id ? staffAvatarById.get(event.responsible_id) ?? null : null,
       responsibleColor: event.responsible_id ? staffColorById.get(event.responsible_id) ?? null : null,
+      status: event.status,
       contentPieceId: event.content_piece_id,
     });
   }
@@ -137,8 +142,13 @@ export default async function CalendarioPage({
         // pedía, así que una publicación no decía de quién era. Ahora sale del
         // mismo owner_id que pinta la tarjeta del Pipeline.
         responsibleName: piece.owner_id ? staffNameById.get(piece.owner_id) ?? null : null,
+        responsibleId: piece.owner_id,
         responsibleAvatarUrl: piece.owner_id ? staffAvatarById.get(piece.owner_id) ?? null : null,
         responsibleColor: piece.owner_id ? staffColorById.get(piece.owner_id) ?? null : null,
+        // Una pieza no tiene estado de calendario: su avance lo dice la columna
+        // del Kanban. El modal la abre en modo lectura, así que no hay <select>
+        // que preseleccionar.
+        status: null,
         contentPieceId: piece.id,
       });
     }
@@ -159,8 +169,13 @@ export default async function CalendarioPage({
         brandLogoUrl: piece.brand_id ? brandLogoById.get(piece.brand_id) ?? null : null,
         createdByAgent: false,
         responsibleName: piece.owner_id ? staffNameById.get(piece.owner_id) ?? null : null,
+        responsibleId: piece.owner_id,
         responsibleAvatarUrl: piece.owner_id ? staffAvatarById.get(piece.owner_id) ?? null : null,
         responsibleColor: piece.owner_id ? staffColorById.get(piece.owner_id) ?? null : null,
+        // Una pieza no tiene estado de calendario: su avance lo dice la columna
+        // del Kanban. El modal la abre en modo lectura, así que no hay <select>
+        // que preseleccionar.
+        status: null,
         contentPieceId: piece.id,
       });
     }

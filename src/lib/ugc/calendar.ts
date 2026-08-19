@@ -1,5 +1,10 @@
-import { formatInTimeZone } from "date-fns-tz";
-import type { CalendarEventType, ContentApproval, ContentPlatform } from "@/lib/database.types";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import type {
+  CalendarEventStatus,
+  CalendarEventType,
+  ContentApproval,
+  ContentPlatform,
+} from "@/lib/database.types";
 
 export const COSTA_RICA_TZ = "America/Costa_Rica";
 
@@ -39,6 +44,32 @@ export function diaCR(fecha: string | Date): string {
 export function horaCR(fecha: string | Date): string | null {
   if (typeof fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null;
   return formatInTimeZone(typeof fecha === "string" ? new Date(fecha) : fecha, COSTA_RICA_TZ, "HH:mm");
+}
+
+/**
+ * El instante que representa lo que alguien tipeó en un `<input datetime-local>`.
+ *
+ * El input manda un string SIN zona ('2026-08-26T08:00'). `new Date()` lo lee
+ * en la zona del PROCESO, y Vercel corre en UTC: las 8 de la mañana que alguien
+ * escribió en San José se guardaban como 08:00Z, o sea las 2 de la madrugada en
+ * Costa Rica. Seis horas antes, siempre.
+ *
+ * Es la contracara de diaCR/horaCR —esas leen un instante, esta lo escribe— y
+ * falla por el mismo motivo de fondo: dejar que la zona la ponga el ambiente en
+ * vez de decirla. Es un bug que NO se ve desarrollando (la Mac está en CR, ahí
+ * la conversión daba bien) y que además se acumulaba: al reabrir el evento el
+ * modal mostraba las 02:00 ya convertidas, y volver a guardar las corría otras
+ * seis horas hasta cambiar de día.
+ *
+ * McLovin nunca lo tuvo: al anotar un evento por WhatsApp ya usaba
+ * fromZonedTime. Esto pone al formulario de Q·OS a hacer lo mismo.
+ */
+export function instanteCR(valorDelInput: string): string {
+  // Los segundos se completan solo si el input no los trajo. Un
+  // `datetime-local` sin `step` manda 'yyyy-MM-ddTHH:mm', pero con `step` el
+  // navegador agrega ':ss' y concatenar otro ':00' armaría una fecha inválida.
+  const conSegundos = /T\d{2}:\d{2}:\d{2}/.test(valorDelInput) ? valorDelInput : `${valorDelInput}:00`;
+  return fromZonedTime(conSegundos.replace("T", " "), COSTA_RICA_TZ).toISOString();
 }
 
 /** Suma (o resta, con negativo) días a un instante. */
@@ -119,10 +150,30 @@ export type CalendarItem = {
   /** Ídem: el estado de aprobación es de la pieza, no del evento. */
   approval: ContentApproval | null;
   responsibleName: string | null;
+  /**
+   * El id del responsable, además del nombre.
+   *
+   * Va aparte de `responsibleName` porque los dos se usan para cosas distintas:
+   * el nombre lo pinta la grilla, el id lo necesita el `<select>` del modal para
+   * quedar preseleccionado al editar. Sin él, abrir un evento asignado mostraba
+   * "Sin asignar" y guardar lo mandaba a null: cada edición borraba el
+   * responsable sin que nadie lo pidiera.
+   */
+  responsibleId: string | null;
   /** Para pintar la cara del responsable; null cuando no subió foto. */
   responsibleAvatarUrl: string | null;
   /** El color de staff_members: es el fondo del avatar cuando no hay foto. */
   responsibleColor: string | null;
+  /**
+   * El estado del evento, o null si el item no es un evento.
+   *
+   * Solo `calendar_events` tiene estado: los items derivados de una pieza lo
+   * llevan en null porque su avance lo dice la columna del Kanban, no esta
+   * columna. Igual que responsibleId, existe para que el modal no lo pierda:
+   * estaba fijo en "programado" y editar una grabación ya hecha la devolvía a
+   * programada.
+   */
+  status: CalendarEventStatus | null;
   contentPieceId: string | null;
 };
 

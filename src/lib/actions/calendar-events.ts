@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { instanteCR } from "@/lib/ugc/calendar";
 import type { CalendarEventType, CalendarEventStatus } from "@/lib/database.types";
 
 export async function createCalendarEventAction(formData: FormData) {
@@ -22,7 +23,7 @@ export async function createCalendarEventAction(formData: FormData) {
   await supabase.from("calendar_events").insert({
     type,
     title,
-    starts_at: new Date(startsAt).toISOString(),
+    starts_at: instanteCR(startsAt),
     brand_id: brandId,
     responsible_id: responsibleId,
   });
@@ -66,7 +67,7 @@ export async function updateCalendarEventAction(formData: FormData) {
     .update({
       type,
       title,
-      starts_at: startsAt ? new Date(startsAt).toISOString() : undefined,
+      starts_at: startsAt ? instanteCR(startsAt) : undefined,
       brand_id: brandId,
       responsible_id: responsibleId,
       status,
