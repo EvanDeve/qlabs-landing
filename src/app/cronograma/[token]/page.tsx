@@ -21,8 +21,12 @@ export const dynamic = "force-dynamic";
  *   los cronogramas de TODOS los Heroes a cualquiera con la anon key, que viaja
  *   en el bundle de cualquier navegador. Acá el filtro por token lo hace este
  *   archivo, del lado del servidor.
- * - **El middleware no la toca**: `PROTECTED_PREFIXES` no incluye
- *   `/ugc/cronograma`, y compara por segmento.
+ * - **El middleware no la toca**: vive fuera de `/ugc` y de `/admin`, que son
+ *   los dos únicos árboles del `matcher` del proxy. Antes colgaba de
+ *   `/ugc/cronograma` y dependía de que `PROTECTED_PREFIXES` no la nombrara;
+ *   ahora ni siquiera pasa por ahí, así que se ahorra un `getUser()` por
+ *   visita. Se mudó porque el link se le manda al Hero por WhatsApp y decir
+ *   "ugc" ahí no significaba nada para él.
  */
 
 async function cargar(token: string) {

@@ -147,7 +147,7 @@ export default async function ArmarCronogramaPage({
         </div>
       </div>
 
-      <CronogramaShareLink url={`${await origenDeLaPeticion()}/ugc/cronograma/${cronograma.share_token}`} aprobado={aprobado} />
+      <CronogramaShareLink url={`${await origenDeLaPeticion()}/cronograma/${cronograma.share_token}`} aprobado={aprobado} />
 
       <div style={{ display: "grid", gap: "8px", marginBottom: "18px" }}>
         {items.length === 0 ? (

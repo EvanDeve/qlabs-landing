@@ -51,7 +51,10 @@ Reglas RLS críticas:
 /ugc/marca/*       → Dashboard de la marca (protegido, rol brand)
 /admin/login       → Puerta de Q·OS (solo correo + contraseña, sin registro)
 /admin/*           → Q·OS, el panel del equipo (protegido, rol admin)
+/cronograma/[token] → El cronograma del mes como lo ve el Hero (sin sesión, el token es la credencial)
 ```
+
+**Lo que NO es del marketplace no cuelga de `/ugc`.** Vale para el panel del equipo y para el cronograma público (`/cronograma/[token]`, que se le manda al Hero por WhatsApp): ninguno de los dos es parte de UGC·CRC y decir "ugc" en esas URLs no significaba nada para quien las recibe. Bajo `/ugc` quedan la vista pública del marketplace, sus dos paneles y los perfiles públicos de creador y marca, que sí lo son.
 
 **Q·OS no cuelga de `/ugc`.** El panel del equipo vivía en `/ugc/admin/*` por herencia del orden en que se construyó el proyecto, no por diseño: no es parte del marketplace y no comparte su puerta. Hoy es un árbol aparte con su propio login. Las rutas viejas siguen redirigiendo con un 308 permanente definido en `next.config.ts`, y conviene dejarlo puesto: McLovin ya mandó links a `/ugc/admin/*` por WhatsApp y esos mensajes son texto plano en el teléfono de cada uno. Las notificaciones de adentro de la app no dependen del redirect — `notifications` no guarda la URL, la arma al renderizar a partir de `type` + `payload`.
 

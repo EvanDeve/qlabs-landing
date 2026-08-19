@@ -20,6 +20,13 @@ const nextConfig: NextConfig = {
       // solas: `notifications` no guarda la URL, la arma al renderizar.
       { source: "/ugc/admin", destination: "/admin", permanent: true },
       { source: "/ugc/admin/:path*", destination: "/admin/:path*", permanent: true },
+
+      // El cronograma público salió de /ugc por el mismo motivo, y acá el
+      // redirect pesa todavía más: el link se le manda al Hero por WhatsApp,
+      // no lo tiene nadie de la casa, y es la única ruta del proyecto que
+      // funciona sin sesión. Un 404 acá es un cliente que no puede aprobar su
+      // mes y que no tiene a quién reclamarle salvo por WhatsApp.
+      { source: "/ugc/cronograma/:token", destination: "/cronograma/:token", permanent: true },
     ];
   },
 };
