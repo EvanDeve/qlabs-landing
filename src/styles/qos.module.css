@@ -5463,3 +5463,170 @@
   color: #fff;
   background: rgba(13, 10, 28, 0.55);
 }
+
+/* ---------- La puerta de Q·OS (/admin/login) ----------
+   Es la única pantalla de Q·OS que ve alguien SIN sesión, así que tiene que
+   decir de entrada de qué producto es la puerta. Toma prestado el fondo de la
+   sidebar —el mismo degradado, literal— porque es lo primero que el equipo
+   reconoce del panel, y de paso la separa sin ambigüedad del login del
+   marketplace, que es lavanda y pide elegir rol.
+
+   La tarjeta queda clara sobre el fondo oscuro a propósito: así `.field`,
+   `.inp` y `.btn` se usan tal cual, que es donde viven. Un formulario oscuro
+   obligaría a duplicar los tres. */
+.authPage {
+  min-height: 100vh;
+  /* dvh para que en el teléfono la barra del navegador no recorte la tarjeta. */
+  min-height: 100dvh;
+  /* Flex y no `grid` + `place-items: center`: con grid la columna se dimensiona
+     por el contenido, así que el área terminaba más ancha que la pantalla del
+     teléfono y la tarjeta —centrada DENTRO de esa área— se salía por la
+     derecha. En flex el ancho lo pone el contenedor y el `width: 100%` del
+     bloque se resuelve contra el viewport. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background:
+    radial-gradient(880px 400px at 50% -6%, rgba(109, 84, 243, 0.3), transparent 68%),
+    linear-gradient(185deg, var(--ink-side) 0%, var(--ink-deep) 100%);
+}
+.authWrap {
+  width: 100%;
+  max-width: 368px;
+}
+.authBrand {
+  text-align: center;
+  margin-bottom: 24px;
+}
+/* El logo va centrado por `place-items`, no por `text-align`: el preflight de
+   Tailwind (global, `@import "tailwindcss"` en globals.css) declara
+   `img { display: block }`, así que un `text-align: center` heredado no lo
+   mueve y la marca queda pegada al borde izquierdo. Ya pasó. */
+.authMark {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: 0 12px 30px rgba(6, 4, 18, 0.55);
+}
+.authMark img {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  object-fit: cover;
+}
+/* Con `.qosRoot h1 { color: var(--ink) }` compitiendo, una sola clase pierde
+   por especificidad y el título sale casi negro sobre el fondo oscuro. */
+.qosRoot .authTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+/* Mismo tratamiento que `.sub` y `.navLabel` de la sidebar: mono, versalitas y
+   violeta claro. Es el idioma que Q·OS ya usa para las etiquetas chicas. */
+.authSub {
+  margin: 8px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--b-300);
+}
+.authCard {
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: var(--r-xl);
+  padding: 26px 24px 24px;
+  /* Sombra larga y muy oscura: sobre un fondo claro alcanza con `--sh-lg`,
+     pero acá lo que despega la tarjeta del fondo es el contraste, no el gris. */
+  box-shadow: 0 26px 60px rgba(5, 3, 16, 0.55), 0 3px 10px rgba(5, 3, 16, 0.4);
+  animation: authIn 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes authIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.authPwd {
+  position: relative;
+}
+.authPwd .inp {
+  padding-right: 40px;
+}
+.authEye {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--ink-3);
+  transition: var(--t-fast);
+}
+.authEye:hover {
+  color: var(--ink-2);
+  background: var(--surface-3);
+}
+/* Doble clase para ganarle a `.btn.btnPrimary`, que ya fija padding y tamaño. */
+.btn.authSubmit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+  padding: 11px 16px;
+  font-size: 14px;
+}
+.authError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  /* Va ARRIBA del botón, igual que en el login del marketplace: el aviso tiene
+     que verse antes de volver a apretar, no después. */
+  margin: 0 0 4px;
+  padding: 9px 11px;
+  border: 1px solid var(--risk-line);
+  border-radius: var(--r-md);
+  background: var(--risk-bg);
+  color: var(--risk);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.authFoot {
+  /* Ancho propio, más angosto que la tarjeta, y `balance` para que los dos
+     renglones queden parejos: sin eso el corte natural deja "del equipo."
+     colgando solo abajo. */
+  max-width: 300px;
+  margin: 18px auto 0;
+  text-align: center;
+  text-wrap: balance;
+  font-size: 12px;
+  line-height: 1.6;
+  /* 0.55 y no menos: sobre este fondo, por debajo de ahí el renglón cae del
+     4.5:1 que pide WCAG para texto chico. */
+  color: rgba(244, 243, 251, 0.55);
+}
+
+/* Se apaga el desplazamiento, no la aparición — igual que con `.toast`. */
+@media (prefers-reduced-motion: reduce) {
+  .authCard {
+    animation: none;
+  }
+}

@@ -34,55 +34,24 @@ export default async function QosLoginPage({
   // elemento (input, button, label) bajo esa clase para no filtrarse al resto
   // de la app. Sin ella el formulario sale sin estilo.
   return (
-    <div
-      className={styles.qosRoot}
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        padding: "24px",
-        background:
-          "radial-gradient(1100px 520px at 50% -10%, var(--b-100), transparent 70%), var(--canvas)",
-      }}
-    >
-      <main style={{ width: "100%", maxWidth: "372px" }}>
-        <div style={{ textAlign: "center", marginBottom: "22px" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/favicon-logo.png"
-            alt=""
-            width={44}
-            height={44}
-            style={{ borderRadius: "var(--r-md)", objectFit: "cover", boxShadow: "var(--sh-md)" }}
-          />
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "26px",
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              margin: "12px 0 4px",
-            }}
-          >
-            Q·OS
-          </h1>
-          <p style={{ margin: 0, color: "var(--ink-2)", fontSize: "13.5px" }}>Acceso del equipo</p>
+    <div className={`${styles.qosRoot} ${styles.authPage}`}>
+      <main className={styles.authWrap}>
+        <div className={styles.authBrand}>
+          <div className={styles.authMark}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/favicon-logo.png" alt="" width={34} height={34} />
+          </div>
+          <h1 className={styles.authTitle}>Q·OS</h1>
+          <p className={styles.authSub}>Acceso del equipo</p>
         </div>
 
-        <div className={`${styles.card} ${styles.cardPad}`} style={{ boxShadow: "var(--sh-lg)" }}>
+        <div className={styles.authCard}>
           <QosLoginForm next={next} />
         </div>
 
         {/* Sin link de registro a propósito: al equipo lo da de alta un director
             desde Equipo → Invitar, y la invitación llega por correo. */}
-        <p
-          style={{
-            textAlign: "center",
-            margin: "16px 0 0",
-            fontSize: "12.5px",
-            color: "var(--ink-3)",
-          }}
-        >
+        <p className={styles.authFoot}>
           ¿No tenés acceso? Pedile la invitación a un director del equipo.
         </p>
       </main>

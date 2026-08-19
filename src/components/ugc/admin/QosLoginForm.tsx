@@ -18,9 +18,9 @@ export default function QosLoginForm({ next }: { next?: string }) {
   const [verPwd, setVerPwd] = useState(false);
 
   return (
-    <form action={formAction} style={{ display: "grid", gap: "14px" }}>
+    <form action={formAction}>
       {/* De dónde venía. Solo se respeta si la sesión que entra puede pisar esa
-          ruta — el filtro está en signInAction, no acá. */}
+          ruta — el filtro está en `destinoConNext`, no acá. */}
       {next ? <input type="hidden" name="next" value={next} /> : null}
 
       <div className={styles.field}>
@@ -39,7 +39,7 @@ export default function QosLoginForm({ next }: { next?: string }) {
 
       <div className={styles.field}>
         <label htmlFor="qos-pwd">Contraseña</label>
-        <div style={{ position: "relative" }}>
+        <div className={styles.authPwd}>
           <input
             id="qos-pwd"
             type={verPwd ? "text" : "password"}
@@ -47,57 +47,29 @@ export default function QosLoginForm({ next }: { next?: string }) {
             required
             autoComplete="current-password"
             className={styles.inp}
-            style={{ paddingRight: "42px" }}
           />
           <button
             type="button"
             onClick={() => setVerPwd((v) => !v)}
             tabIndex={-1}
             aria-label={verPwd ? "Ocultar contraseña" : "Mostrar contraseña"}
-            style={{
-              position: "absolute",
-              right: "10px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              background: "none",
-              border: 0,
-              padding: 0,
-              cursor: "pointer",
-              color: "var(--ink-3)",
-              lineHeight: 1,
-            }}
+            className={styles.authEye}
           >
             <i className={verPwd ? "fa-solid fa-eye-slash" : "fa-solid fa-eye"} aria-hidden />
           </button>
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className={`${styles.btn} ${styles.btnPrimary}`}
-        style={{ width: "100%", justifyContent: "center", height: "42px", marginTop: "2px" }}
-      >
-        {isPending ? "Entrando…" : "Entrar"}
-      </button>
-
       {state && "error" in state ? (
-        <p
-          role="alert"
-          style={{
-            margin: 0,
-            borderRadius: "var(--r-md)",
-            background: "var(--risk-bg)",
-            border: "1px solid var(--risk-line)",
-            color: "var(--risk)",
-            padding: "9px 12px",
-            fontSize: "13px",
-            fontWeight: 600,
-          }}
-        >
+        <p role="alert" className={styles.authError}>
+          <i className="fa-solid fa-circle-exclamation" aria-hidden style={{ marginTop: "2px" }} />
           {state.error}
         </p>
       ) : null}
+
+      <button type="submit" disabled={isPending} className={`${styles.btn} ${styles.btnPrimary} ${styles.authSubmit}`}>
+        {isPending ? "Entrando…" : "Entrar"}
+      </button>
     </form>
   );
 }
