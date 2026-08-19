@@ -19,9 +19,9 @@ type ViewMode = "month" | "week" | "day";
 export default async function CalendarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; date?: string; tipo?: string }>;
+  searchParams: Promise<{ view?: string; date?: string; tipo?: string; hero?: string }>;
 }) {
-  const { view: viewParam, date: dateParam, tipo: tipoParam } = await searchParams;
+  const { view: viewParam, date: dateParam, tipo: tipoParam, hero: heroParam } = await searchParams;
   const view: ViewMode = viewParam === "week" || viewParam === "day" ? viewParam : "month";
   // Un `?tipo=` que no existe se ignora y el calendario sale entero, igual que
   // el `?mes=` viejo del Pipeline: un link viejo o mal tipeado tiene que mostrar
@@ -52,7 +52,10 @@ export default async function CalendarioPage({
 
   const [{ data: agencyClients }, { data: staffMembers }, { data: calendarEvents }, { data: contentPieces }] =
     await Promise.all([
-      supabase.from("agency_clients").select("id, name, logo_url"),
+      // `archived` viaja porque decide dos cosas distintas: qué Heroes se
+      // ofrecen en el filtro (solo los activos) y con cuántos se calcula la
+      // paleta (TODOS). Ver coloresDeHeroes más abajo.
+      supabase.from("agency_clients").select("id, name, logo_url, archived"),
       // staff_directory y no staff_members: la tabla quedó cerrada a
     // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
     // expone solo lo que el tablero necesita para pintar responsables.
@@ -213,9 +216,21 @@ export default async function CalendarioPage({
 
   // La paleta se calcula con TODOS los Heroes, archivados incluidos, porque
   // coloresDeHeroes reparte por posición en la lista ordenada: si acá entraran
-  // solo los activos, cada uno tomaría el color del que le sigue y el mismo Hero
-  // cambiaría de color según qué pantalla lo pida.
+  // solo los 11 activos, cada uno tomaría el color del que le sigue y el mismo
+  // Hero cambiaría de color según qué pantalla lo pida. El filtro, en cambio,
+  // ofrece solo los activos — un Hero archivado no tiene nada que planificar
+  // este mes—, y si alguno archivado igual tiene algo agendado, CalendarView lo
+  // agrega solo para que se pueda aislar en vez de quedar sin opción.
   const heroColors = Object.fromEntries(coloresDeHeroes((agencyClients ?? []).map((c) => c.id)));
+  const heroes = (agencyClients ?? [])
+    .filter((c) => !c.archived)
+    .map((c) => ({ id: c.id, name: c.name }))
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
+
+  // Mismo criterio que `tipo`: un id que no es de ningún Hero se ignora y el
+  // calendario sale entero. Se valida contra la lista COMPLETA y no contra los
+  // activos, para que un link a un Hero recién archivado siga funcionando.
+  const hero = (agencyClients ?? []).some((c) => c.id === heroParam) ? heroParam! : null;
 
   return (
     <CalendarView
@@ -226,7 +241,9 @@ export default async function CalendarioPage({
       brands={brands}
       staff={staff}
       heroColors={heroColors}
+      heroes={heroes}
       tipo={tipo}
+      hero={hero}
     />
   );
 }

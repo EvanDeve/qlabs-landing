@@ -16,6 +16,7 @@ export default function CalendarEventModal({
   item,
   defaultDate,
   defaultType,
+  defaultBrandId,
   brands,
   staff,
   onClose,
@@ -28,6 +29,8 @@ export default function CalendarEventModal({
    * día es una grabación, y dejarlo en "Reunión" obliga a corregirlo siempre.
    */
   defaultType?: CalendarEventType;
+  /** Ídem con el Hero: filtrando por uno, lo que se anota es de ese Hero. */
+  defaultBrandId?: string;
   brands: Option[];
   staff: Option[];
   onClose: () => void;
@@ -115,7 +118,7 @@ export default function CalendarEventModal({
 
             <div className={styles.field}>
               <label>Hero (opcional)</label>
-              <select name="brand_id" defaultValue={item?.brandId ?? ""} className={styles.inp}>
+              <select name="brand_id" defaultValue={item?.brandId ?? defaultBrandId ?? ""} className={styles.inp}>
                 <option value="">Sin Hero</option>
                 {brands.map((b) => (
                   <option key={b.id} value={b.id}>

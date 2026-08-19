@@ -71,7 +71,9 @@ export default function CalendarView({
   brands,
   staff,
   heroColors,
+  heroes,
   tipo,
+  hero,
 }: {
   view: ViewMode;
   refDateStr: string;
@@ -81,8 +83,12 @@ export default function CalendarView({
   staff: Option[];
   /** id de Hero → color. Viene calculado con la lista COMPLETA, ver la página. */
   heroColors: Record<string, string>;
+  /** Solo los Heroes activos: son los que se ofrecen en el filtro. */
+  heroes: Option[];
   /** El tipo que se está mirando solo, o null para el calendario entero. */
   tipo: CalendarEventType | null;
+  /** El Hero que se está mirando solo, o null para todos. */
+  hero: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -113,6 +119,7 @@ export default function CalendarView({
       date: cambios.date ?? refDateStr,
     });
     if (tipo) params.set("tipo", tipo);
+    if (hero) params.set("hero", hero);
     return `?${params.toString()}`;
   }
 
@@ -122,19 +129,20 @@ export default function CalendarView({
    * filtro por filtro— y `useTransition` para que la pantalla avise que está
    * cargando en vez de quedarse idéntica un instante.
    */
-  function elegirTipo(id: string) {
+  function elegirFiltro(clave: "tipo" | "hero", id: string) {
     const params = new URLSearchParams(searchParams);
     // Vacío se BORRA del query en vez de quedar como `?tipo=`: así la URL que
     // alguien comparte dice exactamente qué está filtrado.
-    if (id) params.set("tipo", id);
-    else params.delete("tipo");
+    if (id) params.set(clave, id);
+    else params.delete(clave);
     startTransition(() => {
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     });
   }
 
   /**
-   * Lo que se dibuja: la grilla y la agenda muestran solo el tipo elegido.
+   * Lo que se dibuja: la grilla y la agenda muestran solo lo que pasa los dos
+   * filtros. Los dos se cruzan (tipo Y Hero), no se suman.
    *
    * OJO con qué recibe cada cosa. Los items filtrados van a las grillas y a la
    * LISTA de la agenda —lo que uno está mirando—, pero los resúmenes de carga
@@ -145,23 +153,66 @@ export default function CalendarView({
    * se leería como que el equipo está desocupado, que es falso—.
    */
   const itemsVisibles = useMemo(() => {
-    if (!tipo) return itemsByDay;
+    if (!tipo && !hero) return itemsByDay;
     const out: Record<string, CalendarItem[]> = {};
     for (const [dia, items] of Object.entries(itemsByDay)) {
-      const quedan = items.filter((i) => i.type === tipo);
+      const quedan = items.filter((i) => (!tipo || i.type === tipo) && (!hero || i.brandId === hero));
       if (quedan.length) out[dia] = quedan;
     }
     return out;
-  }, [itemsByDay, tipo]);
+  }, [itemsByDay, tipo, hero]);
 
-  /** Cuántos items hay de cada tipo en lo que se está mirando, para el panel. */
+  /**
+   * Cuántos items ofrece cada opción, contados con el OTRO filtro ya aplicado.
+   *
+   * Cruzados y no absolutos a propósito: mirando solo grabaciones, "Zonna (30)"
+   * prometería 30 y al elegirlo dejaría 1. Cada número dice lo que de verdad va
+   * a quedar en pantalla si se toca esa opción.
+   */
   const conteoPorTipo = useMemo(() => {
     const cuenta = new Map<CalendarEventType, number>();
     for (const items of Object.values(itemsByDay)) {
-      for (const i of items) cuenta.set(i.type, (cuenta.get(i.type) ?? 0) + 1);
+      for (const i of items) {
+        if (hero && i.brandId !== hero) continue;
+        cuenta.set(i.type, (cuenta.get(i.type) ?? 0) + 1);
+      }
     }
     return cuenta;
-  }, [itemsByDay]);
+  }, [itemsByDay, hero]);
+
+  const conteoPorHero = useMemo(() => {
+    const cuenta = new Map<string, number>();
+    for (const items of Object.values(itemsByDay)) {
+      for (const i of items) {
+        if (!i.brandId) continue;
+        if (tipo && i.type !== tipo) continue;
+        cuenta.set(i.brandId, (cuenta.get(i.brandId) ?? 0) + 1);
+      }
+    }
+    return cuenta;
+  }, [itemsByDay, tipo]);
+
+  /**
+   * Las opciones de Hero: los activos, más cualquier archivado que igual tenga
+   * algo agendado en lo que se está mirando.
+   *
+   * Sin ese agregado, un Hero recién archivado con eventos pendientes se
+   * dibujaría en la grilla pero no habría forma de aislarlo, y el filtro
+   * parecería incompleto sin decir por qué. Es el mismo caso que el responsable
+   * que ya no está en el equipo, en el modal.
+   */
+  const opcionesHero = useMemo(() => {
+    const activos = new Set(heroes.map((h) => h.id));
+    const extra = new Map<string, string>();
+    for (const items of Object.values(itemsByDay)) {
+      for (const i of items) {
+        if (i.brandId && !activos.has(i.brandId) && i.brandName) extra.set(i.brandId, i.brandName);
+      }
+    }
+    return [...heroes, ...[...extra].map(([id, name]) => ({ id, name }))];
+  }, [heroes, itemsByDay]);
+
+  const nombreDeHero = (id: string) => opcionesHero.find((h) => h.id === id)?.name ?? "Hero";
 
   /**
    * El día que mira el panel de la derecha.
@@ -247,7 +298,7 @@ export default function CalendarView({
           valorLabel={tipo ? CALENDAR_EVENT_TYPE_LABEL[tipo] : "Todos"}
           activo={Boolean(tipo)}
           seleccionado={tipo ?? ""}
-          onElegir={elegirTipo}
+          onElegir={(id) => elegirFiltro("tipo", id)}
           opciones={[
             { id: "", label: "Todos" },
             ...CALENDAR_EVENT_TYPES.map((t) => ({
@@ -257,6 +308,24 @@ export default function CalendarView({
               // vacía y parece que el filtro se rompió.
               label: `${CALENDAR_EVENT_TYPE_LABEL[t]} (${conteoPorTipo.get(t) ?? 0})`,
               color: CALENDAR_EVENT_TYPE_DOT[t],
+            })),
+          ]}
+        />
+        {/* El punto de color es el MISMO que pinta los chips de la grilla y los
+            avatares del panel: es como el equipo reconoce a cada Hero, y era la
+            razón por la que esto no podía ser un <select> nativo. */}
+        <FiltroDropdown
+          label="Hero"
+          valorLabel={hero ? nombreDeHero(hero) : "Todos"}
+          activo={Boolean(hero)}
+          seleccionado={hero ?? ""}
+          onElegir={(id) => elegirFiltro("hero", id)}
+          opciones={[
+            { id: "", label: "Todos" },
+            ...opcionesHero.map((h) => ({
+              id: h.id,
+              label: `${h.name} (${conteoPorHero.get(h.id) ?? 0})`,
+              color: heroColors[h.id],
             })),
           ]}
         />
@@ -303,6 +372,7 @@ export default function CalendarView({
               items={itemsVisibles[activeDay] ?? []}
               itemsDelDia={itemsByDay[activeDay] ?? []}
               tipo={tipo}
+              heroName={hero ? nombreDeHero(hero) : null}
               heroColors={heroColors}
               onSelectItem={setSelectedItem}
             />
@@ -324,6 +394,7 @@ export default function CalendarView({
               items={itemsVisibles[activeDay] ?? []}
               itemsDelDia={itemsByDay[activeDay] ?? []}
               tipo={tipo}
+              heroName={hero ? nombreDeHero(hero) : null}
               heroColors={heroColors}
               onSelectItem={setSelectedItem}
             />
@@ -339,6 +410,7 @@ export default function CalendarView({
         <CalendarEventModal
           defaultDate={showNewForm}
           defaultType={tipo ?? undefined}
+          defaultBrandId={hero ?? undefined}
           brands={brands}
           staff={staff}
           onClose={() => setShowNewForm(null)}
@@ -898,11 +970,37 @@ function DayView({
   );
 }
 
+/**
+ * Por qué la agenda del día está vacía.
+ *
+ * Va aparte porque son cuatro combinaciones de los dos filtros y todas tienen
+ * que ser CIERTAS: un "Nada agendado este día" es mentira un jueves con 16
+ * publicaciones al que solo se le pidieron las grabaciones, y esa mentira es
+ * justo la que haría dudar de que el calendario esté mostrando todo.
+ *
+ * La segunda frase —cuántos items tiene el día de verdad— sale solo cuando hay
+ * algo que contar: "El día tiene 0 items" es ruido.
+ */
+export function textoDelVacio(tipo: CalendarEventType | null, heroName: string | null, totalDelDia: number): string {
+  const plural = tipo ? CALENDAR_EVENT_LABEL_PLURAL[tipo] : null;
+  const primera = plural
+    ? heroName
+      ? `Sin ${plural} de ${heroName} este día.`
+      : `Sin ${plural} este día.`
+    : heroName
+      ? `Nada de ${heroName} este día.`
+      : "Nada agendado este día.";
+  if (!tipo && !heroName) return primera;
+  if (totalDelDia === 0) return primera;
+  return `${primera} El día tiene ${totalDelDia} item${totalDelDia === 1 ? "" : "s"}.`;
+}
+
 function AgendaDelDia({
   dayStr,
   items,
   itemsDelDia,
   tipo,
+  heroName,
   heroColors,
   onSelectItem,
 }: {
@@ -917,6 +1015,8 @@ function AgendaDelDia({
    */
   itemsDelDia: CalendarItem[];
   tipo: CalendarEventType | null;
+  /** El nombre del Hero filtrado, para poder decirlo en el vacío. */
+  heroName: string | null;
   heroColors: Record<string, string>;
   onSelectItem: (item: CalendarItem) => void;
 }) {
@@ -951,13 +1051,7 @@ function AgendaDelDia({
 
         <div className={styles.calAgList}>
           {items.length === 0 ? (
-            <p className={styles.calEmpty}>
-              {tipo
-                ? `Sin ${CALENDAR_EVENT_LABEL_PLURAL[tipo]} este día${
-                    itemsDelDia.length ? `, pero sí ${itemsDelDia.length} item${itemsDelDia.length === 1 ? "" : "s"} de otro tipo.` : "."
-                  }`
-                : "Nada agendado este día."}
-            </p>
+            <p className={styles.calEmpty}>{textoDelVacio(tipo, heroName, itemsDelDia.length)}</p>
           ) : (
             items.map((item) => {
               const color = (item.brandId && heroColors[item.brandId]) || CALENDAR_EVENT_TYPE_DOT[item.type];
