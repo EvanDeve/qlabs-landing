@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { addDays, addMonths, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { CalendarItem } from "@/lib/ugc/calendar";
 import {
+  CALENDAR_EVENT_LABEL_PLURAL,
+  CALENDAR_EVENT_TYPES,
   CALENDAR_EVENT_TYPE_LABEL,
   CALENDAR_EVENT_TYPE_DOT,
   CALENDAR_EVENT_TYPE_ICON,
@@ -17,11 +20,12 @@ import {
   HORA_FIN,
 } from "@/lib/ugc/calendar";
 import { CONTENT_APPROVAL_LABEL, CONTENT_PLATFORM_LABEL } from "@/lib/ugc/content-meta";
-import type { ContentApproval } from "@/lib/database.types";
+import type { CalendarEventType, ContentApproval } from "@/lib/database.types";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import StaffAvatar from "./StaffAvatar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CalendarEventModal from "./CalendarEventModal";
+import FiltroDropdown from "./FiltroDropdown";
 import styles from "@/styles/qos.module.css";
 
 type ViewMode = "month" | "week" | "day";
@@ -67,6 +71,7 @@ export default function CalendarView({
   brands,
   staff,
   heroColors,
+  tipo,
 }: {
   view: ViewMode;
   refDateStr: string;
@@ -76,7 +81,13 @@ export default function CalendarView({
   staff: Option[];
   /** id de Hero → color. Viene calculado con la lista COMPLETA, ver la página. */
   heroColors: Record<string, string>;
+  /** El tipo que se está mirando solo, o null para el calendario entero. */
+  tipo: CalendarEventType | null;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [showNewForm, setShowNewForm] = useState<string | null>(null);
   const [pickedDay, setPickedDay] = useState<string | null>(null);
@@ -88,14 +99,69 @@ export default function CalendarView({
   const nextDateStr = format(shifter(refDate, shiftAmount), "yyyy-MM-dd");
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
-  /** Los links de navegación de la pantalla: vista y fecha. */
+  /**
+   * Los links de navegación de la pantalla: vista, fecha y el tipo filtrado.
+   *
+   * El tipo va SÍ o SÍ, aunque ninguno de estos controles lo cambie: acá el
+   * href se arma de cero, así que lo que no se copia se pierde. Sin esta línea,
+   * pasar de mes o tocar "Semana" mostraba de vuelta el calendario entero y el
+   * filtro parecía apagarse solo.
+   */
   function hrefCon(cambios: { view?: ViewMode; date?: string }) {
     const params = new URLSearchParams({
       view: cambios.view ?? view,
       date: cambios.date ?? refDateStr,
     });
+    if (tipo) params.set("tipo", tipo);
     return `?${params.toString()}`;
   }
+
+  /**
+   * Cambiar el filtro es navegar, igual que en el Pipeline: `replace` y no
+   * `push` para no llenar el historial —volver atrás tendría que deshacer
+   * filtro por filtro— y `useTransition` para que la pantalla avise que está
+   * cargando en vez de quedarse idéntica un instante.
+   */
+  function elegirTipo(id: string) {
+    const params = new URLSearchParams(searchParams);
+    // Vacío se BORRA del query en vez de quedar como `?tipo=`: así la URL que
+    // alguien comparte dice exactamente qué está filtrado.
+    if (id) params.set("tipo", id);
+    else params.delete("tipo");
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    });
+  }
+
+  /**
+   * Lo que se dibuja: la grilla y la agenda muestran solo el tipo elegido.
+   *
+   * OJO con qué recibe cada cosa. Los items filtrados van a las grillas y a la
+   * LISTA de la agenda —lo que uno está mirando—, pero los resúmenes de carga
+   * (la barra del mes, el badge del día) siguen contando el mes COMPLETO. No es
+   * un descuido: los cortes de nivelDeCarga son fijos justamente para que
+   * "rojo" signifique lo mismo siempre, y alimentarlos con un subconjunto los
+   * rompe —filtrando por grabación, un mes normal mostraría 28 "días libres" y
+   * se leería como que el equipo está desocupado, que es falso—.
+   */
+  const itemsVisibles = useMemo(() => {
+    if (!tipo) return itemsByDay;
+    const out: Record<string, CalendarItem[]> = {};
+    for (const [dia, items] of Object.entries(itemsByDay)) {
+      const quedan = items.filter((i) => i.type === tipo);
+      if (quedan.length) out[dia] = quedan;
+    }
+    return out;
+  }, [itemsByDay, tipo]);
+
+  /** Cuántos items hay de cada tipo en lo que se está mirando, para el panel. */
+  const conteoPorTipo = useMemo(() => {
+    const cuenta = new Map<CalendarEventType, number>();
+    for (const items of Object.values(itemsByDay)) {
+      for (const i of items) cuenta.set(i.type, (cuenta.get(i.type) ?? 0) + 1);
+    }
+    return cuenta;
+  }, [itemsByDay]);
 
   /**
    * El día que mira el panel de la derecha.
@@ -141,7 +207,10 @@ export default function CalendarView({
     // por hora, y ahí el encabezado —los días, o los tres números del día— es la
     // referencia que no puede irse de pantalla mientras se baja por el horario.
     // El Mes no: su alto crece con las semanas del mes y ya se lee entero.
-    <div className={`${styles.calWide} ${view === "month" ? "" : styles.calFit}`}>
+    <div
+      className={`${styles.calWide} ${view === "month" ? "" : styles.calFit}`}
+      style={{ opacity: isPending ? 0.6 : 1 }}
+    >
       <div className={styles.calHead}>
         <h2 className={styles.calMonth}>{tituloVisible}</h2>
         <div className={styles.calNav}>
@@ -169,6 +238,28 @@ export default function CalendarView({
             </Link>
           ))}
         </div>
+        {/* Una sola pastilla y no una fila de ellas: la fila de Heroes se sacó
+            de acá justamente porque once pastillas se comían ~60px de alto que
+            en Semana y Día se lleva la grilla (0dfe4b0). Este control dice qué
+            filtra y por qué valor sin ocupar una fila propia. */}
+        <FiltroDropdown
+          label="Tipo"
+          valorLabel={tipo ? CALENDAR_EVENT_TYPE_LABEL[tipo] : "Todos"}
+          activo={Boolean(tipo)}
+          seleccionado={tipo ?? ""}
+          onElegir={elegirTipo}
+          opciones={[
+            { id: "", label: "Todos" },
+            ...CALENDAR_EVENT_TYPES.map((t) => ({
+              id: t,
+              // El conteo va en la opción para no tener que elegir a ciegas: sin
+              // él, filtrar por un tipo que este mes no tiene deja la pantalla
+              // vacía y parece que el filtro se rompió.
+              label: `${CALENDAR_EVENT_TYPE_LABEL[t]} (${conteoPorTipo.get(t) ?? 0})`,
+              color: CALENDAR_EVENT_TYPE_DOT[t],
+            })),
+          ]}
+        />
         <button
           type="button"
           onClick={() => setShowNewForm(activeDay)}
@@ -186,7 +277,7 @@ export default function CalendarView({
             <MonthGrid
               refDateStr={refDateStr}
               gridDays={gridDays}
-              itemsByDay={itemsByDay}
+              itemsByDay={itemsVisibles}
               heroColors={heroColors}
               activeDay={activeDay}
               todayStr={todayStr}
@@ -197,7 +288,7 @@ export default function CalendarView({
           ) : (
             <WeekGrid
               gridDays={gridDays}
-              itemsByDay={itemsByDay}
+              itemsByDay={itemsVisibles}
               heroColors={heroColors}
               activeDay={activeDay}
               todayStr={todayStr}
@@ -209,7 +300,9 @@ export default function CalendarView({
           <aside className={styles.calRail}>
             <AgendaDelDia
               dayStr={activeDay}
-              items={itemsByDay[activeDay] ?? []}
+              items={itemsVisibles[activeDay] ?? []}
+              itemsDelDia={itemsByDay[activeDay] ?? []}
+              tipo={tipo}
               heroColors={heroColors}
               onSelectItem={setSelectedItem}
             />
@@ -220,7 +313,7 @@ export default function CalendarView({
         <div className={styles.calLayout}>
           <DayView
             dayStr={activeDay}
-            items={itemsByDay[activeDay] ?? []}
+            items={itemsVisibles[activeDay] ?? []}
             heroColors={heroColors}
             onSelectItem={setSelectedItem}
             onCreate={setShowNewForm}
@@ -228,7 +321,9 @@ export default function CalendarView({
           <aside className={styles.calRail}>
             <AgendaDelDia
               dayStr={activeDay}
-              items={itemsByDay[activeDay] ?? []}
+              items={itemsVisibles[activeDay] ?? []}
+              itemsDelDia={itemsByDay[activeDay] ?? []}
+              tipo={tipo}
               heroColors={heroColors}
               onSelectItem={setSelectedItem}
             />
@@ -243,6 +338,7 @@ export default function CalendarView({
       {showNewForm && (
         <CalendarEventModal
           defaultDate={showNewForm}
+          defaultType={tipo ?? undefined}
           brands={brands}
           staff={staff}
           onClose={() => setShowNewForm(null)}
@@ -805,17 +901,28 @@ function DayView({
 function AgendaDelDia({
   dayStr,
   items,
+  itemsDelDia,
+  tipo,
   heroColors,
   onSelectItem,
 }: {
   dayStr: string;
+  /** Los que se listan: ya filtrados por tipo. */
   items: CalendarItem[];
+  /**
+   * TODOS los del día, filtro incluido o no. Los dos resúmenes de arriba salen
+   * de acá y no de `items` a propósito: describen el día, no lo que se está
+   * mirando. Contando solo lo filtrado, un jueves con 16 publicaciones diría
+   * "Sin publicaciones · Día libre" apenas alguien filtra por grabación.
+   */
+  itemsDelDia: CalendarItem[];
+  tipo: CalendarEventType | null;
   heroColors: Record<string, string>;
   onSelectItem: (item: CalendarItem) => void;
 }) {
   const date = new Date(`${dayStr}T00:00:00`);
-  const nivel = nivelDeCarga(items.length);
-  const publicaciones = items.filter((i) => i.type === "publicacion").length;
+  const nivel = nivelDeCarga(itemsDelDia.length);
+  const publicaciones = itemsDelDia.filter((i) => i.type === "publicacion").length;
 
   return (
     <section className={styles.card}>
@@ -844,7 +951,13 @@ function AgendaDelDia({
 
         <div className={styles.calAgList}>
           {items.length === 0 ? (
-            <p className={styles.calEmpty}>Nada agendado este día.</p>
+            <p className={styles.calEmpty}>
+              {tipo
+                ? `Sin ${CALENDAR_EVENT_LABEL_PLURAL[tipo]} este día${
+                    itemsDelDia.length ? `, pero sí ${itemsDelDia.length} item${itemsDelDia.length === 1 ? "" : "s"} de otro tipo.` : "."
+                  }`
+                : "Nada agendado este día."}
+            </p>
           ) : (
             items.map((item) => {
               const color = (item.brandId && heroColors[item.brandId]) || CALENDAR_EVENT_TYPE_DOT[item.type];

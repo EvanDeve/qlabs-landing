@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { diaCR, diaCorto, entraEnLaGrilla, horaCR, instanteCR, nivelDeCarga, sumarDias } from "@/lib/ugc/calendar";
+import {
+  CALENDAR_EVENT_LABEL_PLURAL,
+  CALENDAR_EVENT_TYPES,
+  CALENDAR_EVENT_TYPE_LABEL,
+  diaCR,
+  diaCorto,
+  entraEnLaGrilla,
+  esTipoDeEvento,
+  horaCR,
+  instanteCR,
+  nivelDeCarga,
+  sumarDias,
+} from "@/lib/ugc/calendar";
 
 // El bug que estas pruebas cuidan: una pieza puesta para el 1 de agosto se veía
 // en todos lados —Kanban, Calendario y el WhatsApp del agente— como del 31 de
@@ -184,5 +196,41 @@ describe("instanteCR", () => {
 
   it("acepta el valor con segundos que manda un input con step", () => {
     expect(instanteCR("2026-08-26T08:00:00")).toBe("2026-08-26T14:00:00.000Z");
+  });
+});
+
+// El filtro por tipo del calendario viaja en la URL (`?tipo=grabacion`), así que
+// lo que llega es un string cualquiera: un link viejo, algo tipeado a mano o el
+// nombre de un tipo que se renombró. La regla es mostrar de MÁS y nunca una
+// pantalla vacía que parezca que no hay nada agendado.
+describe("esTipoDeEvento", () => {
+  it("acepta los tipos de verdad", () => {
+    for (const t of CALENDAR_EVENT_TYPES) expect(esTipoDeEvento(t)).toBe(true);
+  });
+
+  it("rechaza cualquier otra cosa, y el calendario sale entero", () => {
+    for (const basura of ["", undefined, "grabaciones", "GRABACION", "reunió", "todos", "__proto__"]) {
+      expect(esTipoDeEvento(basura)).toBe(false);
+    }
+  });
+
+  it("cubre todos los tipos que el calendario sabe dibujar", () => {
+    // Si mañana se agrega un tipo al enum y no a esta lista, el filtro no lo
+    // ofrecería nunca y el hueco sería invisible: los eventos se dibujan igual.
+    expect([...CALENDAR_EVENT_TYPES].sort()).toEqual(Object.keys(CALENDAR_EVENT_TYPE_LABEL).sort());
+  });
+
+  it("cada tipo tiene su plural, y los que no se derivan pegando una s están bien", () => {
+    // "Sin publicaciónes" es lo que sale de concatenar: el plural pierde la
+    // tilde. "Guion" suma sílaba. Los otros dos sí son regulares y se listan
+    // igual, para que agregar un tipo nuevo obligue a decidir su plural.
+    expect(CALENDAR_EVENT_LABEL_PLURAL).toEqual({
+      publicacion: "publicaciones",
+      grabacion: "grabaciones",
+      reunion: "reuniones",
+      entrega: "entregas",
+      guion: "guiones",
+    });
+    for (const t of CALENDAR_EVENT_TYPES) expect(CALENDAR_EVENT_LABEL_PLURAL[t]).toBeTruthy();
   });
 });

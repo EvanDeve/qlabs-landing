@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 import type { CalendarItem } from "@/lib/ugc/calendar";
+import type { CalendarEventType } from "@/lib/database.types";
 import { CALENDAR_EVENT_TYPE_LABEL, COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { createCalendarEventAction, updateCalendarEventAction, deleteCalendarEventAction } from "@/lib/actions/calendar-events";
 import { QosIcon } from "@/lib/ugc/qos-icons";
@@ -14,12 +15,19 @@ type Option = { id: string; name: string };
 export default function CalendarEventModal({
   item,
   defaultDate,
+  defaultType,
   brands,
   staff,
   onClose,
 }: {
   item?: CalendarItem;
   defaultDate?: string;
+  /**
+   * Con qué tipo nace un evento nuevo. Lo manda el calendario cuando hay un
+   * filtro puesto: mirando solo grabaciones, lo que uno va a anotar al tocar un
+   * día es una grabación, y dejarlo en "Reunión" obliga a corregirlo siempre.
+   */
+  defaultType?: CalendarEventType;
   brands: Option[];
   staff: Option[];
   onClose: () => void;
@@ -86,7 +94,7 @@ export default function CalendarEventModal({
 
             <div className={styles.field}>
               <label>Tipo</label>
-              <select name="type" defaultValue={item?.type ?? "reunion"} className={styles.inp}>
+              <select name="type" defaultValue={item?.type ?? defaultType ?? "reunion"} className={styles.inp}>
                 <option value="reunion">Reunión</option>
                 <option value="guion">Guion</option>
                 <option value="entrega">Entrega</option>

@@ -9,7 +9,7 @@ import {
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import CalendarView from "@/components/ugc/admin/CalendarView";
-import { COSTA_RICA_TZ, diaCR, horaCR, type CalendarItem } from "@/lib/ugc/calendar";
+import { COSTA_RICA_TZ, diaCR, esTipoDeEvento, horaCR, type CalendarItem } from "@/lib/ugc/calendar";
 import { coloresDeHeroes } from "@/lib/ugc/content-meta";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +19,14 @@ type ViewMode = "month" | "week" | "day";
 export default async function CalendarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; date?: string }>;
+  searchParams: Promise<{ view?: string; date?: string; tipo?: string }>;
 }) {
-  const { view: viewParam, date: dateParam } = await searchParams;
+  const { view: viewParam, date: dateParam, tipo: tipoParam } = await searchParams;
   const view: ViewMode = viewParam === "week" || viewParam === "day" ? viewParam : "month";
+  // Un `?tipo=` que no existe se ignora y el calendario sale entero, igual que
+  // el `?mes=` viejo del Pipeline: un link viejo o mal tipeado tiene que mostrar
+  // de más, nunca una pantalla vacía que parezca que no hay nada agendado.
+  const tipo = esTipoDeEvento(tipoParam) ? tipoParam : null;
   const refDateStr = dateParam || formatInTimeZone(new Date(), COSTA_RICA_TZ, "yyyy-MM-dd");
   const refDate = new Date(`${refDateStr}T00:00:00`);
 
@@ -222,6 +226,7 @@ export default async function CalendarioPage({
       brands={brands}
       staff={staff}
       heroColors={heroColors}
+      tipo={tipo}
     />
   );
 }

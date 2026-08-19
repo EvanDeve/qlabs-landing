@@ -185,6 +185,44 @@ export const CALENDAR_EVENT_TYPE_LABEL: Record<CalendarEventType, string> = {
   guion: "Guion",
 };
 
+/**
+ * Los tipos en el orden en que se ofrecen para filtrar: de lo que más hay a lo
+ * que menos. Medido sobre agosto 2026 —116 publicaciones de 129 items— así que
+ * empezar por otro lado dejaría arriba opciones que casi nunca recortan nada.
+ *
+ * Es una lista y no `Object.keys(CALENDAR_EVENT_TYPE_LABEL)`: el orden de las
+ * claves de un objeto es el de escritura y nadie lo va a respetar al agregar un
+ * tipo. Acá el orden es el dato.
+ */
+export const CALENDAR_EVENT_TYPES: CalendarEventType[] = [
+  "publicacion",
+  "grabacion",
+  "guion",
+  "reunion",
+  "entrega",
+];
+
+/** Si un string cualquiera —el `?tipo=` de la URL— es un tipo de verdad. */
+export function esTipoDeEvento(valor: string | undefined): valor is CalendarEventType {
+  return !!valor && (CALENDAR_EVENT_TYPES as string[]).includes(valor);
+}
+
+/**
+ * El plural de cada tipo, para los textos que cuentan ("Sin grabaciones").
+ *
+ * Va a mano y no pegándole una "s" al singular por el mismo motivo que ya
+ * obligó a escribir las dos formas enteras en la agenda: "publicación" pierde
+ * la tilde en plural y "publicaciónes" es lo que sale de concatenar. "Guion"
+ * suma sílaba ("guiones") y tampoco funciona.
+ */
+export const CALENDAR_EVENT_LABEL_PLURAL: Record<CalendarEventType, string> = {
+  publicacion: "publicaciones",
+  grabacion: "grabaciones",
+  reunion: "reuniones",
+  entrega: "entregas",
+  guion: "guiones",
+};
+
 export const CALENDAR_EVENT_TYPE_DOT: Record<CalendarEventType, string> = {
   publicacion: "var(--st-pub)",
   grabacion: "var(--st-grab)",
