@@ -187,14 +187,7 @@ export default async function CreadorHomePage() {
           —una sola línea de texto al lado de cinco etapas— ve media pantalla
           de tarjeta vacía, que es justo lo contrario de lo que el estado
           "todo tranquilo" debería transmitir. Cada tarjeta mide lo suyo. */}
-      <div
-        style={{
-          display: "grid",
-          gap: "16px",
-          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
-          alignItems: "start",
-        }}
-      >
+      <div className={styles.resumenGrid}>
         {/* `card` sola no trae padding: lo pone `cardPad`, y `sectionHead`
             está pensado para vivir DENTRO de ese padding. Al colgar el
             encabezado directo de la tarjeta, el título quedaba literalmente

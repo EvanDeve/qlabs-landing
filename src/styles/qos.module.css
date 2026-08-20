@@ -3990,9 +3990,13 @@
     background: var(--surface);
     border-top: 1px solid var(--line);
     box-shadow: 0 -2px 10px rgba(26, 23, 48, 0.06);
-    /* La franja del gesto de inicio en iPhone: sin esto los labels quedan
-       debajo del indicador. */
-    padding-bottom: env(safe-area-inset-bottom);
+    /* La franja del gesto de inicio en iPhone.
+       Va con `max()` y no con `env()` pelado: en Safari, sin
+       `viewport-fit=cover`, env() vale 0 —y en un teléfono real la barra
+       quedaba pegada al borde de abajo, con los labels a ras del vidrio—. El
+       piso de 10px es el aire que necesita igual. */
+    padding-top: 4px;
+    padding-bottom: max(env(safe-area-inset-bottom), 10px);
   }
   /* La barra es fixed, así que no ocupa lugar en el flujo: sin este colchón
      tapa lo último de la página (el "Guardar perfil" del perfil, la última
@@ -4001,19 +4005,22 @@
      algún item la pidió: en admin, que no la tiene, el colchón sería 76px de
      vacío al pie de todas las pantallas. */
   .qosRoot:has(.bottomNav) .content {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    padding-bottom: calc(70px + max(env(safe-area-inset-bottom), 10px));
   }
 }
+/* Medidas de barra de tabs de iOS: el ícono manda (26px) y el label es chico y
+   discreto debajo. Con 20px de ícono y 10.5 de texto los dos pesaban lo mismo y
+   en un teléfono se leía como un pie de página, no como una barra de app. */
 .bnItem {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  min-height: 58px;
-  padding: 9px 4px 8px;
-  font-size: 10.5px;
-  font-weight: 600;
+  gap: 4px;
+  min-height: 52px;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 500;
   line-height: 1.15;
   text-align: center;
   color: var(--ink-3);
@@ -4027,26 +4034,19 @@
   outline: 2px solid var(--b-500);
   outline-offset: -2px;
 }
+/* El activo se marca como en iOS: tinte violeta y el label en negrita. La
+   raya de 2px que había arriba era el segundo aviso —para no depender de
+   distinguir morado de gris— pero se leía como una pestaña de sitio web; el
+   peso del texto cumple lo mismo sin delatar que esto es una página. */
 .bnItemActive {
-  color: var(--b-600);
-}
-/* El color solo no alcanza para marcar el activo (mismo problema que tenían los
-   links): la barra superior lo dice sin depender de distinguir morado de gris. */
-.bnItemActive::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 22%;
-  right: 22%;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
-  background: var(--b-500);
+  color: var(--b-500);
+  font-weight: 700;
 }
 .bnCount {
   position: absolute;
-  top: 6px;
+  top: 2px;
   left: 50%;
-  margin-left: 4px;
+  margin-left: 7px;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
@@ -6673,5 +6673,21 @@
   /* El aire que necesita el título para no meterse debajo de la campana. */
   .encabezadoPropio .feedTitle {
     padding-right: 52px;
+  }
+}
+
+/* Las dos tarjetas del pie del Resumen. Estaban con `style` inline a dos
+   columnas, y un estilo inline le gana a TODA media query —la misma trampa que
+   ya había mordido a `.kpiRow3`—: en un teléfono quedaban dos columnas de 160px
+   con "Ver tablero" partido en dos líneas. */
+.resumenGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .resumenGrid {
+    grid-template-columns: 1fr;
   }
 }

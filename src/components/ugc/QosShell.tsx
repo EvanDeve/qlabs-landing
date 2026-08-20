@@ -299,7 +299,7 @@ export default function QosShell({
                 aria-current={isActive ? "page" : undefined}
                 aria-label={item.label}
               >
-                <QosIcon name={item.icon} size={20} />
+                <QosIcon name={item.icon} size={26} />
                 <span>{item.shortLabel ?? item.label}</span>
                 {typeof item.count === "number" && item.count > 0 && (
                   <span className={styles.bnCount}>{item.count}</span>
@@ -315,7 +315,7 @@ export default function QosShell({
               aria-label="Ver todas las secciones"
               aria-expanded={mobileOpen}
             >
-              <QosIcon name="dots" size={20} />
+              <QosIcon name="dots" size={26} />
               <span>Más</span>
             </button>
           )}
