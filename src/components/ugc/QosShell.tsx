@@ -82,6 +82,7 @@ export default function QosShell({
   profileHref,
   section = "Operación",
   topbarActions,
+  encabezadoPropio = false,
   children,
 }: {
   navItems: QosNavItem[];
@@ -96,6 +97,14 @@ export default function QosShell({
    */
   profileHref?: string;
   section?: string;
+  /**
+   * Cada pantalla trae su propio título grande, así que en móvil la barra de
+   * arriba sobra: se convierte en una capa transparente con solo la campana,
+   * enfrentada al título. Es opt-in porque hoy solo el panel del creador tiene
+   * ese encabezado en todas sus pantallas — la marca y Q·OS siguen apoyándose
+   * en el título de la barra.
+   */
+  encabezadoPropio?: boolean;
   /**
    * Controles propios de una pantalla, a la izquierda de la campanita. Se
    * renderizan en TODAS las páginas del área, así que cada uno decide solo si
@@ -153,7 +162,10 @@ export default function QosShell({
       .toUpperCase() || "Q";
 
   return (
-    <div className={styles.qosRoot} id="qos-root">
+    <div
+      className={`${styles.qosRoot} ${encabezadoPropio ? styles.encabezadoPropio : ""}`}
+      id="qos-root"
+    >
       {mobileOpen && <div className={styles.sbScrim} onClick={() => setMobileOpen(false)} />}
       <div className={`${styles.app} ${collapsed ? styles.appCollapsed : ""}`}>
         <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
@@ -249,7 +261,7 @@ export default function QosShell({
             >
               <QosIcon name="menu" size={18} />
             </button>
-            <div>
+            <div className={styles.tbHeading}>
               {/* El segundo escalón sale del grupo del item activo y solo cae en
                   `section` si el item no tiene grupo. Con `section` fijo, el
                   rastro se contradecía con el menú: /admin/transcripcion

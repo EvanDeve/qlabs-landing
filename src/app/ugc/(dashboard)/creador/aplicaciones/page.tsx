@@ -71,9 +71,10 @@ export default async function MisAplicacionesPage() {
 
   return (
     <div>
-      <h1 className={styles.tbTitle} style={{ fontSize: "26px", marginBottom: "20px" }}>
-        Mis aplicaciones
-      </h1>
+      <div className={styles.feedHead}>
+        <h1 className={styles.feedTitle}>Mis aplicaciones</h1>
+        <p className={styles.feedSub}>Todo a lo que aplicaste y en qué anda cada cosa.</p>
+      </div>
 
       {applications && applications.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

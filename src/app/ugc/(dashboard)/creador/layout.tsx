@@ -92,6 +92,7 @@ export default async function CreadorLayout({
       userAvatarUrl={profile?.avatar_url ?? null}
       userRole="Creador"
       section="Creador"
+      encabezadoPropio
     >
       {children}
     </QosShell>

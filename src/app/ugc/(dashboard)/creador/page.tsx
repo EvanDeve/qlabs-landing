@@ -154,12 +154,10 @@ export default async function CreadorHomePage() {
 
   return (
     <div>
-      <h1 className={styles.tbTitle} style={{ fontSize: "26px" }}>
-        Resumen
-      </h1>
-      <p style={{ color: "var(--ink-2)", marginBottom: "20px" }}>
-        Cómo va tu trabajo hoy.
-      </p>
+      <div className={styles.feedHead}>
+        <h1 className={styles.feedTitle}>Resumen</h1>
+        <p className={styles.feedSub}>Cómo va tu trabajo hoy.</p>
+      </div>
 
       <div className={styles.kpiRow}>
         {kpis.map((kpi, i) => (

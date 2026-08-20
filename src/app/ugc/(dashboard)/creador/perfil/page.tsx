@@ -35,11 +35,9 @@ export default async function CreatorProfileEditPage() {
         }}
       >
         <div>
-          <h1 className={styles.tbTitle} style={{ fontSize: "26px" }}>
-            Mi perfil
-          </h1>
-          <p style={{ marginTop: "4px", color: "var(--ink-2)" }}>
-            Esto es lo que las marcas ven en tu perfil completo cuando aplicás a una campaña.
+          <h1 className={styles.feedTitle}>Mi perfil</h1>
+          <p className={styles.feedSub}>
+            Esto es lo que las marcas ven cuando aplicás a una campaña.
           </p>
         </div>
         {creatorProfile?.handle && (

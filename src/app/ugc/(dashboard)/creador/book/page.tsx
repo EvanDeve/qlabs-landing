@@ -56,12 +56,12 @@ export default async function CreatorBookPage() {
 
   return (
     <div>
-      <h1 className={styles.tbTitle} style={{ fontSize: "26px" }}>
-        Mi book
-      </h1>
-      <p style={{ color: "var(--ink-2)", marginBottom: "20px" }}>
-        Las marcas ven tu book al revisar tu aplicación — mantenelo actualizado con tus mejores piezas.
-      </p>
+      <div className={styles.feedHead}>
+        <h1 className={styles.feedTitle}>Mi book</h1>
+        <p className={styles.feedSub}>
+          Las marcas lo miran al revisar tu aplicación — mantenelo con tus mejores piezas.
+        </p>
+      </div>
 
       <div className={`${styles.kpiRow} ${styles.kpiRow3}`}>
         {stats.map((s) => (

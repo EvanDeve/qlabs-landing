@@ -25,13 +25,12 @@ export default async function CreadorPipelinePage() {
 
   return (
     <div>
-      <h1 className={styles.tbTitle} style={{ fontSize: "26px" }}>
-        Mi pipeline
-      </h1>
-      <p style={{ color: "var(--ink-2)", marginBottom: "20px" }}>
-        Tu tablero de producción. Arrastrá las tarjetas entre columnas, y armá las columnas como
-        trabajás vos.
-      </p>
+      <div className={styles.feedHead}>
+        <h1 className={styles.feedTitle}>Mi pipeline</h1>
+        <p className={styles.feedSub}>
+          Tu tablero de producción. Arrastrá las tarjetas y armá las columnas como trabajás vos.
+        </p>
+      </div>
 
       <CreatorTaskBoard tasks={tasks ?? []} columns={columns} />
     </div>

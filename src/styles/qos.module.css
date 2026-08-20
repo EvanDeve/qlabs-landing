@@ -4152,16 +4152,7 @@
   color: var(--ink-2);
 }
 
-/* Con un título grande en la pantalla, el de la barra de arriba lo repetía
-   palabra por palabra, uno encima del otro. En el celular gana el grande —que
-   es el que abre la pantalla— y arriba queda solo el rastro. En escritorio se
-   mantienen los dos: la barra ahí es el ancla del panel.
-   Mismo idioma de `:has()` que ya usan .calWide y .bottomNav. */
-@media (max-width: 900px) {
-  .main:has(.feedTitle) .topbar .tbTitle {
-    display: none;
-  }
-}
+
 
 /* Los filtros se deslizan en horizontal en vez de envolver: con seis rubros
    en dos líneas, en el celular la primera tarjeta arrancaba fuera de pantalla.
@@ -6645,4 +6636,42 @@
   font-weight: 600;
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.92);
+}
+
+
+/* ============================================================
+   ENCABEZADO PROPIO DE CADA PANTALLA (móvil)
+   En el celular, la barra de Q·OS —hamburguesa, rastro y título— no se parece
+   a nada de una app de teléfono, y encima repetía palabra por palabra el
+   título grande de la pantalla. Acá se convierte en una capa transparente con
+   solo la campana, enfrentada al título.
+   La hamburguesa no hace falta: la barra de abajo tiene "Más", que abre el
+   mismo menú.
+   ============================================================ */
+@media (max-width: 900px) {
+  /* `:not(:has(.workspace))` deja afuera la transcripción, que es un espacio de
+     trabajo a pantalla completa sin encabezado propio: ahí la barra sigue
+     siendo lo único que dice dónde está parado. */
+  .encabezadoPropio .main:not(:has(.workspace)) {
+    position: relative;
+  }
+  .encabezadoPropio .main:not(:has(.workspace)) > .topbar {
+    position: absolute;
+    top: 0;
+    left: auto;
+    right: 0;
+    z-index: 25;
+    padding: 12px 14px;
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: 0;
+  }
+  .encabezadoPropio .main:not(:has(.workspace)) > .topbar .tbHeading,
+  .encabezadoPropio .main:not(:has(.workspace)) > .topbar .mobileMenuBtn {
+    display: none;
+  }
+  /* El aire que necesita el título para no meterse debajo de la campana. */
+  .encabezadoPropio .feedTitle {
+    padding-right: 52px;
+  }
 }
