@@ -4031,8 +4031,11 @@
   position: relative;
   transition: var(--t-fast);
 }
+/* El hundido del toque. Antes pintaba la celda entera de gris —que en una barra
+   de tabs se lee como un botón de formulario—; bajar la opacidad es lo que hace
+   iOS y además se ve igual con el dedo encima. */
 .bnItem:active {
-  background: var(--surface-3);
+  opacity: 0.55;
 }
 .bnItem:focus-visible {
   outline: 2px solid var(--b-500);
@@ -6694,4 +6697,53 @@
   .resumenGrid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================================
+   ESQUELETO DE CARGA
+   En App Router, un `<Link>` a una ruta dinámica prefetchea SOLO hasta su
+   `loading.tsx` más cercano, y sin frontera de Suspense el router no puede
+   pintar nada: se queda en la pantalla vieja hasta que llega el RSC entero.
+   Con 27 rutas `force-dynamic` y 600-900 ms de TTFB medidos en producción, eso
+   son 600-900 ms de pantalla congelada por cada toque.
+   Va con forma —bloques del alto real— y no con un spinner: un spinner dice
+   "esperá", un esqueleto dice "ya casi".
+   ============================================================ */
+.skBloque {
+  border-radius: 12px;
+  background: linear-gradient(90deg, var(--surface-3) 25%, var(--line-2) 37%, var(--surface-3) 63%);
+  background-size: 400% 100%;
+  animation: skBrillo 1.4s ease-in-out infinite;
+}
+@keyframes skBrillo {
+  from {
+    background-position: 100% 50%;
+  }
+  to {
+    background-position: 0 50%;
+  }
+}
+/* Sin animación para quien la pidió apagada: el brillo que recorre la pantalla
+   es justo el tipo de movimiento que molesta con `prefers-reduced-motion`. */
+@media (prefers-reduced-motion: reduce) {
+  .skBloque {
+    animation: none;
+  }
+}
+.skTarjeta {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(26, 23, 48, 0.04), 0 6px 18px rgba(26, 23, 48, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* El activo se pinta APENAS se toca, sin esperar a que la pantalla cambie.
+   `useLinkStatus` marca el hijo y `:has()` sube el estado al item — el mismo
+   idioma que ya usan .bottomNav y .calWide. */
+.qosRoot .bnItem:has([data-cargando]) {
+  color: var(--b-500);
+  font-weight: 700;
 }

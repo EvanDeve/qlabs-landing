@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import type { Database } from "@/lib/database.types";
 import { QosIcon } from "@/lib/ugc/qos-icons";
@@ -299,11 +299,7 @@ export default function QosShell({
                 aria-current={isActive ? "page" : undefined}
                 aria-label={item.label}
               >
-                <QosIcon name={item.icon} size={24} />
-                <span>{item.shortLabel ?? item.label}</span>
-                {typeof item.count === "number" && item.count > 0 && (
-                  <span className={styles.bnCount}>{item.count}</span>
-                )}
+                <ContenidoDeTab item={item} />
               </Link>
             );
           })}
@@ -322,5 +318,29 @@ export default function QosShell({
         </nav>
       )}
     </div>
+  );
+}
+
+/**
+ * El contenido de un item de la barra de abajo.
+ *
+ * Existe como componente aparte por `useLinkStatus`, que solo funciona dentro
+ * del `<Link>`: marca el item apenas se toca, sin esperar a que la pantalla
+ * cambie. Con 600-900 ms de servidor por medio, sin esto el toque no devolvía
+ * ninguna señal y se sentía que el botón no había respondido.
+ *
+ * El `data-cargando` lo lee `.bnItem:has(...)` en el CSS, porque un hijo no
+ * puede cambiarle la clase al padre.
+ */
+function ContenidoDeTab({ item }: { item: QosNavItem }) {
+  const { pending } = useLinkStatus();
+  return (
+    <>
+      <QosIcon name={item.icon} size={24} />
+      <span data-cargando={pending ? "" : undefined}>{item.shortLabel ?? item.label}</span>
+      {typeof item.count === "number" && item.count > 0 && (
+        <span className={styles.bnCount}>{item.count}</span>
+      )}
+    </>
   );
 }
