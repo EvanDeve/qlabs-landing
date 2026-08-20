@@ -130,11 +130,24 @@ export function fechaLarga(iso: string): string {
   });
 }
 
-/** "02 ago" — para las filas del historial, donde el año no aporta nada. */
+/**
+ * "02 ago" — para las filas del historial, donde el año no aporta nada.
+ *
+ * Se arma por partes y no con `toLocaleDateString` a secas porque es-CR con
+ * `day: "2-digit"` devuelve "02-ago", con guion: en una fila que dice
+ * "Kosta Asiatika · Cena para 2 · 02-ago" ese guion se lee como parte del
+ * nombre. Con `day: "numeric"` sí pone espacio, así que la diferencia no se
+ * nota probando de a un formato.
+ */
 export function fechaCorta(iso: string): string {
-  return new Date(iso)
-    .toLocaleDateString("es-CR", { day: "2-digit", month: "short", timeZone: "America/Costa_Rica" })
-    .replace(".", "");
+  const partes = new Intl.DateTimeFormat("es-CR", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "America/Costa_Rica",
+  }).formatToParts(new Date(iso));
+  const dia = partes.find((p) => p.type === "day")?.value ?? "";
+  const mes = (partes.find((p) => p.type === "month")?.value ?? "").replace(".", "");
+  return `${dia} ${mes}`;
 }
 
 /**
@@ -148,4 +161,37 @@ export function diasRestantes(iso: string): number {
   const hoy = new Date(dia(new Date()));
   const vence = new Date(dia(new Date(iso)));
   return Math.round((vence.getTime() - hoy.getTime()) / 86_400_000);
+}
+
+/** "7 ago 2026" — el reclamo de un cupón sí lleva año: puede ser viejo. */
+export function fechaConAnio(iso: string): string {
+  return new Date(iso)
+    .toLocaleDateString("es-CR", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "America/Costa_Rica",
+    })
+    .replace(".", "");
+}
+
+/**
+ * "Agosto 2026" — el encabezado de cada grupo del historial. Por partes, igual
+ * que `fechaCorta`: es-CR arma "agosto de 2026" y ese "de" sobra en un título.
+ */
+export function mesLargo(iso: string): string {
+  const partes = new Intl.DateTimeFormat("es-CR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Costa_Rica",
+  }).formatToParts(new Date(iso));
+  const mes = partes.find((p) => p.type === "month")?.value ?? "";
+  const anio = partes.find((p) => p.type === "year")?.value ?? "";
+  return `${mes.charAt(0).toUpperCase()}${mes.slice(1)} ${anio}`;
+}
+
+/** Clave de agrupación por mes en hora de Costa Rica: "2026-08". */
+export function claveMes(iso: string): string {
+  const [dia] = new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Costa_Rica" }).split("T");
+  return dia.slice(0, 7);
 }
