@@ -48,6 +48,21 @@ export const metadata: Metadata = {
     "Q Labs equipa a tu restaurante u hotel con las herramientas exactas para digitalizarse y vender más, de forma medible y sostenible. Tú diriges la misión; nosotros somos tu Q.",
   icons: {
     icon: "/favicon-logo.png",
+    // El favicon es PNG transparente y iOS lo compone sobre NEGRO: el acceso
+    // directo salía como un cuadrado negro con la Q adentro. Este archivo es el
+    // mismo logo aplanado sobre blanco, a 180 px, que es lo que pide iOS.
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    // El nombre que queda debajo del icono en la pantalla de inicio. Sin esto,
+    // iOS usa el <title>, que en este sitio es la frase entera de la landing y
+    // sale recortada a "Q Labs — Equipam…".
+    title: "Q Labs",
+    // Deliberadamente en false: `true` haría que el acceso directo abra en modo
+    // standalone (sin barras de Safari), que se ve mejor, pero el login con
+    // Google sale a otro contexto y la sesión no siempre vuelve. Es un cambio
+    // de una línea cuando se quiera probar.
+    capable: false,
   },
 };
 
