@@ -3997,9 +3997,10 @@
        del diseño (~31pt). Va con `max()` y no con `env()` pelado porque en
        Safari, sin `viewport-fit=cover`, env() vale 0: la regla estaba escrita
        para el indicador y en la práctica no aplicaba nunca.
-       Los 14px de los lados son lo que impide que "Inicio" y "Más" queden
-       pegados al borde de la pantalla. */
-    padding: 10px 14px max(env(safe-area-inset-bottom), 26px);
+       Los 26px de los lados son lo que impide que "Inicio" y "Más" queden
+       pegados al borde de la pantalla. El diseño usa 14 y seguía leyéndose
+       apretado en un teléfono real, así que va con más aire que el mockup. */
+    padding: 10px 26px max(env(safe-area-inset-bottom), 26px);
   }
   /* La barra es fixed, así que no ocupa lugar en el flujo: sin este colchón
      tapa lo último de la página (el "Guardar perfil" del perfil, la última
