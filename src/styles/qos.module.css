@@ -4130,85 +4130,552 @@
 }
 
 /* ============================================================
-   FEED DE PROMOS: encabezado con logo, brief acotado, detalle
+   FEED DE PROMOS
+   Rediseñado con lenguaje de app de iPhone (ver docs/brief-diseno-ugc-ios.md).
+   Las medidas salen del mockup a 393 pt: título grande de 34, chips de filtro
+   que se deslizan en horizontal, portada de 2.5:1 y el monto neto a 26 px en
+   violeta, que es el dato que frena el scroll.
    ============================================================ */
+.feedHead {
+  margin-bottom: 14px;
+}
+.feedTitle {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  color: var(--ink);
+}
+.feedSub {
+  margin-top: 5px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+/* Con un título grande en la pantalla, el de la barra de arriba lo repetía
+   palabra por palabra, uno encima del otro. En el celular gana el grande —que
+   es el que abre la pantalla— y arriba queda solo el rastro. En escritorio se
+   mantienen los dos: la barra ahí es el ancla del panel.
+   Mismo idioma de `:has()` que ya usan .calWide y .bottomNav. */
+@media (max-width: 900px) {
+  .main:has(.feedTitle) .topbar .tbTitle {
+    display: none;
+  }
+}
+
+/* Los filtros se deslizan en horizontal en vez de envolver: con seis rubros
+   en dos líneas, en el celular la primera tarjeta arrancaba fuera de pantalla.
+   Que el último chip se vea cortado es la señal de que hay más. */
+.filterRow {
+  display: flex;
+  gap: 9px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 0 4px;
+  margin-bottom: 18px;
+}
+.filterRow::-webkit-scrollbar {
+  display: none;
+}
+/* .qosRoot-prefijado para ganarle al reset de <button>, igual que .subtab.
+   Son clases aparte y no una variante de .subtab porque esa la comparten seis
+   pantallas más (Recompensas, UGC de la marca, book, perfil). */
+.qosRoot .filterChip {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 8px 17px;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--ink);
+  white-space: nowrap;
+  transition: var(--t-fast);
+}
+.qosRoot .filterChip:hover:not(.filterChipOn) {
+  background: var(--surface-3);
+}
+.qosRoot .filterChip:focus-visible {
+  outline: 2px solid var(--b-500);
+  outline-offset: 2px;
+}
+.qosRoot .filterChipOn {
+  background: var(--ink);
+  color: #fff;
+}
+
+.feedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 16px;
+}
+
+/* La tarjeta ENTERA es el link al detalle. El mockup no tiene "Ver detalle" ni
+   el formulario de aplicar adentro: se aplica desde el detalle, que es donde
+   están el brief completo y el desglose del pago. */
+.qosRoot .promoCard {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 20px;
+  overflow: hidden;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(26, 23, 48, 0.04), 0 6px 18px rgba(26, 23, 48, 0.05);
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+.qosRoot .promoCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(26, 23, 48, 0.05), 0 14px 30px rgba(26, 23, 48, 0.1);
+}
+/* El hundido del toque en iOS. Con :hover solo, en el celular la tarjeta se
+   quedaba levantada después de tocarla. */
+.qosRoot .promoCard:active {
+  transform: scale(0.99);
+}
+.qosRoot .promoCard:focus-visible {
+  outline: 2px solid var(--b-500);
+  outline-offset: 2px;
+}
+
+.promoCover {
+  position: relative;
+  aspect-ratio: 5 / 2;
+  background: var(--surface-3);
+}
+.promoCoverImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Respaldo cuando la campaña no tiene portada: el degradado de la marca con su
+   logo al centro. No se inventa una foto ni se deja un hueco gris. */
+.promoCoverFallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.promoCoverPill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(26, 23, 48, 0.16);
+}
+
+.promoBody {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .promoHead {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
 }
 .promoBrand {
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .promoBrandMeta {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--ink-3);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.qosRoot .promoTitle {
-  font-size: 16px;
+.promoTitle {
+  font-size: 19px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
   color: var(--ink);
-  transition: var(--t-fast);
 }
-.qosRoot .promoTitle:hover {
-  color: var(--b-600);
-}
-/* El brief se acota acá para que la grilla no quede despareja; completo en el detalle. */
-.promoBrief {
-  font-size: 13.5px;
-  color: var(--ink-2);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.promoFoot {
-  margin-top: auto;
-  padding-top: 8px;
+/* El número manda: es lo único de la tarjeta que va en violeta y a 26 px. */
+.promoPriceRow {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  align-items: baseline;
+  gap: 8px;
   flex-wrap: wrap;
 }
-/* El form de aplicar (textarea + botón) necesita el ancho completo: como
-   hermano flex de "Ver detalle" se desbordaba de la tarjeta. Va siempre en su
-   propia línea; el link y la píldora de estado sí comparten fila. */
-.promoFoot > form {
-  flex: 1 1 100%;
-  min-width: 0;
+.promoPrice {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--b-500);
 }
-/* Mismo criterio que `.linkMore`: área táctil y fondo al hover. El margen
-   negativo lo devuelve a ras del borde izquierdo de la tarjeta de promo. */
-.qosRoot .promoMore {
+.promoPriceNote {
   font-size: 12.5px;
-  font-weight: 700;
+  color: var(--ink-2);
+}
+.promoDays {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.promoChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.promoChip {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  background: var(--b-100);
   color: var(--b-600);
-  display: inline-flex;
+}
+.promoRights {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.promoRights b {
+  margin-right: 5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  /* Los chips llegan al borde de la pantalla: cortados al ras es como se ve en
+     iOS que la fila sigue. El padding devuelve el margen del primero. */
+  .filterRow {
+    margin-inline: -18px;
+    padding-inline: 18px;
+  }
+  .feedGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   HOJA DE DETALLE DE LA PROMO
+   Sube desde el feed en vez de abrir una página nueva: decidir si aplicás es
+   una parada corta y el feed tiene que seguir detrás, con el scroll donde se
+   dejó. Las medidas salen del mockup a 393 pt.
+   ============================================================ */
+.hojaFondo {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* Sin `backdrop-filter`: en Chrome, sobre un fixed que cubre la ventana
+     entera, el desenfoque espejaba la página de atrás y se veía el layout
+     duplicado y al revés. El velo oscuro solo alcanza para separar los planos. */
+  background: rgba(10, 8, 22, 0.42);
+  animation: hojaEntraFondo 180ms ease-out;
+}
+@keyframes hojaEntraFondo {
+  from {
+    opacity: 0;
+  }
+}
+.hoja {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -12px 40px rgba(10, 8, 22, 0.24);
+  animation: hojaSube 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes hojaSube {
+  from {
+    transform: translateY(100%);
+  }
+}
+/* En pantalla grande no es una hoja de celular pegada abajo: se centra y
+   redondea los cuatro lados, como cualquier modal de escritorio. */
+@media (min-width: 901px) {
+  .hojaFondo {
+    align-items: center;
+    padding: 24px;
+  }
+  .hoja {
+    border-radius: 22px;
+    max-height: 88vh;
+  }
+  @keyframes hojaSube {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+  }
+}
+.hojaAgarre {
+  width: 36px;
+  height: 5px;
+  border-radius: var(--r-full);
+  background: var(--line-strong);
+  margin: 8px auto 0;
+  flex-shrink: 0;
+}
+.qosRoot .hojaCerrar {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  color: var(--ink-2);
+  display: grid;
+  place-items: center;
+  transition: var(--t-fast);
+  z-index: 1;
+}
+.qosRoot .hojaCerrar:hover {
+  background: var(--line);
+  color: var(--ink);
+}
+/* El scroll vive acá adentro y no en la hoja entera para que el agarre y la X
+   queden fijos arriba mientras el contenido sube. */
+.hojaScroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 20px calc(20px + env(safe-area-inset-bottom));
+}
+
+.qosRoot .hojaMarca {
+  display: flex;
   align-items: center;
-  padding: 4px 8px;
-  margin-left: -8px;
-  border-radius: var(--r-sm);
+  gap: 11px;
+  padding-right: 44px;
+  color: var(--ink);
+  border-radius: var(--r-md);
   transition: var(--t-fast);
 }
-.qosRoot .promoMore:hover {
-  color: var(--b-700);
-  background: rgba(109, 84, 243, 0.08);
+.qosRoot a.hojaMarca:hover {
+  opacity: 0.72;
 }
-.qosRoot .promoMore:focus-visible {
-  outline: 2px solid var(--b-500);
-  outline-offset: 2px;
+.hojaTitulo {
+  margin: 16px 0 14px;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.hojaPago {
+  border-radius: 16px;
+  background: #f2eeff;
+  padding: 2px 14px;
+  margin-bottom: 14px;
+}
+.hojaPagoFila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.hojaPagoFila + .hojaPagoFila {
+  border-top: 1px solid rgba(109, 84, 243, 0.14);
+}
+.hojaPagoFila span:last-child {
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* La comisión es la única cifra que no se resalta: es la que se va. */
+.hojaPagoFila:nth-child(2) span:last-child {
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.hojaPagoTotal span:first-child {
+  font-weight: 800;
+  color: var(--ink);
+}
+.hojaPagoTotal span:last-child {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--b-500);
+}
+
+.promoChipPlazo {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  background: #e9e9ef;
+  color: var(--ink);
+}
+
+.hojaBrief {
+  margin-top: 14px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  white-space: pre-line;
+}
+.hojaDato {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.hojaDato b {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Lo que la promo suma además de la plata. Verde y con el "+" adelante porque
+   es lo único de la hoja que es una ganancia extra, no una condición. */
+.hojaBeneficio {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 16px;
+  background: #d3f6de;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #0d6b42;
+}
+.hojaBeneficioIc {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-full);
+  background: #0f7a4a;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.hojaDivisor {
+  height: 1px;
+  background: var(--line);
+  margin: 20px 0;
+}
+.hojaSubtitulo {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.hojaDerechos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* Contorneados y no rellenos: se distinguen de los entregables de arriba, que
+   son lo que hacés, mientras que estos son lo que cedés. */
+.hojaDerecho {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 13px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--b-400);
+  color: var(--b-600);
+}
+.hojaDerechosTexto {
+  margin-top: 12px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.hojaDerechosTexto b {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.hojaAplicar {
+  margin-top: 20px;
+}
+.hojaPitch {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  resize: none;
+  transition: var(--t-fast);
+}
+.hojaPitch::placeholder {
+  color: var(--ink-3);
+}
+.hojaPitch:focus {
+  outline: none;
+  border-color: var(--b-400);
+  box-shadow: var(--sh-glow);
+}
+.qosRoot .btnAplicar {
+  width: 100%;
+  min-height: 52px;
+  border-radius: var(--r-full);
+  background: var(--b-500);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  transition: var(--t-fast);
+}
+.qosRoot .btnAplicar:hover:not(:disabled) {
+  background: var(--b-600);
+}
+.qosRoot .btnAplicar:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.qosRoot .btnAplicar:disabled {
+  opacity: 0.6;
+}
+/* El estado ocupa el mismo lugar y el mismo tamaño que el botón de aplicar:
+   con la píldora chiquita suelta, ahí abajo quedaba un hueco donde el resto de
+   las promos tienen la acción. Va después de `.riskPill` en el archivo a
+   propósito — de ahí saca el color y acá se le cambia la forma. */
+.hojaEstado {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hojaPie {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
 }
 
 /* ============================================================

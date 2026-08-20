@@ -11,23 +11,19 @@ export default function ApplyForm({ campaignId }: { campaignId: string }) {
   );
 
   return (
-    <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+    <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
       <input type="hidden" name="campaign_id" value={campaignId} />
       <textarea
         name="pitch_message"
-        placeholder="Mensaje opcional para la marca (por qué encajás con esta campaña)"
+        placeholder="Mensaje opcional para la marca (pitch)"
         rows={2}
-        className={styles.inp}
-        style={{ resize: "none" }}
+        className={styles.hojaPitch}
       />
       {state?.error && <p style={{ fontSize: "12.5px", color: "var(--risk)" }}>{state.error}</p>}
-      <button
-        type="submit"
-        disabled={pending}
-        className={`${styles.btn} ${styles.btnPrimary}`}
-        style={{ alignSelf: "flex-start" }}
-      >
-        {pending ? "Enviando…" : "Aplicar"}
+      {/* Ancho completo y 52 px de alto: es la única acción de la pantalla y en
+          un celular tiene que poder tocarse sin apuntar. */}
+      <button type="submit" disabled={pending} className={styles.btnAplicar}>
+        {pending ? "Enviando…" : "Aplicar a esta promo"}
       </button>
     </form>
   );

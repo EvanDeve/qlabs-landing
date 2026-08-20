@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { DELIVERABLE_TYPES } from "@/lib/ugc/deliverables";
 import { isUsageScope, isUsageDuration } from "@/lib/ugc/usage-rights";
+import { CAMPAIGN_COVER_BUCKET, esUrlDePortada, rutaDePortada } from "@/lib/ugc/campaign-covers";
 
 /**
  * Resultado de crear una campaña.
@@ -46,6 +47,13 @@ export async function createCampaignAction(formData: FormData): Promise<Campaign
   const deadlineDays = deadlineDaysRaw ? Number(deadlineDaysRaw) : null;
   const compensationDetails = String(formData.get("compensation_details") ?? "").trim() || null;
   const intent = formData.get("intent") === "publish" ? "publish" : "draft";
+
+  // La portada ya está en Storage cuando llega acá —el navegador la subió
+  // directo— y lo que viaja es su URL pública. Se filtra por bucket: sin eso,
+  // `cover_url` sería un campo de texto libre que el feed de todos los
+  // creadores termina renderizando como <img src>.
+  const coverRaw = String(formData.get("cover_url") ?? "").trim();
+  const coverUrl = coverRaw && esUrlDePortada(coverRaw) ? coverRaw : null;
 
   // Los radios del formulario son `required`, pero eso solo cubre el navegador:
   // se revalida acá porque define qué derechos cede el creador.
@@ -94,6 +102,7 @@ export async function createCampaignAction(formData: FormData): Promise<Campaign
     usage_rights_duration: usageDuration,
     usage_rights_editing: usageEditing,
     usage_rights_notes: usageNotes,
+    cover_url: coverUrl,
     deliverables,
     status: intent === "publish" ? "published" : "draft",
     published_at: intent === "publish" ? new Date().toISOString() : null,
@@ -145,5 +154,65 @@ export async function publishCampaignAction(formData: FormData): Promise<Campaig
   revalidatePath("/ugc/marca");
   revalidatePath("/ugc/marca/ugc");
   revalidatePath(`/ugc/marca/campanas/${campaignId}`);
+  return { ok: true };
+}
+
+/**
+ * Cambiar (o quitar) la portada de una campaña que ya existe.
+ *
+ * Existe aparte de `createCampaignAction` porque las campañas no tienen
+ * pantalla de edición: sin esto, la portada sería un privilegio de las que se
+ * creen de acá en adelante y las que ya están publicadas quedarían para
+ * siempre con el degradado. El archivo sube directo del navegador; acá solo
+ * llega su URL.
+ */
+export async function updateCampaignCoverAction(formData: FormData): Promise<CampaignActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/ugc/login");
+  }
+
+  const campaignId = String(formData.get("campaign_id") ?? "");
+  if (!campaignId) return { error: "No encontramos la campaña." };
+
+  const quitar = formData.get("quitar_portada") === "1";
+  const coverRaw = String(formData.get("cover_url") ?? "").trim();
+  const coverUrl = coverRaw && esUrlDePortada(coverRaw) ? coverRaw : null;
+  if (!quitar && !coverUrl) return { error: "No se pudo leer la imagen. Probá de nuevo." };
+
+  // Se lee la anterior ANTES de pisarla: es la única forma de saber qué archivo
+  // quedó colgado en Storage.
+  const { data: actual } = await supabase
+    .from("campaigns")
+    .select("cover_url")
+    .eq("id", campaignId)
+    .eq("brand_id", user.id)
+    .maybeSingle();
+
+  if (!actual) return { error: "No encontramos la campaña." };
+
+  const { error } = await supabase
+    .from("campaigns")
+    .update({ cover_url: quitar ? null : coverUrl })
+    .eq("id", campaignId)
+    .eq("brand_id", user.id);
+
+  if (error) return { error: "No se pudo guardar la portada. Intentá de nuevo." };
+
+  // Igual que con la foto del cupón: la anterior se borra después de guardar y
+  // solo si el guardado salió bien. El 1 GB de Storage es el primer techo del
+  // proyecto y cada imagen reemplazada que quede colgada es deuda invisible.
+  const anterior = rutaDePortada(actual.cover_url);
+  if (anterior && anterior !== rutaDePortada(coverUrl)) {
+    await supabase.storage.from(CAMPAIGN_COVER_BUCKET).remove([anterior]);
+  }
+
+  revalidatePath("/ugc/marca/ugc");
+  revalidatePath(`/ugc/marca/campanas/${campaignId}`);
+  revalidatePath("/ugc/creador/promos");
   return { ok: true };
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PublishCampaignButton from "@/components/ugc/marca/PublishCampaignButton";
+import CampaignCoverEditor from "@/components/ugc/marca/CampaignCoverEditor";
 import DesglosePago from "@/components/ugc/DesglosePago";
 import ApplicantDecisionButtons from "@/components/ugc/marca/ApplicantDecisionButtons";
 import ApproveWithRatingForm from "@/components/ugc/marca/ApproveWithRatingForm";
@@ -42,11 +43,12 @@ export default async function CampaignDetailPage({
     notFound();
   }
 
-  const { data: applications } = await supabase
-    .from("applications")
-    .select("*")
-    .eq("campaign_id", id)
-    .order("created_at", { ascending: false });
+  const [{ data: applications }, { data: brand }] = await Promise.all([
+    supabase.from("applications").select("*").eq("campaign_id", id).order("created_at", { ascending: false }),
+    // Para el respaldo de la portada: sin foto, la tarjeta del feed muestra el
+    // logo de la marca sobre su degradado, y acá se previsualiza igual.
+    supabase.from("brand_profiles").select("brand_name, logo_url").eq("profile_id", user!.id).maybeSingle(),
+  ]);
 
   const creatorIds = applications?.map((a) => a.creator_id) ?? [];
 
@@ -156,6 +158,13 @@ export default async function CampaignDetailPage({
             ))}
           </div>
         )}
+
+        <CampaignCoverEditor
+          campaignId={campaign.id}
+          coverUrl={campaign.cover_url}
+          brandName={brand?.brand_name ?? "Marca"}
+          brandLogoUrl={brand?.logo_url ?? null}
+        />
       </div>
 
       <div className={styles.sectionHead} style={{ marginTop: "28px" }}>

@@ -59,3 +59,37 @@ export function usageRightsChips(c: Partial<UsageRights>): string[] {
     c.usage_rights_editing ? "Editable" : "Sin editar",
   ];
 }
+
+/**
+ * La duración dicha dentro de una oración, que no es lo mismo que la etiqueta
+ * del chip: "durante siempre" no se dice en español. Para eso está esta tabla.
+ */
+const USAGE_DURATION_FRASE: Record<UsageDuration, string> = {
+  meses_3: "durante 3 meses",
+  meses_6: "durante 6 meses",
+  meses_12: "durante 12 meses",
+  perpetuo: "sin límite de tiempo",
+};
+
+/**
+ * Los derechos explicados en una oración, en lugar de tres chips que hay que
+ * saber leer. Devuelve las piezas por separado —no una oración armada— para
+ * que la pantalla pueda resaltar el alcance y el plazo, que son las dos partes
+ * que definen qué está cediendo el creador.
+ *
+ * Devuelve null si la campaña es de las viejas, que no pactaron nada.
+ */
+export function usageRightsFrase(c: Partial<UsageRights>): {
+  alcance: string;
+  duracion: string;
+  edicion: string;
+} | null {
+  if (!hasUsageRights(c)) return null;
+  return {
+    alcance: USAGE_SCOPE_LABEL[c.usage_rights_scope as UsageScope].toLowerCase(),
+    duracion: USAGE_DURATION_FRASE[c.usage_rights_duration as UsageDuration],
+    edicion: c.usage_rights_editing
+      ? "puede recortarla o reeditarla"
+      : "tiene que publicarla tal como se la entregás",
+  };
+}

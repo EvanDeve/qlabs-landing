@@ -303,7 +303,7 @@ export default function QosShell({
               aria-label="Ver todas las secciones"
               aria-expanded={mobileOpen}
             >
-              <QosIcon name="menu" size={20} />
+              <QosIcon name="dots" size={20} />
               <span>Más</span>
             </button>
           )}

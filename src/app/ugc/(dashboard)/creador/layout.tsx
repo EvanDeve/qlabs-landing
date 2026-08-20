@@ -13,7 +13,16 @@ import { displayHandle } from "@/lib/ugc/handles";
 // `bottom` marca los cuatro que salen a la barra inferior en móvil: lo del día a
 // día. El resto queda detrás de "Más", que abre este mismo menú.
 const NAV_ITEMS: QosNavItem[] = [
-  { href: "/ugc/creador", label: "Resumen", icon: "grid", group: "Mi trabajo", bottom: true },
+  {
+    href: "/ugc/creador",
+    label: "Resumen",
+    icon: "home",
+    group: "Mi trabajo",
+    bottom: true,
+    // "Inicio" abajo y "Resumen" en el menú: en la barra de tabs, el primer
+    // ítem es la casa a la que se vuelve, no el nombre de la pantalla.
+    shortLabel: "Inicio",
+  },
   {
     href: "/ugc/creador/pipeline",
     label: "Mi pipeline",

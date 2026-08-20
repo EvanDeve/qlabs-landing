@@ -4,7 +4,10 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ugc/Toaster";
 import DesglosePago from "@/components/ugc/DesglosePago";
+import { createClient } from "@/lib/supabase/client";
 import { createCampaignAction, type CampaignActionState } from "@/lib/actions/campaigns";
+import { CAMPAIGN_COVER_BUCKET, MAX_CAMPAIGN_COVER_BYTES } from "@/lib/ugc/campaign-covers";
+import { subirArchivoDirecto, pesoLegible } from "@/lib/ugc/uploads";
 import { DELIVERABLE_TYPES, FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import {
   USAGE_SCOPES,
@@ -39,6 +42,14 @@ export default function CampaignForm() {
   const [presupuesto, setPresupuesto] = useState("");
   const [restaurado, setRestaurado] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | null>(null);
+  // La portada sube DIRECTO del navegador a Storage: un archivo de 5 MB no
+  // pasa por el Server Action (tope de ~4.5 MB en Vercel). El input de archivo
+  // va sin `name` a propósito — así no entra al borrador de localStorage, que
+  // solo sabe guardar texto.
+  const portadaRef = useRef<HTMLInputElement>(null);
+  const [portada, setPortada] = useState<File | null>(null);
+  const [portadaPreview, setPortadaPreview] = useState<string | null>(null);
+  const [subiendo, setSubiendo] = useState(false);
 
   const hayEntregable = DELIVERABLE_TYPES.some((t) => (qty[t] ?? 0) > 0);
 
@@ -98,6 +109,23 @@ export default function CampaignForm() {
     }
   }, [state]);
 
+  function elegirPortada(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setState({ error: "La portada tiene que ser una imagen." });
+      return;
+    }
+    if (file.size > MAX_CAMPAIGN_COVER_BYTES) {
+      setState({
+        error: `La portada pesa ${pesoLegible(file.size)} y el máximo es ${pesoLegible(MAX_CAMPAIGN_COVER_BYTES)}.`,
+      });
+      return;
+    }
+    setState(null);
+    setPortada(file);
+    setPortadaPreview(URL.createObjectURL(file));
+  }
+
   /** Cada tecleo deja el formulario entero guardado. */
   function guardarBorrador() {
     const form = formRef.current;
@@ -134,6 +162,27 @@ export default function CampaignForm() {
     formData.set("intent", intent);
 
     startTransition(async () => {
+      if (portada) {
+        setSubiendo(true);
+        try {
+          const ruta = await subirArchivoDirecto({
+            bucket: CAMPAIGN_COVER_BUCKET,
+            file: portada,
+            maxBytes: MAX_CAMPAIGN_COVER_BYTES,
+            extFallback: "jpg",
+          });
+          // Bucket público, igual que la foto del cupón: la URL se arma una vez
+          // y se guarda. Nadie tiene que firmar nada para ver el feed.
+          const { data } = createClient().storage.from(CAMPAIGN_COVER_BUCKET).getPublicUrl(ruta);
+          formData.set("cover_url", data.publicUrl);
+        } catch (e) {
+          setState({ error: e instanceof Error ? e.message : "No se pudo subir la portada." });
+          return;
+        } finally {
+          setSubiendo(false);
+        }
+      }
+
       const resultado = await createCampaignAction(formData);
       setState(resultado);
       if (resultado && "error" in resultado) return;
@@ -180,6 +229,71 @@ export default function CampaignForm() {
         placeholder="Contá qué querés que el creador muestre: mood, ángulo, momentos clave."
         required
       />
+
+      {/* ── Portada ── */}
+      <div className={styles.field}>
+        <label>Portada (opcional)</label>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+          {portadaPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={portadaPreview}
+              alt="Vista previa de la portada"
+              style={{
+                width: "160px",
+                height: "64px",
+                objectFit: "cover",
+                borderRadius: "10px",
+                border: "1px solid var(--line)",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "160px",
+                height: "64px",
+                borderRadius: "10px",
+                border: "1px dashed var(--line)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "11.5px",
+                color: "var(--ink-3)",
+              }}
+            >
+              Sin portada
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <input
+              ref={portadaRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => elegirPortada(e.target.files?.[0] ?? null)}
+              style={{ fontSize: "12.5px" }}
+            />
+            <span style={{ fontSize: "11.5px", color: "var(--ink-3)" }}>
+              JPG o PNG, hasta {pesoLegible(MAX_CAMPAIGN_COVER_BYTES)}. Es lo primero que ve el
+              creador en el feed; se recorta apaisada. Sin portada, la tarjeta usa tu logo.
+            </span>
+            {portadaPreview && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPortada(null);
+                  setPortadaPreview(null);
+                  if (portadaRef.current) portadaRef.current.value = "";
+                }}
+                className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                style={{ alignSelf: "flex-start" }}
+              >
+                Quitar portada
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <div className={styles.field}>
@@ -354,7 +468,7 @@ export default function CampaignForm() {
           title={hayEntregable ? undefined : "Elegí al menos un entregable"}
           className={`${styles.btn} ${styles.btnPrimary}`}
         >
-          {isPending ? "Publicando…" : "Publicar campaña"}
+          {subiendo ? "Subiendo portada…" : isPending ? "Publicando…" : "Publicar campaña"}
         </button>
       </div>
     </form>

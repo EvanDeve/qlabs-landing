@@ -41,6 +41,11 @@ export default async function CreadorFeedPage() {
       deliverables: Array.isArray(campaign.deliverables)
         ? (campaign.deliverables as { type: string; qty: number }[])
         : [],
+      coverUrl: campaign.cover_url,
+      usage_rights_scope: campaign.usage_rights_scope,
+      usage_rights_duration: campaign.usage_rights_duration,
+      usage_rights_editing: campaign.usage_rights_editing,
+      usage_rights_notes: campaign.usage_rights_notes,
       brandName: brand?.brand_name ?? null,
       brandIndustry: brand?.industry ?? null,
       brandLogoUrl: brand?.logo_url ?? null,
@@ -53,12 +58,12 @@ export default async function CreadorFeedPage() {
 
   return (
     <div>
-      <h1 className={styles.tbTitle} style={{ fontSize: "26px" }}>
-        Feed de promos
-      </h1>
-      <p style={{ color: "var(--ink-2)", marginBottom: "20px" }}>
-        Campañas de marcas verificadas buscando creadores como vos. Aplicá con tu book en un clic.
-      </p>
+      {/* Título grande al estilo iOS: la barra de arriba ya dice dónde estamos,
+          así que este encabezado es el que abre la pantalla. */}
+      <div className={styles.feedHead}>
+        <h1 className={styles.feedTitle}>Feed de promos</h1>
+        <p className={styles.feedSub}>Marcas verificadas buscando creadores como vos</p>
+      </div>
 
       {feedCampaigns.length > 0 ? (
         <CreadorFeedGrid campaigns={feedCampaigns} />

@@ -28,7 +28,7 @@ const GRADIENTS = [
   ["#F2A03D", "#D97706"],
 ];
 
-function gradientFor(name: string) {
+export function brandGradient(name: string) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   const [from, to] = GRADIENTS[hash % GRADIENTS.length];
@@ -81,7 +81,7 @@ export default function BrandAvatar({
         overflow: "hidden",
         display: "grid",
         placeItems: "center",
-        background: logoUrl ? "#fff" : color || gradientFor(label),
+        background: logoUrl ? "#fff" : color || brandGradient(label),
         color: "#fff",
         fontWeight: 700,
         fontSize: Math.max(11, Math.round(size * 0.36)),

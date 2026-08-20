@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import ApplyForm from "@/components/ugc/creador/ApplyForm";
-import BrandAvatar from "@/components/ugc/BrandAvatar";
-import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
-import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/application-status";
-import DesglosePago from "@/components/ugc/DesglosePago";
-import { hasUsageRights, usageRightsChips } from "@/lib/ugc/usage-rights";
+import PromoDetalle from "@/components/ugc/creador/PromoDetalle";
+import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * El detalle con URL propia.
+ *
+ * Desde el feed, la promo abre en una hoja sin cambiar de página. Esta ruta
+ * sigue existiendo para lo que llega de afuera —una notificación, un link
+ * compartido, "abrir en pestaña nueva"— y muestra exactamente el mismo
+ * contenido: es el mismo componente.
+ */
 export default async function PromoDetailPage({
   params,
 }: {
@@ -45,189 +49,39 @@ export default async function PromoDetailPage({
       .maybeSingle(),
   ]);
 
-  const deliverables = Array.isArray(campaign.deliverables)
-    ? (campaign.deliverables as { type: string; qty: number }[])
-    : [];
-  const usageChips = usageRightsChips(campaign);
-  const brandName = brand?.brand_name ?? "Marca";
-  const igHandle = brand?.instagram_handle?.replace(/^@/, "");
-
   return (
-    <div>
-      {/* Botón, no link de texto: es la salida principal de esta página. */}
-      <Link
-        href="/ugc/creador/promos"
-        className={`${styles.btn} ${styles.btnGhost}`}
-        style={{ marginBottom: "16px" }}
-      >
-        <i className="fa-solid fa-arrow-left" aria-hidden /> Volver al feed
+    <div style={{ maxWidth: "560px", margin: "0 auto" }}>
+      <Link href="/ugc/creador/promos" className={styles.backBtn}>
+        <QosIcon name="chevL" size={16} />
+        Volver al feed
       </Link>
 
-      <div className={styles.promoDetailGrid}>
-        {/* ---------- La promo ---------- */}
-        <div className={`${styles.card} ${styles.cardPad}`}>
-          <h1 className={styles.tbTitle} style={{ fontSize: "24px", marginBottom: "6px" }}>
-            {campaign.title}
-          </h1>
-          <p style={{ color: "var(--ink-3)", fontSize: "13px", marginBottom: "18px" }}>
-            Publicada por {brandName}
-            {brand?.location ? ` · ${brand.location}` : ""}
-          </p>
-
-          <div className={styles.promoFacts}>
-            {campaign.deadline_days && (
-              <div className={styles.promoFact}>
-                <div className={styles.promoFactLabel}>Plazo</div>
-                <div className={styles.promoFactValue}>{campaign.deadline_days} días</div>
-              </div>
-            )}
-            {deliverables.length > 0 && (
-              <div className={styles.promoFact}>
-                <div className={styles.promoFactLabel}>Entregables</div>
-                <div className={styles.promoFactValue}>
-                  {deliverables.map((d) => `${d.qty}x ${FORMAT_LABEL[d.type] ?? d.type}`).join(", ")}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* El desglose reemplaza al dato suelto "Lo que cobrás": ese número
-              solo, sin decir de dónde salía, era el que hacía pensar que la
-              marca había puesto otra cosa o que había un cobro escondido. */}
-          <div style={{ marginTop: "16px" }}>
-            <DesglosePago budgetAmount={campaign.budget_amount} audiencia="creador" />
-            <p style={{ marginTop: "8px", fontSize: "12px", color: "var(--ink-3)" }}>
-              La comisión es cómo se sostiene UGC·CRC. Está en los{" "}
-              <Link href="/legal/terminos#pagos" className={styles.linkMore} target="_blank">
-                Términos
-              </Link>
-              .
-            </p>
-          </div>
-
-          {campaign.compensation_details && (
-            <p style={{ marginTop: "14px", fontSize: "13.5px", color: "var(--b-600)", fontWeight: 600 }}>
-              + {campaign.compensation_details}
-            </p>
-          )}
-
-          <h2 style={{ fontSize: "15px", margin: "22px 0 8px" }}>El brief</h2>
-          <p className={styles.promoDetailBrief}>{campaign.brief}</p>
-
-          {campaign.target_audience && (
-            <>
-              <h2 style={{ fontSize: "15px", margin: "22px 0 8px" }}>A quién busca</h2>
-              <p style={{ fontSize: "14px", color: "var(--ink-2)", lineHeight: 1.6 }}>
-                {campaign.target_audience}
-              </p>
-            </>
-          )}
-
-          {/* Va justo antes del botón de aplicar a propósito: es lo último que
-              el creador debería leer antes de comprometerse. */}
-          <h2 style={{ fontSize: "15px", margin: "22px 0 8px" }}>Derechos de uso</h2>
-          {hasUsageRights(campaign) ? (
-            <>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {usageChips.map((chip) => (
-                  <span key={chip} className={styles.tag}>
-                    {chip}
-                  </span>
-                ))}
-              </div>
-              <p style={{ marginTop: "10px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6 }}>
-                {brandName} puede usar la pieza en{" "}
-                <b>{usageChips[0]?.toLowerCase()}</b> durante <b>{usageChips[1]?.toLowerCase()}</b>{" "}
-                desde que aprueba la entrega, y{" "}
-                {campaign.usage_rights_editing
-                  ? "puede recortarla o reeditarla"
-                  : "debe publicarla tal como se la entregás"}
-                . Vos siempre podés publicarla en tu propio perfil.
-              </p>
-              {campaign.usage_rights_notes && (
-                <p style={{ marginTop: "8px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6 }}>
-                  {campaign.usage_rights_notes}
-                </p>
-              )}
-            </>
-          ) : (
-            <p style={{ fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6 }}>
-              Esta promo se publicó sin especificar derechos de uso. Antes de entregar, acordá con{" "}
-              {brandName} dónde y por cuánto tiempo va a usar el contenido.
-            </p>
-          )}
-
-          <div style={{ marginTop: "26px", borderTop: "1px solid var(--line)", paddingTop: "20px" }}>
-            {application ? (
-              <span
-                className={`${styles.riskPill} ${styles["risk" + APPLICATION_STATUS_STYLE[application.status]]}`}
-              >
-                Ya aplicaste — {APPLICATION_STATUS_LABEL[application.status]}
-              </span>
-            ) : (
-              <ApplyForm campaignId={campaign.id} />
-            )}
-          </div>
-        </div>
-
-        {/* ---------- La marca ---------- */}
-        <aside className={`${styles.card} ${styles.cardPad}`}>
-          <div className={styles.brandCardHead}>
-            <BrandAvatar name={brandName} logoUrl={brand?.logo_url} size={52} radius={14} />
-            <div style={{ minWidth: 0 }}>
-              <b style={{ fontSize: "15px", display: "block" }}>
-                {brandName}
-                {brand?.verified && (
-                  <i
-                    className="fa-solid fa-circle-check"
-                    title="Marca verificada"
-                    style={{ marginLeft: "6px", color: "var(--ok)", fontSize: "12px" }}
-                  />
-                )}
-              </b>
-              <span style={{ fontSize: "12px", color: "var(--ink-3)" }}>
-                {[brand?.industry, brand?.location].filter(Boolean).join(" · ")}
-              </span>
-            </div>
-          </div>
-
-          {brand?.description && (
-            <p style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--ink-2)" }}>{brand.description}</p>
-          )}
-
-          <div className={styles.brandCardLinks}>
-            {brand?.slug && (
-              <Link href={`/ugc/marcas/${brand.slug}`} className={styles.brandCardLink}>
-                <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden /> Ver perfil de la marca
-              </Link>
-            )}
-          </div>
-
-          {(brand?.website || igHandle) && (
-            <div className={styles.brandCardLinks}>
-              {brand?.website && (
-                <a
-                  href={brand.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.brandCardLink}
-                >
-                  <i className="fa-solid fa-globe" aria-hidden /> Sitio web
-                </a>
-              )}
-              {igHandle && (
-                <a
-                  href={`https://instagram.com/${igHandle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.brandCardLink}
-                >
-                  <i className="fa-brands fa-instagram" aria-hidden /> @{igHandle}
-                </a>
-              )}
-            </div>
-          )}
-        </aside>
+      <div className={`${styles.card} ${styles.cardPad}`}>
+        <PromoDetalle
+          promo={{
+            id: campaign.id,
+            title: campaign.title,
+            brief: campaign.brief,
+            budget_amount: campaign.budget_amount,
+            compensation_details: campaign.compensation_details,
+            deadline_days: campaign.deadline_days,
+            target_audience: campaign.target_audience,
+            deliverables: Array.isArray(campaign.deliverables)
+              ? (campaign.deliverables as { type: string; qty: number }[])
+              : [],
+            usage_rights_scope: campaign.usage_rights_scope,
+            usage_rights_duration: campaign.usage_rights_duration,
+            usage_rights_editing: campaign.usage_rights_editing,
+            usage_rights_notes: campaign.usage_rights_notes,
+            brandName: brand?.brand_name ?? null,
+            brandIndustry: brand?.industry ?? null,
+            brandLocation: brand?.location ?? null,
+            brandLogoUrl: brand?.logo_url ?? null,
+            brandSlug: brand?.slug ?? null,
+            brandVerified: brand?.verified ?? false,
+            applicationStatus: application?.status ?? null,
+          }}
+        />
       </div>
     </div>
   );

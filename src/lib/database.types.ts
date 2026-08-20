@@ -269,6 +269,7 @@ export interface Database {
           usage_rights_duration: CampaignUsageDuration | null;
           usage_rights_editing: boolean | null;
           usage_rights_notes: string | null;
+          cover_url: string | null;
         };
         Insert: {
           id?: string;
@@ -289,6 +290,7 @@ export interface Database {
           usage_rights_duration?: CampaignUsageDuration | null;
           usage_rights_editing?: boolean | null;
           usage_rights_notes?: string | null;
+          cover_url?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["campaigns"]["Insert"]>;
         Relationships: [];
