@@ -3988,15 +3988,18 @@
        encima del menú que la reemplaza. */
     z-index: 38;
     background: var(--surface);
-    border-top: 1px solid var(--line);
-    box-shadow: 0 -2px 10px rgba(26, 23, 48, 0.06);
-    /* La franja del gesto de inicio en iPhone.
-       Va con `max()` y no con `env()` pelado: en Safari, sin
-       `viewport-fit=cover`, env() vale 0 —y en un teléfono real la barra
-       quedaba pegada al borde de abajo, con los labels a ras del vidrio—. El
-       piso de 10px es el aire que necesita igual. */
-    padding-top: 4px;
-    padding-bottom: max(env(safe-area-inset-bottom), 10px);
+    /* Sin borde arriba: en el diseño la barra es una superficie blanca sobre el
+       lavanda del fondo, separada por sombra. La línea de 1px la volvía a
+       delatar como un pie de página. */
+    border-top: 0;
+    box-shadow: 0 -1px 0 rgba(10, 11, 16, 0.04), 0 -6px 20px rgba(26, 23, 48, 0.07);
+    /* Los 26px de abajo son la franja del gesto de inicio del iPhone, medida
+       del diseño (~31pt). Va con `max()` y no con `env()` pelado porque en
+       Safari, sin `viewport-fit=cover`, env() vale 0: la regla estaba escrita
+       para el indicador y en la práctica no aplicaba nunca.
+       Los 14px de los lados son lo que impide que "Inicio" y "Más" queden
+       pegados al borde de la pantalla. */
+    padding: 10px 14px max(env(safe-area-inset-bottom), 26px);
   }
   /* La barra es fixed, así que no ocupa lugar en el flujo: sin este colchón
      tapa lo último de la página (el "Guardar perfil" del perfil, la última
@@ -4005,7 +4008,7 @@
      algún item la pidió: en admin, que no la tiene, el colchón sería 76px de
      vacío al pie de todas las pantallas. */
   .qosRoot:has(.bottomNav) .content {
-    padding-bottom: calc(70px + max(env(safe-area-inset-bottom), 10px));
+    padding-bottom: calc(62px + max(env(safe-area-inset-bottom), 26px));
   }
 }
 /* Medidas de barra de tabs de iOS: el ícono manda (26px) y el label es chico y
@@ -4016,14 +4019,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-height: 52px;
-  padding: 6px 4px;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0 2px;
   font-size: 11px;
   font-weight: 500;
   line-height: 1.15;
   text-align: center;
-  color: var(--ink-3);
+  color: var(--ink-2);
   position: relative;
   transition: var(--t-fast);
 }
