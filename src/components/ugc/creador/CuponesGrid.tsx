@@ -143,6 +143,14 @@ export default function CuponesGrid({
 
             return (
               <div key={c.id} className={styles.cuponCard} style={{ opacity: desbloqueado ? 1 : 0.75 }}>
+                {/* La foto es lo que hace que un cupón se vea deseable al lado
+                    de otros cinco — por eso existe `coupons.image_url`. Solo
+                    aparece si la marca subió una; sin foto la tarjeta se ve
+                    igual que siempre. */}
+                {c.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.imageUrl} alt="" className={styles.cuponFoto} />
+                )}
                 <div className={styles.cuponHead}>
                   <BrandAvatar name={c.brandName} logoUrl={c.brandLogo} size={44} radius={14} />
                   <div style={{ minWidth: 0 }}>

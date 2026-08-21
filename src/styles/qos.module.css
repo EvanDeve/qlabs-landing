@@ -6277,6 +6277,20 @@
   padding: 16px;
   box-shadow: 0 1px 2px rgba(26, 23, 48, 0.04), 0 6px 18px rgba(26, 23, 48, 0.05);
 }
+/* La foto del cupón, cuando la marca subió una. Sale del padding de la tarjeta
+   con márgenes negativos en vez de reestructurar `.cuponCard` en cabecera y
+   cuerpo: la clase la comparten Disponibles y Mis cupones, y solo una de las
+   dos lleva foto. El radio repite el de la tarjeta, así no hace falta
+   `overflow: hidden`. */
+.cuponFoto {
+  display: block;
+  width: calc(100% + 32px);
+  margin: -16px -16px 14px;
+  aspect-ratio: 5 / 2;
+  object-fit: cover;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface-3);
+}
 .cuponHead {
   display: flex;
   align-items: center;
