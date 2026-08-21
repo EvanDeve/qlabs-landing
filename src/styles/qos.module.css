@@ -58,8 +58,12 @@
   --st-prog: #14a08a;
   --st-pub: #14a06a;
 
-  --font-display: var(--font-outfit), system-ui, sans-serif;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  /* Las dos salen de una variable de afuera con respaldo, para que el panel del
+     marketplace pueda pedir la tipografía de la marca sin que Q·OS —que tiene
+     identidad propia a pedido de Evan— se entere. Lo prende `.fuenteMarketplace`
+     en el layout de `(dashboard)`. */
+  --font-display: var(--fuente-panel-titulos, var(--font-outfit)), system-ui, sans-serif;
+  --font-sans: var(--fuente-panel, var(--font-inter)), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   --r-sm: 7px;
@@ -6746,4 +6750,15 @@
 .qosRoot .bnItem:has([data-cargando]) {
   color: var(--b-500);
   font-weight: 700;
+}
+
+/* Plus Jakarta Sans en todo el panel del marketplace (`/ugc/creador` y
+   `/ugc/marca`), que es la tipografía de la marca — la del landing y la que
+   pide el brief del rediseño. Q·OS (`/admin`) no pasa por este layout y se
+   queda con Outfit + Inter.
+   De paso, los títulos a 800 ahora son 800 de verdad: Inter se carga hasta 700
+   y el navegador venía sintetizando el peso. */
+.fuenteMarketplace {
+  --fuente-panel: var(--font-jakarta);
+  --fuente-panel-titulos: var(--font-jakarta);
 }
