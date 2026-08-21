@@ -194,6 +194,12 @@ export default function AuthForm({ initialIntent }: { initialIntent?: Role }) {
           >
             {signInPending ? "Entrando..." : "Entrar"}
           </button>
+          <Link
+            href="/ugc/recuperar"
+            className="mt-1 text-center text-sm font-semibold text-ink-soft transition hover:text-violet"
+          >
+            Olvidé mi contraseña
+          </Link>
         </form>
       ) : (
         <form key="signup" action={signUpFormAction} className="flex flex-col gap-3">

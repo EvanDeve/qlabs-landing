@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { signInAction, type AuthActionState } from "@/lib/actions/auth";
 import styles from "@/styles/qos.module.css";
 
@@ -70,6 +71,13 @@ export default function QosLoginForm({ next }: { next?: string }) {
       <button type="submit" disabled={isPending} className={`${styles.btn} ${styles.btnPrimary} ${styles.authSubmit}`}>
         {isPending ? "Entrando…" : "Entrar"}
       </button>
+
+      {/* Fuera del <form>-submit pero adentro del form: así el link queda en el
+          orden de tabulación justo después del botón, que es donde lo busca
+          quien ya se dio cuenta de que no se acuerda de la clave. */}
+      <p className={styles.authAlt}>
+        <Link href="/admin/recuperar">Olvidé mi contraseña</Link>
+      </p>
     </form>
   );
 }

@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendTransactionalEmail } from "@/lib/email/resend";
 import { destinoDeSesion, destinoConNext } from "@/lib/ugc/estado-cuenta";
 
 export type AuthActionState = { error: string } | { message: string } | null;
@@ -130,4 +132,132 @@ export async function signOutAction() {
 
   await supabase.auth.signOut();
   redirect(esAdmin ? "/admin/login" : "/ugc/login");
+}
+
+const ESPERA_ENTRE_RESETS_MS = 60_000;
+const ultimoResetPorEmail = new Map<string, number>();
+
+/**
+ * Manda el correo para recuperar la contraseña. Lo comparten las dos puertas:
+ * /admin/recuperar (equipo) y /ugc/recuperar (creadores y marcas).
+ *
+ * NO usa `supabase.auth.resetPasswordForEmail`, que sería lo obvio, por dos
+ * razones concretas:
+ *
+ * 1. El cliente de @supabase/ssr habla PKCE. Con PKCE el link del correo solo
+ *    sirve en el MISMO navegador que pidió el reset, porque el verifier queda
+ *    en una cookie de acá. Y recuperar la contraseña es justo el caso donde la
+ *    gente pide desde la compu y abre el correo en el teléfono: el link moría
+ *    con "invalid request" y no había forma de que la persona entendiera por qué.
+ * 2. El correo lo mandaría Supabase con su plantilla en inglés y su límite de
+ *    envíos por hora, mientras el resto de la app ya manda todo por Resend
+ *    desde notificaciones@qlabsmethod.com.
+ *
+ * `generateLink` arma el mismo link de recovery pero sin PKCE (token en el
+ * fragmento, flujo implícito) y sin mandar nada — el correo lo mandamos
+ * nosotros. Es exactamente la forma que ya sabe leer /ugc/auth/set-password,
+ * que es como funcionan las invitaciones al equipo desde el día uno.
+ */
+export async function requestPasswordResetAction(
+  _prevState: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return { error: "Poné un email válido." };
+  }
+
+  // La misma respuesta exista o no la cuenta: si dijéramos "ese email no está
+  // registrado", este formulario público serviría para averiguar quién tiene
+  // cuenta en Q Labs probando direcciones de a una.
+  const respuestaNeutra = {
+    message: `Si ${email} tiene una cuenta, te mandamos un link para crear una contraseña nueva. Revisá tu correo (mirá también spam).`,
+  };
+
+  // Freno básico contra el bucle: el formulario es público y sin sesión, así
+  // que sin esto cualquiera puede pedir mil resets seguidos para la dirección
+  // de otro y llenarle la bandeja (y de paso quemarnos la cuota de Resend).
+  //
+  // Es memoria del proceso, no una tabla: frena el caso tonto —alguien
+  // apretando o un script de una sola máquina— y se pierde en cada deploy y en
+  // cada instancia nueva de Vercel. Si esto llega a pasar de verdad, el
+  // arreglo de verdad es una tabla con (email, pedido_at) y RLS.
+  const ahora = Date.now();
+  const ultimo = ultimoResetPorEmail.get(email);
+  if (ultimo && ahora - ultimo < ESPERA_ENTRE_RESETS_MS) {
+    // Se responde lo mismo que en el camino feliz: decir "esperá" confirmaría
+    // que la cuenta existe, que es justo lo que el mensaje neutro evita.
+    return respuestaNeutra;
+  }
+  ultimoResetPorEmail.set(email, ahora);
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const destino = `${siteUrl}/ugc/auth/set-password?modo=recuperar`;
+  const admin = createAdminClient();
+
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo: destino },
+  });
+
+  if (error || !data.properties?.action_link) {
+    // El caso normal acá es "no existe esa cuenta", que no es un error nuestro
+    // y no se le cuenta a quien pregunta.
+    console.warn("[requestPasswordReset] no se generó link para", email, "—", error?.message);
+    return respuestaNeutra;
+  }
+
+  const link = data.properties.action_link;
+
+  // Supabase NO falla si el `redirectTo` no está en la allowlist de Redirect
+  // URLs: lo cambia por el Site URL del proyecto y devuelve 200. El link llega
+  // igual, la persona lo abre, y aterriza en la home del sitio con el token
+  // colgando del `#` y sin nada que lo lea. Se ve como "el correo no sirve".
+  // Por eso se compara: si nos lo cambiaron, que quede gritado en los logs.
+  if (!link.includes(encodeURIComponent(destino)) && !link.includes(destino)) {
+    console.error(
+      "[requestPasswordReset] Supabase ignoró el redirect_to y lo reemplazó por el Site URL.",
+      "Agregá", `${siteUrl}/**`, "en Authentication → URL Configuration → Redirect URLs.",
+      "Link generado:", link
+    );
+  }
+
+  const enviado = await sendTransactionalEmail(
+    email,
+    "Recuperá tu contraseña",
+    `<p>Pediste crear una contraseña nueva para tu cuenta de Q Labs.</p>
+     <p><a href="${link}" style="display:inline-block;background:#705CF6;color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;text-decoration:none">Crear contraseña nueva</a></p>
+     <p>El link vence en una hora y sirve una sola vez.</p>
+     <p style="color:#5B5570;font-size:13px">Si no fuiste vos, ignorá este correo: tu contraseña actual sigue funcionando.</p>`
+  );
+
+  // Un fallo de Resend sí se cuenta. No filtra nada —habla de nuestro servidor
+  // de correo, no de si la cuenta existe— y callarlo deja a la persona
+  // esperando un mail que nunca salió.
+  if (!enviado) {
+    return { error: "No pudimos mandar el correo en este momento. Probá de nuevo en unos minutos." };
+  }
+
+  return respuestaNeutra;
+}
+
+/**
+ * A qué panel mandar a quien acaba de definir su contraseña. Existe porque
+ * /ugc/auth/set-password es un componente de cliente y `destinoDeSesion` mira
+ * tablas que solo se leen del lado del servidor.
+ *
+ * Antes esa pantalla mandaba a /admin fijo, que servía cuando su único uso era
+ * la invitación al equipo. Con el reset abierto a todo el mundo, un creador
+ * terminaba estrellándose contra el panel del equipo apenas cambiaba la clave.
+ */
+export async function destinoTrasSetPasswordAction(): Promise<string> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return "/ugc/login";
+  return await destinoDeSesion(supabase, user.id);
 }

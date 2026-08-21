@@ -4,7 +4,13 @@ import type { Database } from "@/lib/database.types";
 
 // OJO: "/admin" cubre también "/admin/login" por prefijo, así que la puerta
 // se excluye a mano — si no, entrar sin sesión rebota a sí misma en bucle.
-const PUBLIC_PATHS = ["/admin/login"];
+//
+// "/admin/recuperar" va por lo mismo y es peor si se olvida: la persona que
+// necesita esa pantalla es, por definición, la que no tiene sesión, así que
+// protegerla la manda al login que justamente no puede pasar. Del lado del
+// marketplace "/ugc/recuperar" no necesita excepción porque no cuelga de
+// ninguno de los prefijos protegidos.
+const PUBLIC_PATHS = ["/admin/login", "/admin/recuperar"];
 
 const PROTECTED_PREFIXES = [
   "/ugc/creador",
