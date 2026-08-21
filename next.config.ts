@@ -27,6 +27,19 @@ const nextConfig: NextConfig = {
       // funciona sin sesión. Un 404 acá es un cliente que no puede aprobar su
       // mes y que no tiene a quién reclamarle salvo por WhatsApp.
       { source: "/ugc/cronograma/:token", destination: "/cronograma/:token", permanent: true },
+
+      // Definir contraseña salió de /ugc por lo mismo, y acá el link va DENTRO
+      // de un correo: invitaciones al equipo y recuperación de contraseña. Un
+      // correo viejo en una bandeja no se puede reescribir, igual que un
+      // WhatsApp. Además la pantalla nunca fue del marketplace —la usan las dos
+      // puertas—, así que el /ugc/ del principio le decía a alguien del equipo
+      // que le habían mandado el link equivocado justo antes de escribir su
+      // contraseña.
+      //
+      // El token viaja en el fragmento (#access_token=...), que el navegador
+      // conserva a través del redirect porque el Location no trae uno propio.
+      // Por eso un link ya mandado sigue funcionando.
+      { source: "/ugc/auth/set-password", destination: "/auth/set-password", permanent: true },
     ];
   },
 };

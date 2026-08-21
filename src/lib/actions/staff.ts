@@ -13,7 +13,7 @@ export type InviteStaffState = { error: string } | { message: string } | null;
 // Invita a un colaborador nuevo por email: crea el auth.users (rol admin vía
 // metadata, mismo trigger handle_new_user que el signup normal) y le manda el
 // correo de invitación de Supabase para que defina su contraseña en
-// /ugc/auth/set-password. Ya queda asignado a un staff_role en el mismo paso.
+// /auth/set-password. Ya queda asignado a un staff_role en el mismo paso.
 export async function inviteStaffAction(
   _prevState: InviteStaffState,
   formData: FormData
@@ -35,7 +35,7 @@ export async function inviteStaffAction(
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { role: "admin", full_name: displayName },
-    redirectTo: `${siteUrl}/ugc/auth/set-password`,
+    redirectTo: `${siteUrl}/auth/set-password`,
   });
 
   if (error || !data.user) {

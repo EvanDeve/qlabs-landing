@@ -155,7 +155,7 @@ const ultimoResetPorEmail = new Map<string, number>();
  *
  * `generateLink` arma el mismo link de recovery pero sin PKCE (token en el
  * fragmento, flujo implícito) y sin mandar nada — el correo lo mandamos
- * nosotros. Es exactamente la forma que ya sabe leer /ugc/auth/set-password,
+ * nosotros. Es exactamente la forma que ya sabe leer /auth/set-password,
  * que es como funcionan las invitaciones al equipo desde el día uno.
  */
 export async function requestPasswordResetAction(
@@ -193,7 +193,7 @@ export async function requestPasswordResetAction(
   ultimoResetPorEmail.set(email, ahora);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const destino = `${siteUrl}/ugc/auth/set-password?modo=recuperar`;
+  const destino = `${siteUrl}/auth/set-password?modo=recuperar`;
   const admin = createAdminClient();
 
   const { data, error } = await admin.auth.admin.generateLink({
@@ -245,7 +245,7 @@ export async function requestPasswordResetAction(
 
 /**
  * A qué panel mandar a quien acaba de definir su contraseña. Existe porque
- * /ugc/auth/set-password es un componente de cliente y `destinoDeSesion` mira
+ * /auth/set-password es un componente de cliente y `destinoDeSesion` mira
  * tablas que solo se leen del lado del servidor.
  *
  * Antes esa pantalla mandaba a /admin fijo, que servía cuando su único uso era
