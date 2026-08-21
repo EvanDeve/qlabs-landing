@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import BrandAvatar from "@/components/ugc/BrandAvatar";
 import { creatorPayout } from "@/lib/ugc/payout";
-import { daysUntil, dueLabel } from "@/lib/ugc/creator-task";
+import { dueLabel } from "@/lib/ugc/creator-task";
+import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
+import { estadoDeNivel, type Nivel } from "@/lib/ugc/loyalty";
+import { displayHandle } from "@/lib/ugc/handles";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
-
-const KPI_COLORS = ["#6d54f3", "#c07414", "#14a06a", "#df4650"];
 
 const colones = (n: number) => `₡${n.toLocaleString("es-CR")}`;
 
@@ -30,33 +32,77 @@ function diasRestantes(limite: Date): number {
   return Math.round((limSinHora.getTime() - hoySinHora.getTime()) / 86_400_000);
 }
 
+/**
+ * Un `date` de Postgres ("2026-08-21") partido a mano y NO con `new Date(s)`:
+ * el constructor lo lee como medianoche UTC y en Costa Rica (UTC-6) eso corre
+ * el día para atrás. Es la misma razón por la que existe `daysUntil`.
+ */
+function diaLocal(fecha: string): Date {
+  const [y, m, d] = fecha.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function diaYMes(d: Date): { dia: string; mes: string } {
+  return {
+    dia: String(d.getDate()).padStart(2, "0"),
+    mes: d.toLocaleDateString("es-CR", { month: "short" }).replace(".", ""),
+  };
+}
+
+const fechaCortaDe = (d: Date) => `${diaYMes(d).dia} ${diaYMes(d).mes}`;
+
+type ItemAgenda = {
+  id: string;
+  cuando: number;
+  dia: string;
+  mes: string;
+  titulo: string;
+  detalle: string;
+  href: string;
+};
+
 export default async function CreadorHomePage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: applications }, { data: tasks }, { data: taskColumns }, { count: bookCount }] =
-    await Promise.all([
-      supabase.from("applications").select("*").eq("creator_id", user!.id),
-      supabase.from("creator_tasks").select("*").eq("creator_id", user!.id),
-      supabase
-        .from("creator_task_columns")
-        .select("*")
-        .eq("creator_id", user!.id)
-        .order("position", { ascending: true }),
-      supabase
-        .from("portfolio_items")
-        .select("*", { count: "exact", head: true })
-        .eq("creator_id", user!.id),
-    ]);
+  const [
+    { data: applications },
+    { data: tasks },
+    { data: taskColumns },
+    { count: bookCount },
+    { data: perfil },
+    { data: perfilCreador },
+    { data: puntos },
+    { data: umbrales },
+    { data: publicadas },
+  ] = await Promise.all([
+    supabase.from("applications").select("*").eq("creator_id", user!.id),
+    supabase.from("creator_tasks").select("*").eq("creator_id", user!.id),
+    supabase
+      .from("creator_task_columns")
+      .select("*")
+      .eq("creator_id", user!.id)
+      .order("position", { ascending: true }),
+    supabase
+      .from("portfolio_items")
+      .select("*", { count: "exact", head: true })
+      .eq("creator_id", user!.id),
+    supabase.from("profiles").select("display_name, avatar_url").eq("id", user!.id).maybeSingle(),
+    supabase.from("creator_profiles").select("handle").eq("profile_id", user!.id).maybeSingle(),
+    supabase.from("creator_points").select("total_points").eq("creator_id", user!.id).maybeSingle(),
+    supabase.from("level_thresholds").select("*").order("min_points"),
+    // Solo los ids: alcanza para contar las que todavía no miró.
+    supabase.from("campaigns").select("id").eq("status", "published"),
+  ]);
 
   const apps = applications ?? [];
   const campaignIds = [...new Set(apps.map((a) => a.campaign_id))];
   const { data: campaigns } = campaignIds.length
     ? await supabase
         .from("campaigns")
-        .select("id, title, budget_amount, deadline_days, brand_id")
+        .select("id, title, budget_amount, deadline_days, brand_id, deliverables")
         .in("id", campaignIds)
     : { data: [] };
   const campaignById = new Map((campaigns ?? []).map((c) => [c.id, c]));
@@ -68,7 +114,7 @@ export default async function CreadorHomePage() {
   const brandNameById = new Map((brands ?? []).map((b) => [b.profile_id, b.brand_name]));
 
   const enProduccion = apps.filter((a) => a.status === "accepted");
-  const esperandoRespuesta = apps.filter((a) => a.status === "pending" || a.status === "reviewing");
+  const esperandoMarca = apps.filter((a) => a.status === "pending" || a.status === "reviewing");
   // "Por cobrar" incluye lo entregado y lo aprobado: el pago se coordina por
   // fuera y no hay registro de que se haya hecho, así que aprobado ≠ cobrado.
   const porCobrar = apps.filter((a) => a.status === "delivered" || a.status === "approved");
@@ -78,263 +124,238 @@ export default async function CreadorHomePage() {
     return sum + (c ? creatorPayout(c.budget_amount) : 0);
   }, 0);
 
-  const tareas = tasks ?? [];
+  // "Promos nuevas" son las publicadas a las que todavía NO aplicó. No es
+  // "publicadas esta semana": lo que le sirve saber es cuántas le quedan por
+  // mirar, no cuántas nacieron.
+  const idsAplicados = new Set(apps.map((a) => a.campaign_id));
+  const promosNuevas = (publicadas ?? []).filter((c) => !idsAplicados.has(c.id)).length;
+
+  const totalPoints = puntos?.total_points ?? 0;
+  const escalera: Nivel[] = umbrales ?? [{ level: 1, name: "Bronce", min_points: 0 }];
+  const { actual } = estadoDeNivel(totalPoints, escalera);
+
+  const nombre = perfilCreador?.handle
+    ? displayHandle(perfilCreador.handle)
+    : perfil?.display_name ?? "Tu perfil";
+
   const columnas = taskColumns ?? [];
   // Qué cuenta como terminado lo define la columna (`is_done`), no su nombre ni
   // su posición: el creador arma sus propias columnas y puede llamarlas como
   // quiera, así que buscar "publicado" por texto no serviría.
   const columnasHechas = new Set(columnas.filter((c) => c.is_done).map((c) => c.id));
-  const tareasAbiertas = tareas.filter((t) => !columnasHechas.has(t.column_id));
-  const tareasAtrasadas = tareasAbiertas.filter((t) => t.due_date && daysUntil(t.due_date) < 0);
+  const tareasAbiertas = (tasks ?? []).filter((t) => !columnasHechas.has(t.column_id));
 
-  // Entregas ordenadas por urgencia. Las que no tienen fecha van al final.
+  // Entregas pendientes ordenadas por urgencia. Las que no tienen fecha al final.
   const entregas = enProduccion
     .map((a) => {
       const c = campaignById.get(a.campaign_id);
       const limite = fechaLimite(a.accepted_at, c?.deadline_days ?? null);
+      const entregables = Array.isArray(c?.deliverables)
+        ? (c.deliverables as { type: string; qty: number }[])
+        : [];
       return {
         id: a.id,
         titulo: c?.title ?? "Campaña",
         marca: c ? brandNameById.get(c.brand_id) ?? null : null,
         monto: c ? creatorPayout(c.budget_amount) : null,
+        entregables,
+        limite,
         dias: limite ? diasRestantes(limite) : null,
       };
     })
     .sort((a, b) => (a.dias ?? Infinity) - (b.dias ?? Infinity));
 
-  const kpis = [
-    { label: "En producción", value: String(enProduccion.length), icon: "film" },
-    { label: "Esperando respuesta", value: String(esperandoRespuesta.length), icon: "clock" },
-    { label: "Por cobrar", value: colones(montoPorCobrar), icon: "briefcase" },
-    { label: "Tareas atrasadas", value: String(tareasAtrasadas.length), icon: "alert" },
-  ];
+  // ── La tarjeta de acción: lo único que hay que hacer ahora ──
+  const urgente = entregas.find((e) => e.dias !== null && e.dias <= 3) ?? null;
 
-  // Cada fila nombra algo accionable. Si no hay ninguna, no se inventa relleno:
-  // la sección muestra que está todo al día.
-  const atencion: { texto: string; detalle: string; href: string; urgente: boolean }[] = [];
+  let accion: { arriba: string | null; titulo: string; nota: React.ReactNode; cta: string; href: string };
+
+  if (urgente) {
+    // "Entregá el Reel de Zonna" cuando hay un solo entregable; con varios, la
+    // frase se vuelve impronunciable y el detalle ya los lista abajo.
+    const unico =
+      urgente.entregables.length === 1 && urgente.entregables[0].qty === 1
+        ? FORMAT_LABEL[urgente.entregables[0].type] ?? urgente.entregables[0].type
+        : null;
+    const dias = urgente.dias!;
+    accion = {
+      arriba: null,
+      titulo: urgente.marca
+        ? `Entregá ${unico ? `el ${unico}` : "el trabajo"} de ${urgente.marca}`
+        : `Entregá ${urgente.titulo}`,
+      nota: (
+        <>
+          {urgente.monto !== null && `${colones(urgente.monto)} neto · `}
+          {urgente.entregables.length > 0 &&
+            `${urgente.entregables.map((d) => `${d.qty}× ${FORMAT_LABEL[d.type] ?? d.type}`).join(", ")} · `}
+          <span className={dias < 0 ? styles.homeVencido : undefined}>
+            {dias < 0
+              ? `venció el ${fechaCortaDe(urgente.limite!)}`
+              : dias === 0
+                ? "se entrega hoy"
+                : dias === 1
+                  ? "se entrega mañana"
+                  : `se entrega en ${dias} días`}
+          </span>
+        </>
+      ),
+      cta: "Entregar ahora",
+      href: "/ugc/creador/aplicaciones",
+    };
+  } else if ((bookCount ?? 0) === 0) {
+    accion = {
+      arriba: null,
+      titulo: "Tu book está vacío",
+      nota: "Las marcas lo miran antes de aceptarte. Subí al menos una pieza.",
+      cta: "Subir una pieza",
+      href: "/ugc/creador/book",
+    };
+  } else {
+    accion = {
+      arriba: "Todo al día",
+      titulo: "No tenés entregas pendientes",
+      nota:
+        promosNuevas > 0
+          ? `Hay ${promosNuevas} ${promosNuevas === 1 ? "promo nueva" : "promos nuevas"} para vos.`
+          : "Cuando una marca publique una promo nueva, te va a aparecer acá.",
+      cta: "Ver promos nuevas",
+      href: "/ugc/creador/promos",
+    };
+  }
+
+  // ── La agenda: lo que viene, con fecha ──
+  const agenda: ItemAgenda[] = [];
+
+  for (const t of tareasAbiertas) {
+    if (!t.due_date) continue;
+    const d = diaLocal(t.due_date);
+    const { dia, mes } = diaYMes(d);
+    const cuando = dueLabel(t.due_date);
+    agenda.push({
+      id: `t-${t.id}`,
+      cuando: d.getTime(),
+      dia,
+      mes,
+      titulo: t.title,
+      detalle: [cuando.charAt(0).toUpperCase() + cuando.slice(1), t.notes].filter(Boolean).join(" · "),
+      href: "/ugc/creador/pipeline",
+    });
+  }
 
   for (const e of entregas) {
-    if (e.dias === null) continue;
-    if (e.dias < 0) {
-      atencion.push({
-        texto: e.titulo,
-        detalle: `Entrega vencida hace ${Math.abs(e.dias)} ${Math.abs(e.dias) === 1 ? "día" : "días"}`,
-        href: "/ugc/creador/aplicaciones",
-        urgente: true,
-      });
-    } else if (e.dias <= 3) {
-      atencion.push({
-        texto: e.titulo,
-        detalle: e.dias === 0 ? "Se entrega hoy" : `Se entrega en ${e.dias} ${e.dias === 1 ? "día" : "días"}`,
-        href: "/ugc/creador/aplicaciones",
-        urgente: e.dias === 0,
-      });
-    }
-  }
-
-  for (const t of tareasAtrasadas) {
-    atencion.push({
-      texto: t.title,
-      detalle: `Tarea ${dueLabel(t.due_date!)}`,
-      href: "/ugc/creador/pipeline",
-      urgente: true,
+    if (!e.limite) continue;
+    const { dia, mes } = diaYMes(e.limite);
+    agenda.push({
+      id: `e-${e.id}`,
+      cuando: e.limite.getTime(),
+      dia,
+      mes,
+      titulo: e.marca ? `Entrega de ${e.marca}` : "Entrega",
+      detalle: e.titulo,
+      href: "/ugc/creador/aplicaciones",
     });
   }
 
-  // Se fue el aviso de "tu perfil está en revisión": un creador que ve esta
-  // pantalla ya está verificado, porque si no el layout no lo deja entrar.
-  if ((bookCount ?? 0) === 0) {
-    atencion.push({
-      texto: "Tu book está vacío",
-      detalle: "Las marcas miran tu book antes de aceptarte. Subí al menos una pieza.",
-      href: "/ugc/creador/book",
-      urgente: false,
+  agenda.sort((a, b) => a.cuando - b.cuando);
+
+  // ── Y si no hay agenda, qué está esperando del lado de las marcas ──
+  // Ojo: no hay forma de saber si la marca ABRIÓ la aplicación —no se registra—
+  // así que estas filas dicen el estado real, no "vio tu aplicación".
+  const enVuelo = [...esperandoMarca]
+    .sort((a, b) => (a.status === "reviewing" ? -1 : 1) - (b.status === "reviewing" ? -1 : 1))
+    .slice(0, 4)
+    .map((a) => {
+      const c = campaignById.get(a.campaign_id);
+      const marca = c ? brandNameById.get(c.brand_id) ?? "La marca" : "La marca";
+      const desde = fechaCortaDe(new Date(a.status_changed_at));
+      return {
+        id: a.id,
+        titulo:
+          a.status === "reviewing" ? `${marca} está revisando tu aplicación` : `${marca} todavía no responde`,
+        detalle: a.status === "reviewing" ? `En revisión desde el ${desde}` : `Aplicaste el ${desde}`,
+      };
     });
-  }
+
+  const stats = [
+    { num: enProduccion.length, label: "en producción" },
+    { num: esperandoMarca.length, label: "esperando marca" },
+    { num: promosNuevas, label: promosNuevas === 1 ? "promo nueva" : "promos nuevas" },
+  ];
 
   return (
     <div>
-      <div className={styles.feedHead}>
-        <h1 className={styles.feedTitle}>Resumen</h1>
-        <p className={styles.feedSub}>Cómo va tu trabajo hoy.</p>
+      <Link href="/ugc/creador/perfil" className={styles.homeIdentidad} title="Ver mi perfil">
+        {/* Sin el "@": como inicial, todos los creadores tendrían la misma. */}
+        <BrandAvatar name={nombre.replace(/^@/, "")} logoUrl={perfil?.avatar_url} size={46} radius={23} />
+        <div style={{ minWidth: 0 }}>
+          <div className={styles.homeNombre}>{nombre}</div>
+          <div className={styles.homeMeta}>Nivel {actual?.name ?? "Bronce"} · verificado</div>
+        </div>
+      </Link>
+
+      <div className={styles.homeCobrarLabel}>Por cobrar</div>
+      <div className={styles.homeCobrarMonto}>{colones(montoPorCobrar)}</div>
+      <div className={styles.homeCobrarNota}>
+        {porCobrar.length > 0
+          ? `De ${porCobrar.length} ${porCobrar.length === 1 ? "entrega" : "entregas"} · Q Labs lo coordina por fuera`
+          : "Todavía no tenés entregas por cobrar"}
       </div>
 
-      <div className={styles.kpiRow}>
-        {kpis.map((kpi, i) => (
-          <div
-            key={kpi.label}
-            className={`${styles.kpi} ${styles.kpiAccent}`}
-            style={{ "--kpi-accent": KPI_COLORS[i] } as React.CSSProperties}
-          >
-            <div className={styles.kTop}>
-              <div
-                className={styles.kIc}
-                style={{ background: `${KPI_COLORS[i]}22`, color: KPI_COLORS[i] }}
-              >
-                <QosIcon name={kpi.icon} size={16} />
-              </div>
-              <div className={styles.kLabel}>{kpi.label}</div>
-            </div>
-            <div className={styles.kNum} style={{ color: KPI_COLORS[i] }}>
-              {kpi.value}
-            </div>
+      <div className={styles.homeStats}>
+        {stats.map((s) => (
+          <div key={s.label} className={styles.recStat}>
+            <div className={styles.recStatNum}>{s.num}</div>
+            <div className={styles.recStatLabel}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* `alignItems: start` es lo que impide que "Requiere tu atención" se
-          estire hasta la altura de "Mi pipeline". Sin eso, un creador al día
-          —una sola línea de texto al lado de cinco etapas— ve media pantalla
-          de tarjeta vacía, que es justo lo contrario de lo que el estado
-          "todo tranquilo" debería transmitir. Cada tarjeta mide lo suyo. */}
-      <div className={styles.resumenGrid}>
-        {/* `card` sola no trae padding: lo pone `cardPad`, y `sectionHead`
-            está pensado para vivir DENTRO de ese padding. Al colgar el
-            encabezado directo de la tarjeta, el título quedaba literalmente
-            en la esquina. Se arma como en el dashboard de admin: las dos
-            clases juntas en la tarjeta y el contenido adentro. */}
-        <section className={`${styles.card} ${styles.cardPad}`}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionHeadBig}>Requiere tu atención</h2>
+      <div className={styles.homeCard}>
+        {accion.arriba && (
+          <div className={styles.homeEstadoLinea}>
+            <span className={styles.homePunto} />
+            {accion.arriba}
           </div>
-          <div>
-            {atencion.length > 0 ? (
-              atencion.map((a, i) => (
-                <Link
-                  key={`${a.texto}-${i}`}
-                  href={a.href}
-                  style={{
-                    display: "block",
-                    padding: "12px 0",
-                    borderBottom: i < atencion.length - 1 ? "1px solid var(--line)" : "none",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span
-                      className={styles.dot}
-                      style={{ background: a.urgente ? "#df4650" : "#c07414", flexShrink: 0 }}
-                    />
-                    <b style={{ fontSize: "14px" }}>{a.texto}</b>
-                  </div>
-                  <div style={{ fontSize: "13px", color: "var(--ink-2)", marginLeft: "16px" }}>
-                    {a.detalle}
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <div className={styles.empty}>Todo al día. Nada vencido ni por vencer.</div>
-            )}
-          </div>
-        </section>
-
-        <section className={`${styles.card} ${styles.cardPad}`}>
-          <div className={styles.sectionHead}>
-            <h2>Mi pipeline</h2>
-            {/* `sectionHeadAct` solo empuja a la derecha (margin-left:auto);
-                no tiene color ni peso, así que sola se veía texto negro
-                cualquiera. `linkMore` es la que lo hace parecer accionable. */}
-            <Link
-              href="/ugc/creador/pipeline"
-              className={`${styles.sectionHeadAct} ${styles.linkMore}`}
-            >
-              Ver tablero
-            </Link>
-          </div>
-          <div>
-            {tareas.length > 0 ? (
-              columnas.map((col) => {
-                const n = tareas.filter((t) => t.column_id === col.id).length;
-                return (
-                  <div
-                    key={col.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "9px 0",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <span
-                      className={styles.dot}
-                      style={{ background: col.color, flexShrink: 0 }}
-                    />
-                    <span style={{ color: "var(--ink-2)" }}>{col.name}</span>
-                    <b style={{ marginLeft: "auto" }}>{n}</b>
-                  </div>
-                );
-              })
-            ) : (
-              <div className={styles.empty}>
-                Todavía no tenés tareas.{" "}
-                <Link href="/ugc/creador/pipeline" style={{ color: "var(--b-600)", fontWeight: 600 }}>
-                  Armá tu tablero
-                </Link>
-                .
-              </div>
-            )}
-          </div>
-        </section>
+        )}
+        <div className={styles.homeCardTitulo}>{accion.titulo}</div>
+        <div className={styles.homeCardNota}>{accion.nota}</div>
+        <Link href={accion.href} className={styles.btnAplicar} style={{ display: "grid", placeItems: "center" }}>
+          {accion.cta}
+        </Link>
       </div>
 
-      <section className={`${styles.card} ${styles.cardPad}`} style={{ marginTop: "16px" }}>
-        <div className={styles.sectionHead}>
-          <h2>Entregas en curso</h2>
-          <Link
-            href="/ugc/creador/aplicaciones"
-            className={`${styles.sectionHeadAct} ${styles.linkMore}`}
-          >
-            Ver todas
-          </Link>
-        </div>
-        <div>
-          {entregas.length > 0 ? (
-            entregas.map((e, i) => (
-              <div
-                key={e.id}
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "12px 0",
-                  borderBottom: i < entregas.length - 1 ? "1px solid var(--line)" : "none",
-                }}
-              >
-                <div style={{ minWidth: 0, flex: "1 1 220px" }}>
-                  <b style={{ fontSize: "14px" }}>{e.titulo}</b>
-                  {e.marca && (
-                    <div style={{ fontSize: "13px", color: "var(--ink-2)" }}>{e.marca}</div>
-                  )}
-                </div>
-                {e.monto !== null && (
-                  <span style={{ fontWeight: 700, fontSize: "14px" }}>{colones(e.monto)}</span>
-                )}
-                <span
-                  className={`${styles.kcDue} ${e.dias !== null && e.dias < 0 ? styles.kcDueLate : ""}`}
-                >
-                  <QosIcon name="clock" size={12} />
-                  {e.dias === null
-                    ? "sin fecha"
-                    : e.dias < 0
-                      ? `venció hace ${Math.abs(e.dias)}d`
-                      : e.dias === 0
-                        ? "vence hoy"
-                        : `en ${e.dias}d`}
-                </span>
+      {agenda.length > 0 ? (
+        <div className={styles.homeLista}>
+          {agenda.slice(0, 4).map((item) => (
+            <Link key={item.id} href={item.href} className={styles.homeFila}>
+              <div className={styles.homeFecha}>
+                <div className={styles.homeFechaDia}>{item.dia}</div>
+                <div className={styles.homeFechaMes}>{item.mes}</div>
               </div>
-            ))
-          ) : (
-            <div className={styles.empty}>
-              No tenés entregas en curso.{" "}
-              <Link href="/ugc/creador/promos" style={{ color: "var(--b-600)", fontWeight: 600 }}>
-                Mirá las promos abiertas
-              </Link>
-              .
-            </div>
-          )}
+              <span className={styles.homeFechaSep} />
+              <div className={styles.homeFilaTexto}>
+                <div className={styles.homeFilaTitulo}>{item.titulo}</div>
+                <div className={styles.homeFilaDetalle}>{item.detalle}</div>
+              </div>
+              <span className={styles.homeChevron}>
+                <QosIcon name="chevR" size={17} />
+              </span>
+            </Link>
+          ))}
         </div>
-      </section>
+      ) : enVuelo.length > 0 ? (
+        <div className={styles.homeLista}>
+          {enVuelo.map((a) => (
+            <Link key={a.id} href="/ugc/creador/aplicaciones" className={styles.homeFila}>
+              <span className={styles.homePuntoFila} />
+              <div className={styles.homeFilaTexto}>
+                <div className={styles.homeFilaTitulo}>{a.titulo}</div>
+                <div className={styles.homeFilaDetalle}>{a.detalle}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -6193,8 +6193,10 @@
   padding-top: 16px;
   border-top: 1px solid var(--line-2);
 }
+/* 8px y no 12: con tres columnas en 393px, "esperando marca" se partía en dos
+   líneas y la fila de cifras dejaba de leerse de un vistazo. */
 .recStat {
-  padding: 0 12px;
+  padding: 0 8px;
 }
 .recStat + .recStat {
   border-left: 1px solid var(--line-2);
@@ -6210,7 +6212,7 @@
 }
 .recStatLabel {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1.35;
   color: var(--ink-3);
 }
@@ -6775,4 +6777,190 @@
 .fuenteMarketplace {
   --fuente-panel: var(--font-jakarta);
   --fuente-panel-titulos: var(--font-jakarta);
+}
+
+/* ============================================================
+   HOME DEL CREADOR
+   La pantalla abre con quién sos y cuánto tenés por cobrar, no con un título
+   de sección. Medidas del mockup a 393pt: monto a 44, identidad a 17, las tres
+   cifras sin tarjeta y separadas por hairlines verticales.
+   ============================================================ */
+.homeIdentidad {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.homeNombre {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.homeMeta {
+  margin-top: 1px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.homeCobrarLabel {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+/* El número más grande de toda la app. Es lo que el creador viene a mirar. */
+.homeCobrarMonto {
+  margin: 2px 0 4px;
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.homeCobrarNota {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* Las tres cifras van sobre el fondo, sin tarjeta: la tarjeta blanca de abajo
+   es la que tiene que llamar la atención. Reusa .recStat de Recompensas. */
+.homeStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 22px 0 18px;
+}
+
+.homeCard {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(26, 23, 48, 0.04), 0 6px 18px rgba(26, 23, 48, 0.05);
+}
+.homeEstadoLinea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.homePunto {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+  background: var(--ok);
+}
+.homeCardTitulo {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: var(--ink);
+}
+.homeCardNota {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.homeVencido {
+  font-weight: 700;
+  color: var(--risk);
+}
+.homeCard .btnAplicar {
+  margin-top: 16px;
+}
+
+/* La lista de abajo. Sin padding lateral en el contenedor para que las líneas
+   entre filas crucen la tarjeta de lado a lado, como en el diseño. */
+.homeLista {
+  margin-top: 14px;
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(26, 23, 48, 0.04), 0 6px 18px rgba(26, 23, 48, 0.05);
+  overflow: hidden;
+}
+.qosRoot .homeFila {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  color: var(--ink);
+  transition: var(--t-fast);
+}
+.homeFila + .homeFila {
+  border-top: 1px solid var(--line-2);
+}
+.qosRoot a.homeFila:hover {
+  background: var(--surface-2);
+}
+.homeFecha {
+  flex-shrink: 0;
+  width: 34px;
+  text-align: center;
+}
+.homeFechaDia {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.homeFechaMes {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.homeFechaSep {
+  align-self: stretch;
+  width: 1px;
+  flex-shrink: 0;
+  background: var(--line);
+}
+.homeFilaTexto {
+  min-width: 0;
+  flex: 1;
+}
+.homeFilaTitulo {
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.homeFilaDetalle {
+  margin-top: 1px;
+  font-size: 13px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.homeChevron {
+  flex-shrink: 0;
+  color: var(--ink-3);
+  display: grid;
+  place-items: center;
+}
+/* El punto de las filas de estado: violeta porque es algo en curso del lado de
+   la marca, no una fecha propia. */
+.homePuntoFila {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+  background: var(--b-500);
+}
+
+@media (max-width: 900px) {
+  /* Esta pantalla no abre con `.feedTitle`, así que el aire para la campana lo
+     reserva la fila de identidad. */
+  .encabezadoPropio .homeIdentidad {
+    padding-right: 52px;
+  }
 }
