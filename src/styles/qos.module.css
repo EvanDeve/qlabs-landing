@@ -8799,3 +8799,384 @@
 .qosRoot .visorAccionRoja:hover:not(:disabled) {
   background: #e2544d;
 }
+
+/* ============================================================
+   MI PERFIL — el editor del creador
+   Es una lista de filas, no un formulario largo: en el teléfono un form con
+   diez campos abiertos es una pared, y cada dato se edita de a uno en su hoja.
+   ============================================================ */
+.perfilIdentidad {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  margin-bottom: 20px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.qosRoot .perfilAvatar {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-full);
+  overflow: visible;
+  cursor: pointer;
+  background: repeating-linear-gradient(
+    -45deg,
+    #e7e2fb,
+    #e7e2fb 5px,
+    #efecfd 5px,
+    #efecfd 10px
+  );
+}
+.perfilAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-full);
+  object-fit: cover;
+}
+/* La cámara sobre la esquina: sin ella nadie descubre que el avatar se toca. */
+.perfilAvatarEditar {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.perfilIdentTexto {
+  flex: 1;
+  min-width: 0;
+}
+.perfilIdentHandle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.perfilTilde {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: var(--r-full);
+  background: var(--ok);
+  color: #fff;
+}
+.perfilIdentSub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.perfilVerPublico {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  color: var(--b-600);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.perfilVerPublico:hover {
+  filter: brightness(0.97);
+}
+
+.perfilSeccion {
+  margin: 0 0 8px 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.perfilSeccionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+.perfilSeccionHead .perfilSeccion {
+  margin-bottom: 8px;
+}
+.hojaTabla + .perfilSeccion {
+  margin-top: 20px;
+}
+.platChips + .perfilSeccion {
+  margin-top: 20px;
+}
+
+.perfilFila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.perfilFila + .perfilFila {
+  border-top: 1px solid var(--line-2);
+}
+.perfilFilaLabel {
+  flex-shrink: 0;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+/* El valor se alinea a la derecha y trunca: la etiqueta siempre se lee entera,
+   que es lo que deja escanear la lista de un vistazo. */
+.perfilFilaValor {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.perfilFilaVacio {
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+/* Los puntitos de nivel. Son cinco fijos y se pintan los que corresponden: un
+   número ("4/5") se lee más lento y ocupa lo mismo. */
+.perfilNivel,
+.perfilNivelEdit {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.perfilNivel i,
+.perfilNivelEdit button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--line-strong);
+}
+.perfilNivelEdit button {
+  width: 16px;
+  height: 16px;
+  background: none;
+  cursor: pointer;
+  position: relative;
+}
+.perfilNivelEdit button::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: var(--r-full);
+  background: var(--line-strong);
+}
+.perfilNivel i.perfilNivelOn {
+  background: var(--b-500);
+}
+.perfilNivelEdit button.perfilNivelOn::after {
+  background: var(--b-500);
+}
+
+.perfilChipAgregar {
+  border-style: dashed;
+  color: var(--b-600);
+}
+.perfilChipQuitar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.perfilAyuda {
+  margin: 8px 2px 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.perfilOk {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ok);
+}
+
+.perfilAgregarFila {
+  display: flex;
+  gap: 9px;
+  margin-top: 10px;
+}
+.qosRoot .perfilAgregarInput {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.qosRoot .perfilAgregarInput:focus {
+  outline: none;
+  border-color: var(--b-400);
+}
+.perfilAgregarBtn {
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--b-100);
+  color: var(--b-600);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.perfilSkillFila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+}
+.perfilSkillFila + .perfilSkillFila {
+  border-top: 1px solid var(--line-2);
+}
+
+/* --- La hoja de la bio --- */
+.qosRoot .perfilTextarea {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-3);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  resize: none;
+}
+.qosRoot .perfilTextarea:focus {
+  outline: none;
+  border-color: var(--b-400);
+}
+.perfilContador {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  padding: 0 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.perfilContadorTope {
+  color: var(--warn);
+  font-weight: 700;
+}
+.perfilTip {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--b-50);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--b-600);
+}
+.perfilTip b {
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* --- La hoja de compartir --- */
+.perfilLinkCard {
+  padding: 14px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: var(--surface-3);
+}
+.perfilHandle {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+/* `break-all` y no truncado: acá el link es para leerlo o dictarlo, así que
+   tiene que verse entero aunque ocupe dos líneas. */
+.perfilUrl {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  word-break: break-all;
+}
+.perfilAcciones {
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  overflow: hidden;
+}
+.qosRoot .perfilAccion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 15px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .perfilAccion + .perfilAccion {
+  border-top: 1px solid var(--line-2);
+}
+.qosRoot .perfilAccion:hover {
+  background: var(--surface-3);
+}
+.perfilQr {
+  display: grid;
+  place-items: center;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line-2);
+}
+.perfilQr svg {
+  width: 180px;
+  height: 180px;
+}
+.perfilNota {
+  margin-top: 14px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}

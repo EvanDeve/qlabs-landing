@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import CreatorProfileEditForm from "@/components/ugc/creador/CreatorProfileEditForm";
+import PerfilEditor from "@/components/ugc/creador/PerfilEditor";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -11,48 +10,23 @@ export default async function CreatorProfileEditPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [
-    { data: creatorProfile },
-    { data: profile },
-    { data: skills },
-    { data: pastBrands },
-  ] = await Promise.all([
-    supabase.from("creator_profiles").select("*").eq("profile_id", user!.id).single(),
-    supabase.from("profiles").select("bio, city, avatar_url").eq("id", user!.id).single(),
-    supabase.from("creator_skills").select("*").eq("creator_id", user!.id).order("position"),
-    supabase.from("creator_past_brands").select("*").eq("creator_id", user!.id).order("position"),
-  ]);
+  const [{ data: creatorProfile }, { data: profile }, { data: skills }, { data: pastBrands }] =
+    await Promise.all([
+      supabase.from("creator_profiles").select("*").eq("profile_id", user!.id).single(),
+      supabase.from("profiles").select("bio, city, avatar_url").eq("id", user!.id).single(),
+      supabase.from("creator_skills").select("*").eq("creator_id", user!.id).order("position"),
+      supabase.from("creator_past_brands").select("*").eq("creator_id", user!.id).order("position"),
+    ]);
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "16px",
-          marginBottom: "20px",
-        }}
-      >
-        <div>
-          <h1 className={styles.feedTitle}>Mi perfil</h1>
-          <p className={styles.feedSub}>
-            Esto es lo que las marcas ven cuando aplicás a una campaña.
-          </p>
-        </div>
-        {creatorProfile?.handle && (
-          <Link
-            href={`/ugc/creadores/${creatorProfile.handle.replace(/^@/, "")}`}
-            className={`${styles.btn} ${styles.btnGhost}`}
-            style={{ flexShrink: 0 }}
-          >
-            Ver perfil
-          </Link>
-        )}
+      <div className={styles.feedHead}>
+        <h1 className={styles.feedTitle}>Mi perfil</h1>
+        <p className={styles.feedSub}>Esto es lo que ven las marcas cuando aplicás.</p>
       </div>
 
-      <CreatorProfileEditForm
-        initialProfile={{
+      <PerfilEditor
+        inicial={{
           handle: creatorProfile?.handle ?? "",
           verified: creatorProfile?.verified ?? false,
           bio: profile?.bio ?? "",
@@ -64,8 +38,11 @@ export default async function CreatorProfileEditPage() {
           tiktok_handle: creatorProfile?.tiktok_handle ?? "",
           avatar_url: profile?.avatar_url ?? null,
         }}
-        initialSkills={(skills ?? []).map((s) => ({ name: s.name, level: s.level }))}
-        initialPastBrands={(pastBrands ?? []).map((b) => ({ category: b.category, brand_name: b.brand_name }))}
+        skillsIniciales={(skills ?? []).map((s) => ({ name: s.name, level: s.level }))}
+        marcasIniciales={(pastBrands ?? []).map((b) => ({
+          category: b.category,
+          brand_name: b.brand_name,
+        }))}
       />
     </div>
   );
