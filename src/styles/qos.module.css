@@ -7290,3 +7290,422 @@
   font-size: 13px;
   color: var(--ink-3);
 }
+
+/* ============================================================
+   HOJA DE ENTREGA — el creador sube las piezas
+   Medido sobre el mockup a 377 px de ancho para 393 pt (escala 0.96, hay que
+   dividir). Las cajas salen de `campaigns.deliverables`: "1 Reel + 2 Stories"
+   son tres, y de ahí sale el "2 de 3" del encabezado.
+   ============================================================ */
+.entHead {
+  padding-right: 44px;
+  margin-bottom: 14px;
+}
+.qosRoot .entTitulo {
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.entSub {
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.entProgreso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.entBarra {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  overflow: hidden;
+}
+.entBarraFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  transition: width 200ms ease-out;
+}
+/* Verde solo cuando están las tres: el color es el premio, no la decoración. */
+.entBarraFillOk {
+  background: var(--ok);
+}
+.entCuenta {
+  flex-shrink: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--b-600);
+}
+.entCuentaOk {
+  color: var(--ok);
+}
+
+/* El brief va plegado: es la respuesta a "¿qué me pidieron?", pero si estuviera
+   abierto empujaría las cajas —lo que el creador vino a hacer— fuera de la
+   primera pantalla. */
+.entBrief {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--surface-3);
+}
+.entBrief summary {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.entBrief p {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.entSlots {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.entSlot {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f3f1fe;
+}
+/* El error saca el fondo lavanda y se dibuja con borde: es lo único de la hoja
+   que pide una acción distinta, y a fondo plano se perdía entre las demás. */
+.entSlotError {
+  background: var(--surface);
+  border: 1px solid #f8c9c0;
+}
+.entThumb {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  /* Las rayas son el marcador de "acá va una pieza" del diseño. */
+  background: repeating-linear-gradient(
+    -45deg,
+    #e7e2fb,
+    #e7e2fb 5px,
+    #efecfd 5px,
+    #efecfd 10px
+  );
+}
+.entThumbError {
+  background: #fdeae6;
+}
+.entThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.entThumbBang {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--coral, #e0503a);
+}
+.entSpinner {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-full);
+  border: 2.5px solid var(--b-300);
+  border-top-color: transparent;
+  animation: entGira 700ms linear infinite;
+}
+@keyframes entGira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.entSlotCuerpo {
+  flex: 1;
+  min-width: 0;
+}
+.entSlotTop {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.entBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 19px;
+  padding: 0 8px;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  color: var(--b-600);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.entBadgeError {
+  background: #fdeae6;
+  color: #e0503a;
+}
+.entTilde {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: var(--r-full);
+  background: var(--ok);
+  color: #fff;
+}
+.entSlotAcc {
+  margin-left: auto;
+}
+.entLink,
+.entLinkGris {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.entLink {
+  color: var(--b-600);
+}
+.entLinkGris {
+  color: var(--ink-3);
+}
+.entSlotNombre {
+  margin-top: 5px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.entSlotMeta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.entSlotErrorTxt {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #e0503a;
+}
+.entElegir {
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--b-600);
+  cursor: pointer;
+}
+.entReintentar {
+  margin-top: 9px;
+  height: 32px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.entSubFila {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 7px;
+}
+.entBarraChica {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  overflow: hidden;
+}
+.entPct {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--b-600);
+}
+
+/* Tres botones y no uno porque en el teléfono abren tres cosas distintas: la
+   cámara, el carrete y el explorador de archivos (donde vive Drive). */
+.entFuentes {
+  display: flex;
+  gap: 9px;
+  margin-top: 14px;
+}
+.entFuente {
+  flex: 1;
+  height: 36px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  color: var(--b-600);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.entFuente:hover {
+  background: var(--b-100);
+  filter: brightness(0.97);
+}
+
+.entTabla {
+  margin-top: 16px;
+  border-radius: 14px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.entFila {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 14px;
+}
+.entFila + .entFila {
+  border-top: 1px solid var(--line-2);
+}
+.entFilaLabel {
+  width: 74px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.qosRoot .entFilaInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+}
+.qosRoot .entFilaInput:focus {
+  outline: none;
+}
+.qosRoot .entFilaInput::placeholder {
+  color: var(--ink-3);
+}
+.entFilaNota {
+  resize: none;
+  line-height: 1.45;
+}
+
+.entAviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: var(--b-50);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--b-600);
+  font-weight: 600;
+}
+.entAvisoIc {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.entError {
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--risk);
+}
+
+.entConfirma {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-top: 16px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.qosRoot .entConfirma input {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: var(--b-600);
+  cursor: pointer;
+}
+
+.entEnviar {
+  display: block;
+  width: 100%;
+  height: 46px;
+  margin-top: 14px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: transform var(--t-fast), background var(--t-fast);
+}
+.entEnviar:hover:not(:disabled) {
+  background: var(--b-700);
+}
+.entEnviar:active:not(:disabled) {
+  transform: scale(0.99);
+}
+/* Deshabilitado en lavanda y no en gris: gris dice "roto", lavanda dice
+   "todavía no". El pie de abajo explica qué falta. */
+.entEnviar:disabled {
+  background: var(--b-100);
+  color: var(--b-400);
+  cursor: not-allowed;
+}
+.entPie {
+  margin-top: 9px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+}

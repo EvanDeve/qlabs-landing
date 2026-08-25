@@ -74,7 +74,7 @@ export default function PortfolioUploadForm() {
         formRef.current?.reset();
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
-        // Ver la nota del mismo bloque en DeliverySubmitForm: el action ya no
+        // Ver la nota del mismo bloque en HojaDeEntrega: el action ya no
         // se llama por useActionState, así que el refresh va explícito.
         router.refresh();
       }

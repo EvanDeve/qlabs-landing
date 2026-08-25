@@ -66,11 +66,36 @@ type SubidaArgs = {
   maxBytes: number;
   /** Extensión a usar cuando el nombre del archivo no trae una. */
   extFallback?: string;
+  /**
+   * Avance de la subida, de 0 a 1. Opcional: quien no lo pasa se comporta
+   * igual que antes.
+   */
+  onProgreso?: (fraccion: number) => void;
+  /** Para cancelar desde la UI. Aborta la subida de verdad, no la ignora. */
+  signal?: AbortSignal;
 };
+
+/** Se distingue de un error real: cancelar es una decisión, no una falla. */
+export class SubidaCancelada extends Error {
+  constructor() {
+    super("Subida cancelada");
+    this.name = "SubidaCancelada";
+  }
+}
 
 /**
  * Sube el archivo y devuelve la ruta que hay que mandarle al servidor.
  * Tira `Error` con mensaje ya traducido: quien llama solo lo muestra.
+ *
+ * Va sobre XMLHttpRequest y no sobre `supabase.storage.upload()` por una razón
+ * concreta: el SDK usa `fetch`, que no reporta cuánto subió. Sin eso la barra
+ * de la hoja de entrega solo puede girar, y el creador que sube un reel de 40
+ * MB por datos móviles no tiene forma de saber si avanza o se colgó. XHR sigue
+ * siendo el único camino en el navegador para `upload.onprogress`.
+ *
+ * Se pega contra el endpoint REST de Storage —el mismo que llama el SDK— con
+ * el token de la sesión. Si el día de mañana el SDK expone progreso, esto
+ * vuelve a ser dos líneas.
  */
 export async function subirArchivoDirecto({
   bucket,
@@ -78,6 +103,8 @@ export async function subirArchivoDirecto({
   file,
   maxBytes,
   extFallback = "bin",
+  onProgreso,
+  signal,
 }: SubidaArgs): Promise<string> {
   if (file.size > maxBytes) {
     throw new Error(
@@ -87,18 +114,82 @@ export async function subirArchivoDirecto({
 
   const supabase = createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Se venció la sesión. Volvé a entrar y probá de nuevo.");
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error("Se venció la sesión. Volvé a entrar y probá de nuevo.");
 
-  const prefijo = carpeta ?? user.id;
+  const prefijo = carpeta ?? session.user.id;
   const storagePath = `${prefijo}/${crypto.randomUUID()}.${extensionDe(file.name, extFallback)}`;
 
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(storagePath, file, { contentType: file.type || undefined });
+  if (signal?.aborted) throw new SubidaCancelada();
 
-  if (error) throw new Error(mensajeDeSubida(error.message, maxBytes));
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!base || !anon) throw new Error("Falta la configuración de Supabase.");
+  const endpoint = `${base}/storage/v1/object/${bucket}/${storagePath
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+
+  // Multipart y no el archivo crudo: es exactamente lo que arma
+  // `storage-js` en el navegador cuando el cuerpo es un Blob (append de
+  // "cacheControl" y del archivo bajo el nombre vacío). Mandar el binario
+  // directo es el camino de Node, y contra este servidor no guarda el
+  // Content-Type correcto. Ojo: NO se setea el header Content-Type — el
+  // navegador tiene que ponerlo con su propio boundary.
+  const cuerpo = new FormData();
+  cuerpo.append("cacheControl", "3600");
+  cuerpo.append("", file);
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", endpoint, true);
+    xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
+    // El gateway de Supabase pide `apikey` en TODA request, no solo en las de
+    // PostgREST. El SDK lo agrega solo; acá hay que ponerlo a mano o la subida
+    // vuelve 401 sin haber llegado a las policies.
+    xhr.setRequestHeader("apikey", anon);
+    xhr.setRequestHeader("x-upsert", "false");
+
+    const alAbortar = () => xhr.abort();
+    signal?.addEventListener("abort", alAbortar);
+    const limpiar = () => signal?.removeEventListener("abort", alAbortar);
+
+    if (onProgreso) {
+      xhr.upload.onprogress = (e) => {
+        // `lengthComputable` es false en algunos navegadores para cuerpos
+        // grandes; ahí no se inventa un número, simplemente no se avisa.
+        if (e.lengthComputable && e.total > 0) onProgreso(e.loaded / e.total);
+      };
+    }
+
+    xhr.onload = () => {
+      limpiar();
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgreso?.(1);
+        resolve();
+      } else {
+        let crudo = xhr.responseText || `HTTP ${xhr.status}`;
+        try {
+          const j = JSON.parse(xhr.responseText);
+          crudo = j.message ?? j.error ?? crudo;
+        } catch {
+          // El cuerpo no siempre es JSON (un 413 del proxy llega en texto).
+        }
+        reject(new Error(mensajeDeSubida(`${crudo} ${xhr.status}`, maxBytes)));
+      }
+    };
+    xhr.onerror = () => {
+      limpiar();
+      reject(new Error(mensajeDeSubida("network", maxBytes)));
+    };
+    xhr.onabort = () => {
+      limpiar();
+      reject(new SubidaCancelada());
+    };
+
+    xhr.send(cuerpo);
+  });
 
   return storagePath;
 }

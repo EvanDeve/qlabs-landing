@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import AplicacionCard, { type AplicacionEnCurso } from "@/components/ugc/creador/AplicacionCard";
 import { APPLICATION_CLOSED, APPLICATION_STATUS_LABEL } from "@/lib/ugc/application-status";
 import { APLICACION_TONO, fechaLimite } from "@/lib/ugc/application-steps";
+import { slotsDeCampana } from "@/lib/ugc/delivery-slots";
 import type { ApplicationStatus } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
 
@@ -52,7 +53,7 @@ export default async function MisAplicacionesPage() {
   const { data: campaigns } = campaignIds.length
     ? await supabase
         .from("campaigns")
-        .select("id, title, brand_id, budget_amount, deadline_days")
+        .select("id, title, brand_id, budget_amount, deadline_days, brief, deliverables")
         .in("id", campaignIds)
     : { data: [] };
 
@@ -77,8 +78,30 @@ export default async function MisAplicacionesPage() {
         .in("reference_id", applicationIds)
     : { data: [] };
 
+  // Lo que el creador ya subió y todavía no envió. Solo importa en las
+  // aceptadas: desde 'delivered' la entrega está cerrada y la hoja no se abre.
+  const aceptadasIds = (applications ?? []).filter((a) => a.status === "accepted").map((a) => a.id);
+  const { data: yaSubidos } = aceptadasIds.length
+    ? await supabase
+        .from("application_deliveries")
+        .select("application_id, slot, note")
+        .in("application_id", aceptadasIds)
+        .eq("kind", "file")
+        .not("slot", "is", null)
+    : { data: [] };
+
   const campaignById = new Map((campaigns ?? []).map((c) => [c.id, c]));
   const brandById = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b]));
+
+  const guardadosPorAplicacion = new Map<string, { slot: string; nombre: string | null; peso: null }[]>();
+  for (const d of yaSubidos ?? []) {
+    if (!d.slot) continue;
+    const lista = guardadosPorAplicacion.get(d.application_id) ?? [];
+    // El peso no se guarda en la base: lo sabe el navegador en el momento de
+    // subir y no vale una columna. Al reabrir la hoja se muestra sin él.
+    lista.push({ slot: d.slot, nombre: d.note, peso: null });
+    guardadosPorAplicacion.set(d.application_id, lista);
+  }
 
   const puntosPorAplicacion = new Map<string, number>();
   for (const ev of pointsEvents ?? []) {
@@ -96,6 +119,9 @@ export default async function MisAplicacionesPage() {
       logo: brand?.logo_url ?? null,
       monto: campaign?.budget_amount ?? null,
       deadlineDays: campaign?.deadline_days ?? null,
+      brief: campaign?.brief ?? null,
+      slots: slotsDeCampana(campaign?.deliverables ?? null),
+      guardados: guardadosPorAplicacion.get(app.id) ?? [],
     } satisfies AplicacionEnCurso & Record<string, unknown>;
   });
 

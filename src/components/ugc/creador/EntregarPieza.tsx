@@ -1,25 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import DeliverySubmitForm from "@/components/ugc/creador/DeliverySubmitForm";
+import HojaDeEntrega, { type ArchivoGuardado } from "@/components/ugc/creador/HojaDeEntrega";
+import type { SlotEntrega } from "@/lib/ugc/delivery-slots";
 import styles from "@/styles/qos.module.css";
 
 /**
  * El botón "Entregar pieza" de la tarjeta y la hoja que abre.
  *
- * Es un puente a propósito: adentro va el formulario de entrega tal como
- * existe hoy, hasta que se diseñe la pantalla de entrega del creador. Lo que
- * ya queda armado es el lugar —la hoja sube desde abajo, con el nombre de la
- * campaña arriba— así que cambiar el contenido después no toca la lista.
+ * La hoja es una hoja y no una página porque entregar es una parada corta con
+ * un contexto que ya está a la vista: se abre, se suben las piezas y se
+ * vuelve a la lista sin perder el scroll. Mismo patrón que `PromoSheet`.
  */
 export default function EntregarPieza({
   applicationId,
   titulo,
   marca,
+  brief,
+  slots,
+  guardados,
 }: {
   applicationId: string;
   titulo: string;
   marca: string | null;
+  brief: string | null;
+  slots: SlotEntrega[];
+  guardados: ArchivoGuardado[];
 }) {
   const [abierta, setAbierta] = useState(false);
 
@@ -39,11 +45,20 @@ export default function EntregarPieza({
     };
   }, [abierta]);
 
+  const listos = guardados.length;
+  const faltan = slots.length - listos;
+
   return (
     <>
       <button type="button" className={styles.apliCta} onClick={() => setAbierta(true)}>
         Entregar pieza
       </button>
+      {/* Que la tarjeta diga cuánto va evita abrir la hoja solo para mirar. */}
+      {slots.length > 0 && listos > 0 && faltan > 0 && (
+        <p className={styles.apliCtaPie}>
+          {listos} de {slots.length} archivos listos
+        </p>
+      )}
 
       {abierta && (
         <div className={styles.hojaFondo} onClick={() => setAbierta(false)} role="presentation">
@@ -75,11 +90,15 @@ export default function EntregarPieza({
             </button>
 
             <div className={styles.hojaScroll}>
-              <div className={styles.apliHojaHead}>
-                <h2 className={styles.hojaTitulo}>{titulo}</h2>
-                {marca && <p className={styles.apliHojaMarca}>{marca}</p>}
-              </div>
-              <DeliverySubmitForm applicationId={applicationId} onListo={() => setAbierta(false)} />
+              <HojaDeEntrega
+                applicationId={applicationId}
+                titulo={titulo}
+                marca={marca}
+                brief={brief}
+                slots={slots}
+                guardados={guardados}
+                onListo={() => setAbierta(false)}
+              />
             </div>
           </div>
         </div>

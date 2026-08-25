@@ -312,6 +312,7 @@ export interface Database {
           conflict_by: string | null;
           conflict_at: string | null;
           admin_note: string | null;
+          delivery_note: string | null;
         };
         Insert: {
           id?: string;
@@ -329,6 +330,7 @@ export interface Database {
           conflict_by?: string | null;
           conflict_at?: string | null;
           admin_note?: string | null;
+          delivery_note?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;
         Relationships: [];
@@ -343,6 +345,7 @@ export interface Database {
           external_url: string | null;
           note: string | null;
           created_at: string;
+          slot: string | null;
         };
         Insert: {
           id?: string;
@@ -353,6 +356,7 @@ export interface Database {
           external_url?: string | null;
           note?: string | null;
           created_at?: string;
+          slot?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["application_deliveries"]["Insert"]>;
         Relationships: [];

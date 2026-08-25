@@ -1,6 +1,8 @@
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import ConflictActionButton from "@/components/ugc/ConflictActionButton";
 import EntregarPieza from "@/components/ugc/creador/EntregarPieza";
+import type { ArchivoGuardado } from "@/components/ugc/creador/HojaDeEntrega";
+import type { SlotEntrega } from "@/lib/ugc/delivery-slots";
 import { APPLICATION_STATUS_LABEL, canCancel, canDispute } from "@/lib/ugc/application-status";
 import {
   APLICACION_TONO,
@@ -27,6 +29,10 @@ export type AplicacionEnCurso = {
   logo: string | null;
   monto: number | null;
   deadlineDays: number | null;
+  /** Solo lo necesita la hoja de entrega, así que viaja solo con las aceptadas. */
+  brief: string | null;
+  slots: SlotEntrega[];
+  guardados: ArchivoGuardado[];
 };
 
 const TONO_CLASE = {
@@ -127,7 +133,14 @@ export default function AplicacionCard({ app }: { app: AplicacionEnCurso }) {
       <Pasos pasos={pasosDeAplicacion(app)} />
 
       {app.status === "accepted" && (
-        <EntregarPieza applicationId={app.id} titulo={app.titulo} marca={app.marca} />
+        <EntregarPieza
+          applicationId={app.id}
+          titulo={app.titulo}
+          marca={app.marca}
+          brief={app.brief}
+          slots={app.slots}
+          guardados={app.guardados}
+        />
       )}
 
       {/* Salidas. Cancelar solo mientras no haya entrega; después es disputa,

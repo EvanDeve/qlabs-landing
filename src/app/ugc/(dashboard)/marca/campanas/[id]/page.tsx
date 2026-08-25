@@ -7,6 +7,7 @@ import DesglosePago from "@/components/ugc/DesglosePago";
 import ApplicantDecisionButtons from "@/components/ugc/marca/ApplicantDecisionButtons";
 import ApproveWithRatingForm from "@/components/ugc/marca/ApproveWithRatingForm";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
+import { slotsDeCampana } from "@/lib/ugc/delivery-slots";
 import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
 import {
   APPLICATION_STATUS_LABEL,
@@ -71,11 +72,21 @@ export default async function CampaignDetailPage({
         .order("created_at", { ascending: false })
     : { data: [] };
 
+  // Las piezas van en el orden en que la marca las pidió —Reel, Story 1, Story
+  // 2—, no en el que el creador terminó de subirlas. Por fecha salían al revés,
+  // y encima los links del post arriba de las piezas.
+  const ordenDeSlot = new Map(slotsDeCampana(campaign.deliverables).map((s, i) => [s.id, i]));
+  const posicion = (d: { slot: string | null }) =>
+    d.slot ? (ordenDeSlot.get(d.slot) ?? 900) : 999;
+
   const deliveriesByApplicationId = new Map<string, typeof deliveries>();
   for (const delivery of deliveries ?? []) {
     const list = deliveriesByApplicationId.get(delivery.application_id) ?? [];
     list.push(delivery);
     deliveriesByApplicationId.set(delivery.application_id, list);
+  }
+  for (const list of deliveriesByApplicationId.values()) {
+    list?.sort((a, b) => posicion(a) - posicion(b));
   }
 
   const fileDeliveries = (deliveries ?? []).filter((d) => d.kind === "file" && d.storage_path);
@@ -253,6 +264,16 @@ export default async function CampaignDetailPage({
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px" }}>
                       {deliveriesByApplicationId.get(app.id)!.map((d) => (
                         <div key={d.id} style={{ fontSize: "13.5px", color: "var(--ink-2)" }}>
+                          {/* El creador entrega por entregable, así que decir
+                              cuál es cada archivo importa: con 1 reel y 3
+                              stories, "Ver pieza entregada" cuatro veces no
+                              distingue nada. */}
+                          {d.slot && (
+                            <b style={{ color: "var(--ink)" }}>
+                              {slotsDeCampana(campaign.deliverables).find((s) => s.id === d.slot)
+                                ?.etiqueta ?? d.slot}{" "}
+                            </b>
+                          )}
                           {d.kind === "file" ? (
                             <a
                               href={signedUrlByPath.get(d.storage_path!) ?? "#"}
@@ -270,6 +291,12 @@ export default async function CampaignDetailPage({
                           {d.note && <span> — {d.note}</span>}
                         </div>
                       ))}
+                      {app.delivery_note && (
+                        <p style={{ fontSize: "13px", color: "var(--ink-2)", marginTop: "4px" }}>
+                          <b>Nota del creador: </b>
+                          {app.delivery_note}
+                        </p>
+                      )}
                     </div>
                   )}
 
