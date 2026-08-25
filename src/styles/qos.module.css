@@ -7944,8 +7944,16 @@
   .main:has(.pipeHead) .topbar .tbTitle {
     display: none;
   }
-  .encabezadoPropio .pipeHead {
+  .encabezadoPropio .pipeHead,
+  /* Igual que el pipeline: la campana del shell vive arriba a la derecha y sin
+     este colchón el botón de la pantalla le queda debajo y sale cortado. */
+  .encabezadoPropio .bookHead {
     padding-right: 52px;
+  }
+  /* Esta pantalla también trae su propio título. */
+  .main:has(.bookHead) .topbar .tbTitle,
+  .main:has(.bookVacio) .topbar .tbTitle {
+    display: none;
   }
 }
 
@@ -8326,4 +8334,468 @@
   background: var(--ink);
   border-color: var(--ink);
   color: var(--ink-inv);
+}
+
+/* ============================================================
+   MI BOOK — el portafolio del creador
+   Medido sobre el mockup a 262 px de ancho para 393 pt (escala 0.667, hay que
+   dividir). La grilla es de dos columnas con las tarjetas a 3:4.
+   ============================================================ */
+.bookHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.bookSubir {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.bookSubir:hover {
+  background: var(--b-700);
+}
+
+/* Las tres cifras en UNA tarjeta, separadas por líneas: a 393 px tres tarjetas
+   sueltas quedan de ~110 px y el número —que es lo único que se mira— deja de
+   leerse de un vistazo. */
+.bookStats {
+  display: flex;
+  margin-bottom: 16px;
+  padding: 14px 4px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.bookStat {
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
+  text-align: left;
+}
+.bookStat + .bookStat {
+  border-left: 1px solid var(--line-2);
+}
+.bookStat strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+/* El rating va en ámbar: es el único de los tres que habla de qué tan bien lo
+   hiciste, no de cuánto hiciste. */
+.bookStatRating {
+  color: var(--warn);
+}
+.bookStat span {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--ink-3);
+}
+
+.bookGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.bookClip {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.bookClip:hover {
+  transform: translateY(-2px);
+}
+.bookThumb {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: repeating-linear-gradient(
+    -45deg,
+    #e7e2fb,
+    #e7e2fb 6px,
+    #efecfd 6px,
+    #efecfd 12px
+  );
+}
+.bookMedia {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Los dos badges van sobre la pieza en oscuro y no en el color de la categoría:
+   encima de una foto cualquiera, un fondo de color no garantiza contraste y el
+   oscuro sí. */
+.bookCat,
+.bookViews {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--r-full);
+  background: rgba(20, 18, 30, 0.72);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.bookCat {
+  top: 8px;
+  left: 8px;
+}
+.bookViews {
+  bottom: 8px;
+  left: 8px;
+}
+.bookInfo {
+  padding: 10px 11px 12px;
+}
+.bookTitulo {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bookBajada {
+  margin-top: 1px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- El book vacío --- */
+.bookVacio {
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.bookHuecos {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.bookHueco {
+  flex: 1;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #e7e2fb,
+    #e7e2fb 6px,
+    #efecfd 6px,
+    #efecfd 12px
+  );
+}
+/* El tercero vacío con un "+": los dos rayados dicen "acá van piezas" y este
+   dice "y todavía falta una". */
+.bookHuecoMas {
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-3);
+  font-size: 19px;
+  font-weight: 700;
+}
+.bookVacio .vacioTitulo {
+  font-size: 20px;
+}
+.bookVacio .bookSubir {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 46px;
+  margin-top: 16px;
+  font-size: 15px;
+}
+
+.bookConsejos {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.bookConsejosTitulo {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.bookConsejosLista {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bookConsejosLista li {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.bookConsejoNum {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  color: var(--b-600);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* --- La hoja de subir --- */
+.bookElegir {
+  display: block;
+  width: 100%;
+  height: 88px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface-3);
+  color: var(--b-600);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.bookElegir:hover {
+  border-color: var(--b-400);
+  background: var(--b-50);
+}
+.bookArchivo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--surface-3);
+}
+.bookArchivoThumb {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    -45deg,
+    #e7e2fb,
+    #e7e2fb 5px,
+    #efecfd 5px,
+    #efecfd 10px
+  );
+}
+.bookArchivoDatos {
+  flex: 1;
+  min-width: 0;
+}
+.bookArchivoNombre {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bookArchivoMeta {
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.bookAvisoForma {
+  margin-top: 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--warn-bg);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--warn);
+}
+
+/* ============================================================
+   EL VISOR — la pieza a pantalla completa
+   En oscuro: el fondo claro del panel le compite a un video vertical y le
+   cambia los colores a la vista.
+   ============================================================ */
+.visor {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  background: #17151f;
+  color: #fff;
+  animation: visorEntra 180ms ease-out;
+}
+@keyframes visorEntra {
+  from {
+    opacity: 0;
+  }
+}
+.visorTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+  flex-shrink: 0;
+}
+.visorCuenta {
+  flex: 1;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.72);
+}
+.visorOrden {
+  display: flex;
+  gap: 8px;
+}
+.qosRoot .visorIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .visorIcon:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
+}
+.qosRoot .visorIcon:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.visorMedia {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+}
+.visorImg {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 14px;
+  object-fit: contain;
+}
+.visorPie {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px 0;
+  flex-shrink: 0;
+}
+.visorDatos {
+  min-width: 0;
+}
+.visorTitulo {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.visorBajada {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.visorViews {
+  flex-shrink: 0;
+  text-align: right;
+}
+.visorViews strong {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.visorViews span {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.visorAcciones,
+.visorConfirma {
+  padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+.visorConfirma {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.72);
+}
+.visorConfirmaBtns {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.qosRoot .visorAccion {
+  flex: 1;
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .visorAccion:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+.qosRoot .visorAccionRoja {
+  background: #d8433c;
+}
+.qosRoot .visorAccionRoja:hover:not(:disabled) {
+  background: #e2544d;
 }
