@@ -56,7 +56,13 @@ export type StaffRole =
 // por significado: las banderas is_done / is_pending_approval.
 export type ContentApproval = "pendiente" | "correccion" | "revisado";
 export type ContentPriority = "baja" | "media" | "alta";
-export type ContentPlatform = "instagram" | "tiktok" | "reels";
+export type ContentPlatform =
+  | "instagram"
+  | "tiktok"
+  | "reels"
+  | "stories"
+  | "photos"
+  | "facebook";
 
 // Nota: el tablero del creador NO tiene enum de etapas. Sus columnas son filas
 // de `creator_task_columns` para que cada creador arme las suyas — un enum de

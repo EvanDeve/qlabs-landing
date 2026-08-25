@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { getOrSeedColumns } from "@/lib/actions/creator-tasks";
+import { getColumns } from "@/lib/actions/creator-tasks";
 import CreatorTaskBoard from "@/components/ugc/creador/CreatorTaskBoard";
+import TableroVacio from "@/components/ugc/creador/TableroVacio";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,20 @@ export default async function CreadorPipelinePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Siembra las columnas por defecto si es la primera vez. Va antes de pedir
-  // las tareas para que un tablero nuevo nunca se renderice sin columnas.
-  const columns = await getOrSeedColumns(supabase, user!.id);
+  const columns = await getColumns(supabase, user!.id);
+
+  // Sin columnas no hay tablero que mostrar, y tampoco hace falta pedir las
+  // tareas: no puede haber ninguna, porque toda tarea cuelga de una columna.
+  if (columns.length === 0) {
+    return (
+      <div>
+        <div className={styles.feedHead}>
+          <h1 className={styles.feedTitle}>Mi pipeline</h1>
+        </div>
+        <TableroVacio />
+      </div>
+    );
+  }
 
   // El filtro por creator_id es redundante con la RLS, pero deja explícito en
   // el código que esto es privado de cada creador.
@@ -23,16 +35,5 @@ export default async function CreadorPipelinePage() {
     .eq("creator_id", user!.id)
     .order("position", { ascending: true });
 
-  return (
-    <div>
-      <div className={styles.feedHead}>
-        <h1 className={styles.feedTitle}>Mi pipeline</h1>
-        <p className={styles.feedSub}>
-          Tu tablero de producción. Arrastrá las tarjetas y armá las columnas como trabajás vos.
-        </p>
-      </div>
-
-      <CreatorTaskBoard tasks={tasks ?? []} columns={columns} />
-    </div>
-  );
+  return <CreatorTaskBoard tasks={tasks ?? []} columns={columns} />;
 }

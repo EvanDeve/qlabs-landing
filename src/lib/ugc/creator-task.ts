@@ -14,7 +14,20 @@ export const COLUMNAS_POR_DEFECTO: { name: string; color: string; is_done: boole
   { name: "Guion", color: "#9b6cf0", is_done: false },
   { name: "Grabación", color: "#1f9ac9", is_done: false },
   { name: "Edición", color: "#3b6ef5", is_done: false },
-  { name: "Publicado", color: "#14a06a", is_done: true },
+  { name: "Listo", color: "#14a06a", is_done: true },
+];
+
+/**
+ * Lo mismo, con la frase que explica cada columna. Solo se usa en la pantalla
+ * del tablero vacío, donde el creador está decidiendo si le sirven: ahí el
+ * nombre solo no alcanza para saber qué cae en "Guion" y qué en "Grabación".
+ */
+export const COLUMNAS_SUGERIDAS: { name: string; color: string; is_done: boolean; que: string }[] = [
+  { ...COLUMNAS_POR_DEFECTO[0], que: "Lo que se te ocurre y todavía no armás" },
+  { ...COLUMNAS_POR_DEFECTO[1], que: "Ya sabés qué vas a decir y mostrar" },
+  { ...COLUMNAS_POR_DEFECTO[2], que: "Agendado o grabando" },
+  { ...COLUMNAS_POR_DEFECTO[3], que: "Cortando y armando la pieza" },
+  { ...COLUMNAS_POR_DEFECTO[4], que: "Deja de contar como pendiente" },
 ];
 
 /** Paleta que se ofrece al crear o editar una columna. */
@@ -29,13 +42,33 @@ export const COLORES_COLUMNA = [
   "#df4650",
 ];
 
+/**
+ * "Reel" en singular y no "Reels": en el tablero cada tarjeta es UNA pieza.
+ * `reels` es el valor que guarda la base desde que el enum nació en Q·OS y no
+ * se renombra por un tema de etiqueta.
+ */
 export const PLATFORM_LABEL: Record<ContentPlatform, string> = {
-  instagram: "Instagram",
+  reels: "Reel",
   tiktok: "TikTok",
-  reels: "Reels",
+  stories: "Stories",
+  photos: "Fotos",
+  instagram: "Instagram",
+  facebook: "Facebook",
 };
 
-export const PLATFORMS: ContentPlatform[] = ["instagram", "tiktok", "reels"];
+/**
+ * El orden es el del diseño: primero los formatos que el creador usa todos los
+ * días. `instagram` queda al final aunque el mockup no lo muestre —hay tareas
+ * viejas guardadas con ese valor y esconderlo las dejaría sin chip—.
+ */
+export const PLATFORMS: ContentPlatform[] = [
+  "reels",
+  "tiktok",
+  "stories",
+  "photos",
+  "instagram",
+  "facebook",
+];
 
 export function isPlatform(value: string): value is ContentPlatform {
   return (PLATFORMS as string[]).includes(value);
@@ -55,6 +88,19 @@ export function daysUntil(dueDate: string): number {
   const hoy = new Date();
   const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
   return Math.round((due.getTime() - hoySinHora.getTime()) / 86_400_000);
+}
+
+/**
+ * "29 ago" a partir de un `date` de Postgres. Se parte a mano y NO con
+ * `new Date(s)` por lo mismo que `daysUntil`: el constructor lo lee como
+ * medianoche UTC y en Costa Rica corre el día para atrás.
+ */
+export function fechaCortaDeDia(dueDate: string): string {
+  const [y, m, d] = dueDate.split("-").map(Number);
+  const fecha = new Date(y, m - 1, d);
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  const mes = fecha.toLocaleDateString("es-CR", { month: "short" }).replace(".", "");
+  return `${dia} ${mes}`;
 }
 
 /** Texto corto para la tarjeta: "vence hoy", "en 3 días", "hace 2 días". */

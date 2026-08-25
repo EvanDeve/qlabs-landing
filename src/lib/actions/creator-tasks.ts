@@ -24,37 +24,57 @@ async function requireCreator() {
 }
 
 /**
- * Devuelve las columnas del creador, sembrando las de por defecto la primera
- * vez. Se hace acá y no en un trigger de alta de usuario porque los creadores
- * que ya existían nunca pasarían por ese trigger y verían un tablero sin
- * columnas, sin manera de crear la primera.
+ * Las columnas del creador, tal como están. Ya NO siembra sola.
+ *
+ * Antes sembraba las cinco por defecto en la primera visita, así que nadie veía
+ * nunca un tablero vacío —y con eso se perdía la única oportunidad de decirle
+ * al creador que las columnas son suyas y que nadie más ve ese tablero—. Ahora
+ * la primera visita muestra la pantalla que ofrece las sugeridas o armar las
+ * propias, y sembrar es una decisión suya: `sembrarColumnasSugeridasAction`.
  */
-export async function getOrSeedColumns(
+export async function getColumns(
   supabase: Awaited<ReturnType<typeof createClient>>,
   creatorId: string
 ) {
-  const { data: existentes } = await supabase
+  const { data } = await supabase
     .from("creator_task_columns")
     .select("*")
     .eq("creator_id", creatorId)
     .order("position", { ascending: true });
 
-  if (existentes && existentes.length > 0) return existentes;
+  return data ?? [];
+}
 
-  const { data: creadas } = await supabase
+/** El botón "Usar columnas sugeridas" del tablero vacío. */
+export async function sembrarColumnasSugeridasAction(): Promise<CreatorTaskState> {
+  const { supabase, user } = await requireCreator();
+
+  // Que no siembre dos veces: dos toques seguidos, o la pestaña abierta en dos
+  // lados, dejarían diez columnas y ningún índice único lo impide.
+  const { count } = await supabase
     .from("creator_task_columns")
-    .insert(
-      COLUMNAS_POR_DEFECTO.map((c, i) => ({
-        creator_id: creatorId,
-        name: c.name,
-        color: c.color,
-        is_done: c.is_done,
-        position: i,
-      }))
-    )
-    .select();
+    .select("id", { count: "exact", head: true })
+    .eq("creator_id", user.id);
 
-  return creadas ?? [];
+  if ((count ?? 0) > 0) {
+    revalidar();
+    return null;
+  }
+
+  const { error } = await supabase.from("creator_task_columns").insert(
+    COLUMNAS_POR_DEFECTO.map((c, i) => ({
+      creator_id: user.id,
+      name: c.name,
+      color: c.color,
+      is_done: c.is_done,
+      position: i,
+    }))
+  );
+
+  if (error) return { error: "No se pudieron crear las columnas. Probá de nuevo." };
+
+  revalidar();
+  return null;
 }
 
 /** Confirma que una columna es del creador antes de aceptarla como destino. */
