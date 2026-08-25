@@ -89,25 +89,6 @@ async function enviar(params: Record<string, string>, to: string): Promise<Envio
 }
 
 /**
- * Mensaje que inicia el negocio. Va SIEMPRE por plantilla aprobada por Meta:
- * fuera de la ventana de 24 h no existe otra opción.
- *
- * `variables` se indexa por posición ('1', '2', ...) igual que los {{1}} de la
- * plantilla. Cada valor pasa por sanitizarVariable() — no es opcional, ver ahí.
- */
-export async function sendWhatsAppTemplate(
-  to: string,
-  contentSid: string,
-  variables: Record<string, string>
-): Promise<EnvioResult> {
-  const limpias = Object.fromEntries(
-    Object.entries(variables).map(([k, v]) => [k, sanitizarVariable(v)])
-  );
-
-  return enviar({ ContentSid: contentSid, ContentVariables: JSON.stringify(limpias) }, to);
-}
-
-/**
  * Texto libre. Solo es válido DENTRO de la ventana de 24 h que abre el último
  * mensaje del usuario; fuera de ella Twilio lo rechaza con un 63016. Por eso lo
  * usa el webhook (donde la ventana acaba de abrirse por definición) y nunca el
@@ -119,22 +100,6 @@ export async function sendWhatsAppFreeform(to: string, body: string): Promise<En
 
 /** Tope de un mensaje de WhatsApp. Cortar acá es mejor que que lo corte Meta. */
 export const MAX_BODY = 1500;
-
-/** Tope que nos damos para el resumen que va dentro de la plantilla. */
-export const MAX_VARIABLE = 600;
-
-/**
- * Deja un texto apto para ir como variable {{n}} de una plantilla.
- *
- * Meta rechaza el mensaje —en runtime, no al aprobar la plantilla— si una
- * variable trae saltos de línea, tabs o 4+ espacios seguidos. Es un error que
- * no se ve en desarrollo si uno prueba con textos cortos de una línea y después
- * aparece el día que el LLM decide formatear con viñetas.
- */
-export function sanitizarVariable(texto: string): string {
-  const plano = texto.replace(/[\r\n\t]+/g, " ").replace(/ {2,}/g, " ").trim();
-  return plano.length > MAX_VARIABLE ? `${plano.slice(0, MAX_VARIABLE - 1).trimEnd()}…` : plano;
-}
 
 /**
  * Normaliza a E.164 asumiendo Costa Rica cuando no viene código de país.

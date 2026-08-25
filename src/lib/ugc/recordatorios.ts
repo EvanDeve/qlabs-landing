@@ -4,7 +4,7 @@ import type { Database } from "@/lib/database.types";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { getStaffAgenda, contarAgenda } from "@/lib/ugc/agenda";
 import { redactarNudge, getAjustesAgente } from "@/lib/ugc/agente";
-import { sendWhatsAppTemplate, sendWhatsAppFreeform } from "@/lib/whatsapp/twilio";
+import { sendWhatsAppFreeform } from "@/lib/whatsapp/twilio";
 
 /**
  * Arma y manda el recordatorio diario de un miembro del equipo.
@@ -16,7 +16,20 @@ import { sendWhatsAppTemplate, sendWhatsAppFreeform } from "@/lib/whatsapp/twili
 
 const CODIGO_UNIQUE_VIOLATION = "23505";
 
-export const PLANTILLA_RECORDATORIO = "recordatorio_diario";
+/**
+ * NO hay plantilla de recordatorio, y es una decisión, no un pendiente.
+ *
+ * WhatsApp solo deja mandar texto libre dentro de las 24 h del último mensaje
+ * de la persona; fuera de esa ventana hace falta una plantilla aprobada por
+ * Meta. Se pidió y no la aprobaron. En vez de insistir, el equipo reabre la
+ * ventana escribiéndole a McLovin —un "hola" alcanza— y a partir de ahí los
+ * recordatorios entran solos por 24 h.
+ *
+ * Lo que esto cambia en el código: con la ventana cerrada el recordatorio se
+ * SALTEA. Antes se intentaba igual y Twilio lo rechazaba con 63016, así que
+ * cada mañana dejaba una fila roja en el panel por algo que nunca iba a poder
+ * salir — ruido que enseña a ignorar el panel.
+ */
 
 export type MiembroNotificable = {
   profileId: string;
@@ -27,7 +40,7 @@ export type MiembroNotificable = {
 
 export type ResultadoRecordatorio =
   | { estado: "enviado"; sid: string }
-  | { estado: "salteado"; motivo: "sin_pendientes" | "ya_enviado" }
+  | { estado: "salteado"; motivo: "sin_pendientes" | "ya_enviado" | "ventana_cerrada" }
   | { estado: "fallido"; error: string };
 
 /** Miembros activos, con opt-in y con teléfono. El resto no se toca. */
@@ -114,22 +127,21 @@ export async function enviarRecordatorioDiario(
   // alguien a dejar de leer los mensajes. Si no hay pendientes, no hay mensaje.
   if (contarAgenda(agenda) === 0) return { estado: "salteado", motivo: "sin_pendientes" };
 
+  // Sin plantilla aprobada, fuera de la ventana de 24 h no hay forma de que el
+  // mensaje salga. Se corta ACÁ, antes de gastar una llamada al LLM redactando
+  // algo que Twilio va a rechazar. La persona reabre la ventana escribiéndole a
+  // McLovin. Ver la nota de arriba.
+  if (!(await ventanaAbierta(admin, miembro.profileId, now))) {
+    return { estado: "salteado", motivo: "ventana_cerrada" };
+  }
+
   const dedupeKey = `daily:${formatInTimeZone(now, COSTA_RICA_TZ, "yyyy-MM-dd")}`;
 
   // ---- Ventana inteligente ----
-  // Si la persona escribió hace menos de 24 h, WhatsApp deja mandar texto
-  // libre: ahí el agente habla como una persona, sin el corsé de la plantilla,
-  // y además no se cobra. Solo cuando la ventana está cerrada hay que golpear
-  // la puerta con una plantilla aprobada — y aun así el contenido lo redacta
-  // el LLM, no es un texto fijo.
-  const abierta = await ventanaAbierta(admin, miembro.profileId, now);
-  const contentSid = process.env.TWILIO_REMINDER_CONTENT_SID;
-  const usaTextoLibre = abierta || !contentSid;
-
   // La personalidad sale de agent_settings, igual que en la conversación: el
   // recordatorio de la mañana y las respuestas del webhook tienen que sonar a
   // la misma persona.
-  const mensaje = await redactarNudge(agenda, miembro.nombre, usaTextoLibre, now, ajustes);
+  const mensaje = await redactarNudge(agenda, miembro.nombre, true, now, ajustes);
 
   // La fila se inserta ANTES de llamar a Twilio: es el candado de exactly-once.
   // Si el cron se dispara dos veces (Vercel reintenta ante timeout o 5xx), el
@@ -143,7 +155,7 @@ export async function enviarRecordatorioDiario(
       body: mensaje,
       // Queda registrado por cuál de los dos caminos salió: si algún día un
       // envío falla con 63016, esta columna es la que lo explica.
-      template_name: usaTextoLibre ? null : PLANTILLA_RECORDATORIO,
+      template_name: null,
       status: "queued",
       dedupe_key: dedupeKey,
     })
@@ -156,13 +168,7 @@ export async function enviarRecordatorioDiario(
     return { estado: "fallido", error: insertError.message };
   }
 
-  if (usaTextoLibre && !abierta) {
-    console.warn("[recordatorios] ventana cerrada y sin TWILIO_REMINDER_CONTENT_SID — Twilio va a rechazar el texto libre");
-  }
-
-  const envio = usaTextoLibre
-    ? await sendWhatsAppFreeform(miembro.telefono, mensaje)
-    : await sendWhatsAppTemplate(miembro.telefono, contentSid!, { "1": miembro.nombre, "2": mensaje });
+  const envio = await sendWhatsAppFreeform(miembro.telefono, mensaje);
 
   if (!envio.ok) {
     // El dedupe existe para que nadie reciba el mismo recordatorio dos veces,

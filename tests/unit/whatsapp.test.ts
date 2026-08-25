@@ -1,39 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { sanitizarVariable, normalizarTelefonoCR, MAX_VARIABLE } from "@/lib/whatsapp/twilio";
+import { normalizarTelefonoCR } from "@/lib/whatsapp/twilio";
 
 // Las dos funciones tienen la misma pinta de detalle sin importancia y las dos
 // fallan igual de feo: en producción, contra números reales, y sin que se note
 // probando en local con un texto corto de una línea.
-
-describe("sanitizarVariable", () => {
-  // Meta rechaza el MENSAJE (no la plantilla) si una variable trae saltos de
-  // línea, tabs o 4+ espacios seguidos. O sea: la plantilla queda aprobada, el
-  // código compila, y el envío falla recién el día que el texto sale con
-  // formato.
-  it("aplasta saltos de línea y tabs a un espacio", () => {
-    expect(sanitizarVariable("Hoy:\n- Grabar\n- Publicar")).toBe("Hoy: - Grabar - Publicar");
-    expect(sanitizarVariable("a\tb")).toBe("a b");
-  });
-
-  it("colapsa los espacios múltiples", () => {
-    expect(sanitizarVariable("uno    dos")).toBe("uno dos");
-  });
-
-  it("recorta los extremos", () => {
-    expect(sanitizarVariable("  hola  ")).toBe("hola");
-  });
-
-  it("corta lo muy largo y avisa que cortó", () => {
-    const salida = sanitizarVariable("x".repeat(MAX_VARIABLE + 200));
-
-    expect(salida).toHaveLength(MAX_VARIABLE);
-    expect(salida.endsWith("…")).toBe(true);
-  });
-
-  it("deja intacto lo que ya está bien", () => {
-    expect(sanitizarVariable("Atrasado (2): Publicar Reel (Zonna)")).toBe("Atrasado (2): Publicar Reel (Zonna)");
-  });
-});
 
 describe("normalizarTelefonoCR", () => {
   it("acepta las formas en que la gente escribe un número tico", () => {
