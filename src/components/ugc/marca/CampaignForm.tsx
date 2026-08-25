@@ -18,14 +18,29 @@ import {
 } from "@/lib/ugc/usage-rights";
 import styles from "@/styles/qos.module.css";
 
-/** Dónde se guarda el borrador del navegador. */
-const BORRADOR_KEY = "ugc:campana-borrador";
+/**
+ * Dónde se guarda el borrador del navegador, UNA CLAVE POR CUENTA.
+ *
+ * Con la clave fija que había antes, dos marcas en el mismo navegador se
+ * pasaban el borrador: título, brief, presupuesto y derechos de uso, durante
+ * siete días. No era teórico —una cuenta recién creada abrió "Nueva campaña" y
+ * le apareció un brief ajeno con ₡180.000 ya cargados— y pesa porque el brief
+ * es justo lo que el proyecto trata como confidencial: solo lo ve un creador
+ * autenticado, vía `campaign_previews`.
+ */
+const claveBorrador = (brandId: string) => `ugc:campana-borrador:${brandId}`;
+
+/**
+ * La clave vieja, compartida. Se borra al entrar para que el borrador ajeno que
+ * hoy está en el navegador de alguien no siga apareciendo después del arreglo.
+ */
+const BORRADOR_KEY_VIEJA = "ugc:campana-borrador";
 /** Un brief de hace tres semanas apareciendo solo asusta más de lo que ayuda. */
 const BORRADOR_VIDA_MS = 7 * 24 * 60 * 60 * 1000;
 
 type Borrador = { savedAt: number; campos: Record<string, string> };
 
-export default function CampaignForm() {
+export default function CampaignForm({ brandId }: { brandId: string }) {
   const router = useRouter();
   const toast = useToast();
   const formRef = useRef<HTMLFormElement>(null);
@@ -63,9 +78,17 @@ export default function CampaignForm() {
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
+
+    // Se limpia el resto de la clave compartida, exista o no borrador propio.
+    try {
+      localStorage.removeItem(BORRADOR_KEY_VIEJA);
+    } catch {
+      // Modo incógnito: no hay nada que limpiar.
+    }
+
     let borrador: Borrador | null = null;
     try {
-      borrador = JSON.parse(localStorage.getItem(BORRADOR_KEY) ?? "null");
+      borrador = JSON.parse(localStorage.getItem(claveBorrador(brandId)) ?? "null");
     } catch {
       // Basura en localStorage (otra versión del formato, edición a mano): se
       // ignora y se sigue con el formulario en blanco.
@@ -92,7 +115,7 @@ export default function CampaignForm() {
     setQty((prev) => ({ ...prev, ...cantidades }));
     setRestaurado(true);
     setGuardadoEn(borrador.savedAt);
-  }, []);
+  }, [brandId]);
 
   /**
    * Lleva la vista al error.
@@ -136,7 +159,7 @@ export default function CampaignForm() {
     }
     const savedAt = Date.now();
     try {
-      localStorage.setItem(BORRADOR_KEY, JSON.stringify({ savedAt, campos } satisfies Borrador));
+      localStorage.setItem(claveBorrador(brandId), JSON.stringify({ savedAt, campos } satisfies Borrador));
       setGuardadoEn(savedAt);
     } catch {
       // Modo incógnito o cuota llena: no vale la pena molestar con un error,
@@ -188,7 +211,7 @@ export default function CampaignForm() {
       if (resultado && "error" in resultado) return;
       // Solo se limpia cuando la campaña entró de verdad. Por eso la acción ya
       // no redirige: con redirect() adentro, esta línea nunca corría.
-      localStorage.removeItem(BORRADOR_KEY);
+      localStorage.removeItem(claveBorrador(brandId));
       // El aviso se dispara ANTES de navegar y sobrevive igual: el Toaster vive
       // en el layout del panel y no se desmonta al cambiar de pantalla.
       toast(

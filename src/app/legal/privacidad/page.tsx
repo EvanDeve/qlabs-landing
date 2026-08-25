@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Dato from "@/components/legal/Dato";
+import Dato, { Contacto, SiHay } from "@/components/legal/Dato";
 import { LEGAL } from "@/lib/legal";
 
 // ⚠️ BORRADOR PENDIENTE DE REVISIÓN LEGAL (redactado 2026-07-27).
@@ -40,15 +40,18 @@ export default function PrivacidadPage() {
       <h2 id="responsable">1. Quién es responsable de tus datos</h2>
       <p>
         El responsable de la base de datos es{" "}
-        <strong>
-          <Dato valor={LEGAL.razonSocial} campo="razón social" />
-        </strong>
-        , cédula jurídica <Dato valor={LEGAL.cedulaJuridica} campo="cédula jurídica" />, con
-        domicilio en <Dato valor={LEGAL.domicilio} campo="domicilio social" />.
+        <strong>{LEGAL.razonSocial ?? LEGAL.nombreComercial}</strong>
+        <SiHay valor={LEGAL.cedulaJuridica}>
+          , cédula jurídica <Dato valor={LEGAL.cedulaJuridica} campo="cédula jurídica" />
+        </SiHay>
+        <SiHay valor={LEGAL.domicilio}>
+          , con domicilio en <Dato valor={LEGAL.domicilio} campo="domicilio social" />
+        </SiHay>
+        .
       </p>
       <p>
         Para cualquier consulta sobre tus datos, o para ejercer los derechos de la sección 7,
-        escribinos a <Dato valor={LEGAL.contactoEmail} campo="correo de contacto" />.
+        escribinos a <Contacto />.
       </p>
 
       <h2 id="consentimiento">2. Tu consentimiento</h2>
@@ -248,7 +251,7 @@ export default function PrivacidadPage() {
       <p>
         Buena parte de esto lo podés hacer solo, desde tu perfil dentro de la plataforma. Para lo
         demás —o para pedir una copia de todos tus datos— escribinos a{" "}
-        <Dato valor={LEGAL.contactoEmail} campo="correo de contacto" />. Respondemos en un plazo
+        <Contacto />. Respondemos en un plazo
         máximo de <strong>cinco días hábiles</strong>, como manda la ley.
       </p>
       <p>
@@ -289,7 +292,7 @@ export default function PrivacidadPage() {
 
       <h2 id="contacto">12. Contacto</h2>
       <p>
-        Escribinos a <Dato valor={LEGAL.contactoEmail} campo="correo de contacto" />. Ver también
+        Escribinos a <Contacto />. Ver también
         nuestros <Link href="/legal/terminos">Términos y condiciones</Link>.
       </p>
     </article>

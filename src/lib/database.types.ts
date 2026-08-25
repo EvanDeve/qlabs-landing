@@ -728,6 +728,18 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["creator_transcriptions"]["Insert"]>;
         Relationships: [];
       };
+      password_reset_throttle: {
+        Row: {
+          email: string;
+          last_requested_at: string;
+        };
+        Insert: {
+          email: string;
+          last_requested_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["password_reset_throttle"]["Insert"]>;
+        Relationships: [];
+      };
       creator_task_columns: {
         Row: {
           id: string;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Dato from "@/components/legal/Dato";
+import Dato, { Contacto, SiHay } from "@/components/legal/Dato";
 import { LEGAL, COMISION_PORCENTAJE, PAGO_CREADOR_PORCENTAJE } from "@/lib/legal";
 
 // ⚠️ BORRADOR PENDIENTE DE REVISIÓN LEGAL (redactado 2026-07-27).
@@ -42,16 +42,18 @@ export default function TerminosPage() {
       <h2 id="quienes-somos">1. Quiénes somos</h2>
       <p>
         {LEGAL.marketplace} es operado por{" "}
-        <strong>
-          <Dato valor={LEGAL.razonSocial} campo="razón social" />
-        </strong>
-        , cédula jurídica <Dato valor={LEGAL.cedulaJuridica} campo="cédula jurídica" />, con
-        domicilio en <Dato valor={LEGAL.domicilio} campo="domicilio social" /> (en adelante,
-        &ldquo;{LEGAL.nombreComercial}&rdquo;, &ldquo;nosotros&rdquo;).
+        <strong>{LEGAL.razonSocial ?? LEGAL.nombreComercial}</strong>
+        <SiHay valor={LEGAL.cedulaJuridica}>
+          , cédula jurídica <Dato valor={LEGAL.cedulaJuridica} campo="cédula jurídica" />
+        </SiHay>
+        <SiHay valor={LEGAL.domicilio}>
+          , con domicilio en <Dato valor={LEGAL.domicilio} campo="domicilio social" />
+        </SiHay>{" "}
+        (en adelante, &ldquo;{LEGAL.nombreComercial}&rdquo;, &ldquo;nosotros&rdquo;).
       </p>
       <p>
         Para cualquier consulta sobre estos términos escribinos a{" "}
-        <Dato valor={LEGAL.contactoEmail} campo="correo de contacto" />.
+        <Contacto />.
       </p>
 
       <h2 id="que-es">2. Qué es {LEGAL.marketplace} y qué no es</h2>
@@ -316,7 +318,7 @@ export default function TerminosPage() {
 
       <h2 id="contacto">15. Contacto</h2>
       <p>
-        Escribinos a <Dato valor={LEGAL.contactoEmail} campo="correo de contacto" /> para cualquier
+        Escribinos a <Contacto /> para cualquier
         consulta sobre estos términos, una disputa o el estado de tu cuenta.
       </p>
     </article>

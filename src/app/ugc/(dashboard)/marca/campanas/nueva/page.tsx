@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import CampaignForm from "@/components/ugc/marca/CampaignForm";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
@@ -10,6 +11,13 @@ export const dynamic = "force-dynamic";
 // siempre debió ser —"todavía no la quiero mostrar"— y no como el premio de
 // consuelo de una cuenta a medio habilitar.
 export default async function NuevaCampanaPage() {
+  // El id viaja al formulario solo para separar su borrador del de otra cuenta
+  // que use el mismo navegador. Ver la nota de BORRADOR_KEY.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <div style={{ maxWidth: "640px", margin: "0 auto" }}>
       <Link href="/ugc/marca/ugc" className={styles.backBtn}>
@@ -27,7 +35,7 @@ export default async function NuevaCampanaPage() {
       </div>
 
       <div className={`${styles.card} ${styles.cardPad}`}>
-        <CampaignForm />
+        <CampaignForm brandId={user!.id} />
       </div>
     </div>
   );

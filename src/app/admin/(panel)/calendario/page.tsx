@@ -45,8 +45,27 @@ export default async function CalendarioPage({
 
   const gridDays = eachDayOfInterval({ start: gridStart, end: gridEnd }).map((d) => format(d, "yyyy-MM-dd"));
 
-  const rangeStartUtc = fromZonedTime(`${format(gridStart, "yyyy-MM-dd")} 00:00:00`, COSTA_RICA_TZ).toISOString();
-  const rangeEndUtc = fromZonedTime(`${format(gridEnd, "yyyy-MM-dd")} 23:59:59`, COSTA_RICA_TZ).toISOString();
+  /**
+   * El rango que se CONSULTA no es el de la grilla: es la unión de la grilla
+   * con el mes entero de la fecha de referencia.
+   *
+   * La barra "Carga del mes" del costado dibuja los 30 días del mes y se
+   * alimenta del mismo `itemsByDay` que la grilla. En vista Mes daba igual
+   * —la grilla ya cubre el mes— pero en Semana y Día la consulta traía 7 días
+   * o 1, así que la barra contaba solo eso y decía cosas como "31 este mes ·
+   * 24 días libres" sobre una semana. Ensanchar el rango cuesta una consulta
+   * igual de barata y arregla las dos vistas; una segunda consulta solo para
+   * la barra sería tráfico de más contra la primera pared del proyecto.
+   */
+  const monthStart = startOfMonth(refDate);
+  const monthEnd = endOfMonth(refDate);
+  const queryStart = gridStart < monthStart ? gridStart : monthStart;
+  const queryEnd = gridEnd > monthEnd ? gridEnd : monthEnd;
+
+  const rangeStartUtc = fromZonedTime(`${format(queryStart, "yyyy-MM-dd")} 00:00:00`, COSTA_RICA_TZ).toISOString();
+  const rangeEndUtc = fromZonedTime(`${format(queryEnd, "yyyy-MM-dd")} 23:59:59`, COSTA_RICA_TZ).toISOString();
+  const queryStartStr = format(queryStart, "yyyy-MM-dd");
+  const queryEndStr = format(queryEnd, "yyyy-MM-dd");
 
   const supabase = await createClient();
 
@@ -79,7 +98,7 @@ export default async function CalendarioPage({
           "id, title, brand_id, owner_id, publish_date, record_date, publish_time, platform, approval, content_columns!inner(section)"
         )
         .or(
-          `and(publish_date.gte.${gridDays[0]},publish_date.lte.${gridDays[gridDays.length - 1]}),and(record_date.gte.${gridDays[0]},record_date.lte.${gridDays[gridDays.length - 1]})`
+          `and(publish_date.gte.${queryStartStr},publish_date.lte.${queryEndStr}),and(record_date.gte.${queryStartStr},record_date.lte.${queryEndStr})`
         ),
     ]);
 
@@ -125,7 +144,7 @@ export default async function CalendarioPage({
   for (const piece of contentPieces ?? []) {
     const col = Array.isArray(piece.content_columns) ? piece.content_columns[0] : piece.content_columns;
     if (col?.section === "it") continue;
-    if (piece.publish_date && piece.publish_date >= gridDays[0] && piece.publish_date <= gridDays[gridDays.length - 1]) {
+    if (piece.publish_date && piece.publish_date >= queryStartStr && piece.publish_date <= queryEndStr) {
       items.push({
         id: `piece-publish-${piece.id}`,
         type: "publicacion",
@@ -159,7 +178,7 @@ export default async function CalendarioPage({
         contentPieceId: piece.id,
       });
     }
-    if (piece.record_date && piece.record_date >= gridDays[0] && piece.record_date <= gridDays[gridDays.length - 1]) {
+    if (piece.record_date && piece.record_date >= queryStartStr && piece.record_date <= queryEndStr) {
       items.push({
         id: `piece-record-${piece.id}`,
         type: "grabacion",

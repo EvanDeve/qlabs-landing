@@ -6,9 +6,12 @@
  * por dos documentos largos.
  *
  * ⚠️ Los valores en `null` NO los puede inventar el código: son datos
- * registrales reales. Mientras estén en `null`, la página los pinta como
- * "[completar: ...]" en coral, bien visible, justamente para que no se publique
- * un documento legal con huecos sin que nadie se dé cuenta.
+ * registrales reales. Mientras estén en `null` los documentos se arman sin
+ * ellos, con frases que siguen siendo correctas (ver `Dato` y `SiHay`), y en
+ * desarrollo queda una marca visible para que el pendiente no se duerma.
+ * Poner algo verosímil de relleno sería peor que decir de menos: una razón
+ * social inventada en un documento legal es un problema, un documento que
+ * identifica a la empresa por su nombre comercial no lo es.
  */
 
 export const LEGAL = {
@@ -24,6 +27,13 @@ export const LEGAL = {
   nombreComercial: "Q Labs",
   marketplace: "UGC·CRC",
   sitio: "qlabsmethod.com",
+
+  /**
+   * Agenda pública del negocio. Es el canal de contacto de respaldo mientras no
+   * haya un correo legal: los documentos prometen derechos (Ley 8968) y tienen
+   * que decir por dónde ejercerlos. La misma que usa `/ugc/pendiente`.
+   */
+  calendly: "https://calendly.com/puravidarepublic/aas-pov",
 
   /** Fecha de la versión vigente de ambos documentos. */
   vigenciaDesde: "27 de julio de 2026",

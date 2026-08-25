@@ -135,7 +135,8 @@ export async function signOutAction() {
 }
 
 const ESPERA_ENTRE_RESETS_MS = 60_000;
-const ultimoResetPorEmail = new Map<string, number>();
+/** Una fila que ya no frena nada se borra; no vale la pena un cron para esto. */
+const VIDA_DEL_FRENO_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Manda el correo para recuperar la contraseña. Lo comparten las dos puertas:
@@ -175,26 +176,48 @@ export async function requestPasswordResetAction(
     message: `Si ${email} tiene una cuenta, te mandamos un link para crear una contraseña nueva. Revisá tu correo (mirá también spam).`,
   };
 
-  // Freno básico contra el bucle: el formulario es público y sin sesión, así
-  // que sin esto cualquiera puede pedir mil resets seguidos para la dirección
-  // de otro y llenarle la bandeja (y de paso quemarnos la cuota de Resend).
+  // Freno contra el bucle: el formulario es público y sin sesión, así que sin
+  // esto cualquiera puede pedir mil resets seguidos para la dirección de otro y
+  // llenarle la bandeja (y de paso quemarnos la cuota de Resend).
   //
-  // Es memoria del proceso, no una tabla: frena el caso tonto —alguien
-  // apretando o un script de una sola máquina— y se pierde en cada deploy y en
-  // cada instancia nueva de Vercel. Si esto llega a pasar de verdad, el
-  // arreglo de verdad es una tabla con (email, pedido_at) y RLS.
+  // Vive en la base y no en memoria del proceso: en Vercel hay varias
+  // instancias y cada deploy las reinicia, así que un Map frenaba a quien
+  // cayera dos veces en la misma máquina y a nadie más.
+  const admin = createAdminClient();
   const ahora = Date.now();
-  const ultimo = ultimoResetPorEmail.get(email);
-  if (ultimo && ahora - ultimo < ESPERA_ENTRE_RESETS_MS) {
+
+  const { data: freno } = await admin
+    .from("password_reset_throttle")
+    .select("last_requested_at")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (freno && ahora - new Date(freno.last_requested_at).getTime() < ESPERA_ENTRE_RESETS_MS) {
     // Se responde lo mismo que en el camino feliz: decir "esperá" confirmaría
     // que la cuenta existe, que es justo lo que el mensaje neutro evita.
     return respuestaNeutra;
   }
-  ultimoResetPorEmail.set(email, ahora);
+
+  const { error: frenoError } = await admin
+    .from("password_reset_throttle")
+    .upsert({ email, last_requested_at: new Date(ahora).toISOString() }, { onConflict: "email" });
+
+  // Si el freno no se pudo escribir se sigue igual: dejar a alguien sin poder
+  // recuperar su cuenta porque falló la tabla de rate limit es peor que mandar
+  // un correo de más.
+  if (frenoError) {
+    console.error("No se pudo registrar el freno de reset:", frenoError.message);
+  }
+
+  // Barrido de las filas viejas, en el mismo camino que las escribe. Son
+  // direcciones de correo de gente que ya resolvió su problema.
+  void admin
+    .from("password_reset_throttle")
+    .delete()
+    .lt("last_requested_at", new Date(ahora - VIDA_DEL_FRENO_MS).toISOString());
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const destino = `${siteUrl}/auth/set-password?modo=recuperar`;
-  const admin = createAdminClient();
 
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
