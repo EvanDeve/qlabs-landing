@@ -97,7 +97,6 @@ export default function ContentColumnModal({
             <input
               name="name"
               required
-              autoFocus
               defaultValue={column?.name ?? ""}
               placeholder="Rev. Cliente"
               className={styles.inp}

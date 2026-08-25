@@ -73,7 +73,6 @@ export default function ColumnModal({
           <input
             name="name"
             required
-            autoFocus
             defaultValue={column?.name ?? ""}
             placeholder="Por grabar"
             className={styles.hojaCampoInput}

@@ -336,7 +336,6 @@ export default function PerfilEditor({
           {campo === "bio" && (
             <>
               <textarea
-                autoFocus
                 rows={4}
                 maxLength={MAX_BIO}
                 value={bio}
@@ -365,7 +364,6 @@ export default function PerfilEditor({
             <label className={styles.hojaCampo}>
               <span className={styles.hojaCampoLabel}>Ciudad</span>
               <input
-                autoFocus
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="Heredia"
@@ -379,7 +377,6 @@ export default function PerfilEditor({
               <label className={styles.hojaCampo}>
                 <span className={styles.hojaCampoLabel}>Seguidores</span>
                 <input
-                  autoFocus
                   type="number"
                   min={0}
                   inputMode="numeric"
@@ -402,7 +399,6 @@ export default function PerfilEditor({
                 {campo === "instagram" ? "Instagram" : "TikTok"}
               </span>
               <input
-                autoFocus
                 value={campo === "instagram" ? instagram : tiktok}
                 onChange={(e) =>
                   campo === "instagram" ? setInstagram(e.target.value) : setTiktok(e.target.value)

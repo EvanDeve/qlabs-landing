@@ -11,6 +11,11 @@ import styles from "@/styles/qos.module.css";
  * ahora las dos del pipeline). Lo que se repetía no era el markup sino el
  * `useEffect`: olvidarse de restaurar `body.overflow` deja la página trabada
  * al cerrar, y es un bug que no se nota hasta que alguien intenta scrollear.
+ *
+ * ⚠️ NINGÚN campo dentro de una hoja lleva `autoFocus`. Lo pidió Evan el
+ * 2026-08-25: en el teléfono el teclado sube solo al abrir, tapa media hoja y
+ * arranca escribiendo antes de que uno haya leído qué le están preguntando.
+ * Se toca el campo y recién ahí sube el teclado.
  */
 export default function Hoja({
   titulo,

@@ -8315,7 +8315,14 @@
   gap: 9px;
   margin-bottom: 16px;
 }
+/* `inline-flex` y no el `inline-block` de fábrica: estos chips se usan como
+   <button> y también como <span> —los nichos del perfil, que no se tocan— y en
+   un elemento `inline` el `height` se IGNORA. El texto quedaba pegado arriba
+   del pill en vez de centrado. */
 .platChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 34px;
   padding: 0 15px;
   border: 1px solid var(--line);

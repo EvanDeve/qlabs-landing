@@ -95,7 +95,6 @@ export default function CreatorTaskModal({
           <input
             name="title"
             required
-            autoFocus={!editando}
             defaultValue={task?.title ?? ""}
             placeholder="Reel de la receta nueva"
             className={styles.hojaCampoInput}
