@@ -145,15 +145,38 @@ describe("bucket deliveries (entrega del creador)", () => {
     expect(error).not.toBeNull();
   });
 
-  it("el creador NO puede borrar lo ya entregado", async () => {
-    // Es deliberado que el bucket no tenga policy de DELETE: si la tuviera, un
-    // creador podría hacer desaparecer la pieza después de que la marca la
-    // aprobó. La limpieza de huérfanos la hace el server con service role.
+  // El bucket SÍ tiene policy de DELETE desde 20260825120000, pero cortada por
+  // el estado de la aplicación. Antes no tenía ninguna, y este test verificaba
+  // eso; el motivo por el que no la tenía —que un creador no pueda hacer
+  // desaparecer la pieza después de que la marca la aprobó— sigue intacto y es
+  // lo que prueba el segundo caso.
+  it("el creador SÍ puede borrar mientras la aplicación sigue aceptada — es 'Cambiar' de la hoja de entrega", async () => {
+    const path = `${aplicacionAceptada}/reemplazable.txt`;
+    await intentarSubida(creador, DELIVERIES_BUCKET, path);
+
+    await creador.client.storage.from(DELIVERIES_BUCKET).remove([path]);
+
+    const { data } = await admin.storage.from(DELIVERIES_BUCKET).list(aplicacionAceptada);
+    expect(data?.map((o) => o.name)).not.toContain("reemplazable.txt");
+  });
+
+  it("el creador NO puede borrar una vez entregada", async () => {
+    // El corte es el estado, no el archivo: al pasar a 'delivered' la pieza es
+    // lo que la marca va a aprobar y lo que respalda el pago del creador.
     const path = `${aplicacionAceptada}/final.txt`;
+    const { error } = await admin
+      .from("applications")
+      .update({ status: "delivered" })
+      .eq("id", aplicacionAceptada);
+    if (error) throw new Error(`setup delivered: ${error.message}`);
+
     await creador.client.storage.from(DELIVERIES_BUCKET).remove([path]);
 
     const { data } = await admin.storage.from(DELIVERIES_BUCKET).list(aplicacionAceptada);
     expect(data?.map((o) => o.name)).toContain("final.txt");
+
+    // Se devuelve a 'accepted' por si algún test posterior cuenta con eso.
+    await admin.from("applications").update({ status: "accepted" }).eq("id", aplicacionAceptada);
   });
 });
 

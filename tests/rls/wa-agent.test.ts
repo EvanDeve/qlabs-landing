@@ -23,7 +23,13 @@ beforeAll(async () => {
 
   const { error: staffError } = await admin
     .from("staff_members")
-    .insert({ profile_id: elAdmin.id, staff_role: "editor", phone_e164: "+50688887777", wa_opt_in: true });
+    // director, NO editor: desde `20260803000000_roles_director.sql` el corte de
+    // permisos dentro de Q·OS es `staff_members.staff_role = 'director'`
+    // (`is_director()`), no `profiles.role = 'admin'`. Con "editor" acá, los
+    // cuatro casos de "sí lo ve" fallaban y la suite quedaba en rojo
+    // permanente, que es exactamente lo que hace que nadie mire cuando algo se
+    // rompe de verdad.
+    .insert({ profile_id: elAdmin.id, staff_role: "director", phone_e164: "+50688887777", wa_opt_in: true });
   if (staffError) throw new Error(`no se pudo crear el staff de prueba: ${staffError.message}`);
 
   const { data, error } = await admin
@@ -65,7 +71,7 @@ afterAll(async () => {
 });
 
 describe("wa_messages", () => {
-  it("el admin sí los ve — si no, el panel de Equipo estaría vacío y el test de abajo no probaría nada", async () => {
+  it("el director sí los ve — si no, el panel de Equipo estaría vacío y el test de abajo no probaría nada", async () => {
     const { data } = await elAdmin.client.from("wa_messages").select("id").eq("id", mensajeId);
 
     expect(data).toHaveLength(1);
@@ -116,7 +122,7 @@ describe("staff_members", () => {
 });
 
 describe("wa_agent_actions", () => {
-  it("el admin sí las ve — es lo que muestra el panel de McLovin", async () => {
+  it("el director sí las ve — es lo que muestra el panel de McLovin", async () => {
     const { data } = await elAdmin.client.from("wa_agent_actions").select("id").eq("id", accionId);
 
     expect(data).toHaveLength(1);
@@ -164,7 +170,7 @@ describe("agent_settings", () => {
   // Ojo: `agent_settings` es una fila única y compartida — estos tests corren
   // contra el proyecto de verdad, así que lo que se toca se devuelve como
   // estaba. Si no, un test dejaría al agente hablando distinto en producción.
-  it("el admin puede leerla y editarla — es el panel de McLovin", async () => {
+  it("el director puede leerla y editarla — es el panel de McLovin", async () => {
     const { data } = await elAdmin.client.from("agent_settings").select("instrucciones").eq("id", true).single();
     expect(data).not.toBeNull();
     const original = data!.instrucciones;
@@ -235,7 +241,7 @@ describe("wa_public_messages", () => {
     await admin.from("wa_public_messages").delete().eq("id", publicoId);
   });
 
-  it("el admin sí los ve — es lo que muestra el panel", async () => {
+  it("el director sí los ve — es lo que muestra el panel", async () => {
     const { data } = await elAdmin.client.from("wa_public_messages").select("id").eq("id", publicoId);
 
     expect(data).toHaveLength(1);
