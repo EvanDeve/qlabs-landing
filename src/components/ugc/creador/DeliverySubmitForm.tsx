@@ -14,7 +14,14 @@ import styles from "@/styles/qos.module.css";
  * en producción. Por eso esto ya no puede ser un `<form action={...}>` con
  * `useActionState` — la subida tiene que pasar antes de llamar al action.
  */
-export default function DeliverySubmitForm({ applicationId }: { applicationId: string }) {
+export default function DeliverySubmitForm({
+  applicationId,
+  onListo,
+}: {
+  applicationId: string;
+  /** Se llama solo cuando la entrega salió bien: la hoja que lo contiene cierra. */
+  onListo?: () => void;
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,6 +75,7 @@ export default function DeliverySubmitForm({ applicationId }: { applicationId: s
         // entregada aparezca en la lista. Que no aparezca haría que el creador
         // la suba de nuevo creyendo que falló.
         router.refresh();
+        onListo?.();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo entregar la pieza.");
@@ -80,15 +88,10 @@ export default function DeliverySubmitForm({ applicationId }: { applicationId: s
     <form
       ref={formRef}
       onSubmit={entregar}
-      style={{
-        marginTop: "16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-        padding: "16px",
-        borderRadius: "var(--r-lg)",
-        background: "var(--surface-3)",
-      }}
+      // Sin caja propia: desde el rediseño esto vive dentro de una hoja, que
+      // ya pone su fondo y su padding. La caja gris de antes existía porque el
+      // formulario colgaba abierto dentro de la tarjeta de la aplicación.
+      style={{ display: "flex", flexDirection: "column", gap: "12px" }}
     >
       <p style={{ fontSize: "12.5px", color: "var(--ink-3)" }}>
         Subí el video final y pegá el link del post ya publicado en redes — podés mandar los dos juntos.

@@ -1,18 +1,38 @@
 import { createClient } from "@/lib/supabase/server";
-import DeliverySubmitForm from "@/components/ugc/creador/DeliverySubmitForm";
-import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
-import {
-  APPLICATION_STATUS_LABEL,
-  APPLICATION_STATUS_STYLE,
-  canCancel,
-  canDispute,
-} from "@/lib/ugc/application-status";
-import ConflictActionButton from "@/components/ugc/ConflictActionButton";
-import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
-import { creatorPayout } from "@/lib/ugc/payout";
+import AplicacionCard, { type AplicacionEnCurso } from "@/components/ugc/creador/AplicacionCard";
+import { APPLICATION_CLOSED, APPLICATION_STATUS_LABEL } from "@/lib/ugc/application-status";
+import { APLICACION_TONO, fechaLimite } from "@/lib/ugc/application-steps";
+import type { ApplicationStatus } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Orden de "En curso": primero lo que te pide algo a vos.
+ *
+ * No es la fecha: una aplicación aceptada con el reloj corriendo importa más
+ * que una entregada de la semana pasada, aunque la entregada sea más reciente.
+ * Dentro de cada grupo sí manda el tiempo — plazo más cercano arriba.
+ */
+const URGENCIA: Record<ApplicationStatus, number> = {
+  accepted: 0,
+  pending: 1,
+  reviewing: 1,
+  delivered: 2,
+  disputed: 3,
+  approved: 9,
+  rejected: 9,
+  cancelled: 9,
+};
+
+const TONO_CLASE = {
+  ok: styles.apliPillOk,
+  curso: styles.apliPillCurso,
+  neutro: styles.apliPillNeutro,
+  espera: styles.apliPillEspera,
+  problema: styles.apliPillProblema,
+  cerrada: styles.apliPillCerrada,
+} as const;
 
 export default async function MisAplicacionesPage() {
   const supabase = await createClient();
@@ -22,7 +42,9 @@ export default async function MisAplicacionesPage() {
 
   const { data: applications } = await supabase
     .from("applications")
-    .select("*")
+    .select(
+      "id, campaign_id, status, created_at, status_changed_at, accepted_at, delivered_at, approved_at, rating, conflict_reason, admin_note"
+    )
     .eq("creator_id", user!.id)
     .order("created_at", { ascending: false });
 
@@ -30,194 +52,131 @@ export default async function MisAplicacionesPage() {
   const { data: campaigns } = campaignIds.length
     ? await supabase
         .from("campaigns")
-        .select("id, title, brand_id, budget_amount, deadline_days, deliverables, compensation_details")
+        .select("id, title, brand_id, budget_amount, deadline_days")
         .in("id", campaignIds)
     : { data: [] };
 
   const brandIds = [...new Set((campaigns ?? []).map((c) => c.brand_id))];
   const { data: brandProfiles } = brandIds.length
-    ? await supabase.from("brand_profiles").select("profile_id, brand_name").in("profile_id", brandIds)
+    ? await supabase
+        .from("brand_profiles")
+        .select("profile_id, brand_name, logo_url")
+        .in("profile_id", brandIds)
+    : { data: [] };
+
+  // Los puntos de cada colaboración salen del ledger, no de una constante: una
+  // aprobada con 5★ deja aplicar (5) + te eligieron (50) + entregada (150) +
+  // rating (50). Sumar `delivery_approved` solo dejaría el número corto.
+  const applicationIds = (applications ?? []).map((a) => a.id);
+  const { data: pointsEvents } = applicationIds.length
+    ? await supabase
+        .from("points_events")
+        .select("points, reference_id")
+        .eq("creator_id", user!.id)
+        .eq("reference_type", "application")
+        .in("reference_id", applicationIds)
     : { data: [] };
 
   const campaignById = new Map((campaigns ?? []).map((c) => [c.id, c]));
-  const brandNameByProfileId = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b.brand_name]));
+  const brandById = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b]));
 
-  const applicationIds = (applications ?? []).map((a) => a.id);
-  const { data: deliveries } = applicationIds.length
-    ? await supabase
-        .from("application_deliveries")
-        .select("*")
-        .in("application_id", applicationIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const deliveriesByApplicationId = new Map<string, typeof deliveries>();
-  for (const delivery of deliveries ?? []) {
-    const list = deliveriesByApplicationId.get(delivery.application_id) ?? [];
-    list.push(delivery);
-    deliveriesByApplicationId.set(delivery.application_id, list);
+  const puntosPorAplicacion = new Map<string, number>();
+  for (const ev of pointsEvents ?? []) {
+    if (!ev.reference_id) continue;
+    puntosPorAplicacion.set(ev.reference_id, (puntosPorAplicacion.get(ev.reference_id) ?? 0) + ev.points);
   }
 
-  const fileDeliveries = (deliveries ?? []).filter((d) => d.kind === "file" && d.storage_path);
-  const signedUrlByPath = new Map<string, string>();
-  await Promise.all(
-    fileDeliveries.map(async (d) => {
-      const { data } = await supabase.storage
-        .from(DELIVERIES_BUCKET)
-        .createSignedUrl(d.storage_path!, DELIVERY_SIGNED_URL_TTL_SECONDS);
-      if (data?.signedUrl) signedUrlByPath.set(d.storage_path!, data.signedUrl);
-    })
-  );
+  const items = (applications ?? []).map((app) => {
+    const campaign = campaignById.get(app.campaign_id);
+    const brand = campaign ? brandById.get(campaign.brand_id) : null;
+    return {
+      ...app,
+      titulo: campaign?.title ?? "Campaña",
+      marca: brand?.brand_name ?? null,
+      logo: brand?.logo_url ?? null,
+      monto: campaign?.budget_amount ?? null,
+      deadlineDays: campaign?.deadline_days ?? null,
+    } satisfies AplicacionEnCurso & Record<string, unknown>;
+  });
+
+  const enCurso = items
+    .filter((a) => !APPLICATION_CLOSED.includes(a.status))
+    .sort((a, b) => {
+      const porUrgencia = URGENCIA[a.status] - URGENCIA[b.status];
+      if (porUrgencia !== 0) return porUrgencia;
+      const limA = fechaLimite(a.accepted_at, a.deadlineDays)?.getTime();
+      const limB = fechaLimite(b.accepted_at, b.deadlineDays)?.getTime();
+      if (limA && limB) return limA - limB;
+      if (limA) return -1;
+      if (limB) return 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+  const historial = items
+    .filter((a) => APPLICATION_CLOSED.includes(a.status))
+    .sort((a, b) => new Date(b.status_changed_at).getTime() - new Date(a.status_changed_at).getTime());
 
   return (
     <div>
       <div className={styles.feedHead}>
         <h1 className={styles.feedTitle}>Mis aplicaciones</h1>
-        <p className={styles.feedSub}>Todo a lo que aplicaste y en qué anda cada cosa.</p>
       </div>
 
-      {applications && applications.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {applications.map((app) => {
-            const campaign = campaignById.get(app.campaign_id);
-            const brandName = campaign ? brandNameByProfileId.get(campaign.brand_id) : null;
+      {items.length === 0 && (
+        <div className={`${styles.card} ${styles.empty}`}>Todavía no aplicaste a ninguna campaña.</div>
+      )}
 
-            return (
-              <div key={app.id} className={`${styles.card} ${styles.cardPad}`}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
-                  <div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink-2)" }}>{brandName}</div>
-                    <div style={{ fontWeight: 800, color: "var(--ink)" }}>{campaign?.title ?? "Campaña"}</div>
-                    {campaign && (
-                      <div style={{ marginTop: "4px", fontSize: "13px", color: "var(--ink-3)" }}>
-                        ₡{creatorPayout(campaign.budget_amount).toLocaleString("es-CR")} neto
-                        {campaign.deadline_days && ` · ${campaign.deadline_days} días para entregar`}
+      {enCurso.length > 0 && (
+        <>
+          <h2 className={styles.apliSeccion}>En curso</h2>
+          <div className={styles.apliLista}>
+            {enCurso.map((app) => (
+              <AplicacionCard key={app.id} app={app} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {historial.length > 0 && (
+        <>
+          <h2 className={styles.apliSeccion}>Historial</h2>
+          <div className={styles.apliHist}>
+            {historial.map((app) => {
+              const puntos = puntosPorAplicacion.get(app.id) ?? 0;
+              const premiada = app.status === "approved" && (app.rating != null || puntos > 0);
+              return (
+                <div key={app.id} className={styles.apliHistFila}>
+                  <div className={styles.apliHistIdent}>
+                    <div className={styles.apliHistTitulo}>{app.titulo}</div>
+                    {premiada && (
+                      <div className={styles.apliHistPremio}>
+                        {app.rating != null && (
+                          <span aria-label={`${app.rating} de 5 estrellas`}>
+                            {"★".repeat(app.rating)}
+                            {"☆".repeat(5 - app.rating)}
+                          </span>
+                        )}
+                        {puntos > 0 && <span>· +{puntos} pts</span>}
+                      </div>
+                    )}
+                    {app.status === "cancelled" && app.conflict_reason && (
+                      <div className={styles.apliHistNota}>{app.conflict_reason}</div>
+                    )}
+                    {app.admin_note && (
+                      <div className={styles.apliHistNota}>
+                        <b>Resolución de Q Labs: </b>
+                        {app.admin_note}
                       </div>
                     )}
                   </div>
-                  <span
-                    className={`${styles.riskPill} ${styles["risk" + APPLICATION_STATUS_STYLE[app.status]]}`}
-                    style={{ flexShrink: 0 }}
-                  >
+                  <span className={`${styles.apliPill} ${TONO_CLASE[APLICACION_TONO[app.status]]}`}>
                     {APPLICATION_STATUS_LABEL[app.status]}
                   </span>
                 </div>
-
-                {campaign && Array.isArray(campaign.deliverables) && campaign.deliverables.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "10px" }}>
-                    {(campaign.deliverables as { type: string; qty: number }[]).map((d) => (
-                      <span key={d.type} className={styles.tag}>
-                        {d.qty}x {FORMAT_LABEL[d.type] ?? d.type}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {campaign?.compensation_details && (
-                  <p style={{ marginTop: "8px", fontSize: "13px", color: "var(--b-600)" }}>
-                    + {campaign.compensation_details}
-                  </p>
-                )}
-
-                {app.pitch_message && (
-                  <p
-                    style={{
-                      marginTop: "12px",
-                      padding: "12px",
-                      borderRadius: "var(--r-md)",
-                      background: "var(--surface-3)",
-                      fontSize: "13.5px",
-                      color: "var(--ink-2)",
-                    }}
-                  >
-                    {app.pitch_message}
-                  </p>
-                )}
-                {(deliveriesByApplicationId.get(app.id)?.length ?? 0) > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px" }}>
-                    {deliveriesByApplicationId.get(app.id)!.map((d) => (
-                      <div key={d.id} style={{ fontSize: "13.5px", color: "var(--ink-2)" }}>
-                        {d.kind === "file" ? (
-                          <a
-                            href={signedUrlByPath.get(d.storage_path!) ?? "#"}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={styles.linkMore}
-                          >
-                            Ver archivo entregado
-                          </a>
-                        ) : (
-                          <a href={d.external_url!} target="_blank" rel="noreferrer" className={styles.linkMore}>
-                            Ver link entregado
-                          </a>
-                        )}
-                        {d.note && <span> — {d.note}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {(app.status === "accepted" || app.status === "delivered") && (
-                  <DeliverySubmitForm applicationId={app.id} />
-                )}
-
-                {app.status === "approved" && app.rating && (
-                  <div style={{ marginTop: "12px", fontSize: "13.5px", color: "var(--ink-2)" }}>
-                    La marca calificó esta entrega con {"★".repeat(app.rating)}
-                    {"☆".repeat(5 - app.rating)}
-                  </div>
-                )}
-
-                {/* Salidas. Cancelar solo mientras no haya entrega; después es
-                    disputa, porque ya hay trabajo hecho. */}
-                {(canCancel(app.status) || canDispute(app.status)) && (
-                  <div
-                    style={{
-                      marginTop: "14px",
-                      paddingTop: "14px",
-                      borderTop: "1px solid var(--line-2)",
-                      display: "flex",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    {canCancel(app.status) && (
-                      <ConflictActionButton
-                        applicationId={app.id}
-                        kind="cancel"
-                        label="Ya no puedo con esta promo"
-                        className={`${styles.btn} ${styles.btnGhost}`}
-                      />
-                    )}
-                    {canDispute(app.status) && (
-                      <ConflictActionButton
-                        applicationId={app.id}
-                        kind="dispute"
-                        label="Reportar un problema"
-                        className={`${styles.btn} ${styles.btnGhost}`}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {(app.status === "cancelled" || app.status === "disputed") && app.conflict_reason && (
-                  <div style={{ marginTop: "12px", fontSize: "13px", color: "var(--ink-2)" }}>
-                    <b>{app.status === "cancelled" ? "Motivo de la cancelación: " : "Caso abierto: "}</b>
-                    {app.conflict_reason}
-                  </div>
-                )}
-
-                {app.admin_note && (
-                  <div style={{ marginTop: "8px", fontSize: "13px", color: "var(--ink-2)" }}>
-                    <b>Resolución de Q Labs: </b>
-                    {app.admin_note}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className={`${styles.card} ${styles.empty}`}>Todavía no aplicaste a ninguna campaña.</div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
