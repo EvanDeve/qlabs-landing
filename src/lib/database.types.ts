@@ -884,6 +884,11 @@ export interface Database {
           // La credencial del link del Hero. Quien conoce el token entra, así
           // que desde afuera solo se puede leer, comentar y aprobar.
           share_token: string;
+          // La credencial del link de grabación. Es OTRO token y no el de
+          // arriba a propósito: el de grabación se le puede pasar a un
+          // camarógrafo externo sin darle también la pantalla donde se aprueba
+          // el mes en nombre del cliente. Ver la migración 20260826130000.
+          crew_token: string;
           // "El cliente aprobó" y "lo dimos por aprobado" no son lo mismo.
           approved_by: CalendarApprovedBy | null;
           client_seen_at: string | null;
@@ -895,6 +900,7 @@ export interface Database {
           approved_at?: string | null;
           target?: number | null;
           share_token?: string;
+          crew_token?: string;
           approved_by?: CalendarApprovedBy | null;
           client_seen_at?: string | null;
         };

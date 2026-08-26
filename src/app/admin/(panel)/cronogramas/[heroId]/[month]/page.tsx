@@ -99,6 +99,10 @@ export default async function ArmarCronogramaPage({
   // no está listo para que lo vea el cliente.
   const guionesPendientes = items.filter((i) => estadoDelGuion(i).estado !== "completo").length;
 
+  // Se resuelve una vez: los dos links salen del mismo origen y `await` dentro
+  // del JSX lo pediría dos veces.
+  const origen = await origenDeLaPeticion();
+
   return (
     <>
       {/* Acá el <h2> sí va: la topbar dice "Cronogramas" para toda la sección,
@@ -163,7 +167,32 @@ export default async function ArmarCronogramaPage({
         </div>
       </div>
 
-      <CronogramaShareLink url={`${await origenDeLaPeticion()}/cronograma/${cronograma.share_token}`} aprobado={aprobado} />
+      <CronogramaShareLink
+        url={`${origen}/cronograma/${cronograma.share_token}`}
+        inputId="crono-share-hero"
+        titulo="Link para el Hero"
+        descripcion={
+          aprobado
+            ? "Ya lo aprobó. El link sigue sirviendo para que consulte el mes, pero ya no puede comentar."
+            : "Mandáselo por WhatsApp. Puede ver el mes, comentar cada video y aprobar. No puede editar nada."
+        }
+        pie="Quien tenga este link entra sin contraseña, así que va solo al Hero. Es distinto para cada mes."
+      />
+
+      {/* El segundo link es OTRO token y no el mismo con otra ruta: así se le
+          puede pasar a un camarógrafo externo sin darle de paso la pantalla
+          donde se aprueba el mes en nombre del cliente. */}
+      <CronogramaShareLink
+        url={`${origen}/grabacion/${cronograma.crew_token}`}
+        inputId="crono-share-grabacion"
+        titulo="Link para quien graba"
+        descripcion="Lleva el guion entero y los apuntes de cada video, que es donde dice si se graba o va con voice over. No puede comentar ni aprobar."
+        pie={
+          aprobado
+            ? "Va al equipo de grabación, no al Hero: muestra los apuntes internos. Es distinto para cada mes."
+            : "Va al equipo de grabación, no al Hero: muestra los apuntes internos. Avisa arriba que el mes todavía no está aprobado y puede cambiar."
+        }
+      />
 
       <div style={{ display: "grid", gap: "8px", marginBottom: "18px" }}>
         {items.length === 0 ? (

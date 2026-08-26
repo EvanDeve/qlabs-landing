@@ -5,7 +5,11 @@ import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 
 /**
- * El link que se le manda al Hero por WhatsApp para que revise y apruebe.
+ * Un link privado del cronograma, listo para copiar y mandar por WhatsApp.
+ *
+ * Sirve a los dos: el del Hero, que es para aprobar, y el de grabación, que es
+ * para trabajar. Los textos los pone quien lo usa porque son lo único que
+ * cambia — y son justamente lo que evita mandar el que no era.
  *
  * La URL llega armada desde el servidor, que la saca de los headers de la
  * petición. Las dos alternativas eran peores: `NEXT_PUBLIC_SITE_URL` hoy apunta
@@ -13,7 +17,22 @@ import styles from "@/styles/qos.module.css";
  * ninguna señal de que está mal; y armarla con `location.origin` en un efecto
  * deja el input vacío en el primer render y obliga a un setState de arranque.
  */
-export default function CronogramaShareLink({ url, aprobado }: { url: string; aprobado: boolean }) {
+export default function CronogramaShareLink({
+  url,
+  titulo,
+  descripcion,
+  pie,
+  inputId,
+}: {
+  url: string;
+  titulo: string;
+  /** Qué puede hacer quien reciba este link. */
+  descripcion: string;
+  /** El recordatorio de a quién va y a quién no. */
+  pie: string;
+  /** Propio por link: dos elementos con el mismo id rompen el foco del fallback. */
+  inputId: string;
+}) {
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
@@ -29,7 +48,7 @@ export default function CronogramaShareLink({ url, aprobado }: { url: string; ap
     } catch {
       // Sin permiso de portapapeles (o fuera de HTTPS) queda seleccionado para
       // copiarlo a mano, que es mejor que un botón que no hace nada.
-      const input = document.getElementById("crono-share") as HTMLInputElement | null;
+      const input = document.getElementById(inputId) as HTMLInputElement | null;
       input?.focus();
       input?.select();
     }
@@ -38,18 +57,16 @@ export default function CronogramaShareLink({ url, aprobado }: { url: string; ap
   return (
     <div className={`${styles.card} ${styles.cardPad}`} style={{ marginBottom: "18px" }}>
       <div className={styles.sectionHead}>
-        <h2>Link para el Hero</h2>
+        <h2>{titulo}</h2>
       </div>
 
       <p className={styles.formNote} style={{ marginBottom: "10px" }}>
-        {aprobado
-          ? "Ya lo aprobó. El link sigue sirviendo para que consulte el mes, pero ya no puede comentar."
-          : "Mandáselo por WhatsApp. Puede ver el mes, comentar cada video y aprobar. No puede editar nada."}
+        {descripcion}
       </p>
 
       <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
         <input
-          id="crono-share"
+          id={inputId}
           readOnly
           value={url}
           onFocus={(e) => e.currentTarget.select()}
@@ -69,7 +86,7 @@ export default function CronogramaShareLink({ url, aprobado }: { url: string; ap
       </div>
 
       <p className={styles.formNote} style={{ marginTop: "9px" }}>
-        Quien tenga este link entra sin contraseña, así que va solo al Hero. Es distinto para cada mes.
+        {pie}
       </p>
     </div>
   );
