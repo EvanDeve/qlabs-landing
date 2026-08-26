@@ -223,6 +223,81 @@ export function contarPalabras(segments: TranscriptionSegment[] | null | undefin
   }, 0);
 }
 
+/**
+ * Lee la duración del átomo `mvhd` de un MP4 o un MOV.
+ *
+ * Existe porque el camino obvio —un `<video>` y su `loadedmetadata`— **no
+ * responde con la pestaña en segundo plano**: Chrome suspende la carga de
+ * medios ahí, y no dispara ni `loadedmetadata` ni `error`, así que la medición
+ * se queda colgada hasta el timeout y devuelve null. Medido el 2026-08-25. En
+ * el teléfono eso pasa apenas el creador se va a otra app mientras elige el
+ * archivo, que es justo lo que uno hace.
+ *
+ * Esto no depende del pipeline de medios: son bytes. Cubre mp4 y mov, que es
+ * lo que sale de un teléfono; para webm o mkv sigue mandando el `<video>`.
+ *
+ * Devuelve null ante cualquier cosa rara en vez de tirar: no saber la duración
+ * no puede costar la subida.
+ */
+export function duracionDeMp4(buffer: ArrayBuffer): number | null {
+  const v = new DataView(buffer);
+
+  function buscar(ini: number, fin: number): number | null {
+    let p = ini;
+    // El 8 es el encabezado mínimo de un átomo: tamaño (4) + tipo (4).
+    while (p + 8 <= fin) {
+      let tam = v.getUint32(p);
+      const tipo = String.fromCharCode(
+        v.getUint8(p + 4),
+        v.getUint8(p + 5),
+        v.getUint8(p + 6),
+        v.getUint8(p + 7)
+      );
+      let cab = 8;
+      // tamaño 1 = el real viene en 64 bits después del tipo; 0 = hasta el final.
+      if (tam === 1) {
+        cab = 16;
+        tam = Number(v.getBigUint64(p + 8));
+      } else if (tam === 0) {
+        tam = fin - p;
+      }
+      if (tam < cab || p + tam > fin) return null;
+
+      if (tipo === "mvhd") {
+        const ver = v.getUint8(p + cab);
+        // +4 salta el byte de versión y los 3 de flags.
+        const base = p + cab + 4;
+        if (ver === 1) {
+          // v1: creación y modificación son de 64 bits (8+8), después escala.
+          const escala = v.getUint32(base + 16);
+          const dur = Number(v.getBigUint64(base + 20));
+          return escala > 0 ? dur / escala : null;
+        }
+        // v0: creación y modificación de 32 bits (4+4), después escala.
+        const escala = v.getUint32(base + 8);
+        const dur = v.getUint32(base + 12);
+        return escala > 0 ? dur / escala : null;
+      }
+
+      // `mvhd` cuelga de `moov`; los otros dos se recorren por si el archivo
+      // trae un orden raro.
+      if (tipo === "moov" || tipo === "trak" || tipo === "mdia") {
+        const r = buscar(p + cab, p + tam);
+        if (r != null) return r;
+      }
+      p += tam;
+    }
+    return null;
+  }
+
+  try {
+    const r = buscar(0, v.byteLength);
+    return r != null && Number.isFinite(r) && r > 0 ? r : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Segundos a "2:14". Null cuando no se sabe: no se estima. */
 export function duracionLegible(segundos: number | null | undefined): string | null {
   if (segundos == null || !Number.isFinite(segundos) || segundos <= 0) return null;

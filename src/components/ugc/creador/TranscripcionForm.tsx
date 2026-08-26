@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  duracionDeMp4,
   esArchivoAceptado,
   MAX_TRANSCRIPTION_FILE_BYTES,
   TRANSCRIPTION_BUCKET,
@@ -18,21 +19,33 @@ import styles from "@/styles/qos.module.css";
  * demuxer, y ese es justo el binario de sistema que no existe en serverless —
  * la misma razón por la que se transcribe con Gemini y no con Whisper.
  *
- * Nunca rechaza: un formato que el `<video>` no sabe leer devuelve null y la
- * transcripción sigue igual, solo que sin el chip de duración. Preferible un
- * chip que falta a bloquear una subida que iba a funcionar.
+ * Va por dos caminos y en este orden:
+ *
+ *   1. Un `<video>` y su `loadedmetadata`. Es barato —no lee el archivo
+ *      entero— y sirve para cualquier formato.
+ *   2. Si eso no contesta, los bytes del átomo `mvhd`. ⚠️ El paso 1 **no
+ *      responde con la pestaña en segundo plano**: Chrome suspende ahí la
+ *      carga de medios y no dispara ni `loadedmetadata` ni `error`. Verificado
+ *      el 2026-08-25, y en el teléfono pasa apenas el creador se va a otra app
+ *      mientras elige el archivo. El respaldo son bytes y no depende de eso,
+ *      pero sí lee el archivo entero, por eso va segundo.
+ *
+ * Nunca rechaza: si los dos fallan devuelve null y la transcripción sigue
+ * igual, solo que sin el chip de duración. Preferible un chip que falta a
+ * bloquear una subida que iba a funcionar.
  */
-function medirDuracion(file: File): Promise<number | null> {
-  return new Promise((resolve) => {
+async function medirDuracion(file: File): Promise<number | null> {
+  const porElemento = await new Promise<number | null>((resolve) => {
     const url = URL.createObjectURL(file);
     const el = document.createElement(file.type.startsWith("audio") ? "audio" : "video");
     const cerrar = (valor: number | null) => {
       URL.revokeObjectURL(url);
       resolve(valor);
     };
-    // Un archivo corrupto puede no disparar ni `loadedmetadata` ni `error`, y
-    // sin este corte la subida se quedaría esperando para siempre.
-    const reloj = setTimeout(() => cerrar(null), 4000);
+    // 2,5 s y no más: un archivo corrupto puede no disparar ni
+    // `loadedmetadata` ni `error`, y en segundo plano no dispara NINGUNO. Lo
+    // que sigue es el respaldo, así que esperar de más solo demora la subida.
+    const reloj = setTimeout(() => cerrar(null), 2500);
     el.preload = "metadata";
     el.onloadedmetadata = () => {
       clearTimeout(reloj);
@@ -44,6 +57,14 @@ function medirDuracion(file: File): Promise<number | null> {
     };
     el.src = url;
   });
+
+  if (porElemento) return porElemento;
+
+  try {
+    return duracionDeMp4(await file.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 type Trabajo = {

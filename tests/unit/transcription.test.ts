@@ -9,6 +9,7 @@ import {
   segmentsToTimestampedText,
   contarPalabras,
   duracionLegible,
+  duracionDeMp4,
   idiomaLegible,
   nombreDeTranscripcion,
   fuenteLegible,
@@ -219,5 +220,72 @@ describe("fuenteLegible", () => {
     expect(fuenteLegible("upload")).toBe("Archivo");
     expect(fuenteLegible("youtube")).toBe("YouTube");
     expect(fuenteLegible("otro")).toBe("Link");
+  });
+});
+
+
+/**
+ * Arma un MP4 mínimo: `ftyp` + `moov` > `mvhd`. Se construye a mano en vez de
+ * commitear un binario — lo que se prueba es el parseo de los campos, y un
+ * .mp4 de verdad en el repo no dice cuál byte importa.
+ */
+function mp4Falso({ escala, duracion, version }: { escala: number; duracion: number; version: 0 | 1 }) {
+  const cuerpo = version === 1 ? 4 + 8 + 8 + 4 + 8 : 4 + 4 + 4 + 4 + 4;
+  const mvhd = new ArrayBuffer(8 + cuerpo);
+  const v = new DataView(mvhd);
+  v.setUint32(0, mvhd.byteLength);
+  "mvhd".split("").forEach((c, i) => v.setUint8(4 + i, c.charCodeAt(0)));
+  v.setUint8(8, version);
+  if (version === 1) {
+    v.setUint32(8 + 4 + 16, escala);
+    v.setBigUint64(8 + 4 + 20, BigInt(duracion));
+  } else {
+    v.setUint32(8 + 4 + 8, escala);
+    v.setUint32(8 + 4 + 12, duracion);
+  }
+
+  const ftyp = new ArrayBuffer(16);
+  const fv = new DataView(ftyp);
+  fv.setUint32(0, 16);
+  "ftypisom".split("").forEach((c, i) => fv.setUint8(4 + i, c.charCodeAt(0)));
+
+  const moov = new ArrayBuffer(8 + mvhd.byteLength);
+  const mv = new DataView(moov);
+  mv.setUint32(0, moov.byteLength);
+  "moov".split("").forEach((c, i) => mv.setUint8(4 + i, c.charCodeAt(0)));
+  new Uint8Array(moov).set(new Uint8Array(mvhd), 8);
+
+  const todo = new Uint8Array(ftyp.byteLength + moov.byteLength);
+  todo.set(new Uint8Array(ftyp), 0);
+  todo.set(new Uint8Array(moov), ftyp.byteLength);
+  return todo.buffer;
+}
+
+describe("duracionDeMp4", () => {
+  it("lee la duración de un mvhd version 0", () => {
+    // 7 s exactos: es lo que dio el mp4 real con el que se encontró el bug.
+    expect(duracionDeMp4(mp4Falso({ escala: 1000, duracion: 7000, version: 0 }))).toBe(7);
+  });
+
+  it("lee la duración de un mvhd version 1, que usa 64 bits", () => {
+    expect(duracionDeMp4(mp4Falso({ escala: 600, duracion: 80400, version: 1 }))).toBe(134);
+  });
+
+  it("devuelve null si la escala viene en cero, en vez de dividir por cero", () => {
+    expect(duracionDeMp4(mp4Falso({ escala: 0, duracion: 7000, version: 0 }))).toBeNull();
+  });
+
+  it("devuelve null con basura, sin tirar", () => {
+    // Nunca puede costar la subida: sin duración se sigue igual, sin el chip.
+    expect(duracionDeMp4(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]).buffer)).toBeNull();
+    expect(duracionDeMp4(new ArrayBuffer(0))).toBeNull();
+  });
+
+  it("devuelve null si no hay mvhd por ningún lado", () => {
+    const solo = new ArrayBuffer(16);
+    const v = new DataView(solo);
+    v.setUint32(0, 16);
+    "ftypisom".split("").forEach((c, i) => v.setUint8(4 + i, c.charCodeAt(0)));
+    expect(duracionDeMp4(solo)).toBeNull();
   });
 });
