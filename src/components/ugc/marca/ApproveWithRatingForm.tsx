@@ -7,16 +7,20 @@ import styles from "@/styles/qos.module.css";
 export default function ApproveWithRatingForm({
   applicationId,
   campaignId,
+  oscuro = false,
 }: {
   applicationId: string;
   campaignId: string;
+  /** Sobre la tarjeta negra del detalle: mismas estrellas, botón violeta. */
+  oscuro?: boolean;
 }) {
   const [rating, setRating] = useState(5);
 
   return (
     <form
       action={approveApplicationAction}
-      style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "16px" }}
+      className={oscuro ? styles.mcAprobarForm : undefined}
+      style={oscuro ? undefined : { display: "flex", alignItems: "center", gap: "16px", marginTop: "16px" }}
     >
       <input type="hidden" name="application_id" value={applicationId} />
       <input type="hidden" name="campaign_id" value={campaignId} />
@@ -34,8 +38,11 @@ export default function ApproveWithRatingForm({
           </button>
         ))}
       </div>
-      <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-        Aprobar entrega
+      <button
+        type="submit"
+        className={oscuro ? styles.mcAprobarBtn : `${styles.btn} ${styles.btnPrimary}`}
+      >
+        {oscuro ? "Aprobar" : "Aprobar entrega"}
       </button>
     </form>
   );

@@ -222,13 +222,14 @@ export default async function BrandPublicProfilePage({
                   </span>
                 </div>
 
+                {/* Solo la antigüedad. El mockup decía "cierra en N días" y ese
+                    dato NO existe: `deadline_days` es el PLAZO DE ENTREGA una
+                    vez que la marca acepta —en todo el resto del código se
+                    rotula "días de plazo"—, no cuándo se cierran las
+                    aplicaciones. Una campaña publicada no tiene fecha de
+                    cierre. El plazo real ya está en la tabla de abajo. */}
                 <p className="mt-1.5 text-[13px] text-ink-soft">
-                  {[
-                    hace(p.published_at) && `Publicada ${hace(p.published_at)}`,
-                    p.deadline_days && `cierra en ${p.deadline_days}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  {hace(p.published_at) && `Publicada ${hace(p.published_at)}`}
                 </p>
 
                 {p.brief && (

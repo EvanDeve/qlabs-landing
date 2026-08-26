@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { updateApplicationStatusAction } from "@/lib/actions/applications";
 import { useToast } from "@/components/ugc/Toaster";
+import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 
 /**
@@ -39,24 +40,30 @@ export default function ApplicantDecisionButtons({
     });
   }
 
+  // El orden es rechazar → aceptar y no al revés: en el mockup la ✕ queda entre
+  // "Ver book" y "Aceptar", o sea que la acción destructiva no está pegada al
+  // borde donde cae el pulgar. Y rechazar va sin texto por lo mismo que en el
+  // mockup: con tres botones con palabra, la fila no entra en 393 px.
   return (
-    <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
-      <button
-        type="button"
-        onClick={() => decidir("accepted")}
-        disabled={isPending}
-        className={`${styles.btn} ${styles.btnPrimary}`}
-      >
-        Aceptar
-      </button>
+    <>
       <button
         type="button"
         onClick={() => decidir("rejected")}
         disabled={isPending}
-        className={`${styles.btn} ${styles.btnGhost}`}
+        className={styles.mcRechazar}
+        aria-label={`Rechazar a ${creatorName}`}
+        title="Rechazar"
       >
-        Rechazar
+        <QosIcon name="x" size={17} />
       </button>
-    </div>
+      <button
+        type="button"
+        onClick={() => decidir("accepted")}
+        disabled={isPending}
+        className={styles.mcAceptar}
+      >
+        Aceptar
+      </button>
+    </>
   );
 }

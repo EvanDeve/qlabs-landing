@@ -11056,3 +11056,603 @@
     display: none;
   }
 }
+
+/* ---------------- DETALLE DE CAMPAÑA ----------------
+   La tarjeta negra es la misma idea que en el Resumen: lo que hay que decidir
+   ahora. Acá lo que toca es aprobar una entrega, o revisar a quien aplicó. */
+.mcDetHead {
+  margin-bottom: 16px;
+}
+.mcDetTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.qosRoot .mcDetTitulo {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.14;
+  color: var(--ink);
+}
+.mcDetMeta {
+  margin-top: 5px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+/* La entrega que espera aprobación, sobre la tarjeta negra. */
+.mcAprobarFila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 14px;
+}
+.mcAprobarThumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  overflow: hidden;
+}
+.mcAprobarThumb img,
+.mcAprobarThumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mcAprobarAcciones {
+  display: flex;
+  gap: 9px;
+}
+.qosRoot .mcAprobarSec {
+  flex: 1;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--r-full);
+  background: transparent;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcAprobarSec:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+/* El link de reportar va en gris y abajo: es la salida de emergencia, no una
+   de las dos acciones. */
+.qosRoot .mcAprobarReportar {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  border: none;
+  background: none;
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+}
+.qosRoot .mcAprobarReportar:hover {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* El desglose del pago, como tabla. */
+.mcPago {
+  margin-bottom: 8px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+  overflow: hidden;
+}
+.mcPagoFila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 15px;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.mcPagoFila + .mcPagoFila {
+  border-top: 1px solid var(--line-2);
+}
+.mcPagoK {
+  color: var(--ink-2);
+}
+.mcPagoV {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.mcPagoTotal {
+  background: var(--surface-2);
+}
+.mcPagoTotal .mcPagoK {
+  font-weight: 800;
+  color: var(--ink);
+}
+.mcPagoTotal .mcPagoV {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.mcPagoNota {
+  margin-bottom: 20px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+/* "Lo que pediste": el brief como filas de lectura. */
+.mcPedido {
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+  overflow: hidden;
+}
+.mcPedidoFila {
+  display: flex;
+  gap: 14px;
+  padding: 12px 15px;
+}
+.mcPedidoFila + .mcPedidoFila {
+  border-top: 1px solid var(--line-2);
+}
+.mcPedidoK {
+  flex-shrink: 0;
+  width: 92px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.mcPedidoV {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+/* Las estrellas y el botón de aprobar, sobre la tarjeta negra. La calificación
+   se pone ANTES de aprobar y no después: es la misma decisión, y separarlas
+   deja la mitad de las entregas aprobadas sin calificar. */
+.mcAprobarForm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mcAprobarForm .stars {
+  flex-shrink: 0;
+}
+.mcAprobarForm .starBtn {
+  color: rgba(255, 255, 255, 0.25);
+}
+.mcAprobarForm .starBtnOn {
+  color: #f5b301;
+}
+.qosRoot .mcAprobarBtn {
+  flex: 1;
+  height: 44px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-500);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcAprobarBtn:hover {
+  background: var(--b-400);
+}
+/* La cita de la aplicación. Va entre comillas y en cursiva chica: es la voz
+   del creador, no una descripción de la app. */
+.mcPitch {
+  margin-top: 12px;
+  padding: 12px 13px;
+  border-radius: 13px;
+  background: var(--surface-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--ink-2);
+}
+.mcAplicanteAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+/* ---------------- CAMPAÑAS Y APLICANTES ---------------- */
+.mcTitFila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.qosRoot .mcNuevo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 15px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcNuevo:hover {
+  background: var(--b-700);
+}
+
+/* El control segmentado, con su contador. Mismo riel que el de Transcripción;
+   lo que cambia es que acá una de las dos pestañas lleva número. */
+.mcCuenta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: var(--r-full);
+  background: var(--risk);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* La fila de "quién está en esta campaña": caras + resumen. */
+.mcQuienes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line-2);
+  text-decoration: none;
+}
+.mcQuienesTxt {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Sobre tarjeta blanca los avatares llevan borde blanco, no del color de la
+   tarjeta negra. */
+.mcQuienes .mcAvatar {
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+  border-color: var(--surface);
+}
+
+/* El aplicante, en la pestaña de aplicantes. */
+.mcAplicante {
+  padding: 15px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.mcAplicante + .mcAplicante {
+  margin-top: 12px;
+}
+.mcAplicanteTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.mcAplicanteFoto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--b-400);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  overflow: hidden;
+}
+.mcAplicanteFoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.qosRoot .mcAplicanteNombre {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.mcAplicanteMeta {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+/* La nota del creador. Ámbar y no violeta: es una medida de desempeño, y el
+   violeta en esta pantalla ya significa "acción". */
+.mcNota {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #c07414;
+}
+.mcNotaNueva {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.mcChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+.mcChip {
+  height: 25px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.mcAplicanteBotones {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 13px;
+}
+.qosRoot .mcVerBook {
+  flex: 1;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcVerBook:hover {
+  border-color: var(--b-300);
+  color: var(--b-600);
+}
+
+/* Los ya decididos: fila compacta, sin foto grande ni botones. */
+.mcDecidido {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+}
+.mcDecidido + .mcDecidido {
+  border-top: 1px solid var(--line-2);
+}
+.mcDecididoFoto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--b-100);
+  color: var(--b-700);
+  font-size: 11px;
+  font-weight: 800;
+  overflow: hidden;
+}
+.mcDecididoFoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mcDecididoTxt {
+  flex: 1;
+  min-width: 0;
+}
+.qosRoot .mcDecididoNombre {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcDecididoSub {
+  display: block;
+  margin-top: 1px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* El grupo de aplicantes de una campaña. */
+.mcGrupo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 9px;
+}
+.mcGrupoTit {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcGrupoMeta {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ---------------- LOYALTY ---------------- */
+.qosRoot .mcValidarCard {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 4px 0 16px;
+  padding: 15px;
+  border-radius: 18px;
+  background: var(--ink-deep);
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  transition: var(--t-fast);
+}
+.qosRoot .mcValidarCard:hover {
+  background: #17141f;
+}
+.mcValidarIc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* Las tres cifras, sin tarjeta y separadas por hairlines: mismo criterio que
+   las del Home del creador — la tarjeta blanca de abajo es la que tiene que
+   llamar la atención. */
+.mcStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 18px;
+}
+.mcStat {
+  padding: 0 10px;
+}
+.mcStat + .mcStat {
+  border-left: 1px solid var(--line);
+}
+.mcStat:first-child {
+  padding-left: 0;
+}
+.mcStatNum {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.mcStatLabel {
+  margin-top: 1px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--ink-3);
+}
+
+/* La barra de stock del cupón. */
+.mcStock {
+  margin-top: 13px;
+}
+.mcStockFila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.mcStockVia {
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  overflow: hidden;
+}
+.mcStockFill {
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+}
+.qosRoot .mcRechazar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcRechazar:hover:not(:disabled) {
+  border-color: var(--risk);
+  color: var(--risk);
+}
+.qosRoot .mcAceptar {
+  flex: 1;
+  height: 42px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcAceptar:hover:not(:disabled) {
+  background: var(--b-700);
+}
+.qosRoot .mcAceptar:disabled,
+.qosRoot .mcRechazar:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

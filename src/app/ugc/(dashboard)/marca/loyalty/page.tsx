@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import LoyaltyMarcaTabs, { type CuponMarca, type CanjeFila } from "@/components/ugc/marca/LoyaltyMarcaTabs";
 import { fechaCorta, fechaLarga } from "@/lib/ugc/loyalty";
-import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -116,48 +115,14 @@ export default async function LoyaltyMarcaPage() {
     status: r.status,
   }));
 
-  const activos = lista.filter((c) => c.status === "publicado").length;
-  const reclamados = (reclamos ?? []).length;
-  const canjeados = (reclamos ?? []).filter((r) => r.status === "canjeado").length;
-
-  const kpis = [
-    { label: "Cupones activos", value: activos, icon: "sparkle", color: "#6d54f3" },
-    { label: "Reclamos totales", value: reclamados, icon: "users", color: "#c07414" },
-    { label: "Canjes confirmados", value: canjeados, icon: "check", color: "#14a06a" },
-  ];
-
   return (
-    <div>
-      <h1 className={styles.feedTitle}>Loyalty Loop</h1>
-      <p style={{ color: "var(--ink-2)", marginBottom: "24px", maxWidth: "68ch" }}>
-        Creá cupones para atraer creadores, definí quién puede reclamarlos según su nivel, y validá
-        los canjes en tu local con un escaneo.
-      </p>
-
-      <div className={`${styles.kpiRow} ${styles.kpiRow3}`}>
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className={styles.kpi}>
-            <div className={styles.kTop}>
-              <div className={styles.kIc} style={{ background: `${kpi.color}22`, color: kpi.color }}>
-                <QosIcon name={kpi.icon} size={16} />
-              </div>
-              <div className={styles.kLabel}>{kpi.label}</div>
-            </div>
-            <div className={styles.kNum} style={{ color: kpi.color }}>
-              {kpi.value}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: "26px" }}>
-        <LoyaltyMarcaTabs
-          cupones={cuponesVista}
-          canjes={canjes}
-          niveles={(umbrales ?? []).map((n) => ({ level: n.level, name: n.name }))}
-          nombreMarca={marca?.brand_name ?? "tu negocio"}
-        />
-      </div>
+    <div className={styles.mcCol}>
+      <LoyaltyMarcaTabs
+        cupones={cuponesVista}
+        canjes={canjes}
+        niveles={(umbrales ?? []).map((n) => ({ level: n.level, name: n.name }))}
+        nombreMarca={marca?.brand_name ?? "tu negocio"}
+      />
     </div>
   );
 }

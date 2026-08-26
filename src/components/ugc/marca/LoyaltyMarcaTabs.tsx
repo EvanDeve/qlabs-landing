@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useActionState, useState } from "react";
 import {
   cambiarEstadoCuponAction,
@@ -77,54 +79,102 @@ export default function LoyaltyMarcaTabs({
 }) {
   const [tab, setTab] = useState<Tab>("cupones");
 
-  return (
-    <div>
-      {/* Los tres de la izquierda cambian QUÉ se está viendo; el de la derecha
-          crea algo. Mientras "+ Nuevo cupón" era un chip más de la misma fila,
-          las dos cosas se veían idénticas. */}
-      <div className={styles.subtabsRow}>
-        <div className={styles.subtabs}>
-          {(
-            [
-              ["cupones", `Mis cupones${cupones.length ? ` (${cupones.length})` : ""}`],
-              ["validar", "Validar canje"],
-              ["canjes", `Canjes${canjes.length ? ` (${canjes.length})` : ""}`],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className={`${styles.subtab} ${tab === id ? styles.subtabOn : ""}`}
-              onClick={() => setTab(id)}
-            >
-              {label}
-            </button>
-          ))}
+  const activos = cupones.filter((c) => c.status === "publicado").length;
+  const reclamados = canjes.filter((c) => c.status === "reclamado").length;
+  const hechos = canjes.filter((c) => c.status === "canjeado").length;
+
+  if (tab === "nuevo") {
+    return (
+      <>
+        <div className={styles.mcFormBar}>
+          <button type="button" onClick={() => setTab("cupones")} className={styles.mcCancelar}>
+            Cancelar
+          </button>
+          <span className={styles.mcFormTitulo}>Nuevo cupón</span>
+          <span style={{ width: 62 }} aria-hidden />
         </div>
-        <button
-          type="button"
-          className={`${styles.btn} ${styles.btnPrimary}`}
-          onClick={() => setTab("nuevo")}
-        >
+        {/* Vuelve a la lista al guardar: es una acción con principio y fin, no
+            una pestaña donde quedarse. */}
+        <CuponForm niveles={niveles} onListo={() => setTab("cupones")} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className={styles.mcTitFila}>
+        <div style={{ minWidth: 0 }}>
+          <h1 className={styles.mcSaludo}>Loyalty</h1>
+          <p className={styles.feedSub}>Cupones para que los creadores lleguen a tu local.</p>
+        </div>
+        <button type="button" className={styles.mcNuevo} onClick={() => setTab("nuevo")}>
           <QosIcon name="plus" size={15} />
-          Nuevo cupón
+          Nuevo
         </button>
       </div>
 
-      {tab === "cupones" && (
+      {/* La tarjeta negra lleva a la cámara. Es el gesto que se hace con alguien
+          parado enfrente, así que va arriba de todo y no escondido en una
+          pestaña. */}
+      <Link href="/ugc/marca/validar" className={styles.mcValidarCard}>
+        <span className={styles.mcValidarIc}>
+          <QosIcon name="grid" size={20} />
+        </span>
+        <span className={styles.mcDecidirTxt}>
+          <span className={styles.mcDecidirNum}>Validar un canje</span>
+          <span className={styles.mcDecidirSub}>Escaneá el QR del creador</span>
+        </span>
+        <QosIcon name="chevR" size={17} />
+      </Link>
+
+      <div className={styles.mcStats}>
+        {(
+          [
+            [activos, activos === 1 ? "cupón activo" : "cupones activos"],
+            [reclamados, reclamados === 1 ? "reclamado" : "reclamados"],
+            [hechos, hechos === 1 ? "canje hecho" : "canjes hechos"],
+          ] as const
+        ).map(([n, label]) => (
+          <div key={label} className={styles.mcStat}>
+            <div className={styles.mcStatNum}>{n}</div>
+            <div className={styles.mcStatLabel}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className={styles.trTabs} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "cupones"}
+          onClick={() => setTab("cupones")}
+          className={`${styles.trTabBtn} ${tab === "cupones" ? styles.trTabOn : ""}`}
+        >
+          Cupones{cupones.length > 0 ? ` · ${cupones.length}` : ""}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "canjes"}
+          onClick={() => setTab("canjes")}
+          className={`${styles.trTabBtn} ${tab === "canjes" ? styles.trTabOn : ""}`}
+        >
+          Canjes{canjes.length > 0 ? ` · ${canjes.length}` : ""}
+        </button>
+      </div>
+
+      {tab === "cupones" ? (
         <ListaCupones cupones={cupones} niveles={niveles} />
+      ) : (
+        <>
+          <TablaCanjes canjes={canjes} />
+          {/* El buscador manual vive con los canjes: es la salida para cuando la
+              cámara no sirve, y es adonde manda "Buscar el código a mano" de la
+              pantalla del escáner. */}
+          <Validador nombreMarca={nombreMarca} />
+        </>
       )}
-      {tab === "nuevo" && (
-        <div className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "760px" }}>
-          <h2 style={{ fontSize: "17px", marginBottom: "16px" }}>Nuevo cupón</h2>
-          {/* Vuelve a la lista al guardar: ahora es una acción con principio y
-              fin, no una pestaña donde quedarse. También le da su "Cancelar". */}
-          <CuponForm niveles={niveles} onListo={() => setTab("cupones")} />
-        </div>
-      )}
-      {tab === "validar" && <Validador nombreMarca={nombreMarca} />}
-      {tab === "canjes" && <TablaCanjes canjes={canjes} />}
-    </div>
+    </>
   );
 }
 

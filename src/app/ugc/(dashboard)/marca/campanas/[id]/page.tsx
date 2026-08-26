@@ -3,10 +3,12 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PublishCampaignButton from "@/components/ugc/marca/PublishCampaignButton";
 import CampaignCoverEditor from "@/components/ugc/marca/CampaignCoverEditor";
-import DesglosePago from "@/components/ugc/DesglosePago";
 import ApplicantDecisionButtons from "@/components/ugc/marca/ApplicantDecisionButtons";
 import ApproveWithRatingForm from "@/components/ugc/marca/ApproveWithRatingForm";
-import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
+import { entregablesEnLinea } from "@/lib/ugc/deliverables";
+import { AGENCY_FEE_RATE, creatorPayout } from "@/lib/ugc/payout";
+import { CAMPAIGN_STATUS_LABEL } from "@/lib/ugc/campaign-status";
+import AvataresAplicantes from "@/components/ugc/marca/AvataresAplicantes";
 import { slotsDeCampana } from "@/lib/ugc/delivery-slots";
 import { DELIVERIES_BUCKET, DELIVERY_SIGNED_URL_TTL_SECONDS } from "@/lib/ugc/deliveries";
 import {
@@ -75,7 +77,9 @@ export default async function CampaignDetailPage({
   // Las piezas van en el orden en que la marca las pidió —Reel, Story 1, Story
   // 2—, no en el que el creador terminó de subirlas. Por fecha salían al revés,
   // y encima los links del post arriba de las piezas.
-  const ordenDeSlot = new Map(slotsDeCampana(campaign.deliverables).map((s, i) => [s.id, i]));
+  const slots = slotsDeCampana(campaign.deliverables);
+  const ordenDeSlot = new Map(slots.map((s, i) => [s.id, i]));
+  const etiquetaDeSlot = new Map(slots.map((s) => [s.id, s.etiqueta]));
   const posicion = (d: { slot: string | null }) =>
     d.slot ? (ordenDeSlot.get(d.slot) ?? 900) : 999;
 
@@ -100,76 +104,333 @@ export default async function CampaignDetailPage({
     })
   );
 
-  const deliverables = Array.isArray(campaign.deliverables)
-    ? (campaign.deliverables as { type: string; qty: number }[])
+  const porAprobar = (applications ?? []).filter((a) => a.status === "delivered");
+  const porRevisar = (applications ?? []).filter(
+    (a) => a.status === "pending" || a.status === "reviewing"
+  );
+
+  // La entrega que espera: la más vieja primero, que es la que lleva más tiempo
+  // parada del lado de la marca.
+  const entregaPendiente = porAprobar[porAprobar.length - 1];
+  const perfilPendiente = entregaPendiente
+    ? creatorProfileById.get(entregaPendiente.creator_id)
+    : null;
+  const piezasPendientes = entregaPendiente
+    ? (deliveriesByApplicationId.get(entregaPendiente.id) ?? [])
     : [];
+  const primeraPieza = piezasPendientes[0];
+  const linkPrimeraPieza = primeraPieza
+    ? (primeraPieza.external_url ??
+      (primeraPieza.storage_path ? signedUrlByPath.get(primeraPieza.storage_path) : null))
+    : null;
+
+  const comision = campaign.budget_amount
+    ? Math.round(campaign.budget_amount * AGENCY_FEE_RATE)
+    : 0;
+  const neto = campaign.budget_amount ? creatorPayout(campaign.budget_amount) : 0;
+  const crc = (n: number) => `₡${n.toLocaleString("es-CR")}`;
+
+  const derechos = usageRightsChips(campaign).join(" · ");
+
+  const pedido: [string, string][] = [
+    ["Brief", campaign.brief ?? ""],
+    ["Entregables", entregablesEnLinea(campaign.deliverables)],
+    ["Plazo", campaign.deadline_days ? `${campaign.deadline_days} días de plazo` : ""],
+    ["Audiencia", campaign.target_audience ?? ""],
+    ["Compensación", campaign.compensation_details ?? ""],
+    ["Derechos de uso", hasUsageRights(campaign) ? derechos : ""],
+  ].filter(([, v]) => Boolean(v)) as [string, string][];
 
   return (
-    <div>
-      <Link href="/ugc/marca/ugc" className={styles.backBtn}>
-        <QosIcon name="chevL" size={16} />
-        Volver a UGC·CRC
-      </Link>
+    <div className={styles.mcCol}>
+      <div className={styles.mcFormBar}>
+        <Link href="/ugc/marca/ugc" className={styles.mcCancelar}>
+          <QosIcon name="chevL" size={15} /> Campañas
+        </Link>
+        <span className={styles.mcFormTitulo}>Campaña</span>
+        <span style={{ width: 78 }} aria-hidden />
+      </div>
 
-      <div className={`${styles.card} ${styles.cardPad}`}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px" }}>
-          <div>
-            <h1 className={styles.tbTitle} style={{ fontSize: "24px" }}>
-              {campaign.title}
-            </h1>
-            <div style={{ marginTop: "4px", fontSize: "13.5px", fontWeight: 600, color: "var(--ink-2)" }}>
-              ₡{campaign.budget_amount.toLocaleString("es-CR")}
-              {campaign.deadline_days ? ` · ${campaign.deadline_days} días` : ""}
+      <div className={styles.mcDetHead}>
+        <div className={styles.mcDetTop}>
+          <h1 className={styles.mcDetTitulo}>{campaign.title}</h1>
+          <span
+            className={`${styles.mcEstado} ${
+              campaign.status === "published" ? "" : styles.mcEstadoQuieto
+            }`}
+          >
+            {CAMPAIGN_STATUS_LABEL[campaign.status]}
+          </span>
+        </div>
+        <div className={styles.mcDetMeta}>
+          {[
+            campaign.published_at &&
+              `Publicada el ${new Date(campaign.published_at).toLocaleDateString("es-CR", {
+                day: "numeric",
+                month: "short",
+              })}`,
+            // "días de plazo" y NO "cierra en N días" como decía el mockup: es
+            // el tiempo que tiene el creador para entregar DESPUÉS de que la
+            // marca lo acepta. Una campaña publicada no tiene fecha de cierre.
+            campaign.deadline_days && `${campaign.deadline_days} días de plazo`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+      </div>
+
+      {/* ---- Lo que hay que decidir ahora ---- */}
+      {entregaPendiente && (
+        <div className={styles.mcDecidir}>
+          <div className={styles.mcDecidirLabel}>Te toca aprobar</div>
+          <div className={styles.mcAprobarFila}>
+            <span className={styles.mcAprobarThumb}>
+              <QosIcon name="play" size={19} />
+            </span>
+            <span className={styles.mcDecidirTxt}>
+              <span className={styles.mcDecidirNum}>
+                {displayHandle(perfilPendiente?.handle ?? "") || "Un creador"} entregó
+                {piezasPendientes.length > 1 ? ` ${piezasPendientes.length} piezas` : " su pieza"}
+              </span>
+              <span className={styles.mcDecidirSub}>
+                {entregaPendiente.delivered_at
+                  ? new Date(entregaPendiente.delivered_at).toLocaleString("es-CR", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })
+                  : "Esperando tu revisión"}
+              </span>
+            </span>
+          </div>
+
+          {/* Ver la pieza va primero: aprobar sin mirar no es una decisión. */}
+          <div className={styles.mcAprobarAcciones}>
+            {linkPrimeraPieza && (
+              <a
+                href={linkPrimeraPieza}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.mcAprobarSec}
+              >
+                Ver la pieza
+              </a>
+            )}
+            <ApproveWithRatingForm
+              applicationId={entregaPendiente.id}
+              campaignId={campaign.id}
+              oscuro
+            />
+          </div>
+
+          <ConflictActionButton
+            applicationId={entregaPendiente.id}
+            kind="dispute"
+            label="Reportar un problema"
+            className={styles.mcAprobarReportar}
+          />
+        </div>
+      )}
+
+      {!entregaPendiente && porRevisar.length > 0 && (
+        <div className={styles.mcDecidir}>
+          <div className={styles.mcDecidirLabel}>Te toca decidir</div>
+          <div className={styles.mcDecidirFila}>
+            <AvataresAplicantes
+              caras={porRevisar.map((a) => ({
+                id: a.id,
+                nombre: profileById.get(a.creator_id)?.display_name ?? "Creador",
+                avatarUrl: profileById.get(a.creator_id)?.avatar_url ?? null,
+              }))}
+            />
+            <span className={styles.mcDecidirTxt}>
+              <span className={styles.mcDecidirNum}>
+                {porRevisar.length} aplicante{porRevisar.length === 1 ? "" : "s"} por revisar
+              </span>
+              <span className={styles.mcDecidirSub}>Están abajo, con su book</span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {campaign.status === "draft" && (
+        <div style={{ marginBottom: "20px" }}>
+          <PublishCampaignButton campaignId={campaign.id} />
+        </div>
+      )}
+
+      {/* ---- El pago ---- */}
+      {campaign.budget_amount != null && (
+        <>
+          <div className={styles.mcPago}>
+            <div className={styles.mcPagoFila}>
+              <span className={styles.mcPagoK}>Presupuesto</span>
+              <span className={styles.mcPagoV}>{crc(campaign.budget_amount)}</span>
             </div>
-            {/* La marca ve exactamente el mismo desglose que el creador. Que
-                los dos lados lean las mismas tres cifras es el punto: antes
-                cada uno veía un número distinto y ninguno sabía por qué. */}
-            <div style={{ marginTop: "12px", maxWidth: "340px" }}>
-              <DesglosePago budgetAmount={campaign.budget_amount} audiencia="marca" />
+            <div className={styles.mcPagoFila}>
+              <span className={styles.mcPagoK}>
+                Comisión de Q Labs ({Math.round(AGENCY_FEE_RATE * 100)}%)
+              </span>
+              <span className={styles.mcPagoV}>− {crc(comision)}</span>
+            </div>
+            <div className={`${styles.mcPagoFila} ${styles.mcPagoTotal}`}>
+              <span className={styles.mcPagoK}>Recibe el creador</span>
+              <span className={styles.mcPagoV}>{crc(neto)}</span>
             </div>
           </div>
-          {campaign.status === "draft" && <PublishCampaignButton campaignId={campaign.id} />}
-        </div>
+          <p className={styles.mcPagoNota}>El pago lo coordina Q Labs por fuera de la app.</p>
+        </>
+      )}
 
-        <p style={{ marginTop: "16px", color: "var(--ink-2)" }}>{campaign.brief}</p>
-
-        {campaign.target_audience && (
-          <p style={{ marginTop: "12px", fontSize: "13.5px", color: "var(--ink-2)" }}>
-            <span style={{ fontWeight: 700, color: "var(--ink)" }}>Audiencia: </span>
-            {campaign.target_audience}
-          </p>
-        )}
-
-        {campaign.compensation_details && (
-          <p style={{ marginTop: "8px", fontSize: "13.5px", color: "var(--ink-2)" }}>
-            <span style={{ fontWeight: 700, color: "var(--ink)" }}>Compensación adicional: </span>
-            {campaign.compensation_details}
-          </p>
-        )}
-
-        {hasUsageRights(campaign) ? (
-          <p style={{ marginTop: "8px", fontSize: "13.5px", color: "var(--ink-2)" }}>
-            <span style={{ fontWeight: 700, color: "var(--ink)" }}>Derechos de uso: </span>
-            {usageRightsChips(campaign).join(" · ")}
-            {campaign.usage_rights_notes ? ` — ${campaign.usage_rights_notes}` : ""}
-          </p>
-        ) : (
-          <p style={{ marginTop: "8px", fontSize: "13.5px", color: "var(--ink-3)" }}>
-            <span style={{ fontWeight: 700 }}>Derechos de uso: </span>
-            no especificados (campaña creada antes de este campo)
-          </p>
-        )}
-
-        {deliverables.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "16px" }}>
-            {deliverables.map((d) => (
-              <span key={d.type} className={styles.tag}>
-                {d.qty}x {FORMAT_LABEL[d.type] ?? d.type}
-              </span>
+      {/* ---- Lo que pediste ---- */}
+      {pedido.length > 0 && (
+        <>
+          <h2 className={styles.mcSecTit}>Lo que pediste</h2>
+          <div className={styles.mcPedido}>
+            {pedido.map(([k, v]) => (
+              <div key={k} className={styles.mcPedidoFila}>
+                <span className={styles.mcPedidoK}>{k}</span>
+                <span className={styles.mcPedidoV}>{v}</span>
+              </div>
             ))}
           </div>
-        )}
+        </>
+      )}
 
+      {/* ---- Aplicantes ---- */}
+      <h2 className={styles.mcSecTit} style={{ marginTop: "24px" }}>
+        Aplicantes {applications && applications.length > 0 ? `· ${applications.length}` : ""}
+      </h2>
+
+      {applications && applications.length > 0 ? (
+        applications.map((app) => {
+          const profile = profileById.get(app.creator_id);
+          const cp = creatorProfileById.get(app.creator_id);
+          const piezas = deliveriesByApplicationId.get(app.id) ?? [];
+
+          return (
+            <div key={app.id} className={styles.mcCard}>
+              <div className={styles.mcCardTop}>
+                <div style={{ minWidth: 0 }}>
+                  <div className={styles.mcCardTitulo}>
+                    {displayHandle(cp?.handle ?? "") || profile?.display_name || "Creador"}
+                  </div>
+                  <div className={styles.mcCardMeta}>
+                    {[
+                      cp?.followers_count
+                        ? `${cp.followers_count.toLocaleString("es-CR")} seguidores`
+                        : null,
+                      profile?.city,
+                      cp?.niches?.[0],
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                </div>
+                <span
+                  className={`${styles.riskPill} ${styles["risk" + APPLICATION_STATUS_STYLE[app.status]]}`}
+                >
+                  {APPLICATION_STATUS_LABEL[app.status]}
+                </span>
+              </div>
+
+              {app.pitch_message && (
+                <p className={styles.mcPitch}>“{app.pitch_message}”</p>
+              )}
+
+              {piezas.length > 0 && (
+                <div style={{ marginTop: "12px" }}>
+                  {piezas.map((d) => {
+                    const url =
+                      d.external_url ??
+                      (d.storage_path ? signedUrlByPath.get(d.storage_path) : null);
+                    return url ? (
+                      <a
+                        key={d.id}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.mcCardFila}
+                      >
+                        <span className={styles.mcFilaPunto} />
+                        <span className={styles.mcFilaTxt}>
+                          {(d.slot && etiquetaDeSlot.get(d.slot)) ?? "Pieza"}
+                        </span>
+                        <QosIcon name="external" size={15} className={styles.mcFilaChev} />
+                      </a>
+                    ) : null;
+                  })}
+                </div>
+              )}
+
+              {app.rating && (
+                <div className={styles.mcCardMeta} style={{ marginTop: "10px" }}>
+                  Calificada {"★".repeat(app.rating)}
+                  <span style={{ color: "var(--line-strong)" }}>{"★".repeat(5 - app.rating)}</span>
+                </div>
+              )}
+
+              {app.conflict_reason && (
+                <p className={styles.mcCanjeAviso} style={{ marginTop: "12px" }}>
+                  {app.status === "cancelled" ? "Motivo de la cancelación: " : "Caso abierto: "}
+                  {app.conflict_reason}
+                </p>
+              )}
+
+              <div className={styles.mcAplicanteAcciones}>
+                {cp?.handle && (
+                  <Link
+                    href={`/ugc/creadores/${cp.handle.replace(/^@/, "")}`}
+                    className={styles.mcCuponBtn}
+                  >
+                    Ver book
+                  </Link>
+                )}
+                {(app.status === "pending" || app.status === "reviewing") && (
+                  <ApplicantDecisionButtons
+                    applicationId={app.id}
+                    campaignId={campaign.id}
+                    creatorName={
+                      cp?.handle ? displayHandle(cp.handle) : (profile?.display_name ?? "el creador")
+                    }
+                  />
+                )}
+                {canCancel(app.status) && (
+                  <ConflictActionButton
+                    applicationId={app.id}
+                    kind="cancel"
+                    label="Cancelar colaboración"
+                    className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                  />
+                )}
+                {canDispute(app.status) && app.status !== "delivered" && (
+                  <ConflictActionButton
+                    applicationId={app.id}
+                    kind="dispute"
+                    label="Reportar un problema"
+                    className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <div className={styles.mcVacio}>
+          <QosIcon name="users" size={26} className={styles.trVacioIc} />
+          <p className={styles.mcVacioTxt}>
+            Todavía nadie aplicó. Cuando alguien lo haga, te avisamos.
+          </p>
+        </div>
+      )}
+
+      {/* La portada no está en el mockup y se conserva: es lo primero que ve un
+          creador en el feed, y sin ella la tarjeta cae al logo de la marca. */}
+      <h2 className={styles.mcSecTit} style={{ marginTop: "24px" }}>
+        Portada
+      </h2>
+      <div className={styles.mcCard}>
         <CampaignCoverEditor
           campaignId={campaign.id}
           coverUrl={campaign.cover_url}
@@ -177,191 +438,6 @@ export default async function CampaignDetailPage({
           brandLogoUrl={brand?.logo_url ?? null}
         />
       </div>
-
-      <div className={styles.sectionHead} style={{ marginTop: "28px" }}>
-        <h2 className={styles.sectionHeadBig}>Aplicantes ({applications?.length ?? 0})</h2>
-      </div>
-
-      {applications && applications.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {applications.map((app) => {
-            const profile = profileById.get(app.creator_id);
-            const creatorProfile = creatorProfileById.get(app.creator_id);
-
-            return (
-              <div key={app.id} className={`${styles.card} ${styles.cardPad}`}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {creatorProfile?.handle ? (
-                        <Link
-                          href={`/ugc/creadores/${creatorProfile.handle.replace(/^@/, "")}`}
-                          style={{ fontWeight: 800, color: "var(--ink)" }}
-                        >
-                          {displayHandle(creatorProfile.handle)}
-                        </Link>
-                      ) : (
-                        <span style={{ fontWeight: 800, color: "var(--ink)" }}>
-                          {profile?.display_name ?? "Creador"}
-                        </span>
-                      )}
-                      {creatorProfile?.verified && (
-                        <span className={`${styles.riskPill} ${styles.riskOk}`}>Verificado</span>
-                      )}
-                    </div>
-                    <div style={{ marginTop: "4px", fontSize: "13px", color: "var(--ink-3)" }}>
-                      {profile?.city && `${profile.city} · `}
-                      {creatorProfile?.followers_count
-                        ? `${creatorProfile.followers_count.toLocaleString("es-CR")} seguidores`
-                        : null}
-                    </div>
-                    {creatorProfile?.niches && creatorProfile.niches.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
-                        {creatorProfile.niches.map((niche) => (
-                          <span key={niche} className={styles.chip}>
-                            {niche}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    className={`${styles.riskPill} ${styles["risk" + APPLICATION_STATUS_STYLE[app.status]]}`}
-                  >
-                    {APPLICATION_STATUS_LABEL[app.status]}
-                  </span>
-                </div>
-
-                {app.pitch_message && (
-                  <p
-                    style={{
-                      marginTop: "12px",
-                      padding: "12px",
-                      borderRadius: "var(--r-md)",
-                      background: "var(--surface-3)",
-                      fontSize: "13.5px",
-                      color: "var(--ink-2)",
-                    }}
-                  >
-                    {app.pitch_message}
-                  </p>
-                )}
-
-                {(app.status === "pending" || app.status === "reviewing") && (
-                  <ApplicantDecisionButtons
-                    applicationId={app.id}
-                    campaignId={campaign.id}
-                    creatorName={
-                      creatorProfile?.handle
-                        ? displayHandle(creatorProfile.handle)
-                        : (profile?.display_name ?? "el creador")
-                    }
-                  />
-                )}
-
-                {(app.status === "delivered" || app.status === "approved") &&
-                  (deliveriesByApplicationId.get(app.id)?.length ?? 0) > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px" }}>
-                      {deliveriesByApplicationId.get(app.id)!.map((d) => (
-                        <div key={d.id} style={{ fontSize: "13.5px", color: "var(--ink-2)" }}>
-                          {/* El creador entrega por entregable, así que decir
-                              cuál es cada archivo importa: con 1 reel y 3
-                              stories, "Ver pieza entregada" cuatro veces no
-                              distingue nada. */}
-                          {d.slot && (
-                            <b style={{ color: "var(--ink)" }}>
-                              {slotsDeCampana(campaign.deliverables).find((s) => s.id === d.slot)
-                                ?.etiqueta ?? d.slot}{" "}
-                            </b>
-                          )}
-                          {d.kind === "file" ? (
-                            <a
-                              href={signedUrlByPath.get(d.storage_path!) ?? "#"}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={styles.linkMore}
-                            >
-                              Ver pieza entregada
-                            </a>
-                          ) : (
-                            <a href={d.external_url!} target="_blank" rel="noreferrer" className={styles.linkMore}>
-                              Ver link entregado
-                            </a>
-                          )}
-                          {d.note && <span> — {d.note}</span>}
-                        </div>
-                      ))}
-                      {app.delivery_note && (
-                        <p style={{ fontSize: "13px", color: "var(--ink-2)", marginTop: "4px" }}>
-                          <b>Nota del creador: </b>
-                          {app.delivery_note}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                {app.status === "delivered" && (
-                  <ApproveWithRatingForm applicationId={app.id} campaignId={campaign.id} />
-                )}
-
-                {app.status === "approved" && app.rating && (
-                  <div style={{ marginTop: "12px", fontSize: "13.5px", color: "var(--ink-2)" }}>
-                    Calificaste esta entrega con {"★".repeat(app.rating)}
-                    {"☆".repeat(5 - app.rating)}
-                  </div>
-                )}
-
-                {/* Después de que hay entrega la marca ya NO puede cancelar
-                    —sería quedarse con el material— solo abrir un caso. */}
-                {(canCancel(app.status) || canDispute(app.status)) && (
-                  <div
-                    style={{
-                      marginTop: "14px",
-                      paddingTop: "14px",
-                      borderTop: "1px solid var(--line-2)",
-                      display: "flex",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    {canCancel(app.status) && (
-                      <ConflictActionButton
-                        applicationId={app.id}
-                        kind="cancel"
-                        label="Cancelar colaboración"
-                        className={`${styles.btn} ${styles.btnGhost}`}
-                      />
-                    )}
-                    {canDispute(app.status) && (
-                      <ConflictActionButton
-                        applicationId={app.id}
-                        kind="dispute"
-                        label="Reportar un problema"
-                        className={`${styles.btn} ${styles.btnGhost}`}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {(app.status === "cancelled" || app.status === "disputed") && app.conflict_reason && (
-                  <div style={{ marginTop: "12px", fontSize: "13px", color: "var(--ink-2)" }}>
-                    <b>{app.status === "cancelled" ? "Motivo de la cancelación: " : "Caso abierto: "}</b>
-                    {app.conflict_reason}
-                  </div>
-                )}
-
-                {app.admin_note && (
-                  <div style={{ marginTop: "8px", fontSize: "13px", color: "var(--ink-2)" }}>
-                    <b>Resolución de Q Labs: </b>
-                    {app.admin_note}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className={`${styles.card} ${styles.empty}`}>Todavía no hay aplicantes.</div>
-      )}
     </div>
   );
 }
