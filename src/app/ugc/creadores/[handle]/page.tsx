@@ -204,14 +204,6 @@ export default async function CreatorPublicProfilePage({
                   <i className="fa-solid fa-circle-check" aria-hidden /> Creador verificado
                 </p>
               )}
-              <p className="mt-1 text-sm text-ink-soft">
-                {[
-                  profile?.city,
-                  `${creatorProfile.followers_count.toLocaleString("es-CR")} seguidores`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
             </div>
             {approvedCount > 0 && (
               <div className="flex shrink-0 flex-col items-center gap-0.5">
@@ -222,6 +214,20 @@ export default async function CreatorPublicProfilePage({
               </div>
             )}
           </div>
+
+            {/* Ciudad y seguidores van a lo ancho y NO adentro de la columna del
+                handle: ahí la columna mide 150px —se la reparten el avatar y el
+                anillo de confianza, que solo mide 84— y la línea necesita 191,
+                así que "seguidores" caía sola al renglón de abajo. Bajarle el
+                tamaño no alcanzaba: ni a 12px entra. */}
+            <p className="mt-2 text-sm text-ink-soft">
+              {[
+                profile?.city,
+                `${creatorProfile.followers_count.toLocaleString("es-CR")} seguidores`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
 
             {profile?.bio && (
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-soft">{profile.bio}</p>
@@ -279,9 +285,15 @@ export default async function CreatorPublicProfilePage({
 
         {/* STATS de prueba social */}
         <div className="mt-4 grid grid-cols-3 gap-3">
+          {/* En un teléfono cada tarjeta mide 105px y el `p-5` le dejaba 63 de
+              caja: "20 000" a 24px necesita 82 y "entregados" 67, así que las
+              dos se salían del recuadro y por eso el número no se veía
+              centrado. Con 12px de padding la caja pasa a 81 y el valor a 20px
+              pide 68 — entran las dos. De `sm:` para arriba sobra el espacio y
+              se quedan las medidas grandes. */}
           {topStats.map((s) => (
-            <div key={s.label} className="rounded-card border border-line bg-white p-5 text-center">
-              <div className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            <div key={s.label} className="rounded-card border border-line bg-white p-3 text-center sm:p-5">
+              <div className="text-xl font-extrabold tracking-tight text-ink sm:text-3xl">
                 {s.value}
               </div>
               <div className="mt-1 text-xs font-medium text-ink-soft">{s.label}</div>

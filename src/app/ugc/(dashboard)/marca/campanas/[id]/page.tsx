@@ -148,7 +148,6 @@ export default async function CampaignDetailPage({
           <QosIcon name="chevL" size={15} /> Campañas
         </Link>
         <span className={styles.mcFormTitulo}>Campaña</span>
-        <span style={{ width: 78 }} aria-hidden />
       </div>
 
       <div className={styles.mcDetHead}>

@@ -10678,14 +10678,28 @@
 }
 
 /* La barra de arriba del formulario: Cancelar y el título. */
+/* Tres columnas y no `flex`: con las dos de los costados en `1fr` miden
+   siempre lo mismo, así que el título del medio queda centrado de verdad sin
+   el hueco de ancho fijo que había que ir ajustando a mano cada vez que
+   cambiaba la palabra de la izquierda. */
 .mcFormBar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
 }
+/* `inline-flex` y no el bloque que era: `.qosRoot svg { display: block }` le
+   daba renglón propio al chevron y el texto caía debajo, así que "‹ Campañas"
+   se dibujaba en dos líneas de 46px de alto. No era falta de espacio —el link
+   medía 84 de ancho en una barra de 342— y por eso `flex-shrink: 0` no lo
+   arreglaba. */
 .qosRoot .mcCancelar {
-  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: start;
+  white-space: nowrap;
   padding: 4px 6px 4px 0;
   border: none;
   background: none;
@@ -10697,7 +10711,6 @@
   cursor: pointer;
 }
 .qosRoot .mcFormTitulo {
-  flex: 1;
   text-align: center;
   font-size: 16px;
   font-weight: 800;

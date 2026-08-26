@@ -26,10 +26,6 @@ export default async function NuevaCampanaPage() {
           Cancelar
         </Link>
         <span className={styles.mcFormTitulo}>Nueva campaña</span>
-        {/* Hueco del ancho de "Cancelar" para que el título quede centrado de
-            verdad: `space-between` no centra al del medio si los costados
-            miden distinto. */}
-        <span style={{ width: 62 }} aria-hidden />
       </div>
 
       <CampaignForm brandId={user!.id} />

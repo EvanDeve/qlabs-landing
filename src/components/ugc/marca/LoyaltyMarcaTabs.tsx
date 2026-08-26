@@ -86,7 +86,6 @@ export default function LoyaltyMarcaTabs({
             Cancelar
           </button>
           <span className={styles.mcFormTitulo}>Nuevo cupón</span>
-          <span style={{ width: 62 }} aria-hidden />
         </div>
         {/* Vuelve a la lista al guardar: es una acción con principio y fin, no
             una pestaña donde quedarse. */}

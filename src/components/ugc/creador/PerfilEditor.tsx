@@ -198,7 +198,7 @@ export default function PerfilEditor({
               )}
             </div>
             <div className={styles.perfilIdentSub}>
-              {inicial.verified ? "Verificado a mano por Q Labs" : "Todavía sin verificar"}
+              {inicial.verified ? "Verificado por Q Labs" : "Todavía sin verificar"}
             </div>
           </div>
           <CompartirPerfil handle={inicial.handle} />
