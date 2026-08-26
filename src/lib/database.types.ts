@@ -1156,6 +1156,14 @@ export interface Database {
           title: string;
           deliverable_types: string[] | null;
           published_at: string | null;
+          brief: string | null;
+          deliverables: { type: string; qty: number }[] | null;
+          deadline_days: number | null;
+          target_audience: string | null;
+          compensation_details: string | null;
+          usage_rights_scope: string | null;
+          usage_rights_duration: string | null;
+          usage_rights_editing: boolean | null;
         }[];
       };
       creator_delivery_stats: {

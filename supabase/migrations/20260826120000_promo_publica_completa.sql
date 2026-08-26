@@ -20,7 +20,14 @@
 -- exponer un pedazo chico de una tabla cerrada. Con `security_invoker`
 -- devolvería cero filas. Ver la nota de las cuatro vistas en los pendientes.
 
-create or replace function public.brand_public_campaigns(p_slug text)
+-- ⚠️ `create or replace` NO puede cambiar el tipo de retorno de una función que
+-- ya existe: Postgres tira 42P13 ("cannot change return type of existing
+-- function"). Como acá se le agregan columnas al `returns table`, hay que
+-- borrarla antes. El `if exists` deja la migración idempotente, y el `grant` de
+-- más abajo vuelve a otorgar el permiso, que el drop se lleva puesto.
+drop function if exists public.brand_public_campaigns(text);
+
+create function public.brand_public_campaigns(p_slug text)
 returns table (
   id uuid,
   title text,
@@ -32,9 +39,15 @@ returns table (
   deadline_days integer,
   target_audience text,
   compensation_details text,
+  -- Se devuelven como text y se castean abajo: en la tabla son los ENUM
+  -- `campaign_usage_scope` y `campaign_usage_duration`, y declarar text sin
+  -- castear también revienta la función. Del lado de TypeScript llegan como
+  -- string igual, así que castear es más simple que arrastrar los enums.
   usage_rights_scope text,
   usage_rights_duration text,
-  usage_rights_editing text
+  -- boolean, no text: el tipo del `returns table` tiene que calzar EXACTO con
+  -- el de la columna o la función revienta en cada llamada.
+  usage_rights_editing boolean
 )
 language sql
 stable
@@ -54,8 +67,8 @@ as $$
     c.deadline_days,
     c.target_audience,
     c.compensation_details,
-    c.usage_rights_scope,
-    c.usage_rights_duration,
+    c.usage_rights_scope::text,
+    c.usage_rights_duration::text,
     c.usage_rights_editing
   from public.campaigns c
   join public.brand_profiles b on b.profile_id = c.brand_id

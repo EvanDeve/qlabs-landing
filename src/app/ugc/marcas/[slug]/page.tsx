@@ -97,7 +97,7 @@ export default async function BrandPublicProfilePage({
   // derechos incluidos— y sigue SIN devolver el monto: el pago es lo único que
   // exige cuenta de creador. Ver la migración `promo_publica_completa`.
   const { data } = await supabase.rpc("brand_public_campaigns", { p_slug: slug });
-  const promos = (data ?? []) as unknown as PromoPublica[];
+  const promos: PromoPublica[] = data ?? [];
 
   const igHandle = brand.instagram_handle?.replace(/^@/, "");
   const sitio = brand.website?.replace(/^https?:\/\//, "").replace(/\/$/, "");
