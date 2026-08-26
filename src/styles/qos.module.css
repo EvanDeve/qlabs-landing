@@ -10887,3 +10887,172 @@
   font-size: 11px;
   color: var(--ink-3);
 }
+
+/* ---------------- ESCÁNER A PANTALLA COMPLETA ----------------
+   Es la única pantalla del panel que se come el shell entero: tapa la barra de
+   tabs y la campana. Tiene que ser así — se usa con alguien parado enfrente
+   esperando, y cualquier cosa alrededor es una forma de tocar lo que no es. */
+.mcEscaner {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #0b0a0f;
+}
+.mcEscanerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  padding-top: calc(14px + env(safe-area-inset-top));
+}
+.mcEscanerTit {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.qosRoot .mcEscanerX {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+}
+.qosRoot .mcEscanerX:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+.mcEscanerVista {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+.mcEscanerVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Los cuatro corchetes. Van con `border` en las esquinas de un cuadrado
+   centrado: cuatro divs con dos bordes cada uno es menos código que un SVG y
+   escala solo con el tamaño de la pantalla. */
+.mcEscanerMira {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(62vw, 240px);
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+.mcEscanerEsq {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  border: 3px solid var(--b-400);
+}
+.mcEscanerEsq:nth-child(1) {
+  top: 0;
+  left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 14px;
+}
+.mcEscanerEsq:nth-child(2) {
+  top: 0;
+  right: 0;
+  border-left: 0;
+  border-bottom: 0;
+  border-top-right-radius: 14px;
+}
+.mcEscanerEsq:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  border-right: 0;
+  border-top: 0;
+  border-bottom-left-radius: 14px;
+}
+.mcEscanerEsq:nth-child(4) {
+  bottom: 0;
+  right: 0;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 14px;
+}
+.mcEscanerPie {
+  padding: 18px 20px calc(24px + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.62);
+}
+.qosRoot .mcEscanerManual {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--b-300);
+  text-decoration: none;
+}
+
+/* La hoja de resultado, sobre el mismo fondo oscuro del escáner. Es la
+   continuación de esa pantalla: se llega leyendo el QR desde adentro o desde
+   la cámara del sistema, y en los dos casos lo que se está haciendo es mirar
+   un canje, no navegar el panel. */
+.mcCanjeFondo {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: #0b0a0f;
+}
+.mcCanjeHoja {
+  border-radius: 22px 22px 0 0;
+  background: var(--surface);
+  padding: 18px 18px calc(20px + env(safe-area-inset-bottom));
+  max-height: 88vh;
+  overflow-y: auto;
+}
+/* El agarre: no hace nada, dice que esto es una hoja y no una página. */
+/* Adentro de la hoja, la tarjeta del resultado no lleva su propio marco: la
+   hoja YA es la superficie blanca, y las dos juntas se veían como una tarjeta
+   metida dentro de otra. `.mcCanje` conserva su estilo suelto por si algún día
+   se usa fuera de acá. */
+.mcCanjeHoja .mcCanje {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.mcCanjeAgarre {
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+@media (min-width: 901px) {
+  /* En escritorio no hay hoja que suba: se centra como una tarjeta. */
+  .mcCanjeFondo {
+    justify-content: center;
+    align-items: center;
+  }
+  .mcCanjeHoja {
+    width: min(440px, 92vw);
+    border-radius: 22px;
+    padding-bottom: 20px;
+  }
+  .mcCanjeAgarre {
+    display: none;
+  }
+}

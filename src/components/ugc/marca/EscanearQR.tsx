@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 
@@ -32,6 +32,96 @@ export function extraerCodigo(texto: string): string | null {
 
 /** Cuántas veces por segundo se mira la imagen buscando un código. */
 const INTERVALO_MS = 220;
+
+/**
+ * El motor de lectura, sin nada de interfaz.
+ *
+ * Se llama `useLectorQR` y no `usarLectorQR` aunque el resto del código esté
+ * en español: el prefijo `use` es lo que hace que las reglas de hooks de React
+ * lo traten como hook. Con el nombre en español el linter lo veía como una
+ * función normal y protestaba por pasarle una ref.
+ *
+ * Vive aparte porque hay DOS pantallas que escanean: la tarjeta de Loyalty
+ * —donde la cámara es un paso más de un formulario— y `/marca/validar`, que es
+ * la cámara a pantalla completa. Duplicar 90 líneas de `BarcodeDetector` +
+ * jsQR en las dos era garantía de que una se arreglara y la otra no.
+ *
+ * Le entra un <video> ya con su stream y devuelve el código cuando lo ve.
+ */
+export function useLectorQR({
+  videoRef,
+  activo,
+  onCodigo,
+  onAviso,
+}: {
+  videoRef: RefObject<HTMLVideoElement | null>;
+  activo: boolean;
+  onCodigo: (code: string) => void;
+  onAviso?: (mensaje: string) => void;
+}) {
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!activo || !video) return;
+
+    let vivo = true;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    const Detector = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor })
+      .BarcodeDetector;
+    let nativo: BarcodeDetectorLike | null = null;
+    try {
+      if (Detector) nativo = new Detector({ formats: ["qr_code"] });
+    } catch {
+      // Existe el constructor pero no soporta QR: se usa jsQR igual.
+    }
+
+    // Solo se descarga en el navegador que lo necesita, y solo al abrir.
+    const jsQRPromise = nativo ? null : import("jsqr").then((m) => m.default);
+
+    function aceptar(texto: string) {
+      const code = extraerCodigo(texto);
+      if (!code) {
+        onAviso?.("Ese QR no es de un cupón de Q Labs.");
+        return;
+      }
+      vivo = false;
+      onCodigo(code);
+    }
+
+    async function mirar() {
+      if (!vivo || !video || !ctx || video.readyState < 2) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      if (!canvas.width || !canvas.height) return;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      try {
+        if (nativo) {
+          const [primero] = await nativo.detect(canvas);
+          if (primero && vivo) aceptar(primero.rawValue);
+          return;
+        }
+        const jsQR = await jsQRPromise;
+        if (!jsQR || !vivo) return;
+        const imagen = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const leido = jsQR(imagen.data, imagen.width, imagen.height, {
+          inversionAttempts: "dontInvert",
+        });
+        if (leido?.data && vivo) aceptar(leido.data);
+      } catch {
+        // Un cuadro ilegible es lo normal mientras se encuadra: se ignora y se
+        // vuelve a intentar con el siguiente.
+      }
+    }
+
+    const timer = setInterval(mirar, INTERVALO_MS);
+    return () => {
+      vivo = false;
+      clearInterval(timer);
+    };
+  }, [activo, videoRef, onCodigo, onAviso]);
+}
 
 /**
  * Lee el QR del creador con la cámara del teléfono y devuelve el código.
@@ -102,81 +192,37 @@ export default function EscanearQR({ onCodigo }: { onCodigo: (code: string) => v
   }
 
   /**
-   * El arranque de la lectura va en un efecto y no dentro de `abrir()`: el
-   * <video> recién existe en el DOM después de que React pinte `abierto`, así
-   * que asignarle el stream en la misma vuelta no encontraba el nodo.
+   * Conectar el stream va en un efecto y no dentro de `abrir()`: el <video>
+   * recién existe en el DOM después de que React pinte `abierto`, así que
+   * asignarle el stream en la misma vuelta no encontraba el nodo.
    */
   useEffect(() => {
     if (!abierto) return;
     const video = videoRef.current;
     const stream = streamRef.current;
     if (!video || !stream) return;
-
-    let vivo = true;
     video.srcObject = stream;
     video.play().catch(() => {
       // Safari puede rechazar el play si el gesto quedó lejos; el usuario
       // siempre tiene el campo manual.
     });
+  }, [abierto]);
 
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-
-    const Detector = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor })
-      .BarcodeDetector;
-    let nativo: BarcodeDetectorLike | null = null;
-    try {
-      if (Detector) nativo = new Detector({ formats: ["qr_code"] });
-    } catch {
-      // Existe el constructor pero no soporta QR: se usa jsQR igual.
-    }
-
-    // Solo se descarga en el navegador que lo necesita, y solo al abrir.
-    const jsQRPromise = nativo ? null : import("jsqr").then((m) => m.default);
-
-    function aceptar(texto: string) {
-      const code = extraerCodigo(texto);
-      if (!code) {
-        setAviso("Ese QR no es de un cupón de Q Labs.");
-        return;
-      }
+  const alLeer = useCallback(
+    (code: string) => {
       onCodigo(code);
       cerrar();
-    }
+    },
+    [onCodigo, cerrar]
+  );
 
-    async function mirar() {
-      if (!vivo || !video || !ctx || video.readyState < 2) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      if (!canvas.width || !canvas.height) return;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      try {
-        if (nativo) {
-          const [primero] = await nativo.detect(canvas);
-          if (primero && vivo) aceptar(primero.rawValue);
-          return;
-        }
-        const jsQR = await jsQRPromise;
-        if (!jsQR || !vivo) return;
-        const imagen = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const leido = jsQR(imagen.data, imagen.width, imagen.height, {
-          inversionAttempts: "dontInvert",
-        });
-        if (leido?.data && vivo) aceptar(leido.data);
-      } catch {
-        // Un cuadro ilegible es lo normal mientras se encuadra: se ignora y se
-        // vuelve a intentar con el siguiente.
-      }
-    }
-
-    timerRef.current = setInterval(mirar, INTERVALO_MS);
-    return () => {
-      vivo = false;
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-    };
-  }, [abierto, cerrar, onCodigo]);
+  // El motor de lectura es el mismo que usa la cámara a pantalla completa.
+  useLectorQR({
+    videoRef,
+    activo: abierto,
+    onCodigo: alLeer,
+    onAviso: setAviso,
+  });
 
   return (
     <div style={{ marginBottom: "16px" }}>

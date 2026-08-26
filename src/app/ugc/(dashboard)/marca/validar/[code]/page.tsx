@@ -45,14 +45,16 @@ export default async function ValidarCodigoPage({
     : 0;
 
   return (
-    <div className={styles.mcCol}>
-      <div className={styles.mcFormBar}>
-        <Link href="/ugc/marca/loyalty" className={styles.mcCancelar}>
-          Cancelar
+    <div className={styles.mcCanjeFondo}>
+      <div className={styles.mcEscanerBar}>
+        <span className={styles.mcEscanerTit}>Validar canje</span>
+        <Link href="/ugc/marca/loyalty" className={styles.mcEscanerX} aria-label="Cerrar">
+          <QosIcon name="x" size={17} />
         </Link>
-        <span className={styles.mcFormTitulo}>Validar canje</span>
-        <span style={{ width: 62 }} aria-hidden />
       </div>
+      <div style={{ flex: 1 }} />
+      <div className={styles.mcCanjeHoja}>
+        <div className={styles.mcCanjeAgarre} aria-hidden />
 
       {!reclamo ? (
         <div className={styles.mcCanje}>
@@ -142,6 +144,7 @@ export default async function ValidarCodigoPage({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

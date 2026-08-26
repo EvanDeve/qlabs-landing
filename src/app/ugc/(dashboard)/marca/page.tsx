@@ -281,7 +281,7 @@ export default async function MarcaResumenPage() {
                 : "Pueden llegar a canjearlos"}
             </span>
           </span>
-          <Link href="/ugc/marca/loyalty" className={styles.mcCuponBtn}>
+          <Link href="/ugc/marca/validar" className={styles.mcCuponBtn}>
             Validar
           </Link>
         </div>
