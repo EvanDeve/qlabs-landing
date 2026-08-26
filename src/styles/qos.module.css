@@ -10491,3 +10491,369 @@
   font-weight: 700;
   color: var(--ok);
 }
+
+/* ---------------- NUEVA CAMPAÑA ----------------
+   Formulario "inset grouped" de iOS: secciones con su rótulo chiquito afuera y
+   los campos adentro de una tarjeta blanca, separados por hairlines. */
+.mcFormSec {
+  margin: 22px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.mcFormSec:first-child {
+  margin-top: 0;
+}
+.mcInset {
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+  overflow: hidden;
+}
+/* El campo con su rótulo flotando arriba: en un formulario largo, un
+   placeholder que desaparece al escribir deja al usuario sin saber qué campo
+   está llenando tres líneas después. */
+.mcCampo {
+  padding: 11px 14px;
+}
+.mcCampo + .mcCampo,
+.mcCampo + .mcFilaCampo,
+.mcFilaCampo + .mcFilaCampo,
+.mcFilaCampo + .mcCampo {
+  border-top: 1px solid var(--line-2);
+}
+.mcCampoLabel {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.qosRoot .mcCampoInput,
+.qosRoot .mcCampoArea {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  resize: none;
+}
+.qosRoot .mcCampoArea {
+  min-height: 66px;
+  line-height: 1.5;
+}
+.qosRoot .mcCampoInput::placeholder,
+.qosRoot .mcCampoArea::placeholder {
+  color: var(--ink-3);
+}
+
+/* La fila con el rótulo a la izquierda y el valor a la derecha. */
+.mcFilaCampo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+.mcFilaCampoLabel {
+  flex-shrink: 0;
+  font-size: 15px;
+  color: var(--ink);
+}
+.qosRoot .mcFilaCampoInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+  outline: none;
+}
+.qosRoot .mcFilaCampoInput::placeholder {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+/* El presupuesto es el número que decide si alguien aplica: va en violeta y
+   más grande que el resto de la columna. */
+.qosRoot .mcFilaCampoMonto {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--b-600);
+}
+
+/* La banda del desglose. Las tres cifras se muestran a las dos partes desde
+   2026-08-04: acá la marca ve cuánto le llega al creador. */
+.mcBanda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: var(--b-100);
+  font-size: 13px;
+  color: var(--b-900);
+}
+.mcBandaFuerte {
+  font-weight: 800;
+  color: var(--b-700);
+}
+
+/* Los contadores de entregables. Un `<input type=number>` en el teléfono abre
+   el teclado para escribir "1", que es absurdo cuando el rango real es 0 a 5:
+   con − y + se toca y listo. El input sigue existiendo, escondido, porque es
+   lo que el server action lee. */
+.mcEntFila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+.mcEntFila + .mcEntFila {
+  border-top: 1px solid var(--line-2);
+}
+.mcEntNombre {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.mcEntSin .mcEntNombre {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.mcStepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: var(--r-full);
+  background: var(--b-50);
+}
+.qosRoot .mcStepBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--b-600);
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcStepBtn:hover:not(:disabled) {
+  background: var(--b-100);
+}
+.qosRoot .mcStepBtn:disabled {
+  color: var(--b-300);
+  cursor: default;
+}
+.mcStepNum {
+  min-width: 22px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.mcEntAviso {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--risk);
+}
+
+/* La barra de arriba del formulario: Cancelar y el título. */
+.mcFormBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.qosRoot .mcCancelar {
+  flex-shrink: 0;
+  padding: 4px 6px 4px 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--b-600);
+  text-decoration: none;
+  cursor: pointer;
+}
+.qosRoot .mcFormTitulo {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+/* El pie del formulario: dos acciones, la secundaria más chica. Comparte
+   geometría con `.trPie` de Transcripción. */
+.qosRoot .mcPieSec {
+  flex-shrink: 0;
+  height: 46px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  color: var(--b-700);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcPieSec:hover:not(:disabled) {
+  background: var(--b-300);
+  color: #fff;
+}
+.qosRoot .mcPieSec:disabled {
+  color: var(--b-300);
+  cursor: default;
+}
+
+/* ---------------- VALIDAR CANJE ----------------
+   El mockup lo dibuja como una hoja sobre la cámara. La cámara vive en Loyalty
+   —es de donde se llega acá— y esta ruta es a donde apunta el QR, así que acá
+   se dibuja la hoja: el resultado, que es lo que hay que leer. */
+.mcCanje {
+  padding: 22px 18px 18px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 2px 14px rgba(26, 23, 48, 0.07);
+  text-align: center;
+}
+.mcCanjeSello {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.mcCanjeSelloMal {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.mcCanjeSelloNo {
+  background: var(--risk-bg);
+  color: var(--risk);
+}
+.qosRoot .mcCanjeTit {
+  margin-top: 12px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.mcCanjeSub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.mcCanjeCodigo {
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+}
+.mcCanjeTabla {
+  margin: 18px 0 16px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  text-align: left;
+  overflow: hidden;
+}
+.mcCanjeFila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+}
+.mcCanjeFila + .mcCanjeFila {
+  border-top: 1px solid var(--line-2);
+}
+.mcCanjeK {
+  flex-shrink: 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.mcCanjeV {
+  text-align: right;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.mcCanjeVOk {
+  color: var(--ok);
+}
+.mcCanjeAviso {
+  margin-bottom: 14px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  background: var(--warn-bg);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: left;
+  color: var(--warn);
+}
+/* "Ahora no" y no "Rechazar": rechazar suena a que queda registrado en algún
+   lado, y no existe tal estado — lo único que hace es volver sin confirmar. */
+.qosRoot .mcCanjeAhoraNo {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+.qosRoot .mcCanjeAhoraNo:hover {
+  color: var(--ink-2);
+}
+/* El botón de confirmar es VERDE y no violeta: en esta pantalla el violeta es
+   el color de "seguir navegando" y acá lo que se hace es dar por buena una
+   transacción con alguien parado enfrente. */
+.qosRoot .mcCanjeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--ok);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcCanjeBtn:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+.qosRoot .mcCanjeBtn:disabled {
+  background: var(--ok-line);
+  cursor: default;
+}

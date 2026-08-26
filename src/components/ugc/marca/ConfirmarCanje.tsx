@@ -31,7 +31,7 @@ export default function ConfirmarCanje({ code }: { code: string }) {
       <button
         type="submit"
         disabled={pending}
-        className={`${styles.btn} ${styles.btnPrimary}`}
+        className={styles.mcCanjeBtn}
         style={{ width: "100%" }}
       >
         {pending ? "Confirmando…" : "✓ Confirmar canje"}

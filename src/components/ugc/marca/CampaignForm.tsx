@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ugc/Toaster";
-import DesglosePago from "@/components/ugc/DesglosePago";
+import { AGENCY_FEE_RATE, creatorPayout } from "@/lib/ugc/payout";
 import { createClient } from "@/lib/supabase/client";
 import { createCampaignAction, type CampaignActionState } from "@/lib/actions/campaigns";
 import { CAMPAIGN_COVER_BUCKET, MAX_CAMPAIGN_COVER_BYTES } from "@/lib/ugc/campaign-covers";
@@ -240,18 +240,33 @@ export default function CampaignForm({ brandId }: { brandId: string }) {
         </p>
       )}
 
-      <Field
-        label="Título de la campaña"
-        name="title"
-        placeholder="Reel de brunch de domingo"
-        required
-      />
-      <TextArea
-        label="Brief"
-        name="brief"
-        placeholder="Contá qué querés que el creador muestre: mood, ángulo, momentos clave."
-        required
-      />
+      <p className={styles.mcFormSec}>Lo básico</p>
+      <div className={styles.mcInset}>
+        <div className={styles.mcCampo}>
+          <label className={styles.mcCampoLabel} htmlFor="title">
+            Título
+          </label>
+          <input
+            id="title"
+            name="title"
+            required
+            placeholder="Reel de brunch de domingo"
+            className={styles.mcCampoInput}
+          />
+        </div>
+        <div className={styles.mcCampo}>
+          <label className={styles.mcCampoLabel} htmlFor="brief">
+            Brief
+          </label>
+          <textarea
+            id="brief"
+            name="brief"
+            required
+            placeholder="Contá qué querés que el creador muestre: mood, ángulo, momentos clave."
+            className={styles.mcCampoArea}
+          />
+        </div>
+      </div>
 
       {/* ── Portada ── */}
       <div className={styles.field}>
@@ -318,9 +333,12 @@ export default function CampaignForm({ brandId }: { brandId: string }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-        <div className={styles.field}>
-          <label htmlFor="budget_amount">Presupuesto (₡)</label>
+      <p className={styles.mcFormSec}>La oferta</p>
+      <div className={styles.mcInset}>
+        <div className={styles.mcFilaCampo}>
+          <label className={styles.mcFilaCampoLabel} htmlFor="budget_amount">
+            Presupuesto
+          </label>
           <input
             id="budget_amount"
             name="budget_amount"
@@ -328,65 +346,102 @@ export default function CampaignForm({ brandId }: { brandId: string }) {
             required
             value={presupuesto}
             onChange={(e) => setPresupuesto(e.target.value)}
-            placeholder="150000"
-            className={styles.inp}
+            placeholder="₡150000"
+            className={`${styles.mcFilaCampoInput} ${styles.mcFilaCampoMonto}`}
           />
         </div>
-        <Field label="Plazo (días)" name="deadline_days" type="number" placeholder="15" />
+        <div className={styles.mcFilaCampo}>
+          <label className={styles.mcFilaCampoLabel} htmlFor="deadline_days">
+            Plazo
+          </label>
+          <input
+            id="deadline_days"
+            name="deadline_days"
+            type="number"
+            placeholder="15 días"
+            className={styles.mcFilaCampoInput}
+          />
+        </div>
+        <div className={styles.mcFilaCampo}>
+          <label className={styles.mcFilaCampoLabel} htmlFor="target_audience">
+            Audiencia
+          </label>
+          <input
+            id="target_audience"
+            name="target_audience"
+            placeholder="Food & lifestyle, 5K+"
+            className={styles.mcFilaCampoInput}
+          />
+        </div>
+        <div className={styles.mcFilaCampo}>
+          <label className={styles.mcFilaCampoLabel} htmlFor="compensation_details">
+            Compensación extra
+          </label>
+          <input
+            id="compensation_details"
+            name="compensation_details"
+            placeholder="Brunch ×2"
+            className={styles.mcFilaCampoInput}
+          />
+        </div>
       </div>
 
       {/* El reparto se ve mientras se decide el monto, que es cuando importa:
           después de publicar, enterarse de cuánto le llega al creador ya no
-          cambia nada. Es el mismo bloque que ve el creador en la promo. */}
+          cambia nada. Las tres cifras las ven las dos partes desde 2026-08-04. */}
       {Number(presupuesto) > 0 && (
-        <div style={{ marginBottom: "15px" }}>
-          <DesglosePago budgetAmount={Number(presupuesto)} audiencia="marca" />
+        <div className={styles.mcBanda}>
+          <span className={styles.mcBandaFuerte}>
+            ₡{Number(presupuesto).toLocaleString("es-CR")}
+          </span>
+          <span>bruto</span>
+          <span>− {Math.round(AGENCY_FEE_RATE * 100)}% Q Labs</span>
+          <span className={styles.mcBandaFuerte}>
+            ₡{creatorPayout(Number(presupuesto)).toLocaleString("es-CR")}
+          </span>
+          <span>al creador</span>
         </div>
       )}
 
-      <Field
-        label="Audiencia objetivo"
-        name="target_audience"
-        placeholder="Food & lifestyle, GAM, 5K+ seguidores"
-      />
-
-      <Field
-        label="Compensación adicional (opcional)"
-        name="compensation_details"
-        placeholder="Ej: Cena para 2 personas incluida"
-      />
-
-      <div className={styles.field}>
-        {/* Sin `htmlFor`: rotula el grupo entero, no una caja en particular. */}
-        <label>Entregables — elegí al menos uno</label>
-        <div className={`${styles.qtyGrid} ${hayEntregable ? "" : styles.qtyGridFalta}`}>
-          {DELIVERABLE_TYPES.map((type) => (
-            <label
-              key={type}
-              htmlFor={`qty_${type}`}
-              className={`${styles.qtyRow} ${(qty[type] ?? 0) > 0 ? styles.qtyRowOn : ""}`}
-            >
-              <span className={styles.qtyName}>{FORMAT_LABEL[type]}</span>
-              <input
-                id={`qty_${type}`}
-                name={`qty_${type}`}
-                type="number"
-                min={0}
-                value={qty[type] ?? 0}
-                onChange={(e) =>
-                  setQty((prev) => ({ ...prev, [type]: Math.max(0, Number(e.target.value) || 0) }))
-                }
-                className={styles.qtyInp}
-              />
-            </label>
-          ))}
-        </div>
-        {!hayEntregable && (
-          <p className={styles.fieldHint} style={{ color: "var(--risk)" }}>
-            Poné una cantidad mayor a 0 en al menos un formato.
-          </p>
-        )}
+      <p className={styles.mcFormSec}>Entregables · elegí al menos uno</p>
+      <div className={styles.mcInset}>
+        {DELIVERABLE_TYPES.map((type) => {
+          const n = qty[type] ?? 0;
+          return (
+            <div key={type} className={`${styles.mcEntFila} ${n > 0 ? "" : styles.mcEntSin}`}>
+              <span className={styles.mcEntNombre}>{FORMAT_LABEL[type]}</span>
+              {/* El input sigue existiendo, escondido: es lo que lee el server
+                  action. Los botones solo lo mueven. */}
+              <input type="hidden" name={`qty_${type}`} value={n} />
+              <span className={styles.mcStepper}>
+                <button
+                  type="button"
+                  className={styles.mcStepBtn}
+                  disabled={n === 0}
+                  aria-label={`Menos ${FORMAT_LABEL[type]}`}
+                  onClick={() =>
+                    setQty((prev) => ({ ...prev, [type]: Math.max(0, (prev[type] ?? 0) - 1) }))
+                  }
+                >
+                  −
+                </button>
+                <span className={styles.mcStepNum}>{n > 0 ? n : "—"}</span>
+                <button
+                  type="button"
+                  className={styles.mcStepBtn}
+                  aria-label={`Más ${FORMAT_LABEL[type]}`}
+                  onClick={() => setQty((prev) => ({ ...prev, [type]: (prev[type] ?? 0) + 1 }))}
+                >
+                  +
+                </button>
+              </span>
+            </div>
+          );
+        })}
       </div>
+      {!hayEntregable && (
+        <p className={styles.mcEntAviso}>Poné al menos un formato para poder publicar.</p>
+      )}
 
       {/* Derechos de uso. Deliberadamente sin opción preseleccionada: define qué
           cede el creador, así que conviene que sea una decisión consciente y no
@@ -472,14 +527,19 @@ export default function CampaignForm({ brandId }: { brandId: string }) {
       {/* Antes esto tenía una variante sin verificar, con "Guardar borrador"
           como acción principal. Se fue con el bloqueo duro: al panel solo entra
           una marca verificada, así que publicar siempre es una opción real. */}
-      <div className={styles.formActions}>
+      {/* El pie queda fijo abajo, sobre la barra de tabs. El mockup además
+          repetía "Publicar" arriba a la derecha; no se dibuja: son dos botones
+          para lo mismo a 600px de distancia y el de arriba queda al lado de
+          "Cancelar", que es exactamente lo contrario. */}
+      <div className={styles.trPieAire} />
+      <div className={styles.trPie}>
         <button
           type="submit"
           name="intent"
           value="draft"
           disabled={isPending || !hayEntregable}
           title={hayEntregable ? undefined : "Elegí al menos un entregable"}
-          className={`${styles.btn} ${styles.btnGhost}`}
+          className={styles.mcPieSec}
         >
           Guardar borrador
         </button>
@@ -489,40 +549,12 @@ export default function CampaignForm({ brandId }: { brandId: string }) {
           value="publish"
           disabled={isPending || !hayEntregable}
           title={hayEntregable ? undefined : "Elegí al menos un entregable"}
-          className={`${styles.btn} ${styles.btnPrimary}`}
+          className={styles.trPiePill}
         >
           {subiendo ? "Subiendo portada…" : isPending ? "Publicando…" : "Publicar campaña"}
         </button>
       </div>
     </form>
-  );
-}
-
-function Field({
-  label,
-  name,
-  placeholder,
-  type = "text",
-  required,
-}: {
-  label: string;
-  name: string;
-  placeholder?: string;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <div className={styles.field}>
-      <label htmlFor={name}>{label}</label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        required={required}
-        placeholder={placeholder}
-        className={styles.inp}
-      />
-    </div>
   );
 }
 

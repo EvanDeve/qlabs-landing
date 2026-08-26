@@ -90,6 +90,10 @@ export default async function MarcaResumenPage() {
   // Un cupón vencido no es "sin usar": la tarjeta dice que la persona PUEDE
   // llegar a canjearlo, y con la fecha pasada eso ya no es cierto. El estado
   // 'expirado' lo pone un job, así que no alcanza con filtrar por status.
+  // Server Component con `force-dynamic`: corre una vez por request y "ahora"
+  // es el dato que hace falta para saber si el cupón todavía sirve. No hay
+  // re-render que lo mueva, que es contra lo que protege la regla.
+  // eslint-disable-next-line react-hooks/purity
   const ahora = Date.now();
   const sinUsar = (reclamos ?? [])
     .filter((r) => !r.expires_at || new Date(r.expires_at).getTime() > ahora)

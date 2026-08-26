@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { updateBrandProfileAction, type UpdateBrandProfileState } from "@/lib/actions/brand-profile";
 import { BRAND_LOGO_BUCKET, MAX_BRAND_LOGO_FILE_BYTES } from "@/lib/ugc/brand-logos";
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
@@ -69,14 +69,11 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
   const [subiendo, setSubiendo] = useState(false);
   const [errorLogo, setErrorLogo] = useState<string | null>(null);
 
-  const [guardado, setGuardado] = useState(false);
-  useEffect(() => {
-    if (estado && "ok" in estado) {
-      setGuardado(true);
-      const t = setTimeout(() => setGuardado(false), 2200);
-      return () => clearTimeout(t);
-    }
-  }, [estado]);
+  // Se deriva del resultado del action en vez de vivir en un estado con
+  // temporizador: un `setState` sincrónico dentro de un efecto encadena
+  // renders, y acá no aporta nada — el aviso puede quedarse hasta el próximo
+  // guardado, que es exactamente lo que significa.
+  const guardado = Boolean(estado && "ok" in estado);
 
   async function cambiarLogo(f: File) {
     setErrorLogo(null);

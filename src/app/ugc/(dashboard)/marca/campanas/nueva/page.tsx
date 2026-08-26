@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CampaignForm from "@/components/ugc/marca/CampaignForm";
-import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -19,24 +18,21 @@ export default async function NuevaCampanaPage() {
   } = await supabase.auth.getUser();
 
   return (
-    <div style={{ maxWidth: "640px", margin: "0 auto" }}>
-      <Link href="/ugc/marca/ugc" className={styles.backBtn}>
-        <QosIcon name="chevL" size={16} />
-        Mis campañas
-      </Link>
-
-      <div style={{ textAlign: "center", marginBottom: "24px" }}>
-        <h1 className={styles.tbTitle} style={{ fontSize: "28px" }}>
-          Nueva campaña
-        </h1>
-        <p style={{ marginTop: "8px", color: "var(--ink-2)" }}>
-          Publicala para que los creadores la vean, o guardala como borrador y publicala más tarde.
-        </p>
+    <div className={styles.mcCol}>
+      {/* "Cancelar" y no "Mis campañas": esto es un formulario, no una
+          navegación, y el gesto que importa es abandonar sin publicar. */}
+      <div className={styles.mcFormBar}>
+        <Link href="/ugc/marca/ugc" className={styles.mcCancelar}>
+          Cancelar
+        </Link>
+        <span className={styles.mcFormTitulo}>Nueva campaña</span>
+        {/* Hueco del ancho de "Cancelar" para que el título quede centrado de
+            verdad: `space-between` no centra al del medio si los costados
+            miden distinto. */}
+        <span style={{ width: 62 }} aria-hidden />
       </div>
 
-      <div className={`${styles.card} ${styles.cardPad}`}>
-        <CampaignForm brandId={user!.id} />
-      </div>
+      <CampaignForm brandId={user!.id} />
     </div>
   );
 }
