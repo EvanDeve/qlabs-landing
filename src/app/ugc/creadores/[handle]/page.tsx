@@ -8,6 +8,7 @@ import { languageLabel } from "@/lib/ugc/languages";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 import TrustRing from "@/components/ugc/TrustRing";
 import CreatorPublicBook from "@/components/ugc/creador/CreatorPublicBook";
+import CompartirPagina from "@/components/ugc/CompartirPagina";
 
 export const dynamic = "force-dynamic";
 
@@ -157,13 +158,13 @@ export default async function CreatorPublicProfilePage({
 
   return (
     <div className="min-h-screen bg-lavender/40 pb-20">
-      <div className="mx-auto max-w-4xl px-6 pt-8">
+      <div className="mx-auto max-w-2xl px-5 pt-6">
         {/* Barra superior — sin "Volver" a propósito: esta página se comparte
             como media-kit (link en bio de Instagram, WhatsApp), y quien llega
             de afuera no tiene a dónde volver. La marca sí linkea al
             marketplace, que es la puerta de entrada para un negocio que cae
             acá desde el perfil de un creador. */}
-        <div className="flex items-center">
+        <div className="flex items-center justify-between">
           <Link
             href="/ugc"
             className="flex items-center gap-2 text-sm font-extrabold text-ink transition hover:text-violet"
@@ -172,59 +173,55 @@ export default async function CreatorPublicProfilePage({
             <img src="/favicon-logo.png" alt="Q Labs" className="h-6 w-6 rounded-md object-cover" />
             UGC·CRC
           </Link>
+          <CompartirPagina titulo={`${displayHandle(creatorProfile.handle)} en UGC·CRC`} />
         </div>
 
-        {/* HERO */}
-        <div className="mt-6 overflow-hidden rounded-card border border-line bg-white">
-          <div className="h-28 bg-gradient-to-br from-violet via-periwinkle to-violet-deep" />
-          <div className="px-7 pb-7">
-            <div className="-mt-12 flex items-end justify-between">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full ring-4 ring-white">
-                {profile?.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={profile.avatar_url}
-                    alt={displayName}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-periwinkle to-violet-deep text-3xl font-extrabold text-white">
-                    {initial}
-                  </span>
-                )}
-              </div>
-              {approvedCount > 0 && (
-                <div className="mb-2 flex flex-col items-center gap-0.5">
-                  <TrustRing score={trustScore} />
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
-                    Confianza
-                  </span>
-                </div>
+        {/* Identidad. Antes era una tarjeta con banda de degradado y el avatar
+            montado encima; se aplanó el 2026-08-26 para que las dos páginas
+            públicas —esta y la de la marca— se lean como la misma cosa. */}
+        <div className="mt-7">
+          <div className="flex items-start gap-4">
+            <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full">
+              {profile?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatar_url}
+                  alt={displayName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-periwinkle to-violet-deep text-2xl font-extrabold text-white">
+                  {initial}
+                </span>
               )}
             </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-extrabold tracking-tight text-ink">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[27px] font-extrabold leading-[1.12] tracking-[-0.03em] text-ink">
                 {displayHandle(creatorProfile.handle)}
               </h1>
               {creatorProfile.verified && (
-                <span className="inline-flex items-center gap-1.5 rounded-pill bg-trust-bg px-3 py-1 text-xs font-bold text-trust">
+                <p className="mt-1.5 flex items-center gap-1.5 text-sm font-bold text-trust">
                   <i className="fa-solid fa-circle-check" aria-hidden /> Creador verificado
-                </span>
+                </p>
               )}
+              <p className="mt-1 text-sm text-ink-soft">
+                {[
+                  profile?.city,
+                  `${creatorProfile.followers_count.toLocaleString("es-CR")} seguidores`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
             </div>
-
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft">
-              {profile?.city && (
-                <span>
-                  <i className="fa-solid fa-location-dot" aria-hidden /> {profile.city}
+            {approvedCount > 0 && (
+              <div className="flex shrink-0 flex-col items-center gap-0.5">
+                <TrustRing score={trustScore} />
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+                  Confianza
                 </span>
-              )}
-              <span>
-                <i className="fa-solid fa-users" aria-hidden />{" "}
-                {creatorProfile.followers_count.toLocaleString("es-CR")} seguidores
-              </span>
-            </div>
+              </div>
+            )}
+          </div>
 
             {profile?.bio && (
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-soft">{profile.bio}</p>
@@ -278,7 +275,6 @@ export default async function CreatorPublicProfilePage({
                 )}
               </div>
             )}
-          </div>
         </div>
 
         {/* STATS de prueba social */}

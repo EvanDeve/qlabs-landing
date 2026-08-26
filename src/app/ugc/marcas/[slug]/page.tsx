@@ -3,7 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
-import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
+import CompartirPagina from "@/components/ugc/CompartirPagina";
+import { entregablesEnLinea } from "@/lib/ugc/deliverables";
+import {
+  USAGE_SCOPE_LABEL,
+  USAGE_DURATION_LABEL,
+  isUsageScope,
+  isUsageDuration,
+} from "@/lib/ugc/usage-rights";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +58,28 @@ export async function generateMetadata({
   };
 }
 
+/** "hace 2 días" — la antigüedad de la promo, que dice si sigue fresca. */
+function hace(iso: string | null): string | null {
+  if (!iso) return null;
+  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (dias <= 0) return "hoy";
+  if (dias === 1) return "ayer";
+  return `hace ${dias} días`;
+}
+
+type PromoPublica = {
+  id: string;
+  title: string;
+  deliverables: unknown;
+  published_at: string | null;
+  brief: string | null;
+  deadline_days: number | null;
+  target_audience: string | null;
+  compensation_details: string | null;
+  usage_rights_scope: string | null;
+  usage_rights_duration: string | null;
+};
+
 export default async function BrandPublicProfilePage({
   params,
 }: {
@@ -64,137 +93,183 @@ export default async function BrandPublicProfilePage({
   }
 
   // Función security-definer: un visitante anónimo no tiene policy sobre
-  // `campaigns`, y esto expone solo título y formatos — nunca brief ni monto.
-  const { data: promos } = await supabase.rpc("brand_public_campaigns", { p_slug: slug });
+  // `campaigns`. Desde 2026-08-26 devuelve el brief entero —plazo, audiencia y
+  // derechos incluidos— y sigue SIN devolver el monto: el pago es lo único que
+  // exige cuenta de creador. Ver la migración `promo_publica_completa`.
+  const { data } = await supabase.rpc("brand_public_campaigns", { p_slug: slug });
+  const promos = (data ?? []) as unknown as PromoPublica[];
+
   const igHandle = brand.instagram_handle?.replace(/^@/, "");
+  const sitio = brand.website?.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
   return (
     <div className="min-h-screen bg-lavender/40 pb-20">
-      <div className="mx-auto max-w-4xl px-6 pt-8">
-        <div className="flex items-center">
-          <Link
-            href="/ugc"
-            className="flex items-center gap-2 text-sm font-extrabold text-ink transition hover:text-violet"
-          >
+      <div className="mx-auto max-w-2xl px-5 pt-6">
+        <div className="flex items-center justify-between">
+          <Link href="/ugc" className="flex items-center gap-2 text-sm font-extrabold text-ink">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/favicon-logo.png" alt="Q Labs" className="h-6 w-6 rounded-md object-cover" />
             UGC·CRC
           </Link>
+          <CompartirPagina titulo={`${brand.brand_name} en UGC·CRC`} />
         </div>
 
-        {/* HERO */}
-        <div className="mt-6 overflow-hidden rounded-card border border-line bg-white">
-          <div className="h-28 bg-gradient-to-br from-violet via-periwinkle to-violet-deep" />
-          <div className="px-7 pb-7">
-            <div className="-mt-12">
-              <div className="inline-block rounded-2xl ring-4 ring-white">
-                <BrandAvatar name={brand.brand_name} logoUrl={brand.logo_url} size={96} radius={16} />
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-extrabold tracking-tight text-ink">{brand.brand_name}</h1>
-              {brand.verified && (
-                <span className="inline-flex items-center gap-1.5 rounded-pill bg-trust-bg px-3 py-1 text-xs font-bold text-trust">
-                  <i className="fa-solid fa-circle-check" aria-hidden /> Marca verificada
-                </span>
-              )}
-            </div>
-
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft">
-              {brand.industry && <span>{brand.industry}</span>}
-              {brand.location && (
-                <span>
-                  <i className="fa-solid fa-location-dot" aria-hidden /> {brand.location}
-                </span>
-              )}
-            </div>
-
-            {brand.description && (
-              <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-soft">
-                {brand.description}
+        {/* ---- Identidad ---- */}
+        <div className="mt-7 flex items-start gap-4">
+          <BrandAvatar name={brand.brand_name} logoUrl={brand.logo_url} size={72} radius={20} />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-[27px] font-extrabold leading-[1.12] tracking-[-0.03em] text-ink">
+              {brand.brand_name}
+            </h1>
+            {brand.verified && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-sm font-bold text-trust">
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                  <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z" opacity=".2" />
+                  <path
+                    d="m8.5 12 2.5 2.5 5-5"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+                Marca verificada por Q Labs
               </p>
             )}
-
-            {(brand.website || igHandle) && (
-              <div className="mt-5 flex flex-wrap gap-2.5">
-                {brand.website && (
-                  <a
-                    href={brand.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-sm font-bold text-ink transition hover:border-violet hover:text-violet"
-                  >
-                    <i className="fa-solid fa-globe text-base" aria-hidden /> Sitio web
-                  </a>
-                )}
-                {igHandle && (
-                  <a
-                    href={`https://instagram.com/${igHandle}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-sm font-bold text-ink transition hover:border-violet hover:text-violet"
-                  >
-                    <i className="fa-brands fa-instagram text-base" aria-hidden /> @{igHandle}
-                  </a>
-                )}
-              </div>
+            {(brand.location || brand.industry) && (
+              <p className="mt-1 text-sm text-ink-soft">
+                {[brand.location, brand.industry].filter(Boolean).join(" · ")}
+              </p>
             )}
           </div>
         </div>
 
-        {/* PROMOS ABIERTAS */}
-        <section className="mt-10">
-          <h2 className="mb-1 text-lg font-extrabold text-ink">Promos abiertas</h2>
-          <p className="mb-4 text-sm text-ink-soft">
-            {promos && promos.length > 0
-              ? "Registrate como creador para ver el brief completo y aplicar."
-              : "Ahora mismo no tiene promos abiertas."}
-          </p>
+        {brand.description && (
+          <p className="mt-4 text-[15px] leading-relaxed text-ink">{brand.description}</p>
+        )}
 
-          {promos && promos.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {promos.map((promo) => (
-                <div key={promo.id} className="rounded-card border border-line bg-white p-6">
-                  <h3 className="text-base font-extrabold leading-snug text-ink">{promo.title}</h3>
-                  {promo.deliverable_types && promo.deliverable_types.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {promo.deliverable_types.map((format) => (
-                        <span
-                          key={format}
-                          className="rounded-pill border border-line px-3 py-1 text-xs font-semibold text-ink-soft"
-                        >
-                          {FORMAT_LABEL[format] ?? format}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <Link
-                    href={`/ugc/creador/promos/${promo.id}`}
-                    className="mt-5 block rounded-pill bg-violet px-5 py-2.5 text-center text-sm font-bold text-white transition hover:bg-violet-deep"
-                  >
-                    Ver y aplicar
-                  </Link>
+        {(sitio || igHandle) && (
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            {sitio && (
+              <a
+                href={brand.website ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-pill border border-line bg-paper px-4 py-2 text-sm font-semibold text-ink transition hover:border-violet hover:text-violet"
+              >
+                {sitio}
+              </a>
+            )}
+            {igHandle && (
+              <a
+                href={`https://instagram.com/${igHandle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-pill border border-line bg-paper px-4 py-2 text-sm font-semibold text-ink transition hover:border-violet hover:text-violet"
+              >
+                {igHandle}
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* ---- Promos ---- */}
+        <div className="mt-9 flex items-baseline justify-between gap-3">
+          <h2 className="text-xl font-extrabold tracking-[-0.02em] text-ink">Promos abiertas</h2>
+          <span className="text-sm font-semibold text-ink-soft">{promos.length}</span>
+        </div>
+        <p className="mt-1 text-sm text-ink-soft">
+          {promos.length > 0
+            ? "Registrate como creador para ver el pago y aplicar."
+            : "Ahora mismo no hay ninguna abierta."}
+        </p>
+
+        <div className="mt-4 space-y-4">
+          {promos.map((p) => {
+            const entregables = entregablesEnLinea(p.deliverables);
+            const derechos = [
+              isUsageScope(p.usage_rights_scope ?? "")
+                ? USAGE_SCOPE_LABEL[p.usage_rights_scope as never]
+                : null,
+              isUsageDuration(p.usage_rights_duration ?? "")
+                ? USAGE_DURATION_LABEL[p.usage_rights_duration as never]
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ");
+
+            // Solo se dibujan las que tienen dato: una tabla con cuatro filas
+            // en blanco se lee como una promo a medio escribir.
+            const filas: [string, string][] = [
+              ["Entregables", entregables],
+              ["Plazo", p.deadline_days ? `${p.deadline_days} días` : ""],
+              ["Busca", p.target_audience ?? ""],
+              ["Derechos de uso", derechos],
+            ].filter(([, v]) => Boolean(v)) as [string, string][];
+
+            return (
+              <article
+                key={p.id}
+                className="rounded-card border border-line bg-paper p-5 shadow-[0_2px_10px_rgba(10,11,16,0.05)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-[19px] font-extrabold leading-tight tracking-[-0.025em] text-ink">
+                    {p.title}
+                  </h3>
+                  <span className="shrink-0 rounded-pill bg-trust-bg px-3 py-1 text-xs font-extrabold text-trust">
+                    Abierta
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
 
-        {/* CTA para creadores */}
-        <section className="mt-12 rounded-card bg-ink px-7 py-8 text-center text-white">
-          <h2 className="text-xl font-extrabold tracking-tight">¿Creás contenido en Costa Rica?</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-white/70">
-            Registrate en UGC·CRC y aplicá a promos de {brand.brand_name} y de otras marcas
-            costarricenses.
-          </p>
-          <Link
-            href="/ugc/login?intent=creador"
-            className="mt-5 inline-block rounded-pill bg-violet px-6 py-3 text-sm font-bold text-white transition hover:bg-violet-deep"
-          >
-            Aplicá como creador
-          </Link>
-        </section>
+                <p className="mt-1.5 text-[13px] text-ink-soft">
+                  {[
+                    hace(p.published_at) && `Publicada ${hace(p.published_at)}`,
+                    p.deadline_days && `cierra en ${p.deadline_days}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+
+                {p.brief && (
+                  <p className="mt-3 whitespace-pre-wrap text-[14.5px] leading-relaxed text-ink">
+                    {p.brief}
+                  </p>
+                )}
+
+                {filas.length > 0 && (
+                  <dl className="mt-4 overflow-hidden rounded-xl bg-lavender/60">
+                    {filas.map(([k, v], i) => (
+                      <div
+                        key={k}
+                        className={`flex items-baseline justify-between gap-4 px-4 py-2.5 ${
+                          i > 0 ? "border-t border-line/60" : ""
+                        }`}
+                      >
+                        <dt className="text-[13.5px] text-ink-soft">{k}</dt>
+                        <dd className="text-right text-[13.5px] font-bold text-ink">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+
+                {p.compensation_details && (
+                  <p className="mt-3 flex gap-2.5 rounded-xl bg-trust-bg px-4 py-3 text-[13.5px] leading-snug text-ink">
+                    <span className="mt-0.5 shrink-0 font-extrabold text-trust">+</span>
+                    {p.compensation_details}
+                  </p>
+                )}
+
+                <Link
+                  href={`/ugc/login?intent=creador`}
+                  className="mt-4 flex h-12 items-center justify-center rounded-pill bg-violet text-[15px] font-extrabold text-white transition hover:bg-violet-deep"
+                >
+                  Ver y aplicar
+                </Link>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
