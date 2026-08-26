@@ -111,7 +111,10 @@ export default async function MarcaResumenPage() {
   // `redemptions` cuelga de `coupons` y no del perfil.
   const { data: handlesCupon } = sinUsar.length
     ? await supabase
-        .from("creator_profiles")
+        // La vista y no la tabla: `creator_profiles` quedó cerrada al dueño y
+        // al admin, porque traía tarifas y motivos de rechazo. Ver la migración
+        // 20260826140000.
+        .from("creator_public_profiles")
         .select("profile_id, handle")
         .in("profile_id", [...new Set(sinUsar.map((s) => s.creatorId))])
     : { data: [] };

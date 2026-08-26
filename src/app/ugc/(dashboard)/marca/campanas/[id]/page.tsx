@@ -58,7 +58,7 @@ export default async function CampaignDetailPage({
   const [{ data: profiles }, { data: creatorProfiles }] = creatorIds.length
     ? await Promise.all([
         supabase.from("profiles").select("*").in("id", creatorIds),
-        supabase.from("creator_profiles").select("*").in("profile_id", creatorIds),
+        supabase.from("creator_public_profiles").select("*").in("profile_id", creatorIds),
       ])
     : [{ data: [] }, { data: [] }];
 

@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { accesoDeApi } from "@/lib/auth/acceso-api";
 
 // Refresca la lista después de transcribir, sin recargar la página entera.
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return NextResponse.json([], { status: 401 });
+  const acceso = await accesoDeApi(["creator", "admin"]);
+  if (!acceso.ok) return NextResponse.json([], { status: acceso.status });
+  const { user, supabase } = acceso;
 
   const { data } = await supabase
     .from("creator_transcriptions")

@@ -98,7 +98,7 @@ export default async function RecompensasPage() {
   const [{ data: marcas }, { data: stocks }] = await Promise.all([
     brandIds.length
       ? supabase
-          .from("brand_profiles")
+          .from("brand_public_profiles")
           .select("profile_id, brand_name, logo_url, location")
           .in("profile_id", brandIds)
       : Promise.resolve({
@@ -269,7 +269,7 @@ export default async function RecompensasPage() {
 
   const marcasCampana = [...new Set((campanas ?? []).map((c) => c.brand_id))];
   const { data: marcasDeCampanas } = marcasCampana.length
-    ? await supabase.from("brand_profiles").select("profile_id, brand_name").in("profile_id", marcasCampana)
+    ? await supabase.from("brand_public_profiles").select("profile_id, brand_name").in("profile_id", marcasCampana)
     : { data: [] };
   const nombreMarcaCampana = new Map((marcasDeCampanas ?? []).map((m) => [m.profile_id, m.brand_name]));
 

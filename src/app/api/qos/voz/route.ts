@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { accesoDeApi } from "@/lib/auth/acceso-api";
 import { generarVoz, hayApiKey } from "@/lib/ugc/elevenlabs";
 import {
   MODELO_POR_DEFECTO,
@@ -26,26 +26,11 @@ type Body = {
 const FIRMA_SEGUNDOS = 3600;
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Necesitás iniciar sesión." }, { status: 401 });
-  }
-
   // Herramienta del equipo: los créditos de ElevenLabs los paga Q Labs. La RLS
   // protege el dato por dueño, pero quién puede GASTAR se decide acá.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") {
-    return NextResponse.json({ error: "Solo para cuentas del equipo." }, { status: 403 });
-  }
+  const acceso = await accesoDeApi(["admin"]);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
+  const { user, supabase } = acceso;
 
   if (!hayApiKey()) {
     console.error("[voz] falta ELEVENLABS_API_KEY");

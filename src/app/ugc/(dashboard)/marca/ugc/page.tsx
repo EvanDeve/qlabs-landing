@@ -37,7 +37,7 @@ export default async function MarcaUgcPanelPage() {
   const [{ data: profiles }, { data: creatorProfiles }, { data: piezas }] = creatorIds.length
     ? await Promise.all([
         supabase.from("profiles").select("id, display_name, avatar_url, city").in("id", creatorIds),
-        supabase.from("creator_profiles").select("*").in("profile_id", creatorIds),
+        supabase.from("creator_public_profiles").select("*").in("profile_id", creatorIds),
         // El conteo del book. Va en una sola consulta y se agrupa acá: pedir un
         // count por creador serían N viajes para una línea de texto.
         supabase.from("portfolio_items").select("creator_id").in("creator_id", creatorIds),

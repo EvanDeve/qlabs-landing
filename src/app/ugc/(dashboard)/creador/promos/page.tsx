@@ -22,7 +22,7 @@ export default async function CreadorFeedPage() {
 
   const brandIds = [...new Set((campaigns ?? []).map((c) => c.brand_id))];
   const { data: brandProfiles } = brandIds.length
-    ? await supabase.from("brand_profiles").select("*").in("profile_id", brandIds)
+    ? await supabase.from("brand_public_profiles").select("*").in("profile_id", brandIds)
     : { data: [] };
   const brandByProfileId = new Map((brandProfiles ?? []).map((b) => [b.profile_id, b]));
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { accesoDeApi } from "@/lib/auth/acceso-api";
 import { construirPromptDeGuion, mensajeDeErrorDeGuion } from "@/lib/ugc/script-coach";
 
 // Ruta y no server action por la misma razón que la transcripción: es una
@@ -13,27 +13,13 @@ export const maxDuration = 300;
 type Body = { id?: string };
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Necesitás iniciar sesión." }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
   // Igual que la transcripción: el equipo trabaja sobre su propio material. La
   // fila se sigue filtrando por `creator_id = auth.uid()` más abajo, así que un
   // admin no puede generar un guion sobre la transcripción de un creador.
-  if (profile?.role !== "creator" && profile?.role !== "admin") {
-    return NextResponse.json({ error: "Solo para cuentas de creador o del equipo." }, { status: 403 });
-  }
+  // Sesión + rol + verificación, el mismo control que los layouts del panel.
+  const acceso = await accesoDeApi(["creator", "admin"]);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
+  const { user, supabase } = acceso;
 
   if (!process.env.GEMINI_API_KEY) {
     console.error("[guion] falta GEMINI_API_KEY");

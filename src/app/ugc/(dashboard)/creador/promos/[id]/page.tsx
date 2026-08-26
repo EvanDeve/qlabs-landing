@@ -40,7 +40,7 @@ export default async function PromoDetailPage({
   }
 
   const [{ data: brand }, { data: application }] = await Promise.all([
-    supabase.from("brand_profiles").select("*").eq("profile_id", campaign.brand_id).maybeSingle(),
+    supabase.from("brand_public_profiles").select("*").eq("profile_id", campaign.brand_id).maybeSingle(),
     supabase
       .from("applications")
       .select("status")

@@ -61,7 +61,7 @@ export default async function MisAplicacionesPage() {
   const brandIds = [...new Set((campaigns ?? []).map((c) => c.brand_id))];
   const { data: brandProfiles } = brandIds.length
     ? await supabase
-        .from("brand_profiles")
+        .from("brand_public_profiles")
         .select("profile_id, brand_name, logo_url")
         .in("profile_id", brandIds)
     : { data: [] };

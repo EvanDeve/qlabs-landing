@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { accesoDeApi } from "@/lib/auth/acceso-api";
 import {
   detectSourceType,
   normalizeVideoUrl,
@@ -32,28 +32,14 @@ export const maxDuration = 300;
 type Body = { url?: string; storagePath?: string; fileName?: string; durationSeconds?: number };
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Necesitás iniciar sesión." }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
   // El equipo de Q Labs también transcribe material propio. No abre nada: la
   // fila se crea con `creator_id = auth.uid()` y la policy sigue siendo
   // `creator_id = auth.uid()`, así que cada quien ve solo lo suyo y un admin
   // NO ve las transcripciones de los creadores.
-  if (profile?.role !== "creator" && profile?.role !== "admin") {
-    return NextResponse.json({ error: "Solo para cuentas de creador o del equipo." }, { status: 403 });
-  }
+  // Sesión + rol + verificación, el mismo control que los layouts del panel.
+  const acceso = await accesoDeApi(["creator", "admin"]);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
+  const { user, supabase } = acceso;
 
   if (!process.env.GEMINI_API_KEY) {
     console.error("[transcribe] falta GEMINI_API_KEY");

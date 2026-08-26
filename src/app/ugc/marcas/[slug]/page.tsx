@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 async function loadBrand(slug: string) {
   const supabase = await createClient();
-  const { data } = await supabase.from("brand_profiles").select("*").eq("slug", slug).maybeSingle();
+  const { data } = await supabase.from("brand_public_profiles").select("*").eq("slug", slug).maybeSingle();
   return { supabase, brand: data };
 }
 

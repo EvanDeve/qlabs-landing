@@ -1070,6 +1070,25 @@ export interface Database {
       };
     };
     Views: {
+      // `brand_profiles` sin los datos internos y solo con marcas verificadas.
+      // La tabla quedó cerrada al dueño y al admin en la migración
+      // 20260826140000: estaba abierta entera a `anon`, motivo de rechazo
+      // incluido.
+      brand_public_profiles: {
+        Row: {
+          profile_id: string;
+          brand_name: string;
+          industry: string | null;
+          website: string | null;
+          instagram_handle: string | null;
+          description: string | null;
+          logo_url: string | null;
+          location: string | null;
+          slug: string | null;
+          verified: boolean;
+        };
+        Relationships: [];
+      };
       creator_public_profiles: {
         Row: {
           profile_id: string;

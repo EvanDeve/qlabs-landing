@@ -110,7 +110,7 @@ export default async function CreadorHomePage() {
 
   const brandIds = [...new Set((campaigns ?? []).map((c) => c.brand_id))];
   const { data: brands } = brandIds.length
-    ? await supabase.from("brand_profiles").select("profile_id, brand_name").in("profile_id", brandIds)
+    ? await supabase.from("brand_public_profiles").select("profile_id, brand_name").in("profile_id", brandIds)
     : { data: [] };
   const brandNameById = new Map((brands ?? []).map((b) => [b.profile_id, b.brand_name]));
 
