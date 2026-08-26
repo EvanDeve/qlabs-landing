@@ -187,11 +187,7 @@ export default async function ArmarCronogramaPage({
         inputId="crono-share-grabacion"
         titulo="Link para quien graba"
         descripcion="Lleva el guion entero y los apuntes de cada video, que es donde dice si se graba o va con voice over. No puede comentar ni aprobar."
-        pie={
-          aprobado
-            ? "Va al equipo de grabación, no al Hero: muestra los apuntes internos. Es distinto para cada mes."
-            : "Va al equipo de grabación, no al Hero: muestra los apuntes internos. Avisa arriba que el mes todavía no está aprobado y puede cambiar."
-        }
+        pie="Va al equipo de grabación, no al Hero: muestra los apuntes internos. Es distinto para cada mes."
       />
 
       <div style={{ display: "grid", gap: "8px", marginBottom: "18px" }}>

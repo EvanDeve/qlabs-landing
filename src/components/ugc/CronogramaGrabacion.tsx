@@ -39,13 +39,11 @@ export default function CronogramaGrabacion({
   heroNombre,
   heroLogo,
   mesLegible,
-  aprobado,
   videos,
 }: {
   heroNombre: string;
   heroLogo: string | null;
   mesLegible: string;
-  aprobado: boolean;
   videos: Video[];
 }) {
   const conApuntes = videos.filter((v) => v.apuntes).length;
@@ -70,27 +68,10 @@ export default function CronogramaGrabacion({
           </div>
         </header>
 
-        {/* El aviso de que el mes todavía no está aprobado es lo primero que se
-            lee, y va en coral. Un cronograma pendiente puede cambiar entero
-            después de que el cliente lo mire: salir a grabar contra esta lista
-            sin saberlo es perder un día de rodaje. */}
-        {aprobado ? (
-          <div className="mb-7 rounded-card border border-trust/30 bg-trust-bg px-5 py-4">
-            <p className="font-bold text-trust">Mes aprobado por el cliente</p>
-            <p className="mt-1 text-sm text-ink-soft">
-              Esto es lo que se produce. Si algo cambia, el cambio aparece acá.
-            </p>
-          </div>
-        ) : (
-          <div className="mb-7 rounded-card border border-coral/40 bg-coral/10 px-5 py-4">
-            <p className="font-bold text-coral">Pendiente de aprobación del cliente</p>
-            <p className="mt-1 text-sm text-ink-soft">
-              El cliente todavía no aprobó {mesLegible}, así que estos videos pueden cambiar. Confirmá con el equipo
-              antes de salir a grabar.
-            </p>
-          </div>
-        )}
-
+        {/* Acá NO va el estado de aprobación del mes. Lo pidió Evan el
+            2026-08-26 y no es un olvido: quien graba no decide sobre eso, y el
+            aviso le ponía encima una condición que no puede resolver. Si el mes
+            cambia, lo avisa el equipo. */}
         <div className="space-y-3">
           {videos.length === 0 ? (
             <p className="rounded-card border border-line bg-white px-5 py-8 text-center text-ink-soft">

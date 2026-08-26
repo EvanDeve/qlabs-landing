@@ -58,7 +58,7 @@ async function cargar(token: string) {
 
   const { data: cronograma } = await supabase
     .from("hero_calendar_months")
-    .select("hero_id, month, status")
+    .select("hero_id, month")
     .eq("crew_token", token)
     .maybeSingle();
 
@@ -136,7 +136,6 @@ export default async function GrabacionPage({ params }: { params: Promise<{ toke
       heroNombre={hero?.name ?? "la marca"}
       heroLogo={hero?.logo_url ?? null}
       mesLegible={nombreDeMes(cronograma.month)}
-      aprobado={cronograma.status === "aprobado"}
       videos={videos}
     />
   );
