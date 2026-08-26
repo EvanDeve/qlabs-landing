@@ -1,11 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
   parseSegments,
+  parseCabecera,
   normalizeVideoUrl,
   detectSourceType,
   isValidUrl,
   segmentsToPlainText,
   segmentsToTimestampedText,
+  contarPalabras,
+  duracionLegible,
+  idiomaLegible,
+  nombreDeTranscripcion,
+  fuenteLegible,
 } from "@/lib/ugc/transcription";
 
 describe("parseSegments", () => {
@@ -100,5 +106,118 @@ describe("salidas para copiar", () => {
 
   it("con tiempos: una línea por segmento", () => {
     expect(segmentsToTimestampedText(segs)).toBe("[0:00] Hola\n[0:05] Chau");
+  });
+});
+
+
+describe("parseCabecera", () => {
+  it("saca el título y el idioma, y deja la transcripción limpia", () => {
+    const r = parseCabecera("TITULO: Brunch en La Ceiba\nIDIOMA: es\n\n[0:00] Buenas, hoy vengo.");
+    expect(r.title).toBe("Brunch en La Ceiba");
+    expect(r.language).toBe("es");
+    expect(r.cuerpo).toBe("[0:00] Buenas, hoy vengo.");
+  });
+
+  it("saca las comillas que el modelo agrega solo", () => {
+    expect(parseCabecera('TITULO: "Brunch dominical"').title).toBe("Brunch dominical");
+  });
+
+  it("devuelve el texto entero cuando el modelo se olvidó de la cabecera", () => {
+    // Es lo que hace que un olvido del título no cueste la transcripción.
+    const r = parseCabecera("[0:00] Buenas, hoy vengo.");
+    expect(r.title).toBeNull();
+    expect(r.language).toBeNull();
+    expect(r.cuerpo).toBe("[0:00] Buenas, hoy vengo.");
+  });
+
+  it("no deja la cabecera adentro de un audio sin marcas de tiempo", () => {
+    // Sin marcas, parseSegments guarda TODO como un bloque único: si la
+    // cabecera no se saca antes, el creador ve "TITULO:" en su transcripción.
+    const { cuerpo } = parseCabecera("TITULO: Algo\nIDIOMA: en\n\nHello, welcome back.");
+    expect(parseSegments(cuerpo)).toEqual([{ timestamp: "0:00", text: "Hello, welcome back." }]);
+  });
+});
+
+describe("contarPalabras", () => {
+  it("suma las palabras de todos los segmentos", () => {
+    expect(
+      contarPalabras([
+        { timestamp: "0:00", text: "Hola a todos" },
+        { timestamp: "0:05", text: "hoy cocinamos" },
+      ])
+    ).toBe(5);
+  });
+
+  it("no cuenta los espacios de más", () => {
+    expect(contarPalabras([{ timestamp: "0:00", text: "  dos   palabras  " }])).toBe(2);
+  });
+
+  it("devuelve cero sin segmentos", () => {
+    expect(contarPalabras(null)).toBe(0);
+    expect(contarPalabras([])).toBe(0);
+  });
+});
+
+describe("duracionLegible", () => {
+  it("formatea con el segundo en dos dígitos", () => {
+    expect(duracionLegible(134)).toBe("2:14");
+    expect(duracionLegible(48)).toBe("0:48");
+    expect(duracionLegible(242)).toBe("4:02");
+  });
+
+  it("no inventa nada cuando no se pudo medir", () => {
+    // Es el caso de toda transcripción que vino de un link: el chip no se
+    // dibuja en vez de mostrar un cero.
+    expect(duracionLegible(null)).toBeNull();
+    expect(duracionLegible(0)).toBeNull();
+    expect(duracionLegible(Infinity)).toBeNull();
+  });
+});
+
+describe("idiomaLegible", () => {
+  it("nombra los idiomas que conoce", () => {
+    expect(idiomaLegible("es")).toBe("Español");
+    expect(idiomaLegible("EN")).toBe("Inglés");
+  });
+
+  it("muestra el código en mayúsculas si no lo conoce", () => {
+    expect(idiomaLegible("ko")).toBe("KO");
+  });
+
+  it("devuelve null sin idioma", () => {
+    expect(idiomaLegible(null)).toBeNull();
+  });
+});
+
+describe("nombreDeTranscripcion", () => {
+  it("prefiere el título", () => {
+    expect(
+      nombreDeTranscripcion({ title: "Reel del brunch", file_name: "IMG_0042.mp4" })
+    ).toBe("Reel del brunch");
+  });
+
+  it("cae al nombre del archivo sin título", () => {
+    expect(nombreDeTranscripcion({ title: null, file_name: "foodsy_v1.mp4" })).toBe(
+      "foodsy_v1.mp4"
+    );
+  });
+
+  it("cae al link sin título ni archivo", () => {
+    expect(
+      nombreDeTranscripcion({ source_url: "https://www.youtube.com/watch?v=abc" })
+    ).toBe("youtube.com/watch");
+  });
+
+  it("nunca queda vacío", () => {
+    expect(nombreDeTranscripcion({})).toBe("Sin nombre");
+    expect(nombreDeTranscripcion({ title: "   " })).toBe("Sin nombre");
+  });
+});
+
+describe("fuenteLegible", () => {
+  it("nombra de dónde salió", () => {
+    expect(fuenteLegible("upload")).toBe("Archivo");
+    expect(fuenteLegible("youtube")).toBe("YouTube");
+    expect(fuenteLegible("otro")).toBe("Link");
   });
 });

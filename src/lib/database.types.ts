@@ -707,6 +707,8 @@ export interface Database {
           error_message: string | null;
           improved_script: string | null;
           improved_script_at: string | null;
+          duration_seconds: number | null;
+          language: string | null;
           created_at: string;
           completed_at: string | null;
         };
@@ -722,6 +724,8 @@ export interface Database {
           error_message?: string | null;
           improved_script?: string | null;
           improved_script_at?: string | null;
+          duration_seconds?: number | null;
+          language?: string | null;
           created_at?: string;
           completed_at?: string | null;
         };

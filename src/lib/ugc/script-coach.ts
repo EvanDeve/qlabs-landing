@@ -55,9 +55,17 @@ sobre contenido UGC de restaurantes y hoteles en Costa Rica.
 `.trim();
 
 /**
- * El prompt pide texto plano y no JSON a propósito: lo único que se devuelve
- * es un guion, y el creador lo va a editar a mano. Envolverlo en JSON solo
- * agrega una forma más de que la respuesta falle a parsear.
+ * El prompt pide TEXTO PLANO con encabezados fijos, y no JSON.
+ *
+ * Que la pantalla dibuje bloques de colores no cambió esa decisión: el guion
+ * lo sigue editando el creador a mano y un JSON adentro de un textarea es
+ * intocable; además un JSON mal cerrado se pierde entero, mientras que un
+ * encabezado raro solo pierde ese encabezado. `parsearGuion` en `./guion` hace
+ * la traducción y cae a texto plano cuando no reconoce nada — que es también
+ * lo que salva a los guiones generados con la versión anterior de este prompt.
+ *
+ * ⚠️ Si se toca el formato de abajo hay que tocar `parsearGuion` con él. Los
+ * tests de `guion.test.ts` usan justo este ejemplo como muestra.
  */
 export function construirPromptDeGuion(segments: TranscriptionSegment[]): string {
   const transcripcion = segments.map((s) => `[${s.timestamp}] ${s.text}`).join("\n");
@@ -71,20 +79,48 @@ export function construirPromptDeGuion(segments: TranscriptionSegment[]): string
 Abajo está la transcripción de un video que ya se grabó. Reescribila como un
 guion mejorado, listo para volver a grabarse.
 
-Reglas:
+Reglas de contenido:
 - Mantené el tema, el producto y la intención del original. No inventes datos,
   precios, promociones ni afirmaciones que no estén en la transcripción.
 - Trabajá el gancho de los primeros 3 segundos: es donde más se pierde gente.
-- Marcá los tiempos en el mismo formato [M:SS].
-- Poné indicaciones de producción entre paréntesis cuando cambien el resultado
-  —(a cámara), (plano del plato), (texto en pantalla: …)—. Son sugerencias de
-  lo que conviene grabar, no descripciones del video original: vos no lo viste.
 - Cerrá con un llamado a la acción concreto.
+- Lo que va entre comillas es lo que se dice a cámara, palabra por palabra. Lo
+  que va sin comillas son indicaciones de qué mostrar mientras se dice.
+- Español de Costa Rica, voseo.
 
-Después del guion, agregá una sección "## Qué cambié y por qué" con 3 a 5
-puntos, cada uno nombrando el gatillo o la fase que estás corrigiendo.
+Reglas de formato — respetalas EXACTAMENTE, la app las lee:
+- Arrancá con dos líneas sueltas: "FORMATO:" con el tipo de pieza y su duración
+  total (ejemplo: "FORMATO: Reel · 30 s") y "TONO:" con UNA sola palabra que
+  diga cómo hay que decirlo (ejemplo: "TONO: Cercano").
+- Después, exactamente tres bloques, cada uno abierto por su encabezado entre
+  corchetes con el rango de tiempo: "[GANCHO 0-3 s]", "[CUERPO 3-22 s]",
+  "[CIERRE 22-30 s]". Los rangos se encadenan y suman la duración que pusiste
+  en FORMATO.
+- Al final, una sección abierta por la línea "TOMAS QUE TE FALTAN" con 3 a 5
+  viñetas que empiecen con "- ". Cada una es un plano concreto que conviene
+  grabar para que este guion funcione. Son sugerencias de producción para la
+  próxima grabación, NO descripciones del video original: vos no lo viste.
+- Nada de introducción, ni de comentarios, ni de markdown con almohadillas.
 
-Respondé solo con el guion y esa sección, sin introducción.
+Ejemplo exacto de la forma esperada:
+
+FORMATO: Reel · 30 s
+TONO: Cercano
+
+[GANCHO 0-3 s]
+"El mejor brunch de Escalante no es el que sale en todas las listas."
+
+[CUERPO 3-22 s]
+Huevos benedictinos sobre masa madre, café de Tarrazú, y todo el frente ventanal.
+Sentate del lado de la ventana: la luz hace el trabajo por vos.
+
+[CIERRE 22-30 s]
+"Guardate este si te gusta desayunar sin apuro. ¿A quién llevás?"
+
+TOMAS QUE TE FALTAN
+- Detalle del corte del huevo, en cámara lenta
+- Plano del ventanal con la mesa servida
+- Vos hablando a cámara para el gancho
 
 ---
 

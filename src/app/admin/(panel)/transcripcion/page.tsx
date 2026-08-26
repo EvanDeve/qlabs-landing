@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import TranscriptionTool from "@/components/ugc/creador/TranscriptionTool";
+import TranscriptionTool from "@/components/ugc/admin/TranscriptionTool";
 
 export const dynamic = "force-dynamic";
 

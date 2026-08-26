@@ -6712,13 +6712,16 @@
    mismo menú.
    ============================================================ */
 @media (max-width: 900px) {
-  /* `:not(:has(.workspace))` deja afuera la transcripción, que es un espacio de
-     trabajo a pantalla completa sin encabezado propio: ahí la barra sigue
-     siendo lo único que dice dónde está parado. */
-  .encabezadoPropio .main:not(:has(.workspace)) {
+  /* Acá hubo un `:not(:has(.workspace))` que dejaba afuera a la transcripción,
+     cuando era un espacio de trabajo de tres paneles sin título propio. Desde
+     que la pantalla se partió en lista y detalle tiene su encabezado como
+     todas, y la excepción sobraba. Las que sí siguen siendo workspace —el chat
+     y la voz, en Q·OS— nunca pasan por acá: `encabezadoPropio` lo pone
+     únicamente el layout del creador. */
+  .encabezadoPropio .main {
     position: relative;
   }
-  .encabezadoPropio .main:not(:has(.workspace)) > .topbar {
+  .encabezadoPropio .main > .topbar {
     position: absolute;
     top: 0;
     left: auto;
@@ -6729,8 +6732,8 @@
     backdrop-filter: none;
     border-bottom: 0;
   }
-  .encabezadoPropio .main:not(:has(.workspace)) > .topbar .tbHeading,
-  .encabezadoPropio .main:not(:has(.workspace)) > .topbar .mobileMenuBtn {
+  .encabezadoPropio .main > .topbar .tbHeading,
+  .encabezadoPropio .main > .topbar .mobileMenuBtn {
     display: none;
   }
   /* El aire que necesita el título para no meterse debajo de la campana. */
@@ -9186,4 +9189,798 @@
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--ink-3);
+}
+
+
+/* ============================================================
+   TRANSCRIPCIÓN — rediseño con lenguaje de app de iPhone
+   Última pantalla del creador (ver docs/brief-diseno-ugc-ios.md).
+
+   Los mockups vinieron a 239 px para 393 pt (escala 0.565): a ese tamaño una
+   mayúscula mide 4 px y medirla da ±3 pt de error, así que los tamaños se
+   heredan de las pantallas ya hechas —`.feedTitle` 34, bajada 13.5— y de ahí
+   para abajo. Lo que SÍ se midió y se respeta es la paleta, que cae entera
+   sobre los tokens que ya existen: fondo #F5F2FC (--canvas del panel), card
+   blanca, violeta #624FF2 (--b-600) y el lavanda de chips y avisos #E9E3FA
+   (--b-100).
+
+   La pantalla dejó de ser un espacio de trabajo de tres paneles y pasó a ser
+   dos: lista y detalle. Por eso más abajo se sacó el `:not(:has(.workspace))`
+   que la eximía del encabezado propio — hoy tiene el mismo título grande y la
+   misma campana que el resto del panel.
+   ============================================================ */
+
+/* En un monitor, un formulario de un campo estirado a 1400px no se lee: la
+   columna se acota y se centra, como una hoja de papel. En el teléfono el
+   max-width no hace nada y el ancho lo manda el padding del `.content`. */
+.trCol {
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* ---------------- La tarjeta del formulario ---------------- */
+.trCard {
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.trLabel {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.trInputWrap {
+  position: relative;
+}
+/* El ícono no es decoración: sin él, un campo vacío con placeholder gris se
+   lee como texto deshabilitado. `pointer-events: none` para que tocarlo
+   enfoque el input de atrás en vez de no hacer nada. */
+.trInputIc {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.qosRoot .trInput {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px 0 36px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  transition: var(--t-fast);
+}
+.qosRoot .trInput:focus {
+  border-color: var(--b-400);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(109, 84, 243, 0.12);
+}
+.qosRoot .trInput::placeholder {
+  color: var(--ink-3);
+}
+
+/* Los dos botones del formulario. 46px de alto y pastilla completa: son los
+   dos únicos objetivos táctiles de la tarjeta y ocupan el ancho entero. */
+.qosRoot .trBoton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 46px;
+  margin-top: 12px;
+  border: none;
+  border-radius: var(--r-full);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .trBotonPrim {
+  background: var(--b-600);
+  color: #fff;
+}
+.qosRoot .trBotonPrim:hover:not(:disabled) {
+  background: var(--b-700);
+}
+/* Deshabilitado NO es gris: es el mismo violeta desaturado del mockup. Un gris
+   dice "roto"; el lavanda dice "todavía no". */
+.qosRoot .trBoton:disabled {
+  background: var(--b-100);
+  color: var(--b-300);
+  cursor: default;
+}
+.qosRoot .trBotonSec {
+  background: var(--surface);
+  border: 1.5px solid var(--b-300);
+  color: var(--b-600);
+}
+.qosRoot .trBotonSec:hover:not(:disabled) {
+  background: var(--b-50);
+}
+.qosRoot .trBotonSec:disabled {
+  border-color: var(--line);
+}
+
+/* El "o" entre los dos caminos. */
+.trO {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.trO::before,
+.trO::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ---------------- El aviso de qué links andan ---------------- */
+.trAviso {
+  display: flex;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: var(--b-100);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--b-900);
+}
+.trAvisoIc {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--b-600);
+}
+/* El mismo bloque en rojo cuando lo que hay que decir es que algo falló. El
+   color lo hereda el ícono, así que no hace falta pintarlo aparte. */
+.trAvisoMal {
+  background: var(--risk-bg);
+  color: var(--risk);
+}
+.trAvisoMal .trAvisoIc {
+  color: var(--risk);
+}
+
+/* ---------------- Encabezado de sección con acción ---------------- */
+.trSeccion {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 10px;
+}
+.qosRoot .trSeccionTit {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.qosRoot .trVerTodas {
+  flex-shrink: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--b-600);
+  text-decoration: none;
+}
+
+/* ---------------- La lista ----------------
+   Una sola tarjeta blanca con líneas entre filas, no una tarjeta por fila: es
+   lo que muestra el mockup y es lo correcto en un teléfono — tres tarjetas
+   sueltas con su sombra convierten una lista de tres cosas en tres objetos que
+   se miran de a uno. */
+.trLista {
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+  overflow: hidden;
+}
+.trFila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.trFila + .trFila {
+  border-top: 1px solid var(--line-2);
+}
+.trFila:hover {
+  background: var(--surface-2);
+}
+/* 44px es el objetivo táctil mínimo de iOS, y acá además es lo que le da a la
+   fila su alto: el ícono es el elemento más alto de los tres. */
+.trFilaIc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: var(--b-50);
+  color: var(--b-600);
+}
+/* La fila de una transcripción que falló se marca en el ícono y no en el
+   texto: el título sigue siendo la forma de reconocerla. */
+.trFilaIcMal {
+  background: var(--risk-bg);
+  color: var(--risk);
+}
+.trFilaTxt {
+  flex: 1;
+  min-width: 0;
+}
+.qosRoot .trFilaTit {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trFilaMeta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trFilaChev {
+  flex-shrink: 0;
+  color: var(--ink-3);
+}
+
+/* ---------------- Vacío ---------------- */
+.trVacio {
+  padding: 30px 20px;
+  text-align: center;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.trVacioIc {
+  color: var(--b-300);
+}
+.trVacioTxt {
+  margin-top: 8px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* ---------------- Mientras trabaja ----------------
+   El mockup traía tres pasos con un 62% arriba. Dos de esos pasos no existen
+   —no se extrae audio, y el guion NO se encadena— y el porcentaje tampoco: la
+   transcripción es UNA llamada al modelo y no reporta avance. Lo que queda es
+   verdad: la subida sí tiene porcentaje real (XHR), y transcribir es un paso
+   sin número que se dibuja con la barra indeterminada. */
+.trProg {
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.trProgHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.qosRoot .trProgNom {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trProgMeta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.trBarra {
+  position: relative;
+  height: 7px;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  overflow: hidden;
+}
+.trBarraFill {
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  transition: width 0.25s ease;
+}
+/* Sin porcentaje que mostrar, la barra se mueve sola. Es la diferencia visible
+   entre "va por la mitad" y "está trabajando y no sé cuánto falta". */
+.trBarraIndet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  animation: trVaiven 1.3s ease-in-out infinite;
+}
+@keyframes trVaiven {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trBarraIndet::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.35;
+  }
+}
+.trProgLinea {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.trProgPct {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.trPasos {
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line-2);
+  display: grid;
+  gap: 10px;
+}
+.trPaso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+.trPasoIc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+}
+.trPasoHecho {
+  color: var(--ink-2);
+}
+.trPasoHecho .trPasoIc {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+}
+.trPasoAhora {
+  color: var(--ink);
+  font-weight: 700;
+}
+.trPasoAhora .trPasoIc {
+  border-color: var(--b-600);
+}
+.trNota {
+  margin-top: 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--ink-3);
+}
+
+/* ---------------- Detalle: barra de arriba ---------------- */
+.trDetBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.qosRoot .trAtras {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 4px 6px 4px 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--b-600);
+  text-decoration: none;
+  cursor: pointer;
+}
+.qosRoot .trDetTit {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trMenuWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.qosRoot .trMenuBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.qosRoot .trMenuBtn:hover {
+  background: var(--surface-3);
+}
+.trMenu {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  z-index: 30;
+  min-width: 186px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 30px rgba(26, 23, 48, 0.16);
+}
+.qosRoot .trMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.qosRoot .trMenuItem:hover {
+  background: var(--surface-3);
+}
+.qosRoot .trMenuMal {
+  color: var(--risk);
+}
+
+/* ---------------- Detalle: las dos pestañas ---------------- */
+.trTabs {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  margin-bottom: 12px;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+}
+.qosRoot .trTabBtn {
+  flex: 1;
+  height: 34px;
+  border: none;
+  border-radius: var(--r-full);
+  background: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--b-900);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .trTabOn {
+  background: var(--surface);
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(26, 23, 48, 0.12);
+}
+
+/* ---------------- Chips de metadatos ---------------- */
+.trChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.trChip {
+  height: 27px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+/* El primer chip del guion es el formato de la pieza, que es la decisión que
+   el guion propone: va en violeta porque es la que hay que leer. */
+.trChipFuerte {
+  background: var(--b-100);
+  border-color: transparent;
+  color: var(--b-700);
+}
+
+/* ---------------- Los segmentos de la transcripción ---------------- */
+.trSeg {
+  display: flex;
+  gap: 14px;
+  padding: 13px 14px;
+}
+.trSeg + .trSeg {
+  border-top: 1px solid var(--line-2);
+}
+/* Ancho fijo para que los tiempos queden en columna: con `flex-shrink` el
+   "10:05" empuja al texto y las líneas dejan de arrancar todas en el mismo
+   sitio. `tabular-nums` es la otra mitad de lo mismo. */
+.trSegTiempo {
+  flex-shrink: 0;
+  width: 34px;
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--b-600);
+  padding-top: 1px;
+}
+.trSegTxt {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+/* ---------------- El guion en bloques ---------------- */
+.trBloque {
+  display: flex;
+  gap: 14px;
+  padding: 13px 14px;
+}
+.trBloque + .trBloque {
+  border-top: 1px solid var(--line-2);
+}
+.trBloqueEtiq {
+  flex-shrink: 0;
+  width: 62px;
+}
+.trBloqueFase {
+  /* Los dos son <span> dentro de otro <span>: sin `display: block` se acomodan
+     en línea y el rango se parte donde caiga ("GANCHO0-" / "3 s"). El
+     `margin-top` del rango tampoco hacía nada, por lo mismo. */
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--b-600);
+}
+.trBloqueRango {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+/* `pre-wrap` porque el guion trae saltos de línea que son del guion: separan
+   lo que se dice de lo que se muestra mientras se dice. */
+.trBloqueTxt {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+/* Las tomas que faltan: es una lista de cosas para ir a grabar, así que se
+   dibuja como una lista y no como un párrafo. */
+.trTomas {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.qosRoot .trTomasTit {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 9px;
+}
+.trTomasLista {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trToma {
+  display: flex;
+  gap: 9px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.trToma::before {
+  content: "";
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--b-400);
+}
+
+/* El guion viejo, o uno que el creador editó hasta romperle el formato: se
+   muestra tal cual en vez de perderse. */
+.trPlano {
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+/* ---------------- El pie fijo con las acciones ----------------
+   Va pegado abajo y sobre la barra de tabs. El colchón de `.trPieAire` es lo
+   que evita que la última fila de la lista quede debajo del pie: un
+   `padding-bottom` en el body no alcanza cuando el pie es `fixed`. */
+.trPie {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 36;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(245, 245, 250, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+}
+.trPieAire {
+  height: 74px;
+}
+.qosRoot .trPieRedondo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .trPieRedondo:hover {
+  background: var(--surface-3);
+}
+.qosRoot .trPiePill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 1;
+  height: 46px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-600);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .trPiePill:hover:not(:disabled) {
+  background: var(--b-700);
+}
+.qosRoot .trPiePill:disabled {
+  background: var(--b-100);
+  color: var(--b-300);
+  cursor: default;
+}
+
+/* En el teléfono la barra de tabs ya ocupa el borde de abajo, así que el pie
+   se apoya encima de ella en vez de taparla. 900px es el mismo corte con el
+   que aparece la barra — ver reference-qos-bottom-nav. */
+@media (max-width: 900px) {
+  .trPie {
+    /* Exactamente el alto de la barra de tabs: es el mismo `calc` con el que
+       `.content` se pone su colchón, y copiarlo es lo que hace que el pie se
+       apoye en el borde de arriba de la barra y no flote ni la tape. Si un día
+       cambia el alto de `.bottomNav`, los dos se mueven juntos. */
+    bottom: calc(62px + max(env(safe-area-inset-bottom), 26px));
+    padding-bottom: 10px;
+  }
+  /* Solo el alto del pie: el hueco de la barra de tabs ya lo puso `.content`.
+     Medido en un teléfono de 393×852 con el guion más largo: quedan 23px de
+     aire entre la última toma y el pie. */
+  .trPieAire {
+    height: 76px;
+  }
+}
+
+/* En el detalle no va la campana: el mockup muestra ‹ Atrás, el título y el
+   menú, y la campana del shell cae justo encima del menú —las dos flotan
+   arriba a la derecha—. Se esconde la topbar entera, que en móvil ya no
+   contiene nada más. */
+@media (max-width: 900px) {
+  .encabezadoPropio .main:has(.trDetBar) > .topbar {
+    display: none;
+  }
+}
+/* En escritorio no hay barra de tabs y el pie fijo a lo ancho de 1400px se ve
+   como una barra de sistema: ahí se queda con el contenido. */
+@media (min-width: 901px) {
+  .trPie {
+    position: sticky;
+    bottom: 16px;
+    left: auto;
+    right: auto;
+    max-width: 620px;
+    margin: 16px auto 0;
+    border-radius: var(--r-full);
+    border: 1px solid var(--line);
+    box-shadow: 0 8px 24px rgba(26, 23, 48, 0.1);
+    padding: 8px;
+  }
+  .trPieAire {
+    display: none;
+  }
 }

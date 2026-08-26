@@ -5,6 +5,7 @@ import {
   normalizeVideoUrl,
   isValidUrl,
   parseSegments,
+  parseCabecera,
   mensajeDeError,
   mimeDeArchivo,
   TRANSCRIPTION_PROMPT,
@@ -24,7 +25,11 @@ export const maxDuration = 300;
 // Storage y acá llega solo su ruta. En Vercel el body de una función tiene un
 // tope de ~4.5 MB, así que mandar el video por acá fallaría en producción por
 // más que funcione en local.
-type Body = { url?: string; storagePath?: string; fileName?: string };
+// `durationSeconds` la mide el NAVEGADOR con el `<video>` antes de subir. No se
+// puede medir acá: leer la duración de un mp4 en el servidor pide un demuxer, y
+// ese es justo el binario de sistema que no existe en serverless y que llevó a
+// elegir Gemini en vez de Whisper. En un link viene undefined y queda en null.
+type Body = { url?: string; storagePath?: string; fileName?: string; durationSeconds?: number };
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -58,7 +63,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { url, storagePath, fileName } = (await request.json()) as Body;
+  const { url, storagePath, fileName, durationSeconds } = (await request.json()) as Body;
   const esArchivo = Boolean(storagePath);
 
   if (!esArchivo && !url?.trim()) {
@@ -86,6 +91,13 @@ export async function POST(request: Request) {
       source_url: normalized,
       source_type: sourceType,
       file_name: esArchivo ? (fileName ?? "archivo") : null,
+      // Se guarda ya en el insert y no al final: si la transcripción falla, la
+      // fila igual sabe cuánto duraba el material, que es lo que la lista
+      // necesita para dibujar la fila del error.
+      duration_seconds:
+        typeof durationSeconds === "number" && Number.isFinite(durationSeconds) && durationSeconds > 0
+          ? Math.round(durationSeconds)
+          : null,
       status: "processing",
     })
     .select("id")
@@ -142,14 +154,26 @@ export async function POST(request: Request) {
       throw new Error("SIN_AUDIO");
     }
 
-    const segments = parseSegments(texto);
+    // La cabecera se saca ANTES de partir en segmentos: si el video no trae
+    // marcas de tiempo, `parseSegments` guarda todo el texto como un bloque
+    // único y sin este paso el "TITULO: …" quedaría adentro de la
+    // transcripción, a la vista del creador.
+    const { title, language, cuerpo } = parseCabecera(texto);
+
+    const segments = parseSegments(cuerpo);
     if (segments.length === 0) {
       throw new Error("Gemini devolvió una transcripción vacía");
     }
 
     await supabase
       .from("creator_transcriptions")
-      .update({ status: "done", segments, completed_at: new Date().toISOString() })
+      .update({
+        status: "done",
+        segments,
+        title,
+        language,
+        completed_at: new Date().toISOString(),
+      })
       .eq("id", fila.id)
       .eq("creator_id", user.id);
 

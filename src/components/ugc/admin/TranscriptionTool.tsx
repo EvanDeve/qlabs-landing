@@ -16,7 +16,7 @@ import {
 } from "@/lib/ugc/transcription";
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
+import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import styles from "@/styles/qos.module.css";
 
 type Fila = Database["public"]["Tables"]["creator_transcriptions"]["Row"];
@@ -53,6 +53,16 @@ function nombreCorto(t: Fila): string {
   }
 }
 
+/**
+ * La herramienta de transcripción de Q·OS, el panel del equipo.
+ *
+ * Vivía en `components/ugc/creador/` porque nació ahí y el equipo la heredó.
+ * Se mudó acá el 2026-08-25, cuando el panel del creador se rediseñó con
+ * lenguaje de app de teléfono —lista y detalle, ver `TranscripcionDetalle`— y
+ * Q·OS se quedó con esta: son dos sistemas de diseño distintos, y este de tres
+ * paneles es el correcto para una pantalla de escritorio donde se trabaja con
+ * el material a la vista. El backend es el mismo para las dos.
+ */
 export default function TranscriptionTool({ previas }: { previas: Fila[] }) {
   const [url, setUrl] = useState("");
   const [estado, setEstado] = useState<Estado>("vacio");
@@ -379,7 +389,7 @@ export default function TranscriptionTool({ previas }: { previas: Fila[] }) {
               style={{ width: "100%", justifyContent: "center" }}
             >
               <QosIcon name="plus" size={15} />
-              {estado === "subiendo" ? "Subiendo…" : "Subir archivo"}
+              {estado === "subiendo" ? "Subiendo…" : "Subir un archivo"}
             </button>
 
             <p style={{ fontSize: "11.5px", color: "var(--ink-3)", marginTop: "10px", lineHeight: 1.5 }}>

@@ -120,17 +120,138 @@ export function esArchivoAceptado(nombre: string, tipoDeclarado?: string | null)
 
 export const TRANSCRIPTION_PROMPT = `Transcribí el audio de este video al español, palabra por palabra.
 
-Reglas:
+Empezá SIEMPRE con estas dos líneas, en este orden y con este formato exacto:
+TITULO: un título corto y descriptivo del video, máximo 6 palabras, en español.
+IDIOMA: el código ISO 639-1 del idioma que se habla (es, en, pt…), en minúscula.
+
+Después, dejá una línea en blanco y transcribí.
+
+Reglas de la transcripción:
 - Poné una marca de tiempo [M:SS] cada vez que cambia la idea o hay una pausa clara.
 - Transcribí exactamente lo que se dice, sin corregir la gramática ni resumir.
 - Si el audio está en otro idioma, transcribilo en ese idioma tal cual se escucha.
 - Si no hay nada hablado, respondé exactamente: SIN_AUDIO
 
-Respondé ÚNICAMENTE con la transcripción, sin introducción ni comentarios.
+Respondé ÚNICAMENTE con esas dos líneas y la transcripción, sin comentarios.
 
 Ejemplo del formato esperado:
+TITULO: Receta fácil de tres ingredientes
+IDIOMA: es
+
 [0:00] Hola, hoy les traigo la receta más fácil del mundo.
 [0:06] Solo necesitan tres ingredientes.`;
+
+/**
+ * Separa la cabecera (título e idioma) del cuerpo de la transcripción.
+ *
+ * Va aparte de `parseSegments` porque son dos fallas distintas: que el modelo
+ * se olvide del título no debería costar la transcripción entera. Si la
+ * cabecera no vino, se devuelve el texto tal cual y las dos columnas quedan en
+ * null — que es exactamente lo que tienen las filas anteriores a esto.
+ */
+export function parseCabecera(raw: string): {
+  title: string | null;
+  language: string | null;
+  cuerpo: string;
+} {
+  const title = raw.match(/^\s*TITULO:\s*(.+)$/im)?.[1].trim() || null;
+  const idiomaCrudo = raw.match(/^\s*IDIOMA:\s*([a-zA-Z-]{2,8})\s*$/im)?.[1].trim().toLowerCase();
+
+  const cuerpo = raw
+    .split("\n")
+    .filter((l) => !/^\s*(TITULO|IDIOMA):/i.test(l))
+    .join("\n")
+    .trim();
+
+  return {
+    // El modelo a veces envuelve el título en comillas aunque no se le pida.
+    title: title ? title.replace(/^["'«]|["'»]$/g, "").slice(0, 80) : null,
+    language: idiomaCrudo ?? null,
+    cuerpo,
+  };
+}
+
+/**
+ * Cómo se llama una transcripción en la lista.
+ *
+ * El orden es el que se puede sostener: el título que puso el creador o
+ * propuso el modelo; si no hay, el nombre del archivo —que es lo que muestra
+ * el propio mockup en una de sus tres filas—; y si vino de un link, el host.
+ * Nunca queda vacío.
+ */
+export function nombreDeTranscripcion(t: {
+  title?: string | null;
+  file_name?: string | null;
+  source_url?: string | null;
+}): string {
+  if (t.title?.trim()) return t.title.trim();
+  if (t.file_name?.trim()) return t.file_name.trim();
+  if (!t.source_url) return "Sin nombre";
+  try {
+    const u = new URL(t.source_url);
+    return u.hostname.replace(/^www\./, "") + u.pathname;
+  } catch {
+    return t.source_url;
+  }
+}
+
+/** De dónde salió, como se dice en la lista: "Archivo · 28 jul · 2:14". */
+export function fuenteLegible(sourceType: string): string {
+  switch (sourceType) {
+    case "youtube":
+      return "YouTube";
+    case "instagram":
+      return "Instagram";
+    case "tiktok":
+      return "TikTok";
+    case "upload":
+      return "Archivo";
+    default:
+      return "Link";
+  }
+}
+
+/**
+ * Cuántas palabras tiene la transcripción. Es el único de los tres chips del
+ * detalle que no necesitó columna: sale de contar lo que ya está guardado.
+ */
+export function contarPalabras(segments: TranscriptionSegment[] | null | undefined): number {
+  if (!segments?.length) return 0;
+  return segments.reduce((total, s) => {
+    const palabras = s.text.trim().split(/\s+/).filter(Boolean);
+    return total + palabras.length;
+  }, 0);
+}
+
+/** Segundos a "2:14". Null cuando no se sabe: no se estima. */
+export function duracionLegible(segundos: number | null | undefined): string | null {
+  if (segundos == null || !Number.isFinite(segundos) || segundos <= 0) return null;
+  const total = Math.round(segundos);
+  const m = Math.floor(total / 60);
+  const ss = String(total % 60).padStart(2, "0");
+  return `${m}:${ss}`;
+}
+
+// Los idiomas que puede devolver el modelo. `languages.ts` tiene los dos que un
+// creador declara hablar (es/en) y ese es otro dato: acá se nombra el idioma de
+// UN audio, que puede ser cualquiera. Un código desconocido se muestra en
+// mayúsculas —"JA"— en vez de esconderse: dice algo, y es cierto.
+const IDIOMAS: Record<string, string> = {
+  es: "Español",
+  en: "Inglés",
+  pt: "Portugués",
+  fr: "Francés",
+  it: "Italiano",
+  de: "Alemán",
+  ja: "Japonés",
+  zh: "Chino",
+};
+
+export function idiomaLegible(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const limpio = code.trim().toLowerCase().slice(0, 2);
+  return IDIOMAS[limpio] ?? limpio.toUpperCase();
+}
 
 /**
  * Traduce los errores de Gemini a algo accionable. El mensaje crudo suele ser
@@ -147,10 +268,10 @@ export function mensajeDeError(err: unknown, sourceType: SourceType | "upload"):
   // archivo, así que el mensaje manda para allá en vez de dejar al creador
   // reintentando algo que nunca va a andar.
   if (sourceType === "instagram") {
-    return "Instagram no deja leer sus videos desde afuera. Descargá el video y subilo con el botón «Subir archivo» — así sí funciona.";
+    return "Instagram no deja leer sus videos desde afuera. Descargá el video y subilo con el botón «Subir un archivo» — así sí funciona.";
   }
   if (sourceType === "tiktok") {
-    return "TikTok no deja leer sus videos desde afuera. Descargá el video y subilo con el botón «Subir archivo» — así sí funciona.";
+    return "TikTok no deja leer sus videos desde afuera. Descargá el video y subilo con el botón «Subir un archivo» — así sí funciona.";
   }
   if (/quota|rate limit|429/i.test(raw)) {
     return "Se alcanzó el límite de transcripciones por ahora. Probá de nuevo en unos minutos.";
