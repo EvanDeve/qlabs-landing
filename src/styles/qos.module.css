@@ -7947,6 +7947,8 @@
   .main:has(.pipeHead) .topbar .tbTitle {
     display: none;
   }
+  .encabezadoPropio .mcNegocioHead,
+  .encabezadoPropio .mcHead,
   .encabezadoPropio .pipeHead,
   /* Igual que el pipeline: la campana del shell vive arriba a la derecha y sin
      este colchón el botón de la pantalla le queda debajo y sale cortado. */
@@ -10105,7 +10107,9 @@
   overflow: hidden;
 }
 .mcAvatar + .mcAvatar {
-  margin-left: -14px;
+  /* -10 y no más: con -14 el círculo de adelante se comía la segunda letra de
+     las iniciales del de atrás. Medido en pantalla, no estimado. */
+  margin-left: -10px;
 }
 .mcAvatar img {
   width: 100%;
@@ -10391,6 +10395,13 @@
    su hoja— así que reusa `.perfilFila`, `.hojaTabla` y `.hojaCampo*`. Lo único
    propio es el logo, que es un cuadrado redondeado y no un círculo: es una
    marca, no una cara. */
+/* El texto de ayuda debajo de un grupo necesita separarse del rótulo de la
+   sección que viene: sin esto, "La zona es lo primero…" y "Enlaces" se leían
+   como un solo párrafo. */
+.mcCol .perfilAyuda {
+  margin-bottom: 6px;
+}
+
 .mcNegocioHead {
   display: flex;
   align-items: flex-start;
@@ -10856,4 +10867,23 @@
 .qosRoot .mcCanjeBtn:disabled {
   background: var(--ok-line);
   cursor: default;
+}
+.mcPortadaPrev {
+  flex-shrink: 0;
+  width: 84px;
+  height: 40px;
+  border-radius: 9px;
+  object-fit: cover;
+}
+.mcPortadaVacia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 84px;
+  height: 40px;
+  border-radius: 9px;
+  border: 1px dashed var(--line-strong);
+  font-size: 11px;
+  color: var(--ink-3);
 }

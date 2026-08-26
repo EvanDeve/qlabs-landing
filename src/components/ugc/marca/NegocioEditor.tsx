@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { updateBrandProfileAction, type UpdateBrandProfileState } from "@/lib/actions/brand-profile";
 import { BRAND_LOGO_BUCKET, MAX_BRAND_LOGO_FILE_BYTES } from "@/lib/ugc/brand-logos";
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
+import { initialsOf } from "@/components/ugc/BrandAvatar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import Hoja from "@/components/ugc/creador/Hoja";
 import styles from "@/styles/qos.module.css";
@@ -31,14 +32,6 @@ const ETIQUETA: Record<Campo, string> = {
   website: "Sitio web",
   instagram_handle: "Instagram",
 };
-
-/** Las iniciales del negocio cuando no hay logo: "Cafetería Los Higuerones" → "CL". */
-function iniciales(nombre: string): string {
-  const partes = nombre.split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return "?";
-  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-}
 
 /**
  * "Mi negocio": la misma idea que "Mi perfil" del creador — una lista de filas
@@ -190,7 +183,7 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
             // de Storage y es de 64px; `next/image` acá solo suma configuración.
             <img src={logoPreview} alt="" className={styles.mcLogoImg} />
           ) : (
-            iniciales(nombre)
+            initialsOf(nombre)
           )}
           <span className={styles.mcLogoEditar}>
             <QosIcon name="camera" size={12} />

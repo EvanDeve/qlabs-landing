@@ -268,68 +268,44 @@ export default function CampaignForm({ brandId }: { brandId: string }) {
         </div>
       </div>
 
-      {/* ── Portada ── */}
-      <div className={styles.field}>
-        <label>Portada (opcional)</label>
-        <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+      {/* La portada NO está en el mockup y se conserva igual: es lo primero
+          que ve un creador en el feed, y sacarla dejaría todas las campañas
+          nuevas con la tarjeta del logo. Lo que sí cambia es el control: el
+          `<input type=file>` nativo salía crudo en medio de las tarjetas. */}
+      <p className={styles.mcFormSec}>Portada</p>
+      <div className={styles.mcInset}>
+        <div className={styles.mcEntFila}>
           {portadaPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={portadaPreview}
-              alt="Vista previa de la portada"
-              style={{
-                width: "160px",
-                height: "64px",
-                objectFit: "cover",
-                borderRadius: "10px",
-                border: "1px solid var(--line)",
-              }}
-            />
+            <img src={portadaPreview} alt="" className={styles.mcPortadaPrev} />
           ) : (
-            <div
-              style={{
-                width: "160px",
-                height: "64px",
-                borderRadius: "10px",
-                border: "1px dashed var(--line)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "11.5px",
-                color: "var(--ink-3)",
-              }}
-            >
-              Sin portada
-            </div>
+            <span className={styles.mcPortadaVacia}>Sin portada</span>
           )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <input
-              ref={portadaRef}
-              type="file"
-              accept="image/*"
-              onChange={(e) => elegirPortada(e.target.files?.[0] ?? null)}
-              style={{ fontSize: "12.5px" }}
-            />
-            <span style={{ fontSize: "11.5px", color: "var(--ink-3)" }}>
-              JPG o PNG, hasta {pesoLegible(MAX_CAMPAIGN_COVER_BYTES)}. Es lo primero que ve el
-              creador en el feed; se recorta apaisada. Sin portada, la tarjeta usa tu logo.
-            </span>
-            {portadaPreview && (
-              <button
-                type="button"
-                onClick={() => {
-                  setPortada(null);
-                  setPortadaPreview(null);
-                  if (portadaRef.current) portadaRef.current.value = "";
-                }}
-                className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
-                style={{ alignSelf: "flex-start" }}
-              >
-                Quitar portada
-              </button>
-            )}
-          </div>
+          <span className={styles.mcEntNombre} style={{ fontWeight: 400, fontSize: "12.5px", color: "var(--ink-3)", lineHeight: 1.4 }}>
+            Se recorta apaisada. Sin portada, la tarjeta usa tu logo.
+          </span>
+          <input
+            ref={portadaRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => elegirPortada(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (portadaPreview) {
+                setPortada(null);
+                setPortadaPreview(null);
+                if (portadaRef.current) portadaRef.current.value = "";
+              } else {
+                portadaRef.current?.click();
+              }
+            }}
+            className={styles.mcCuponBtn}
+          >
+            {portadaPreview ? "Quitar" : "Elegir"}
+          </button>
         </div>
       </div>
 

@@ -48,7 +48,7 @@ export default async function MarcaResumenPage() {
     ? await supabase
         .from("applications")
         .select(
-          "id, campaign_id, status, accepted_at, delivered_at, approved_at, created_at, creator:profiles!applications_creator_id_fkey(id, display_name, avatar_url), creator_profile:creator_profiles!applications_creator_id_fkey(handle)"
+          "id, campaign_id, status, accepted_at, delivered_at, approved_at, created_at, creator:profiles!applications_creator_id_fkey(id, display_name, avatar_url, creator_profiles(handle))"
         )
         .in("campaign_id", ids)
     : { data: [] };
@@ -61,8 +61,12 @@ export default async function MarcaResumenPage() {
     delivered_at: string | null;
     approved_at: string | null;
     created_at: string;
-    creator: { id: string; display_name: string | null; avatar_url: string | null } | null;
-    creator_profile: { handle: string | null } | null;
+    creator: {
+      id: string;
+      display_name: string | null;
+      avatar_url: string | null;
+      creator_profiles: { handle: string | null } | null;
+    } | null;
   }[];
 
   const porRevisar = aplicaciones.filter((a) => a.status === "pending" || a.status === "reviewing");
@@ -128,13 +132,22 @@ export default async function MarcaResumenPage() {
       ? (activas.find((c) => c.id === [...campanasConPendientes][0])?.title ?? "")
       : `En ${campanasConPendientes.size} campañas`;
 
-  const saludo = (profile?.display_name ?? "").split(" ")[0] || "de vuelta";
+  // El mockup dice "Buenas, Marce" con el negocio arriba, o sea que espera el
+  // nombre de una PERSONA. Pero en muchas cuentas `display_name` es el nombre
+  // del negocio —se copia al registrarse— y el saludo salía "Buenas, Cafetería"
+  // debajo de "Cafetería Los Higuerones". Si son lo mismo, no se saluda por
+  // nombre: mejor un saludo corto que repetir la línea de arriba.
+  const nombrePersona = (profile?.display_name ?? "").trim();
+  const esElNegocio =
+    !nombrePersona ||
+    nombrePersona.toLowerCase() === (brand?.brand_name ?? "").trim().toLowerCase();
+  const saludo = esElNegocio ? "Buenas" : `Buenas, ${nombrePersona.split(" ")[0]}`;
 
   return (
     <div className={styles.mcCol}>
       <div className={styles.mcHead}>
         {brand?.brand_name && <div className={styles.mcEyebrow}>{brand.brand_name}</div>}
-        <h1 className={styles.mcSaludo}>Buenas, {saludo}</h1>
+        <h1 className={styles.mcSaludo}>{saludo}</h1>
       </div>
 
       {porRevisar.length > 0 && (
@@ -173,6 +186,10 @@ export default async function MarcaResumenPage() {
           // cancelada no es un paso adelante de la campaña.
           const vivas = suyas.filter((a) => !["rejected", "cancelled"].includes(a.status));
           const entregando = vivas.filter((a) => a.accepted_at && !a.delivered_at && !a.approved_at);
+          // Las que ya entregaron y esperan la aprobación. Sin esta línea, una
+          // campaña con su única colaboración entregada mostraba el riel en
+          // "Aprobás vos" y ni una palabra de quién ni de qué hay que aprobar.
+          const porAprobar = vivas.filter((a) => a.delivered_at && !a.approved_at);
           const entregables = entregablesEnLinea(c.deliverables);
 
           return (
@@ -208,7 +225,7 @@ export default async function MarcaResumenPage() {
                   >
                     <span className={styles.mcFilaPunto} />
                     <span className={styles.mcFilaTxt}>
-                      {displayHandle(a.creator_profile?.handle ?? "") || "Un creador"}{" "}
+                      {displayHandle(a.creator?.creator_profiles?.handle ?? "") || "Un creador"}{" "}
                       {limite
                         ? `entrega el ${limite.toLocaleDateString("es-CR", {
                             day: "numeric",
@@ -220,6 +237,22 @@ export default async function MarcaResumenPage() {
                   </Link>
                 );
               })}
+
+              {porAprobar.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/ugc/marca/campanas/${c.id}`}
+                  className={styles.mcCardFila}
+                >
+                  <span className={styles.mcFilaPunto} style={{ background: "var(--ok)" }} />
+                  <span className={styles.mcFilaTxt}>
+                    {displayHandle(a.creator?.creator_profiles?.handle ?? "") || "Un creador"} ya
+                    entregó — te toca aprobar
+                  </span>
+                  <QosIcon name="chevR" size={16} className={styles.mcFilaChev} />
+                </Link>
+              ))}
+
             </div>
           );
         })

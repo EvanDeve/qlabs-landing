@@ -5,7 +5,12 @@
 // compartido no debería depender de ninguno de los dos sistemas. Mismo criterio
 // que MediaLightbox.
 
-function initialsOf(name: string) {
+/**
+ * Las iniciales del negocio. Se exporta porque "Mi negocio" dibuja el mismo
+ * logo con el mismo respaldo: tenerla dos veces daba "CH" en el panel y "CL"
+ * en la página pública para el mismo negocio.
+ */
+export function initialsOf(name: string) {
   return (
     name
       .trim()
