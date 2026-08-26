@@ -179,8 +179,8 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
           disabled={subiendo}
         >
           {logoPreview ? (
-            // eslint-disable-next-line @next/next/no-img-element -- el logo sale
             // de Storage y es de 64px; `next/image` acá solo suma configuración.
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={logoPreview} alt="" className={styles.mcLogoImg} />
           ) : (
             initialsOf(nombre)

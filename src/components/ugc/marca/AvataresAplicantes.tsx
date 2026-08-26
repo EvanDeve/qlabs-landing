@@ -41,9 +41,9 @@ export default function AvataresAplicantes({
           title={c.nombre}
         >
           {c.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- los avatares
             // viven en Storage y son de 40px: `next/image` acá suma un
             // optimizador que no cambia nada y obliga a declarar el dominio.
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={c.avatarUrl} alt="" />
           ) : (
             iniciales(c.nombre)

@@ -105,6 +105,10 @@ export default async function LoyaltyMarcaPage() {
     };
   });
 
+  // Server Component con `force-dynamic`: se renderiza una vez por visita, y
+  // así además todas las filas miden contra el mismo instante.
+  // eslint-disable-next-line react-hooks/purity
+  const ahora = Date.now();
   const canjes: CanjeFila[] = (reclamos ?? []).map((r) => ({
     id: r.id,
     fecha: fechaCorta(r.redeemed_at ?? r.claimed_at),
@@ -113,6 +117,12 @@ export default async function LoyaltyMarcaPage() {
     cupon: tituloDe.get(r.coupon_id) ?? "Cupón",
     code: r.code,
     status: r.status,
+    vence: r.expires_at ? fechaCorta(r.expires_at) : null,
+    // Días que le quedan. Es lo que dice si hay que apurar a alguien, y una
+    // fecha suelta obliga a hacer la cuenta de cabeza.
+    diasRestantes: r.expires_at
+      ? Math.ceil((new Date(r.expires_at).getTime() - ahora) / 86_400_000)
+      : null,
   }));
 
   return (
