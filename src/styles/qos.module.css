@@ -3448,14 +3448,36 @@
   flex-shrink: 0;
   min-width: 20px;
 }
+/* El título y los apuntes, uno debajo del otro. El `flex: 1` y el `min-width`
+   se mudaron acá desde `.videoTitulo`: los necesita quien reparte el ancho de
+   la fila, que ahora es esta columna. */
+.videoTitCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 .videoTitulo {
   font-weight: 600;
   font-size: 13.5px;
-  flex: 1;
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* Los apuntes de la tarjeta, con la fila cerrada. Una línea y nada más: la
+   fila es una lista para recorrer un mes, no el lugar donde se leen enteros
+   —para eso está la caja de adentro—. */
+.videoApuntes {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Un apunte pegado sin espacios (un link) desbordaría la fila a lo ancho en
+     vez de cortarse. */
+  overflow-wrap: anywhere;
 }
 /* Sin título todavía: se distingue del que sí lo tiene, para que armando el
    mes se vea de un vistazo cuáles faltan por llenar. */

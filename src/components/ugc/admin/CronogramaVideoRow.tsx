@@ -56,7 +56,23 @@ function GuionChip({ item }: { item: Item }) {
   );
 }
 
-export default function CronogramaVideoRow({ item, numero }: { item: Item; numero: number }) {
+export default function CronogramaVideoRow({
+  item,
+  numero,
+  apuntes,
+}: {
+  item: Item;
+  numero: number;
+  /**
+   * Los apuntes de la tarjeta del pipeline —`content_pieces.notes`—, que son
+   * OTRA cosa que las "Notas de producción" de más abajo: esas viven en el
+   * cronograma y las escribe quien arma el mes; estos los escribe el equipo
+   * sobre la tarjeta y son los que dicen si el video se graba o va con voice
+   * over. Por eso no se editan acá: la tarjeta es su dueña, y el cronograma no
+   * los pisa al sincronizar (ver `sincronizarConLaTarjeta`).
+   */
+  apuntes: string | null;
+}) {
   const [abierto, setAbierto] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [guardado, setGuardado] = useState(false);
@@ -65,6 +81,7 @@ export default function CronogramaVideoRow({ item, numero }: { item: Item; numer
   const [titulo, setTitulo] = useState(item.title);
 
   const aprobado = item.piece_id !== null;
+  const apuntesLimpios = apuntes?.trim() || null;
 
   function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -87,8 +104,20 @@ export default function CronogramaVideoRow({ item, numero }: { item: Item; numer
       >
         <span className={styles.videoNum}>{String(numero).padStart(2, "0")}</span>
 
-        <span className={`${styles.videoTitulo} ${titulo ? "" : styles.videoSinTitulo}`}>
-          {titulo || "Sin título todavía"}
+        <span className={styles.videoTitCol}>
+          <span className={`${styles.videoTitulo} ${titulo ? "" : styles.videoSinTitulo}`}>
+            {titulo || "Sin título todavía"}
+          </span>
+
+          {/* Los apuntes se leen con la fila CERRADA. Quien graba recorre el mes
+              buscando qué le toca grabar y qué es voice over; si hay que abrir
+              los diez videos para saberlo, no los lee nadie. Se recortan a una
+              línea y el texto entero queda en el `title`. */}
+          {apuntesLimpios && (
+            <span className={styles.videoApuntes} title={apuntesLimpios}>
+              {apuntesLimpios}
+            </span>
+          )}
         </span>
 
         <GuionChip item={item} />
@@ -169,6 +198,21 @@ export default function CronogramaVideoRow({ item, numero }: { item: Item; numer
                 Lo que dijo el cliente
               </p>
               <p style={{ fontSize: "13.5px", lineHeight: 1.5 }}>{item.client_comment}</p>
+            </div>
+          )}
+
+          {/* Completos y sin recortar, arriba del guion: es lo que hay que tener
+              a mano para grabar. No son editables acá a propósito —se escriben
+              en la tarjeta del tablero— y el pie lo dice, para que nadie los
+              busque en este formulario. */}
+          {apuntesLimpios && (
+            <div className={styles.hookBox} style={{ marginTop: "16px" }}>
+              <p className={styles.hookLabel}>
+                <QosIcon name="pencil" size={12} />
+                Apuntes del equipo
+              </p>
+              <p style={{ fontSize: "13.5px", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{apuntesLimpios}</p>
+              <p className={styles.hookNote}>Se escriben en la tarjeta del pipeline.</p>
             </div>
           )}
 

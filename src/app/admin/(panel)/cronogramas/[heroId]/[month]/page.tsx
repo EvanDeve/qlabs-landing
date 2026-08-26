@@ -71,6 +71,22 @@ export default async function ArmarCronogramaPage({
   if (!hero || !cronograma) notFound();
 
   const items = videos ?? [];
+
+  // Los apuntes de la tarjeta del pipeline, para los videos que ya son tarjeta.
+  // Es donde el equipo escribe si va grabación o voice over, y hasta ahora
+  // había que salirse al tablero para saberlo: quien graba arma el día desde
+  // esta pantalla, no desde el Kanban.
+  //
+  // Va en una consulta aparte y NO como embed: `calendar_month_items.piece_id`
+  // no tiene FK declarada contra `content_pieces`, y un embed sobre una FK que
+  // no existe no devuelve la fila sin el embed — hace fallar la consulta
+  // entera y `data` vuelve null, sin excepción.
+  const pieceIds = items.map((i) => i.piece_id).filter((id): id is string => id !== null);
+  const { data: tarjetas } = pieceIds.length
+    ? await supabase.from("content_pieces").select("id, notes").in("id", pieceIds)
+    : { data: [] };
+  const apuntesPorPieza = new Map((tarjetas ?? []).map((t) => [t.id, t.notes]));
+
   const aprobado = cronograma.status === "aprobado";
   const comentados = items.filter((i) => i.client_comment).length;
   const sinFecha = items.filter((i) => !i.publish_date).length;
@@ -155,7 +171,14 @@ export default async function ArmarCronogramaPage({
             Todavía no hay videos. Agregá el primero para empezar a armar el mes.
           </div>
         ) : (
-          items.map((item, i) => <CronogramaVideoRow key={item.id} item={item} numero={i + 1} />)
+          items.map((item, i) => (
+            <CronogramaVideoRow
+              key={item.id}
+              item={item}
+              numero={i + 1}
+              apuntes={(item.piece_id && apuntesPorPieza.get(item.piece_id)) || null}
+            />
+          ))
         )}
       </div>
 
