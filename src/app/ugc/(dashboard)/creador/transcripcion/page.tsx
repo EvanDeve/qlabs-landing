@@ -4,6 +4,7 @@ import TranscripcionForm from "@/components/ugc/creador/TranscripcionForm";
 import TranscripcionLista from "@/components/ugc/creador/TranscripcionLista";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,10 @@ export default async function TranscripcionPage() {
 
   return (
     <div className={styles.trCol}>
-      <div className={styles.feedHead}>
-        <h1 className={styles.feedTitle}>Transcripción</h1>
-        <p className={styles.feedSub}>Pasá un video a texto y armá el guion de tu próxima pieza.</p>
-      </div>
+      <PantallaHeader
+        titulo="Transcripción"
+        descripcion="Pasá un video a texto y armá el guion de tu próxima pieza."
+      />
 
       <TranscripcionForm />
 

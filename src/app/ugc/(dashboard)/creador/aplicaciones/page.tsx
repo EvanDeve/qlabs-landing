@@ -5,6 +5,7 @@ import { APLICACION_TONO, fechaLimite } from "@/lib/ugc/application-steps";
 import { slotsDeCampana } from "@/lib/ugc/delivery-slots";
 import type { ApplicationStatus } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -144,9 +145,7 @@ export default async function MisAplicacionesPage() {
 
   return (
     <div>
-      <div className={styles.feedHead}>
-        <h1 className={styles.feedTitle}>Mis aplicaciones</h1>
-      </div>
+      <PantallaHeader titulo="Mis aplicaciones" />
 
       {items.length === 0 && (
         <div className={`${styles.card} ${styles.empty}`}>Todavía no aplicaste a ninguna campaña.</div>

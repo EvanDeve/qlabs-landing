@@ -14,11 +14,17 @@ import styles from "@/styles/qos.module.css";
  * `loading.tsx` cubre todas las pantallas de su segmento, que no tienen la
  * misma forma entre sí.
  */
-export default function EsqueletoPanel({ altoTitulo = 34 }: { altoTitulo?: number }) {
+export default function EsqueletoPanel({ altoTitulo = 28 }: { altoTitulo?: number }) {
   return (
     <div>
-      <div className={styles.feedHead}>
-        <div className={styles.skBloque} style={{ width: "58%", height: `${altoTitulo}px` }} />
+      {/* Mismas piezas que `PantallaHeader`: la fila del título y la bajada a
+          lo ancho. Si el esqueleto no las respeta, la pantalla salta al
+          llegar. */}
+      <div className={styles.pantallaHead}>
+        <div className={styles.pantallaFila}>
+          <div className={styles.skBloque} style={{ width: "58%", height: `${altoTitulo}px` }} />
+          <div className={styles.skBloque} style={{ width: "34px", height: "34px", borderRadius: "10px" }} />
+        </div>
         <div className={styles.skBloque} style={{ width: "76%", height: "14px", marginTop: "10px" }} />
       </div>
 

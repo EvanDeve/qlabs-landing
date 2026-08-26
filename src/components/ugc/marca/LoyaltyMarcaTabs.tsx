@@ -16,6 +16,7 @@ import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import EscanearQR from "./EscanearQR";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export type CuponMarca = {
   id: string;
@@ -96,16 +97,16 @@ export default function LoyaltyMarcaTabs({
 
   return (
     <>
-      <div className={styles.mcTitFila}>
-        <div style={{ minWidth: 0 }}>
-          <h1 className={styles.mcSaludo}>Loyalty</h1>
-          <p className={styles.feedSub}>Cupones para que los creadores lleguen a tu local.</p>
-        </div>
-        <button type="button" className={styles.mcNuevo} onClick={() => setTab("nuevo")}>
-          <QosIcon name="plus" size={15} />
-          Nuevo
-        </button>
-      </div>
+      <PantallaHeader
+        titulo="Loyalty"
+        descripcion="Cupones para que los creadores lleguen a tu local."
+        accion={
+          <button type="button" className={styles.mcNuevo} onClick={() => setTab("nuevo")}>
+            <QosIcon name="plus" size={15} />
+            Nuevo
+          </button>
+        }
+      />
 
       {/* La tarjeta negra lleva a la cámara. Es el gesto que se hace con alguien
           parado enfrente, así que va arriba de todo y no escondido en una

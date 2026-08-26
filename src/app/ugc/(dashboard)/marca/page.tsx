@@ -7,6 +7,7 @@ import RielCampana from "@/components/ugc/marca/RielCampana";
 import AvataresAplicantes, { type CaraAplicante } from "@/components/ugc/marca/AvataresAplicantes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -145,10 +146,7 @@ export default async function MarcaResumenPage() {
 
   return (
     <div className={styles.mcCol}>
-      <div className={styles.mcHead}>
-        {brand?.brand_name && <div className={styles.mcEyebrow}>{brand.brand_name}</div>}
-        <h1 className={styles.mcSaludo}>{saludo}</h1>
-      </div>
+      <PantallaHeader rotulo={brand?.brand_name || undefined} titulo={saludo} />
 
       {porRevisar.length > 0 && (
         <div className={styles.mcDecidir}>

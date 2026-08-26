@@ -8,6 +8,7 @@ import { initialsOf } from "@/components/ugc/BrandAvatar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import Hoja from "@/components/ugc/creador/Hoja";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export type NegocioInicial = {
   brand_name: string;
@@ -146,19 +147,21 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
         <input type="hidden" name="instagram_handle" value={instagram} />
       </form>
 
-      <div className={styles.mcNegocioHead}>
-        <h1 className={styles.mcSaludo}>Mi negocio</h1>
-        {inicial.slug && (
-          <a
-            href={`/ugc/marcas/${inicial.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.mcVerPublico}
-          >
-            Ver público
-          </a>
-        )}
-      </div>
+      <PantallaHeader
+        titulo="Mi negocio"
+        accion={
+          inicial.slug ? (
+            <a
+              href={`/ugc/marcas/${inicial.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.mcVerPublico}
+            >
+              Ver público
+            </a>
+          ) : undefined
+        }
+      />
 
       <div className={styles.mcIdent}>
         <input

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import PerfilEditor from "@/components/ugc/creador/PerfilEditor";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +21,10 @@ export default async function CreatorProfileEditPage() {
 
   return (
     <div>
-      <div className={styles.feedHead}>
-        <h1 className={styles.feedTitle}>Mi perfil</h1>
-        <p className={styles.feedSub}>Esto es lo que ven las marcas cuando aplicás.</p>
-      </div>
+      <PantallaHeader
+        titulo="Mi perfil"
+        descripcion="Esto es lo que ven las marcas cuando aplicás."
+      />
 
       <PerfilEditor
         inicial={{

@@ -8,6 +8,7 @@ import { estadoDeNivel, type Nivel } from "@/lib/ugc/loyalty";
 import { displayHandle } from "@/lib/ugc/handles";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -284,14 +285,21 @@ export default async function CreadorHomePage() {
 
   return (
     <div>
-      <Link href="/ugc/creador/perfil" className={styles.homeIdentidad} title="Ver mi perfil">
-        {/* Sin el "@": como inicial, todos los creadores tendrían la misma. */}
-        <BrandAvatar name={nombre.replace(/^@/, "")} logoUrl={perfil?.avatar_url} size={46} radius={23} />
-        <div style={{ minWidth: 0 }}>
-          <div className={styles.homeNombre}>{nombre}</div>
-          <div className={styles.homeMeta}>Nivel {actual?.name ?? "Bronce"} · verificado</div>
-        </div>
-      </Link>
+      {/* Esta pantalla no abre con un título sino con la identidad, así que va
+          como bloque entero en el lugar del título — la campana la sigue
+          acompañando en la misma fila. */}
+      <PantallaHeader
+        titulo={
+          <Link href="/ugc/creador/perfil" className={styles.homeIdentidad} title="Ver mi perfil">
+            {/* Sin el "@": como inicial, todos los creadores tendrían la misma. */}
+            <BrandAvatar name={nombre.replace(/^@/, "")} logoUrl={perfil?.avatar_url} size={46} radius={23} />
+            <div style={{ minWidth: 0 }}>
+              <div className={styles.homeNombre}>{nombre}</div>
+              <div className={styles.homeMeta}>Nivel {actual?.name ?? "Bronce"} · verificado</div>
+            </div>
+          </Link>
+        }
+      />
 
       <div className={styles.homeCobrarLabel}>Por cobrar</div>
       <div className={styles.homeCobrarMonto}>{colones(montoPorCobrar)}</div>

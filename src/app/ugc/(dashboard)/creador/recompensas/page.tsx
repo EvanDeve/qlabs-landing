@@ -22,6 +22,7 @@ import {
   type Nivel,
 } from "@/lib/ugc/loyalty";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -387,9 +388,7 @@ export default async function RecompensasPage() {
 
   return (
     <div>
-      <h1 className={styles.feedTitle} style={{ marginBottom: "16px" }}>
-        Recompensas
-      </h1>
+      <PantallaHeader titulo="Recompensas" />
 
       {/* ── Puntos, nivel y los tres números ── */}
       <div className={styles.recCard}>

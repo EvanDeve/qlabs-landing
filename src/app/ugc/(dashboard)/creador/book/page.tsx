@@ -3,6 +3,7 @@ import SubirPieza from "@/components/ugc/creador/SubirPieza";
 import PortfolioGrid, { type PortfolioTile } from "@/components/ugc/creador/PortfolioGrid";
 import { PORTFOLIO_BUCKET } from "@/lib/ugc/portfolio";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -48,9 +49,7 @@ export default async function CreatorBookPage() {
   if (tiles.length === 0) {
     return (
       <div>
-        <div className={styles.feedHead}>
-          <h1 className={styles.feedTitle}>Mi book</h1>
-        </div>
+        <PantallaHeader titulo="Mi book" />
 
         <div className={styles.bookVacio}>
           {/* Tres huecos: dicen cuántas piezas se esperan sin tener que leerlo. */}
@@ -88,13 +87,11 @@ export default async function CreatorBookPage() {
 
   return (
     <div>
-      <div className={styles.bookHead}>
-        <div>
-          <h1 className={styles.feedTitle}>Mi book</h1>
-          <p className={styles.feedSub}>Las marcas lo miran al revisar tu aplicación.</p>
-        </div>
-        <SubirPieza etiqueta="Subir" />
-      </div>
+      <PantallaHeader
+        titulo="Mi book"
+        descripcion="Las marcas lo miran al revisar tu aplicación."
+        accion={<SubirPieza etiqueta="Subir" />}
+      />
 
       {/* Las tres en una tarjeta y no en tres: a 393 px, tres tarjetas sueltas
           quedan de ~110 px y el número deja de leerse de un vistazo. */}

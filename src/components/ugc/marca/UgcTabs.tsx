@@ -13,6 +13,7 @@ import AvataresAplicantes from "./AvataresAplicantes";
 import ApplicantDecisionButtons from "./ApplicantDecisionButtons";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 type Campana = {
   id: string;
@@ -84,13 +85,15 @@ export default function UgcTabs({
 
   return (
     <>
-      <div className={styles.mcTitFila}>
-        <h1 className={styles.mcSaludo}>Campañas</h1>
-        <Link href="/ugc/marca/campanas/nueva" className={styles.mcNuevo}>
-          <QosIcon name="plus" size={15} />
-          Nueva
-        </Link>
-      </div>
+      <PantallaHeader
+        titulo="Campañas"
+        accion={
+          <Link href="/ugc/marca/campanas/nueva" className={styles.mcNuevo}>
+            <QosIcon name="plus" size={15} />
+            Nueva
+          </Link>
+        }
+      />
 
       {perfilIncompleto && (
         <div className={`${styles.trAviso} ${styles.trAvisoMal}`} style={{ marginBottom: 14 }}>

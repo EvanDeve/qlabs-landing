@@ -4163,29 +4163,77 @@
 }
 
 /* ============================================================
-   FEED DE PROMOS
-   Rediseñado con lenguaje de app de iPhone (ver docs/brief-diseno-ugc-ios.md).
-   Las medidas salen del mockup a 393 pt: título grande de 34, chips de filtro
-   que se deslizan en horizontal, portada de 2.5:1 y el monto neto a 26 px en
-   violeta, que es el dato que frena el scroll.
+   EL ENCABEZADO DE UNA PANTALLA — `PantallaHeader`
+   Título + acción + campana en una fila, y la descripción abajo a lo ancho.
+   La campana dejó de flotar en la esquina: era la razón por la que cada
+   encabezado reservaba 52px de padding a la derecha, y ese padding le achicaba
+   también la descripción aunque nada la tapara. Adentro de la fila la centra
+   el flexbox y no hay altura que adivinar.
    ============================================================ */
-.feedHead {
+.pantallaHead {
   margin-bottom: 14px;
 }
-.feedTitle {
-  font-size: 34px;
+.pantallaFila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* Sin esto un título largo no se deja achicar y empuja al botón fuera de la
+   pantalla: en un contenedor flex el mínimo por defecto es el del contenido. */
+.pantallaTit {
+  min-width: 0;
+}
+.pantallaRotulo {
+  margin-bottom: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* La escala de título de pantalla, la MISMA en los dos paneles: 28px, la que
+   ya usaba el pipeline. Antes había cuatro (34 en el creador, 31 en marca, 28
+   en el pipeline y 26 en el detalle de campaña).
+   Va con `.qosRoot` adelante porque `.qosRoot h1,h2,h3,h4 { line-height: 1.2 }`
+   le gana a una sola clase: sin el prefijo, el line-height de acá no se aplica
+   y el título se dibuja con una caja más alta que la declarada. */
+.qosRoot .pantallaTitulo {
+  font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 1.08;
+  line-height: 1.1;
   color: var(--ink);
 }
-.feedSub {
+.pantallaActs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+/* La fila de identidad del inicio del creador traía su propio margen de abajo.
+   Adentro del encabezado ese margen infla el ítem flex —el contenedor mide 22px
+   más de lo que se ve— y baja la campana 8px. El aire lo pone el contenedor. */
+.pantallaHead .homeIdentidad {
+  margin-bottom: 0;
+}
+.pantallaHead:has(.homeIdentidad) {
+  margin-bottom: 22px;
+}
+.pantallaDesc {
   margin-top: 5px;
   font-size: 13.5px;
+  line-height: 1.45;
   color: var(--ink-2);
 }
-
-
+/* En escritorio la campana sigue viviendo en la barra de Q·OS, que ahí sí es
+   una barra de verdad; la de la fila sobra. */
+@media (min-width: 901px) {
+  .pantallaActs .bellWrap {
+    display: none;
+  }
+}
 
 /* Los filtros se deslizan en horizontal en vez de envolver: con seis rubros
    en dos líneas, en el celular la primera tarjeta arrancaba fuera de pantalla.
@@ -6742,14 +6790,35 @@
      únicamente el layout del creador. */
   .encabezadoPropio .main {
     position: relative;
+    /* Dónde cae el CENTRO de la campana, medido desde el borde de arriba de
+       `.main`, en las pantallas donde todavía flota.
+       Queda solo para las pantallas que NO usan `PantallaHeader`: el detalle
+       de campaña, Nueva campaña y Validar canje. Las demás dibujan la campana
+       adentro de su fila y no dependen de este número. */
+    --campana-y: 36px;
+  }
+  /* Validar canje trae su propia barra de app, pegada al borde de arriba y a
+     pantalla completa, en vez de un título. (Nueva campaña también trae la
+     suya, pero cae justo en el mismo centro que un título y le sirve el valor
+     por defecto.) */
+  .encabezadoPropio .main:has(.mcEscanerBar) {
+    --campana-y: 30px;
+  }
+  /* Las pantallas que ya traen su fila de título dibujan la campana adentro,
+     así que la barra flotante del shell no tiene nada que mostrar. Las que
+     todavía no —el inicio del creador, Nueva campaña, Validar canje y el
+     detalle de campaña— siguen con la campana flotando y con `--campana-y`. */
+  .encabezadoPropio .main:has(.pantallaHead) > .topbar {
+    display: none;
   }
   .encabezadoPropio .main > .topbar {
     position: absolute;
-    top: 0;
+    /* 17px es media campana: `.calNavBtn` mide 34. */
+    top: calc(var(--campana-y) - 17px);
     left: auto;
     right: 0;
     z-index: 25;
-    padding: 12px 14px;
+    padding: 0 14px;
     background: transparent;
     backdrop-filter: none;
     border-bottom: 0;
@@ -6759,9 +6828,6 @@
     display: none;
   }
   /* El aire que necesita el título para no meterse debajo de la campana. */
-  .encabezadoPropio .feedTitle {
-    padding-right: 52px;
-  }
 }
 
 /* Las dos tarjetas del pie del Resumen. Estaban con `style` inline a dos
@@ -7018,14 +7084,6 @@
   background: var(--b-500);
 }
 
-@media (max-width: 900px) {
-  /* Esta pantalla no abre con `.feedTitle`, así que el aire para la campana lo
-     reserva la fila de identidad. */
-  .encabezadoPropio .homeIdentidad {
-    padding-right: 52px;
-  }
-}
-
 /* ============================================================
    MIS APLICACIONES — el creador
    Medido sobre el mockup a 393 pt (viene 1:1: el ícono de la barra de abajo
@@ -7044,9 +7102,6 @@
 }
 /* La primera etiqueta viene pegada al título grande, que ya trae su propio
    aire abajo. */
-.feedHead + .apliSeccion {
-  margin-top: 2px;
-}
 
 .apliLista {
   display: flex;
@@ -7747,26 +7802,6 @@
   margin: 0 -18px;
   padding: 0 18px;
 }
-.pipeHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  /* La campana del shell vive arriba a la derecha; el botón no puede quedar
-     debajo de ella. */
-  padding-right: 0;
-}
-/* 28 y no los 34 de `.feedTitle`: es lo que mide el mockup en esta pantalla, y
-   con 34 el título no entra al lado de "Nueva tarea" en un teléfono — se parte
-   en dos líneas y empuja el tablero fuera de la primera pantalla. */
-.qosRoot .pipeTitulo {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  color: var(--ink);
-}
 .pipeNueva {
   display: inline-flex;
   align-items: center;
@@ -7964,21 +7999,6 @@
   .pipePuntos {
     display: flex;
   }
-  /* Esta pantalla trae su propio título, así que el de la topbar sobra —mismo
-     criterio que en el feed. */
-  .main:has(.pipeHead) .topbar .tbTitle {
-    display: none;
-  }
-  .encabezadoPropio .mcNegocioHead,
-  .encabezadoPropio .mcHead,
-  .encabezadoPropio .pipeHead,
-  /* Igual que el pipeline: la campana del shell vive arriba a la derecha y sin
-     este colchón el botón de la pantalla le queda debajo y sale cortado. */
-  .encabezadoPropio .bookHead {
-    padding-right: 52px;
-  }
-  /* Esta pantalla también trae su propio título. */
-  .main:has(.bookHead) .topbar .tbTitle,
   .main:has(.bookVacio) .topbar .tbTitle {
     display: none;
   }
@@ -8370,18 +8390,6 @@
   color: var(--ink-inv);
 }
 
-/* ============================================================
-   MI BOOK — el portafolio del creador
-   Medido sobre el mockup a 262 px de ancho para 393 pt (escala 0.667, hay que
-   dividir). La grilla es de dos columnas con las tarjetas a 3:4.
-   ============================================================ */
-.bookHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
 .bookSubir {
   display: inline-flex;
   align-items: center;
@@ -9222,8 +9230,8 @@
 
    Los mockups vinieron a 239 px para 393 pt (escala 0.565): a ese tamaño una
    mayúscula mide 4 px y medirla da ±3 pt de error, así que los tamaños se
-   heredan de las pantallas ya hechas —`.feedTitle` 34, bajada 13.5— y de ahí
-   para abajo. Lo que SÍ se midió y se respeta es la paleta, que cae entera
+   heredan de las pantallas ya hechas —el título y la bajada de
+   `PantallaHeader`— y de ahí para abajo. Lo que SÍ se midió y se respeta es la paleta, que cae entera
    sobre los tokens que ya existen: fondo #F5F2FC (--canvas del panel), card
    blanca, violeta #624FF2 (--b-600) y el lavanda de chips y avisos #E9E3FA
    (--b-100).
@@ -10011,41 +10019,6 @@
 }
 
 
-/* ============================================================
-   PANEL DE MARCA — rediseño con lenguaje de app de iPhone
-   Segunda mitad del rediseño de /ugc (ver docs/brief-diseno-ugc-ios.md).
-
-   Los mockups vinieron a 1,188× (pantalla de 467 px para 393 pt), o sea más
-   grandes que 1:1 — al revés que los del creador, que venían a 0,565. A esa
-   escala una mayúscula mide 27 px y sí se puede medir: el saludo dio 22,7 pt
-   de altura de mayúscula, que en Plus Jakarta Sans (cap 0.73 del em) son 31 px.
-
-   La paleta cae sobre los tokens de siempre. Lo único nuevo es la tarjeta
-   negra, que no existía en ninguna pantalla: es el único elemento de toda la
-   app con fondo oscuro, y es a propósito — marca lo que hay que decidir HOY,
-   y si hubiera dos cosas negras dejaría de significar eso.
-   ============================================================ */
-
-.mcHead {
-  margin-bottom: 18px;
-}
-.mcEyebrow {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.mcSaludo {
-  margin-top: 2px;
-  font-size: 31px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.08;
-  color: var(--ink);
-}
-
 /* ---------------- La tarjeta negra: lo que hay que decidir ---------------- */
 .mcDecidir {
   padding: 18px;
@@ -10424,13 +10397,6 @@
   margin-bottom: 6px;
 }
 
-.mcNegocioHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
 .qosRoot .mcVerPublico {
   flex-shrink: 0;
   height: 34px;
@@ -11092,10 +11058,16 @@
   gap: 12px;
 }
 .qosRoot .mcDetTitulo {
-  font-size: 26px;
+  /* Los 3px de arriba y abajo suben la caja del título de 30.8 a 36.8, que es
+     el alto de los botones que comparten fila con él (Nueva tarea 37, Subir
+     36). Con eso el título, el botón y la campana caen todos en el mismo
+     centro en TODAS las pantallas, tengan botón o no, y `--campana-y` puede
+     ser una sola constante en vez de una por pantalla. */
+  padding: 3px 0;
+  font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 1.14;
+  line-height: 1.1;
   color: var(--ink);
 }
 .mcDetMeta {
@@ -11301,14 +11273,6 @@
   margin-top: 14px;
 }
 
-/* ---------------- CAMPAÑAS Y APLICANTES ---------------- */
-.mcTitFila {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
 .qosRoot .mcNuevo {
   display: inline-flex;
   align-items: center;

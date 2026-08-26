@@ -17,6 +17,7 @@ import { QosIcon } from "@/lib/ugc/qos-icons";
 import CreatorTaskModal from "./CreatorTaskModal";
 import ColumnModal from "./ColumnModal";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export type CreatorTask = Database["public"]["Tables"]["creator_tasks"]["Row"];
 export type TaskColumn = Database["public"]["Tables"]["creator_task_columns"]["Row"];
@@ -101,17 +102,19 @@ export default function CreatorTaskBoard({
 
   return (
     <div className={styles.pipeWrap}>
-      <div className={styles.pipeHead}>
-        <h1 className={styles.pipeTitulo}>Mi pipeline</h1>
-        <button
-          type="button"
-          onClick={() => setCreandoEn(columns[visible]?.id ?? columns[0]?.id ?? null)}
-          className={styles.pipeNueva}
-        >
-          <QosIcon name="plus" size={15} />
-          Nueva tarea
-        </button>
-      </div>
+      <PantallaHeader
+        titulo="Mi pipeline"
+        accion={
+          <button
+            type="button"
+            onClick={() => setCreandoEn(columns[visible]?.id ?? columns[0]?.id ?? null)}
+            className={styles.pipeNueva}
+          >
+            <QosIcon name="plus" size={15} />
+            Nueva tarea
+          </button>
+        }
+      />
 
       {/* Los chips no filtran: saltan. Con cuatro columnas en un teléfono, lo
           que hace falta es llegar a la de al lado sin cuatro deslizadas. */}

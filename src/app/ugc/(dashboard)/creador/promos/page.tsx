@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import CreadorFeedGrid from "@/components/ugc/creador/CreadorFeedGrid";
 import styles from "@/styles/qos.module.css";
+import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -60,10 +61,10 @@ export default async function CreadorFeedPage() {
     <div>
       {/* Título grande al estilo iOS: la barra de arriba ya dice dónde estamos,
           así que este encabezado es el que abre la pantalla. */}
-      <div className={styles.feedHead}>
-        <h1 className={styles.feedTitle}>Feed de promos</h1>
-        <p className={styles.feedSub}>Marcas verificadas buscando creadores como vos</p>
-      </div>
+      <PantallaHeader
+        titulo="Feed de promos"
+        descripcion="Marcas verificadas buscando creadores como vos"
+      />
 
       {feedCampaigns.length > 0 ? (
         <CreadorFeedGrid campaigns={feedCampaigns} />

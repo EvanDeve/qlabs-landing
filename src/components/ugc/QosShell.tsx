@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { Database } from "@/lib/database.types";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import NotificationsBell from "@/components/ugc/NotificationsBell";
+import { NotificacionesCtx } from "@/components/ugc/CampanaDePantalla";
 import { signOutAction } from "@/lib/actions/auth";
 import styles from "@/styles/qos.module.css";
 // ^ el CSS module vive físicamente bajo admin/ porque ahí lo importan otros
@@ -283,7 +284,13 @@ export default function QosShell({
             </div>
           </header>
 
-          <main className={styles.content}>{children}</main>
+          {/* Las notificaciones bajan por contexto porque en móvil la campana
+              la dibuja el encabezado de cada pantalla —dentro de la fila del
+              título—, y un layout de App Router no puede pasarle props a la
+              página que envuelve. */}
+          <main className={styles.content}>
+            <NotificacionesCtx.Provider value={notifications}>{children}</NotificacionesCtx.Provider>
+          </main>
         </div>
       </div>
 
