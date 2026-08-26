@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { normalizarUrl } from "@/lib/ugc/url";
-import { BRAND_LOGO_BUCKET, MAX_BRAND_LOGO_FILE_BYTES } from "@/lib/ugc/brand-logos";
+import { BRAND_LOGO_BUCKET } from "@/lib/ugc/brand-logos";
 
 // `ok` existe para que el formulario pueda cantar "guardado": antes la acción
 // devolvía null tanto al guardar bien como al no hacer nada, así que la
@@ -38,22 +38,25 @@ export async function updateBrandProfileAction(
     return { error: "El nombre del negocio es obligatorio." };
   }
 
-  // Logo (opcional) — mismo patrón que la foto del creador.
-  const logoFile = formData.get("logo");
+  // Logo (opcional). Llega como RUTA de Storage, no como archivo.
+  //
+  // ⚠️ Hasta el 2026-08-26 el archivo viajaba por acá adentro del FormData, con
+  // un tope propio de 5 MB contra el de ~4.5 MB que tiene el body de una
+  // función en Vercel: un logo de 4.6 MB pasaba la validación de este action y
+  // moría en producción, andando perfecto en local. Es el mismo bug que ya se
+  // había arreglado en la foto del creador; a este lo tapaba que casi nadie
+  // sube un logo pesado. Ahora el navegador sube DIRECTO a Storage y acá solo
+  // llega la ruta.
+  const logoPath = String(formData.get("logo_path") ?? "").trim();
   let logoUrl: string | undefined;
-  if (logoFile instanceof File && logoFile.size > 0) {
-    if (logoFile.size > MAX_BRAND_LOGO_FILE_BYTES) {
-      return { error: "El logo supera el tamaño máximo (5 MB)." };
+  if (logoPath) {
+    // La ruta siempre arranca con el uuid de quien sube, que es lo que exige la
+    // policy del bucket. Sin este chequeo, un usuario podría mandar la carpeta
+    // de otro y quedarse con su logo en el perfil.
+    if (!logoPath.startsWith(`${user.id}/`)) {
+      return { error: "No se pudo guardar el logo. Probá de nuevo." };
     }
-    const ext = logoFile.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${user.id}/logo-${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from(BRAND_LOGO_BUCKET)
-      .upload(path, logoFile, { upsert: true, contentType: logoFile.type });
-    if (uploadError) {
-      return { error: "No se pudo subir el logo. Intentá de nuevo." };
-    }
-    logoUrl = supabase.storage.from(BRAND_LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+    logoUrl = supabase.storage.from(BRAND_LOGO_BUCKET).getPublicUrl(logoPath).data.publicUrl;
   }
 
   const update: {

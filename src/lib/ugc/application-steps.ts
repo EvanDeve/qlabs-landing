@@ -42,6 +42,45 @@ export function pasosDeAplicacion(app: Hitos): Paso[] {
 }
 
 /**
+ * El mismo riel, pero como lo ve la MARCA.
+ *
+ * No es `pasosDeAplicacion` con otras etiquetas: es de otra cosa. El del
+ * creador describe SU aplicación; este describe la CAMPAÑA, que puede tener
+ * varias colaboraciones a la vez. El riel muestra la más avanzada, porque lo
+ * que la marca quiere saber de un vistazo es en qué punto está la campaña, no
+ * cada persona — para eso están las filas de abajo de la tarjeta.
+ *
+ * El primer paso es un hecho de la campaña (se publicó) y los otros tres son
+ * de las aplicaciones. Mezclarlos es correcto desde este lado: publicás,
+ * alguien graba, entrega, y te toca aprobar.
+ *
+ * "Aprobás vos" es el paso de AHORA cuando ya entregaron: la pelota es de la
+ * marca y el riel tiene que decírselo, no felicitarla por la entrega ajena.
+ */
+export function pasosDeCampana(
+  apps: Pick<Hitos, "accepted_at" | "delivered_at" | "approved_at">[]
+): Paso[] {
+  const alguna = (campo: keyof typeof apps[number]) => apps.some((a) => Boolean(a[campo]));
+
+  const hechos = [
+    true,
+    // Igual que del lado del creador: la fecha manda sobre el estado, y una
+    // aprobada implica que antes se aceptó y se entregó.
+    alguna("accepted_at") || alguna("delivered_at") || alguna("approved_at"),
+    alguna("delivered_at") || alguna("approved_at"),
+    alguna("approved_at"),
+  ];
+
+  const labels = ["Publicada", "Grabando", "Entrega", "Aprobás vos"];
+  const ahora = hechos.indexOf(false);
+
+  return labels.map((label, i) => ({
+    label,
+    estado: hechos[i] ? "hecho" : i === ahora ? "ahora" : "pendiente",
+  }));
+}
+
+/**
  * El tono del pill en esta pantalla, que NO es `APPLICATION_STATUS_STYLE`.
  *
  * El mapa compartido lo usa también el panel de la marca, donde "rechazada" en

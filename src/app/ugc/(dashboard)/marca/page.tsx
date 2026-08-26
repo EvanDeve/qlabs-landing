@@ -1,181 +1,259 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { pasosDeCampana, fechaLimite } from "@/lib/ugc/application-steps";
+import { entregablesEnLinea } from "@/lib/ugc/deliverables";
+import { displayHandle } from "@/lib/ugc/handles";
+import RielCampana from "@/components/ugc/marca/RielCampana";
+import AvataresAplicantes, { type CaraAplicante } from "@/components/ugc/marca/AvataresAplicantes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
 
-// Ojo: "Loyalty Loop" salió de esta lista y pasó a ser un sistema activo, con
-// su propia tarjeta abajo. Acá describía otra cosa —retención de los clientes
-// del restaurante: cumpleaños y referidos— y dejarlo con el mismo nombre que el
-// módulo de cupones para creadores era prometer dos productos distintos con una
-// sola etiqueta.
-const OTHER_SYSTEMS = [
-  {
-    icon: "columns",
-    name: "La Operación",
-    desc: "Reservas, WhatsApp Business, CRM y automatización de respuestas.",
-  },
-  {
-    icon: "doc",
-    name: "La Vitrina",
-    desc: "Página web que convierte, SEO local, Google Business y contenido para redes.",
-  },
-  {
-    icon: "sparkle",
-    name: "IA & Automatización",
-    desc: "Asistentes de IA para reservas y chatbots de WhatsApp entrenados para tu negocio.",
-  },
-  {
-    icon: "flag",
-    name: "Crecimiento & Estrategia",
-    desc: "Meta / Google / TikTok Ads, campañas de reseñas y estrategia de contenido.",
-  },
-];
-
+/**
+ * El Resumen de la marca.
+ *
+ * ⚠️ Acá vivía el "Centro de Mando": tres KPIs y una grilla de seis tarjetas
+ * con los sistemas de Q Labs —UGC·CRC, Loyalty Loop y cuatro más que linkeaban
+ * a qlabsmethod.com—. Evan las sacó el 2026-08-26 al rediseñar la pantalla: la
+ * home pasó a ser lo que hay que decidir HOY. Se le señaló que con eso se va la
+ * única vitrina de los otros cuatro sistemas dentro del panel y aun así eligió
+ * sacarlas, así que **no volver a proponerlas**. UGC·CRC y Loyalty Loop no se
+ * perdieron: son dos de las cuatro pestañas de la barra de abajo.
+ */
 export default async function MarcaResumenPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user!.id).single();
-
-  const [{ data: campaigns }, { count: cuponesActivosRaw }] = await Promise.all([
-    supabase.from("campaigns").select("id, status").eq("brand_id", user!.id),
+  const [{ data: profile }, { data: brand }, { data: campaigns }] = await Promise.all([
+    supabase.from("profiles").select("display_name").eq("id", user!.id).single(),
+    supabase.from("brand_profiles").select("brand_name").eq("profile_id", user!.id).maybeSingle(),
     supabase
-      .from("coupons")
-      .select("id", { count: "exact", head: true })
+      .from("campaigns")
+      .select("id, title, status, budget_amount, deliverables, deadline_days, created_at")
       .eq("brand_id", user!.id)
-      .eq("status", "publicado"),
+      .in("status", ["published", "in_progress"])
+      .order("created_at", { ascending: false }),
   ]);
 
-  const campaignIds = (campaigns ?? []).map((c) => c.id);
-  const { data: applications } = campaignIds.length
-    ? await supabase.from("applications").select("id, status, created_at").in("campaign_id", campaignIds)
+  const activas = campaigns ?? [];
+  const ids = activas.map((c) => c.id);
+
+  // Las aplicaciones traen el perfil del creador para las caras de la tarjeta
+  // negra y para decir quién entrega. Un solo viaje: pedirlas por campaña sería
+  // una consulta por tarjeta.
+  const { data: apps } = ids.length
+    ? await supabase
+        .from("applications")
+        .select(
+          "id, campaign_id, status, accepted_at, delivered_at, approved_at, created_at, creator:profiles!applications_creator_id_fkey(id, display_name, avatar_url), creator_profile:creator_profiles!applications_creator_id_fkey(handle)"
+        )
+        .in("campaign_id", ids)
     : { data: [] };
 
-  const cuponesActivos = cuponesActivosRaw ?? 0;
-  const activeCampaigns = (campaigns ?? []).filter(
-    (c) => c.status === "published" || c.status === "in_progress"
-  ).length;
-  const pendingApplicants = (applications ?? []).filter(
-    (a) => a.status === "pending" || a.status === "reviewing"
-  ).length;
-  const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const newApplicantsThisWeek = (applications ?? []).filter(
-    (a) => new Date(a.created_at) >= sevenDaysAgo
-  ).length;
+  const aplicaciones = (apps ?? []) as unknown as {
+    id: string;
+    campaign_id: string;
+    status: string;
+    accepted_at: string | null;
+    delivered_at: string | null;
+    approved_at: string | null;
+    created_at: string;
+    creator: { id: string; display_name: string | null; avatar_url: string | null } | null;
+    creator_profile: { handle: string | null } | null;
+  }[];
 
-  const kpis = [
-    { label: "Campañas activas", value: activeCampaigns, icon: "megaphone", color: "#6d54f3" },
-    { label: "Aplicantes por revisar", value: pendingApplicants, icon: "clock", color: "#c07414" },
-    { label: "Aplicantes nuevos (7 días)", value: newApplicantsThisWeek, icon: "users", color: "#14a06a" },
-  ];
+  const porRevisar = aplicaciones.filter((a) => a.status === "pending" || a.status === "reviewing");
+
+  // Los cupones que alguien reclamó y todavía no canjeó: es lo único de Loyalty
+  // que le pide algo a la marca (que valide cuando la persona llegue).
+  const { data: cupones } = await supabase
+    .from("coupons")
+    .select("id, title")
+    .eq("brand_id", user!.id);
+
+  // Los canjes van en su propia consulta y no anidados bajo `coupons`: la
+  // relación no está declarada en los tipos generados y el join no compila.
+  const { data: reclamos } = (cupones ?? []).length
+    ? await supabase
+        .from("redemptions")
+        .select("id, coupon_id, creator_id, expires_at")
+        // Ojo: los estados de `redemptions` están en español. "claimed" compila
+        // como string pero no matchea ninguna fila, y la tarjeta no aparecería
+        // nunca sin que nadie se entere.
+        .eq("status", "reclamado")
+        .in("coupon_id", (cupones ?? []).map((c) => c.id))
+    : { data: [] };
+
+  // Un cupón vencido no es "sin usar": la tarjeta dice que la persona PUEDE
+  // llegar a canjearlo, y con la fecha pasada eso ya no es cierto. El estado
+  // 'expirado' lo pone un job, así que no alcanza con filtrar por status.
+  const ahora = Date.now();
+  const sinUsar = (reclamos ?? [])
+    .filter((r) => !r.expires_at || new Date(r.expires_at).getTime() > ahora)
+    .map((r) => ({
+      cupon: (cupones ?? []).find((c) => c.id === r.coupon_id)?.title ?? "",
+      creatorId: r.creator_id,
+    }));
+
+  // El handle de quien tiene el cupón sin usar. Se pide aparte porque
+  // `redemptions` cuelga de `coupons` y no del perfil.
+  const { data: handlesCupon } = sinUsar.length
+    ? await supabase
+        .from("creator_profiles")
+        .select("profile_id, handle")
+        .in("profile_id", [...new Set(sinUsar.map((s) => s.creatorId))])
+    : { data: [] };
+
+  const handleDe = (id: string) =>
+    displayHandle((handlesCupon ?? []).find((h) => h.profile_id === id)?.handle ?? "");
+
+  const caras: CaraAplicante[] = porRevisar.map((a) => ({
+    id: a.id,
+    nombre: a.creator?.display_name ?? "Creador",
+    avatarUrl: a.creator?.avatar_url ?? null,
+  }));
+
+  // De qué campaña son los que hay que revisar. Si vienen de varias, decir el
+  // título de una sería mentir sobre las otras.
+  const campanasConPendientes = new Set(porRevisar.map((a) => a.campaign_id));
+  const subtituloDecidir =
+    campanasConPendientes.size === 1
+      ? (activas.find((c) => c.id === [...campanasConPendientes][0])?.title ?? "")
+      : `En ${campanasConPendientes.size} campañas`;
+
+  const saludo = (profile?.display_name ?? "").split(" ")[0] || "de vuelta";
 
   return (
-    <div>
-      <h1 className={styles.tbTitle} style={{ fontSize: "26px", marginBottom: "4px" }}>
-        Buenas, {profile?.display_name ?? "de vuelta"} 👋
-      </h1>
-      <p style={{ color: "var(--ink-2)", marginBottom: "24px" }}>
-        Tu Centro de Mando en Q Labs — UGC·CRC es tu sistema activo hoy.
-      </p>
+    <div className={styles.mcCol}>
+      <div className={styles.mcHead}>
+        {brand?.brand_name && <div className={styles.mcEyebrow}>{brand.brand_name}</div>}
+        <h1 className={styles.mcSaludo}>Buenas, {saludo}</h1>
+      </div>
 
-      <div className={`${styles.kpiRow} ${styles.kpiRow3}`}>
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className={styles.kpi}>
-            <div className={styles.kTop}>
-              <div className={styles.kIc} style={{ background: `${kpi.color}22`, color: kpi.color }}>
-                <QosIcon name={kpi.icon} size={16} />
+      {porRevisar.length > 0 && (
+        <div className={styles.mcDecidir}>
+          <div className={styles.mcDecidirLabel}>Te toca decidir</div>
+          <div className={styles.mcDecidirFila}>
+            <AvataresAplicantes caras={caras} />
+            <span className={styles.mcDecidirTxt}>
+              <span className={styles.mcDecidirNum}>
+                {porRevisar.length} aplicante{porRevisar.length === 1 ? "" : "s"} por revisar
+              </span>
+              <span className={styles.mcDecidirSub}>{subtituloDecidir}</span>
+            </span>
+          </div>
+          <Link
+            href={
+              campanasConPendientes.size === 1
+                ? `/ugc/marca/campanas/${[...campanasConPendientes][0]}`
+                : "/ugc/marca/ugc"
+            }
+            className={styles.mcDecidirBtn}
+          >
+            Revisar aplicantes
+          </Link>
+        </div>
+      )}
+
+      <h2 className={styles.mcSecTit}>
+        {activas.length === 1 ? "Tu campaña activa" : "Tus campañas activas"}
+      </h2>
+
+      {activas.length > 0 ? (
+        activas.map((c) => {
+          const suyas = aplicaciones.filter((a) => a.campaign_id === c.id);
+          // Solo las que avanzaron cuentan para el riel: una rechazada o
+          // cancelada no es un paso adelante de la campaña.
+          const vivas = suyas.filter((a) => !["rejected", "cancelled"].includes(a.status));
+          const entregando = vivas.filter((a) => a.accepted_at && !a.delivered_at && !a.approved_at);
+          const entregables = entregablesEnLinea(c.deliverables);
+
+          return (
+            <div key={c.id} className={styles.mcCard}>
+              <div className={styles.mcCardTop}>
+                <div style={{ minWidth: 0 }}>
+                  <div className={styles.mcCardTitulo}>{c.title}</div>
+                  <div className={styles.mcCardMeta}>
+                    {c.budget_amount != null &&
+                      `₡${c.budget_amount.toLocaleString("es-CR")} de presupuesto`}
+                    {c.budget_amount != null && entregables && " · "}
+                    {entregables}
+                  </div>
+                </div>
+                <span
+                  className={`${styles.mcEstado} ${
+                    c.status === "published" ? "" : styles.mcEstadoQuieto
+                  }`}
+                >
+                  {c.status === "published" ? "Publicada" : "En curso"}
+                </span>
               </div>
-              <div className={styles.kLabel}>{kpi.label}</div>
-            </div>
-            <div className={styles.kNum} style={{ color: kpi.color }}>
-              {kpi.value}
-            </div>
-          </div>
-        ))}
-      </div>
 
-      <div className={styles.sectionHead} style={{ marginTop: "30px" }}>
-        <h2 className={styles.sectionHeadBig}>Mis sistemas</h2>
-      </div>
-      <div className={styles.cardsGrid}>
-        <div className={`${styles.card} ${styles.cardPad} ${styles.sysCard}`}>
-          <div className={styles.sysHead}>
-            <span className={styles.sysIc}>
-              <QosIcon name="megaphone" size={19} />
-            </span>
-            <h3>UGC·CRC</h3>
-            <span className={`${styles.riskPill} ${styles.riskOk}`} style={{ marginLeft: "auto" }}>
-              Activo
-            </span>
-          </div>
-          <p className={styles.sysDesc}>
-            Marketplace de creadores verificados: campañas, aplicantes y contenido real.
+              <RielCampana pasos={pasosDeCampana(vivas)} />
+
+              {entregando.map((a) => {
+                const limite = fechaLimite(a.accepted_at, c.deadline_days);
+                return (
+                  <Link
+                    key={a.id}
+                    href={`/ugc/marca/campanas/${c.id}`}
+                    className={styles.mcCardFila}
+                  >
+                    <span className={styles.mcFilaPunto} />
+                    <span className={styles.mcFilaTxt}>
+                      {displayHandle(a.creator_profile?.handle ?? "") || "Un creador"}{" "}
+                      {limite
+                        ? `entrega el ${limite.toLocaleDateString("es-CR", {
+                            day: "numeric",
+                            month: "long",
+                          })}`
+                        : "está grabando"}
+                    </span>
+                    <QosIcon name="chevR" size={16} className={styles.mcFilaChev} />
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })
+      ) : (
+        <div className={styles.mcVacio}>
+          <QosIcon name="megaphone" size={26} className={styles.trVacioIc} />
+          <p className={styles.mcVacioTxt}>
+            No tenés campañas corriendo. Publicá una y los creadores verificados van a poder
+            aplicar.
           </p>
-          <div className={styles.sysFoot}>
-            <span style={{ fontSize: "12px", color: "var(--ink-3)" }}>
-              {activeCampaigns} campaña{activeCampaigns === 1 ? "" : "s"} activa{activeCampaigns === 1 ? "" : "s"}
-            </span>
-            <Link href="/ugc/marca/ugc" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}>
-              Abrir panel
-            </Link>
-          </div>
         </div>
+      )}
 
-        <div className={`${styles.card} ${styles.cardPad} ${styles.sysCard}`}>
-          <div className={styles.sysHead}>
-            <span className={styles.sysIc}>
-              <QosIcon name="sparkle" size={19} />
+      {sinUsar.length > 0 && (
+        <div className={styles.mcCupon}>
+          <span className={styles.mcCuponIc}>
+            <QosIcon name="grid" size={19} />
+          </span>
+          <span className={styles.mcCuponTxt}>
+            <span className={styles.mcCuponTit}>
+              {sinUsar.length} cupón{sinUsar.length === 1 ? "" : "es"} sin usar
             </span>
-            <h3>Loyalty Loop</h3>
-            <span className={`${styles.riskPill} ${styles.riskOk}`} style={{ marginLeft: "auto" }}>
-              Activo
+            <span className={styles.mcCuponSub}>
+              {sinUsar.length === 1
+                ? `${handleDe(sinUsar[0].creatorId)} puede llegar a canjearlo`
+                : "Pueden llegar a canjearlos"}
             </span>
-          </div>
-          <p className={styles.sysDesc}>
-            Cupones por nivel para creadores verificados: reclaman, llegan a tu local y vos validás
-            el canje con un escaneo.
-          </p>
-          <div className={styles.sysFoot}>
-            <span style={{ fontSize: "12px", color: "var(--ink-3)" }}>
-              {cuponesActivos} cupón{cuponesActivos === 1 ? "" : "es"} activo{cuponesActivos === 1 ? "" : "s"}
-            </span>
-            <Link href="/ugc/marca/loyalty" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}>
-              Abrir panel
-            </Link>
-          </div>
+          </span>
+          <Link href="/ugc/marca/loyalty" className={styles.mcCuponBtn}>
+            Validar
+          </Link>
         </div>
+      )}
 
-        {OTHER_SYSTEMS.map((sys) => (
-          <div key={sys.name} className={`${styles.card} ${styles.cardPad} ${styles.sysCard}`}>
-            <div className={styles.sysHead}>
-              <span className={styles.sysIc}>
-                <QosIcon name={sys.icon} size={19} />
-              </span>
-              <h3>{sys.name}</h3>
-              <span className={`${styles.riskPill} ${styles.riskMuted}`} style={{ marginLeft: "auto" }}>
-                Conocé más
-              </span>
-            </div>
-            <p className={styles.sysDesc}>{sys.desc}</p>
-            <div className={styles.sysFoot}>
-              <span style={{ fontSize: "12px", color: "var(--ink-3)" }}>Otro sistema de Q Labs</span>
-              <a
-                href="https://qlabsmethod.com"
-                target="_blank"
-                rel="noreferrer"
-                className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
-              >
-                Conocé más
-              </a>
-            </div>
-          </div>
-        ))}
-      </div>
+      <Link href="/ugc/marca/campanas/nueva" className={styles.mcPublicar}>
+        <QosIcon name="plus" size={17} />
+        Publicar {activas.length > 0 ? "otra" : "una"} campaña
+      </Link>
     </div>
   );
 }

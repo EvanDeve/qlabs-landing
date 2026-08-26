@@ -9213,7 +9213,8 @@
 /* En un monitor, un formulario de un campo estirado a 1400px no se lee: la
    columna se acota y se centra, como una hoja de papel. En el teléfono el
    max-width no hace nada y el ancho lo manda el padding del `.content`. */
-.trCol {
+.trCol,
+.mcCol {
   max-width: 620px;
   margin: 0 auto;
 }
@@ -9983,4 +9984,510 @@
   .trPieAire {
     display: none;
   }
+}
+
+
+/* ============================================================
+   PANEL DE MARCA — rediseño con lenguaje de app de iPhone
+   Segunda mitad del rediseño de /ugc (ver docs/brief-diseno-ugc-ios.md).
+
+   Los mockups vinieron a 1,188× (pantalla de 467 px para 393 pt), o sea más
+   grandes que 1:1 — al revés que los del creador, que venían a 0,565. A esa
+   escala una mayúscula mide 27 px y sí se puede medir: el saludo dio 22,7 pt
+   de altura de mayúscula, que en Plus Jakarta Sans (cap 0.73 del em) son 31 px.
+
+   La paleta cae sobre los tokens de siempre. Lo único nuevo es la tarjeta
+   negra, que no existía en ninguna pantalla: es el único elemento de toda la
+   app con fondo oscuro, y es a propósito — marca lo que hay que decidir HOY,
+   y si hubiera dos cosas negras dejaría de significar eso.
+   ============================================================ */
+
+.mcHead {
+  margin-bottom: 18px;
+}
+.mcEyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcSaludo {
+  margin-top: 2px;
+  font-size: 31px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  color: var(--ink);
+}
+
+/* ---------------- La tarjeta negra: lo que hay que decidir ---------------- */
+.mcDecidir {
+  padding: 18px;
+  margin-bottom: 26px;
+  border-radius: 20px;
+  background: var(--ink-deep);
+}
+.mcDecidirLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+}
+.mcDecidirFila {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0 16px;
+}
+.mcDecidirTxt {
+  flex: 1;
+  min-width: 0;
+}
+.mcDecidirNum {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.mcDecidirSub {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qosRoot .mcDecidirBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-500);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcDecidirBtn:hover {
+  background: var(--b-400);
+}
+
+/* Las caras de quienes aplicaron, montadas una sobre otra. El borde del color
+   de la tarjeta es lo que las separa: sin él, dos avatares oscuros pegados se
+   leen como una sola mancha. */
+.mcAvatars {
+  display: flex;
+  flex-shrink: 0;
+}
+.mcAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--ink-deep);
+  background: var(--b-400);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+}
+.mcAvatar + .mcAvatar {
+  margin-left: -14px;
+}
+.mcAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* El "+2" cuando hay más de los que entran. Va al final y en gris: no es una
+   persona, es un contador. */
+.mcAvatarMas {
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+}
+
+/* ---------------- Encabezado de sección ---------------- */
+.qosRoot .mcSecTit {
+  margin-bottom: 10px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+/* ---------------- La tarjeta de campaña con su riel ---------------- */
+.mcCard {
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.mcCard + .mcCard {
+  margin-top: 12px;
+}
+.mcCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.qosRoot .mcCardTitulo {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.mcCardMeta {
+  margin-top: 3px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+/* El riel de 4 pasos. Mismo lenguaje que el del creador en "Mis aplicaciones",
+   con el vocabulario de la marca: lo que ella ve no es "entregaste" sino quién
+   está grabando y cuándo le toca aprobar. */
+.mcRiel {
+  margin: 16px 0 4px;
+}
+.mcRielVia {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 14px;
+  margin: 0 5px;
+}
+/* La línea va detrás de los puntos y de borde a borde entre el primero y el
+   último, por eso los 5px de margen: es el radio del punto. */
+.mcRielVia::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--b-100);
+}
+/* Lo recorrido, en negro. Se pinta con un ancho en línea calculado por paso. */
+.mcRielAvance {
+  position: absolute;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink);
+}
+.mcRielPunto {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--b-100);
+}
+.mcRielHecho {
+  background: var(--ink);
+}
+/* El punto de ahora es más grande y lleva halo: es el único que hay que
+   encontrar de un vistazo. */
+.mcRielAhora {
+  width: 16px;
+  height: 16px;
+  background: var(--b-500);
+  box-shadow: 0 0 0 5px var(--b-100);
+}
+.mcRielLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.mcRielLabel {
+  flex: 1;
+  text-align: center;
+}
+.mcRielLabel:first-child {
+  text-align: left;
+}
+.mcRielLabel:last-child {
+  text-align: right;
+}
+.mcRielLabelAhora {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* La fila de abajo de la tarjeta: quién entrega y cuándo. */
+.mcCardFila {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line-2);
+  font-size: 13.5px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.mcCardFila + .mcCardFila {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.mcFilaPunto {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--b-500);
+}
+.mcFilaTxt {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcFilaChev {
+  flex-shrink: 0;
+  color: var(--ink-3);
+}
+
+/* ---------------- La tarjeta del cupón sin usar ---------------- */
+.mcCupon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.mcCuponIc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.mcCuponTxt {
+  flex: 1;
+  min-width: 0;
+}
+.qosRoot .mcCuponTit {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.mcCuponSub {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink-2);
+}
+.qosRoot .mcCuponBtn {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  color: var(--b-700);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcCuponBtn:hover {
+  background: var(--b-300);
+  color: #fff;
+}
+
+/* ---------------- El botón de publicar otra ---------------- */
+.qosRoot .mcPublicar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 50px;
+  margin-top: 18px;
+  border: 1.5px solid var(--b-300);
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--b-600);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcPublicar:hover {
+  background: var(--b-50);
+}
+
+/* ---------------- Vacío ---------------- */
+.mcVacio {
+  padding: 26px 20px;
+  text-align: center;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.mcVacioTxt {
+  margin-top: 8px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* La pastilla de estado de la campaña. Verde para publicada, gris para el
+   resto: el color dice "está corriendo", no "está bien". */
+.mcEstado {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-full);
+  background: var(--ok-bg);
+  color: var(--ok);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.mcEstadoQuieto {
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
+
+/* ---------------- MI NEGOCIO ----------------
+   Misma estructura que "Mi perfil" del creador —filas de lectura, cada dato en
+   su hoja— así que reusa `.perfilFila`, `.hojaTabla` y `.hojaCampo*`. Lo único
+   propio es el logo, que es un cuadrado redondeado y no un círculo: es una
+   marca, no una cara. */
+.mcNegocioHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.qosRoot .mcVerPublico {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--b-100);
+  color: var(--b-700);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.qosRoot .mcVerPublico:hover {
+  background: var(--b-300);
+  color: #fff;
+}
+
+.mcIdent {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(26, 23, 48, 0.05);
+}
+.qosRoot .mcLogo {
+  position: relative;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: none;
+  /* 18 de 64 es la proporción del "squircle" de iOS: un radio chico lo deja
+     con cara de miniatura de video y uno completo lo vuelve un avatar. */
+  border-radius: 18px;
+  background: var(--b-400);
+  color: #fff;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  cursor: pointer;
+  overflow: visible;
+}
+.mcLogoImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  object-fit: cover;
+}
+/* La cámara cuelga del borde: adentro del cuadrado tapa el logo, que es
+   justamente lo que se está mirando. */
+.mcLogoEditar {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--b-600);
+  color: #fff;
+}
+.mcIdentTxt {
+  flex: 1;
+  min-width: 0;
+}
+.qosRoot .mcIdentNombre {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.mcIdentSello {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ok);
 }

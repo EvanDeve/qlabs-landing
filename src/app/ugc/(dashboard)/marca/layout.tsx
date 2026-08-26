@@ -96,6 +96,12 @@ export default async function MarcaLayout({
       userAvatarUrl={profile?.avatar_url ?? null}
       userRole="Marca"
       section="Marca"
+      // Desde el rediseño de 2026-08-26 las pantallas de marca traen su propio
+      // título, así que en móvil la barra de Q·OS —hamburguesa, rastro y
+      // título— se convierte en la campana sola. Las tres que todavía no se
+      // rediseñaron (UGC·CRC, Loyalty y el detalle de campaña) ya tienen su
+      // encabezado propio, así que ninguna queda sin título.
+      encabezadoPropio
     >
       {children}
     </QosShell>

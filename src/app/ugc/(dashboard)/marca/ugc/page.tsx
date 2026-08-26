@@ -70,9 +70,7 @@ export default async function MarcaUgcPanelPage() {
 
   return (
     <div>
-      <h1 className={styles.tbTitle} style={{ fontSize: "26px", marginBottom: "4px" }}>
-        UGC·CRC
-      </h1>
+      <h1 className={styles.feedTitle}>UGC·CRC</h1>
       <p style={{ color: "var(--ink-2)", marginBottom: "20px" }}>
         Publicá campañas, revisá aplicantes y convertí contenido real en prueba social.
       </p>

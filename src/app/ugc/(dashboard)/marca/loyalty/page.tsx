@@ -128,9 +128,7 @@ export default async function LoyaltyMarcaPage() {
 
   return (
     <div>
-      <h1 className={styles.tbTitle} style={{ fontSize: "26px", marginBottom: "4px" }}>
-        Loyalty Loop
-      </h1>
+      <h1 className={styles.feedTitle}>Loyalty Loop</h1>
       <p style={{ color: "var(--ink-2)", marginBottom: "24px", maxWidth: "68ch" }}>
         Creá cupones para atraer creadores, definí quién puede reclamarlos según su nivel, y validá
         los canjes en tu local con un escaneo.
