@@ -28,6 +28,14 @@ export type EnvioResult =
    */
   | { ok: false; error: string; definitivo: boolean };
 
+/** Lo que Twilio contesta cuando se le pregunta por un mensaje ya mandado. */
+export type EstadoEnTwilio = {
+  /** El estado crudo de Twilio: queued, sent, delivered, undelivered, failed… */
+  status: string;
+  errorCode: number | null;
+  errorMessage: string | null;
+};
+
 type TwilioConfig = { accountSid: string; authToken: string; from: string };
 
 function leerConfig(): TwilioConfig | null {
@@ -85,6 +93,57 @@ async function enviar(params: Record<string, string>, to: string): Promise<Envio
     // No sabemos si llegó a salir. Se marca como no definitivo para que nadie
     // reintente y termine mandando el mismo recordatorio dos veces.
     return { ok: false, error, definitivo: false };
+  }
+}
+
+/**
+ * Lo que Twilio dice HOY de un mensaje que ya mandamos.
+ *
+ * Existe porque `sendWhatsAppFreeform` devuelve `ok: true` en cuanto Twilio
+ * acepta el mensaje, y aceptar no es entregar. El 2026-09-02 la salida hacia
+ * WhatsApp estuvo caída tres días: Twilio aceptaba todo, devolvía un SID, y los
+ * mensajes se quedaban en `queued` para siempre sin un solo código de error.
+ * Del lado nuestro se veía un éxito perfecto.
+ *
+ * Devuelve null si no se pudo preguntar (sin config, red caída, 404). Null es
+ * "no sé", NO "falló": el llamador tiene que dejar la fila como estaba, porque
+ * pisarla con un fracaso inventado es peor que no saber.
+ */
+export async function consultarEstado(sid: string): Promise<EstadoEnTwilio | null> {
+  const config = leerConfig();
+  if (!config) return null;
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/Accounts/${config.accountSid}/Messages/${encodeURIComponent(sid)}.json`,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${config.accountSid}:${config.authToken}`).toString("base64")}`,
+        },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      }
+    );
+
+    if (!res.ok) {
+      console.warn(`[twilio] no se pudo consultar ${sid}: HTTP ${res.status}`);
+      return null;
+    }
+
+    const data = (await res.json()) as {
+      status?: string;
+      error_code?: number | null;
+      error_message?: string | null;
+    };
+    if (!data.status) return null;
+
+    return {
+      status: data.status,
+      errorCode: data.error_code ?? null,
+      errorMessage: data.error_message ?? null,
+    };
+  } catch (err) {
+    console.warn("[twilio] error consultando estado:", err instanceof Error ? err.message : err);
+    return null;
   }
 }
 

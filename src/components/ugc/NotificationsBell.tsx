@@ -71,6 +71,16 @@ function describe(notification: Notification): { text: string; href: string } {
     };
   }
 
+  // El canal de WhatsApp dejó de entregar. Va a la pantalla de McLovin porque
+  // es desde donde se mira su actividad; el texto ya viene armado del chequeo,
+  // con los números del día.
+  if (notification.type === "wa_salida_trabada") {
+    return {
+      text: String(payload.texto ?? "WhatsApp no está entregando mensajes"),
+      href: "/admin/mclovin",
+    };
+  }
+
   if (notification.type === "verification_pending") {
     const name = String(payload.subject_name ?? "Alguien");
     const roleLabel = payload.subject_role === "brand" ? "marca" : "creador";

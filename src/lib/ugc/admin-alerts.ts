@@ -18,6 +18,15 @@ export const CONTACTO_WA_NUEVO = "contacto_wa_nuevo";
  */
 export const PIEZA_TOCADA = "pieza_tocada";
 
+/**
+ * WhatsApp aceptó mensajes y no los entregó.
+ *
+ * Es el único aviso del sistema que NO puede viajar por WhatsApp: nace
+ * justamente de que ese canal está caído. Lo dispara el cron diario desde
+ * `wa-salud.ts`.
+ */
+export const WA_SALIDA_TRABADA = "wa_salida_trabada";
+
 export type PendingVerification = {
   profileId: string;
   role: "creator" | "brand";

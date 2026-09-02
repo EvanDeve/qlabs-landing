@@ -75,7 +75,21 @@ export type CalendarMonthStatus = "pendiente" | "aprobado";
 /** Quién aprobó el cronograma: el Hero desde su link, o el equipo a mano. */
 export type CalendarApprovedBy = "cliente" | "equipo";
 export type WaDirection = "out" | "in";
-export type WaMessageStatus = "queued" | "sent" | "failed" | "received";
+// Los nombres son los de Twilio tal cual. Los cuatro primeros son "en vuelo"
+// (Twilio lo tiene, la persona no), 'delivered'/'read' es que llegó, y
+// 'undelivered'/'failed'/'canceled' es que ya no va a llegar. Ver
+// src/lib/ugc/wa-salud.ts, que es quien los agrupa.
+export type WaMessageStatus =
+  | "queued"
+  | "accepted"
+  | "sending"
+  | "sent"
+  | "delivered"
+  | "read"
+  | "undelivered"
+  | "failed"
+  | "canceled"
+  | "received";
 export type WaActionKind =
   | "mover_pieza"
   | "marcar_hecho"

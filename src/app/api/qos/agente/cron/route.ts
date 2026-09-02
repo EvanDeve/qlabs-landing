@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { COSTA_RICA_TZ } from "@/lib/ugc/calendar";
 import { getMiembrosNotificables, enviarRecordatorioDiario } from "@/lib/ugc/recordatorios";
 import { limpiarVoiceoversVencidos, expirarLoyalty } from "@/lib/ugc/limpieza";
+import { revisarSaludDeWhatsApp } from "@/lib/ugc/wa-salud";
 
 // Le manda el resumen del día a los miembros del equipo, y de paso hace la
 // limpieza diaria.
@@ -69,5 +70,15 @@ export async function GET(request: Request) {
   // fecha, libera el stock que tomaron sin usar, y avisa 3 días antes.
   const loyalty = await expirarLoyalty(admin);
 
-  return NextResponse.json({ ...resumen, limpieza, loyalty });
+  // Va al final y después de los envíos de arriba a propósito: reconcilia
+  // contra Twilio el estado REAL de lo que se mandó —incluido lo de ayer— y
+  // avisa por campanita y email si nada se está entregando. Los recordatorios
+  // que acaban de salir quedan fuera por el colchón de gracia de wa-salud, así
+  // que no se alarma de su propia corrida.
+  //
+  // Es la respuesta al 2026-09-02: la salida de WhatsApp estuvo caída tres días
+  // y la única señal fue que alguien lo revisara a mano.
+  const whatsapp = await revisarSaludDeWhatsApp(admin, now);
+
+  return NextResponse.json({ ...resumen, limpieza, loyalty, whatsapp });
 }

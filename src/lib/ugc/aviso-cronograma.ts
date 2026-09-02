@@ -65,7 +65,22 @@ async function avisarPorWhatsApp(
     await Promise.allSettled(
       miembros.map(async (m) => {
         if (!(await ventanaAbierta(admin, m.profileId))) return;
-        await sendWhatsAppFreeform(m.telefono, texto);
+
+        const envio = await sendWhatsAppFreeform(m.telefono, texto);
+
+        // Se registra igual que los otros dos caminos de salida (el webhook y
+        // el recordatorio diario). Antes este no dejaba rastro, y eso lo hacía
+        // invisible para el chequeo de salud: el 2026-09-02 los dos avisos de
+        // La Bontá quedaron trabados en Twilio sin existir en ninguna tabla
+        // nuestra. Lo que no se registra no se puede vigilar.
+        await admin.from("wa_messages").insert({
+          profile_id: m.profileId,
+          direction: "out",
+          body: texto,
+          provider_sid: envio.ok ? envio.sid : null,
+          status: envio.ok ? "sent" : "failed",
+          error: envio.ok ? null : envio.error,
+        });
       })
     );
   } catch (e) {
