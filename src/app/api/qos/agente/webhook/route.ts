@@ -83,6 +83,27 @@ function urlsPosibles(request: Request): string[] {
 /** Palabras de baja. Se chequean antes que nada, sin pasar por el LLM. */
 const BAJAS = ["salir", "stop", "baja", "parar", "cancelar"];
 
+/**
+ * Lo que se le contesta a Twilio cuando el mensaje se recibió bien.
+ *
+ * Twilio espera TwiML (`text/xml`) en la respuesta del webhook, y cuando le
+ * llega otra cosa lo anota como error `12300 — Invalid Content-Type`. La
+ * conversación nunca dependió de esto —la respuesta al equipo sale aparte por
+ * la API, dentro del after()— así que devolver JSON no rompía nada. Lo que sí
+ * hacía era pintar de rojo en la consola de Twilio TODOS los mensajes
+ * entrantes, que es exactamente donde aparecería un `11200` de verdad: la única
+ * señal que tenemos de que el webhook dejó de responder. Un log donde todo está
+ * en rojo no avisa de nada.
+ *
+ * Va vacío a propósito: `<Response/>` es TwiML válido y significa "recibido, no
+ * contestes nada por tu cuenta".
+ */
+function recibido(): Response {
+  return new Response('<?xml version="1.0" encoding="UTF-8"?><Response/>', {
+    headers: { "content-type": "text/xml; charset=utf-8" },
+  });
+}
+
 export async function POST(request: Request) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   if (!authToken) {
@@ -102,7 +123,7 @@ export async function POST(request: Request) {
 
   const telefono = normalizarTelefonoCR((params.From ?? "").replace("whatsapp:", ""));
   const texto = (params.Body ?? "").trim();
-  if (!telefono || !texto) return NextResponse.json({ ok: true });
+  if (!telefono || !texto) return recibido();
 
   const admin = createAdminClient();
   const messageSid = params.MessageSid ?? null;
@@ -129,7 +150,7 @@ export async function POST(request: Request) {
     }
   });
 
-  return NextResponse.json({ ok: true });
+  return recibido();
 }
 
 /**
