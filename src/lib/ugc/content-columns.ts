@@ -8,18 +8,21 @@ export type ContentColumn = Database["public"]["Tables"]["content_columns"]["Row
  * guiones se escriben en una tanda de dos o tres días y después esas columnas
  * quedan quietas.
  *
- * "IT" va última: es el carril de trabajo técnico de la plataforma, no de
- * contenido de un Hero, así que es el que menos gente abre.
+ * "IT" y "Admin" van al final: son los carriles de tareas —lo técnico de la
+ * plataforma y lo administrativo de la agencia—, no contenido de un Hero, así
+ * que son los que menos gente abre.
  *
  * ⚠️ La sección solo reparte columnas entre pestañas. Los conteos por Hero
  * —publicados del mes, atrasadas, carga, y la agenda de McLovin— NO la miran,
- * así que una pieza de IT suma como cualquier otra. Lo que la deja afuera es
- * lo mismo que con los guiones: su columna final marcada `is_done` y no
- * cargarle nunca `publish_date`.
+ * así que una pieza de IT o Admin suma como cualquier otra. Lo que la deja
+ * afuera es lo mismo que con los guiones: su columna final marcada `is_done` y
+ * no cargarle nunca `publish_date`.
  *
- * Agregar una sección: sumar el valor al check (migración 20260803100000, y
- * 20260807100000 para 'it') y una entrada acá. No hay ningún otro lugar que
- * enumere las secciones.
+ * Agregar una sección: sumar el valor al check (migración 20260803100000;
+ * 20260807100000 para 'it'; 20260911120000 para 'admin'), al tipo
+ * `PipelineSection`, una entrada acá y otra en `NOMBRE_DE_CARRIL` (tablero.ts;
+ * el tipo obliga). Si es un carril de tareas y no de videos, también en
+ * `CARRILES_DE_TAREAS`, acá abajo.
  */
 export const SECCIONES_PIPELINE: { id: PipelineSection; label: string }[] = [
   { id: "video", label: "Videos" },
@@ -28,7 +31,21 @@ export const SECCIONES_PIPELINE: { id: PipelineSection; label: string }[] = [
   // Ver la migración 20260812200000.
   { id: "guion", label: "Cronogramas" },
   { id: "it", label: "IT" },
+  { id: "admin", label: "Admin" },
 ];
+
+/**
+ * Los carriles donde una tarjeta es una tarea y no un video: sin guion, sin
+ * plataforma, sin hora de salida, y su fecha es "para cuándo tiene que estar"
+ * y no una publicación. El editor, el modal de pieza nueva, el Calendario y la
+ * agenda de McLovin preguntan esto y NUNCA por el id del carril: cuando IT era
+ * el único, la condición vivía copiada en cuatro lugares.
+ */
+const CARRILES_DE_TAREAS: ReadonlySet<PipelineSection> = new Set(["it", "admin"]);
+
+export function esCarrilDeTareas(section: PipelineSection | string | null | undefined): boolean {
+  return !!section && CARRILES_DE_TAREAS.has(section as PipelineSection);
+}
 
 /** La sección que abre el tablero cuando la URL no dice otra cosa. */
 export const SECCION_POR_DEFECTO: PipelineSection = "video";

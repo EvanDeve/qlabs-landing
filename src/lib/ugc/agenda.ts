@@ -2,6 +2,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, ContentPriority } from "@/lib/database.types";
 import { COSTA_RICA_TZ, diaCR, sumarDias, DIAS_PUBLICA_PRONTO } from "@/lib/ugc/calendar";
+import { esCarrilDeTareas } from "@/lib/ugc/content-columns";
 
 /**
  * Qué le toca a un miembro del equipo y para cuándo.
@@ -201,11 +202,11 @@ export async function getStaffAgenda(
     // uno-a-uno de uno-a-muchos y la deja como array en algunos casos.
     const col = Array.isArray(p.content_columns) ? p.content_columns[0] : p.content_columns;
     const columna = col?.name ?? null;
-    // Una tarjeta del carril de IT no se publica: se termina. Su fecha es
+    // Una tarjeta de un carril de tareas no se publica: se termina. Su fecha es
     // "cuándo tiene que estar lista", no una salida al aire, y llamarla
     // publicación —como se hacía— es decirle a alguien que su tarea de
     // infraestructura sale en Instagram el jueves.
-    const esTarea = col?.section === "it";
+    const esTarea = esCarrilDeTareas(col?.section);
 
     // La pieza está "sin terminar" si su columna no la declara ni lista ni
     // publicada. El `!inner` ya filtró is_done, así que en la práctica lo que

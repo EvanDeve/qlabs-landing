@@ -2,7 +2,7 @@
 
 import { createContentPieceAction } from "@/lib/actions/content-pieces";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import type { ContentColumn } from "@/lib/ugc/content-columns";
+import { esCarrilDeTareas, type ContentColumn } from "@/lib/ugc/content-columns";
 import type { BrandOption, StaffOption } from "./KanbanBoard";
 import styles from "@/styles/qos.module.css";
 
@@ -20,9 +20,9 @@ export default function NewContentPieceModal({
   columnId: string;
   onClose: () => void;
 }) {
-  // El carril decide qué se pregunta. Una tarea de IT necesita cuatro datos;
-  // pedirle plataforma y código es pedirle que invente dos.
-  const esTarea = columns.find((c) => c.id === columnId)?.section === "it";
+  // El carril decide qué se pregunta. Una tarea de IT o de Admin necesita
+  // cuatro datos; pedirle plataforma y código es pedirle que invente dos.
+  const esTarea = esCarrilDeTareas(columns.find((c) => c.id === columnId)?.section);
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>

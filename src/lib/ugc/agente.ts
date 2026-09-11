@@ -528,10 +528,10 @@ export type TurnoPrevio = { quien: "agente" | "persona"; texto: string };
 /**
  * Las columnas agrupadas por carril, para el prompt.
  *
- * El carril no es decoración: el tablero corre tres —guion, video e it— y hay
- * NOMBRES REPETIDOS entre ellos. Hoy existen dos columnas llamadas "Terminado",
- * una de video y otra de it, así que "pasalo a Terminado" sin el carril a la
- * vista es una instrucción que el modelo resuelve al azar.
+ * El carril no es decoración: el tablero corre cuatro —guion, video, it y
+ * admin— y hay NOMBRES REPETIDOS entre ellos. Hoy existen tres columnas
+ * llamadas "Terminado" (video, it y admin), así que "pasalo a Terminado" sin el
+ * carril a la vista es una instrucción que el modelo resuelve al azar.
  *
  * La ambigüedad igual se termina de cerrar al escribir —ver columnaDestino() en
  * tablero.ts—. Esto es para que el modelo no proponga el disparate de entrada.

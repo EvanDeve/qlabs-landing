@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { Database } from "@/lib/database.types";
 import { updateContentPieceAction, updateContentPieceColumnAction, deleteContentPieceAction } from "@/lib/actions/content-pieces";
-import { nextColumn, type ContentColumn } from "@/lib/ugc/content-columns";
+import { esCarrilDeTareas, nextColumn, type ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import type { BrandOption, StaffOption } from "./KanbanBoard";
@@ -60,7 +60,8 @@ export default function ContentPieceEditor({
   const current = columns.find((c) => c.id === columnId);
 
   /**
-   * Una tarjeta del carril de IT no es un video: es una tarea interna.
+   * Una tarjeta de un carril de tareas (IT, Admin) no es un video: es una
+   * tarea interna.
    *
    * No tiene guion, ni plataforma, ni hora de salida, ni aprobación del cliente
    * — mostrarle esos quince campos a quien solo necesita anotar "para cuándo
@@ -73,7 +74,7 @@ export default function ContentPieceEditor({
    * campo ausente se guardaría como null. Es el mismo motivo por el que
    * record_date ya viajaba así.
    */
-  const esTarea = current?.section === "it";
+  const esTarea = esCarrilDeTareas(current?.section);
 
   // Solo los pasos del carril al que pertenece la pieza. Un video no atraviesa
   // las columnas de IT ni las de cronogramas, así que dibujarlas lo haría ver

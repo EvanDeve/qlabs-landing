@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import CalendarView from "@/components/ugc/admin/CalendarView";
 import { COSTA_RICA_TZ, diaCR, esTipoDeEvento, horaCR, type CalendarItem } from "@/lib/ugc/calendar";
 import { coloresDeHeroes } from "@/lib/ugc/content-meta";
+import { esCarrilDeTareas } from "@/lib/ugc/content-columns";
 
 export const dynamic = "force-dynamic";
 
@@ -143,7 +144,8 @@ export default async function CalendarioPage({
 
   for (const piece of contentPieces ?? []) {
     const col = Array.isArray(piece.content_columns) ? piece.content_columns[0] : piece.content_columns;
-    if (col?.section === "it") continue;
+    // Las tareas (IT, Admin) no salen al aire: no tienen lugar en el Calendario.
+    if (esCarrilDeTareas(col?.section)) continue;
     if (piece.publish_date && piece.publish_date >= queryStartStr && piece.publish_date <= queryEndStr) {
       items.push({
         id: `piece-publish-${piece.id}`,

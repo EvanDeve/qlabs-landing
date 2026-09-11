@@ -50,6 +50,7 @@ export const NOMBRE_DE_CARRIL: Record<PipelineSection, string> = {
   guion: "guiones",
   video: "video",
   it: "IT",
+  admin: "Admin",
 };
 
 export type Destino = { ok: true; columna: ColumnaDelTablero } | { ok: false; nota: string };

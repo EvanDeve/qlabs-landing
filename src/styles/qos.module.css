@@ -1324,6 +1324,12 @@
   background: var(--surface-3);
   border: 1px solid var(--line-2);
   border-radius: var(--r-full);
+  /* Con cinco pestañas (cuatro carriles + Todo) el riel ya no entra en un
+     teléfono. Que se deslice adentro de su pastilla en vez de empujar la barra:
+     el panel es de escritorio, esto solo evita que se rompa. */
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 /* OJO con el prefijo .qosRoot: el reset `.qosRoot button { background:none;
    border:none }` le gana a cualquier selector de una sola clase y la pestaña

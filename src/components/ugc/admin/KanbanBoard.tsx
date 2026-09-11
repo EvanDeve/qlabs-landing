@@ -420,8 +420,8 @@ function Card({
             distinguía nada. BrandAvatar cae a las iniciales sobre un degradado
             derivado del nombre cuando el Hero no subió logo — nunca queda un
             hueco, y la misma marca siempre se ve igual. */}
-        {/* Sin Hero no se dibuja un avatar vacío: es una tarea interna del
-            carril de IT y no es de ningún cliente. El hueco se llena con la
+        {/* Sin Hero no se dibuja un avatar vacío: es una tarea interna de un
+            carril de tareas (IT, Admin) y no es de ningún cliente. El hueco se llena con la
             palabra, que dice más que un círculo con las iniciales de nadie. */}
         <span className={styles.kcHero}>
           {brand ? (
