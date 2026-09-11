@@ -25,9 +25,13 @@ export default function CompartirPerfil({ handle }: { handle: string }) {
 
   const limpio = handle.replace(/^@/, "");
 
-  useEffect(() => {
-    if (abierta) setUrl(`${window.location.origin}/ugc/creadores/${limpio}`);
-  }, [abierta, limpio]);
+  // La URL se arma al abrir y no en un efecto: la hoja solo existe después de
+  // un clic, y ahí `window` ya está. Un efecto que hace setState dispara un
+  // segundo render con la hoja ya pintada y la URL todavía vacía.
+  function abrir() {
+    setUrl(`${window.location.origin}/ugc/creadores/${limpio}`);
+    setAbierta(true);
+  }
 
   useEffect(() => {
     if (!copiado) return;
@@ -74,7 +78,7 @@ export default function CompartirPerfil({ handle }: { handle: string }) {
 
   return (
     <>
-      <button type="button" className={styles.perfilVerPublico} onClick={() => setAbierta(true)}>
+      <button type="button" className={styles.perfilVerPublico} onClick={abrir}>
         Ver público
       </button>
 

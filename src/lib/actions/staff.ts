@@ -128,7 +128,7 @@ export async function saveWhatsAppSettingsAction(
     .eq("profile_id", profileId)
     .maybeSingle();
 
-  const { error } = await supabase
+  const { data: filas, error } = await supabase
     .from("staff_members")
     .update({
       phone_e164: telefono,
@@ -139,9 +139,14 @@ export async function saveWhatsAppSettingsAction(
       ...(optIn && !actual?.wa_opt_in ? { wa_opt_in_at: new Date().toISOString() } : {}),
       reminder_hour: Number.isInteger(reminderHour) && reminderHour >= 0 && reminderHour <= 23 ? reminderHour : 7,
     })
-    .eq("profile_id", profileId);
+    .eq("profile_id", profileId)
+    // Un UPDATE que la RLS no deja pasar no es un error: es un 204 con cero
+    // filas. Sin pedir la fila de vuelta, un no-director vería "Guardado" y no
+    // se habría guardado nada.
+    .select("profile_id");
 
   if (error) return { error: "No se pudo guardar. Intentá de nuevo." };
+  if (!filas?.length) return { error: "Solo un director puede cambiar estos datos." };
 
   revalidatePath("/admin/equipo");
   return { message: optIn ? "Guardado. Recibe recordatorios." : "Guardado. Recordatorios apagados." };

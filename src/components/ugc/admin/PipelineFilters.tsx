@@ -76,7 +76,7 @@ export default function PipelineFilters({
    */
   busqueda: string;
   onBusqueda: (valor: string) => void;
-  /** Cuántas coincidencias quedaron en la otra pestaña. 0 si no hay que avisar. */
+  /** Cuántas coincidencias quedaron en otras pestañas. 0 si no hay que avisar. */
   fueraDeLaPestana: number;
   /** "Nueva pieza": vive en KanbanBoard, que tiene su estado. */
   acciones: ReactNode;
@@ -176,7 +176,7 @@ export default function PipelineFilters({
           )}
         </div>
 
-        {/* Sin esto, buscar algo que vive en la otra pestaña se ve igual que
+        {/* Sin esto, buscar algo que vive en otra pestaña se ve igual que
             buscar algo que no existe, y la respuesta correcta —cambiá de
             pestaña— no está en ningún lado. */}
         {fueraDeLaPestana > 0 && (
@@ -185,8 +185,6 @@ export default function PipelineFilters({
             onClick={() => setFilter("seccion", "todo")}
             className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
           >
-            {/* "la otra pestaña" se escribió cuando el tablero tenía dos
-                secciones; con IT ya son tres y la frase dejó de ser cierta. */}
             {fueraDeLaPestana} en otras pestañas — ver todo
           </button>
         )}

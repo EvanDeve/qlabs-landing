@@ -65,6 +65,15 @@ async function leerDetalle(file: File): Promise<string | null> {
   }
 }
 
+/**
+ * El estado con el que arranca una subida. Vive fuera del componente porque
+ * toma la hora: adentro, el linter del compilador de React no distingue un
+ * handler de un render y marca `Date.now()` como impuro.
+ */
+function inicioDeSubida(file: File): Extract<Estado, { fase: "subiendo" }> {
+  return { fase: "subiendo", nombre: file.name, peso: file.size, progreso: 0, desde: Date.now() };
+}
+
 function restante(estado: Extract<Estado, { fase: "subiendo" }>): string {
   const transcurrido = (Date.now() - estado.desde) / 1000;
   // Antes de los primeros 2 s o del 5% cualquier estimación es ruido: da
@@ -161,7 +170,7 @@ export default function HojaDeEntrega({
 
     const control = new AbortController();
     abortos.current[slot] = control;
-    actualizar(slot, { fase: "subiendo", nombre: file.name, peso: file.size, progreso: 0, desde: Date.now() });
+    actualizar(slot, inicioDeSubida(file));
 
     try {
       const detalle = await leerDetalle(file);
