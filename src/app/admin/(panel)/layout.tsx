@@ -3,6 +3,8 @@ import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
 import Toaster from "@/components/ugc/Toaster";
 import SelectorDeMes from "@/components/ugc/admin/SelectorDeMes";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
+import { diaLargo } from "@/lib/ugc/calendar";
+import styles from "@/styles/qos.module.css";
 
 // Q·OS dejó de colgar de /ugc, así que este es ahora el único layout que corre
 // sobre el panel del equipo: el Toaster y el force-dynamic los ponía el layout
@@ -60,7 +62,9 @@ export default async function AdminLayout({
     : { count: 0 };
 
   const navItems: QosNavItem[] = [
-    { href: "/admin", label: "Dashboard", icon: "grid", group: "Operación" },
+    // La fecha de hoy en Costa Rica, como eyebrow: el Dashboard es la pantalla
+    // del presente y "viernes 18 de septiembre" dice más que "Operación".
+    { href: "/admin", label: "Dashboard", icon: "grid", group: "Operación", eyebrow: diaLargo(new Date()) },
     {
       href: "/admin/pipeline",
       label: "Pipeline",
@@ -115,17 +119,24 @@ export default async function AdminLayout({
 
   return (
     <Toaster>
-      <QosShell
-        navItems={navItems}
-        notifications={notifications ?? []}
-        userName={profile?.display_name ?? "Sin nombre"}
-        userAvatarUrl={profile?.avatar_url ?? null}
-        profileHref="/admin/perfil"
-        userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
-        topbarActions={<SelectorDeMes />}
-      >
-        {children}
-      </QosShell>
+      {/* `temaQos` es el look monocromo del panel del equipo (sidebar carbón,
+          botón primario negro, tarjetas sin sombra). Va acá y no en QosShell
+          porque el shell y el CSS module los comparten los paneles del
+          marketplace, que siguen con el violeta y los pills de la marca.
+          Mismo patrón que `fuenteMarketplace` en el layout de /ugc. */}
+      <div className={styles.temaQos}>
+        <QosShell
+          navItems={navItems}
+          notifications={notifications ?? []}
+          userName={profile?.display_name ?? "Sin nombre"}
+          userAvatarUrl={profile?.avatar_url ?? null}
+          profileHref="/admin/perfil"
+          userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
+          topbarActions={<SelectorDeMes />}
+        >
+          {children}
+        </QosShell>
+      </div>
     </Toaster>
   );
 }

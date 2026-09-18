@@ -239,31 +239,27 @@ export default async function AdminDashboardPage({
     label: string;
     value: number | string;
     sub: string;
+    /** Color de la sub-línea. El número va siempre en tinta: el color dice si es bueno o malo. */
+    tone?: "ok" | "warn" | "risk";
     /** Segunda línea, en ámbar: algo que el número deja afuera y hay que resolver. */
     alert?: string | null;
-    icon: string;
-    color: string;
   }[] = [
     {
       label: "Piezas atrasadas",
       value: overduePieces.length,
       sub: "la fecha de publicación ya pasó",
-      icon: "alert",
-      color: "#df4650",
+      tone: overduePieces.length > 0 ? "risk" : undefined,
     },
     {
       label: "Pend. aprobación",
       value: pendingApprovalPieces.length,
       sub: "esperando al cliente",
-      icon: "clock",
-      color: "#c07414",
+      tone: pendingApprovalPieces.length > 0 ? "warn" : undefined,
     },
     {
       label: "Publican esta semana",
       value: publishingThisWeekPieces.length,
       sub: "próximos 7 días",
-      icon: "calendar",
-      color: "#6d54f3",
     },
     {
       label: "Meta del mes",
@@ -271,8 +267,7 @@ export default async function AdminDashboardPage({
       // "paquete definido" era el lenguaje de monthly_target, que ya no existe:
       // la meta ahora sale del cronograma.
       sub: `${withTarget.length} de ${heroesManaged.length} heroes con cronograma`,
-      icon: "flag",
-      color: "#6d54f3",
+      tone: heroesManaged.length > 0 && withTarget.length < heroesManaged.length ? "warn" : undefined,
     },
 
     {
@@ -286,15 +281,14 @@ export default async function AdminDashboardPage({
         readySinFecha.length > 0
           ? `${readySinFecha.length} terminado${readySinFecha.length === 1 ? "" : "s"} sin fecha`
           : null,
-      icon: "film",
-      color: "#2aa5c0",
     },
     {
       label: "Publicados",
       value: publishedTotal,
       sub: `ritmo esperado a hoy: ~${expectedTotal}`,
-      icon: "check",
-      color: "#14a06a",
+      // Verde si va al ritmo del mes o mejor; ámbar si va por debajo. Sin meta
+      // no hay ritmo que comparar y queda gris.
+      tone: metaTotal > 0 ? (publishedTotal >= expectedTotal ? "ok" : "warn") : undefined,
     },
     {
       // La suma de las dos de al lado, ni más ni menos: es lo que pidió el
@@ -308,17 +302,18 @@ export default async function AdminDashboardPage({
       label: "Finalizados",
       value: readyPieces.length + publishedTotal,
       sub: "terminados + publicados",
-      icon: "briefcase",
-      color: "#5a41e0",
     },
     {
       label: "Restantes",
       value: remainingTotal,
       sub: `quedan ${daysLeft} días de ${monthName}`,
-      icon: "clock",
-      color: "#c07414",
     },
   ];
+
+  // Dos tarjetas de cuatro: la primera es lo que se mueve hoy, la segunda lo
+  // que ya está hecho (ver el comentario de `kpis`). El corte va acá y no en
+  // CSS para que reordenar siga siendo mover una entrada del array.
+  const filasDeStats = [kpis.slice(0, 4), kpis.slice(4, 8)];
 
   const weekAgendaItems = [
     ...pieces
@@ -347,31 +342,29 @@ export default async function AdminDashboardPage({
        lo que scrollea es cada panel y no la página. Mismo patrón que
        `pipeWide` en el Pipeline — el layout no conoce rutas. */
     <div className={styles.dashFull}>
-      {/* Una sola grilla sobre `kpis`. La fila la corta el grid a los 4 por
-          ancho, no dos contenedores distintos — así reordenar es mover una
-          entrada del array y nada más. */}
-      <div className={styles.kpiRow}>
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className={styles.kpi}>
-            <div className={styles.kTop}>
-              <div className={styles.kIc} style={{ background: `${kpi.color}22`, color: kpi.color }}>
-                <QosIcon name={kpi.icon} size={16} />
+      {/* Stats sin ícono y con el número en tinta, cuatro por tarjeta
+          separadas por un divisor: el color vive en la sub-línea. */}
+      {filasDeStats.map((fila, i) => (
+        <div key={i} className={styles.statCard}>
+          <div className={styles.statRow}>
+            {fila.map((kpi) => (
+              <div key={kpi.label} className={styles.stat}>
+                <div className={styles.statLabel}>{kpi.label}</div>
+                <div className={styles.statNum}>{kpi.value}</div>
+                <div className={styles.statSub} data-tone={kpi.tone}>
+                  {kpi.sub}
+                </div>
+                {kpi.alert && (
+                  <div className={styles.statAlert}>
+                    <QosIcon name="alert" size={12} />
+                    {kpi.alert}
+                  </div>
+                )}
               </div>
-              <div className={styles.kLabel}>{kpi.label}</div>
-            </div>
-            <div className={styles.kNum} style={{ color: kpi.color }}>
-              {kpi.value}
-            </div>
-            <div className={styles.kSub}>{kpi.sub}</div>
-            {kpi.alert && (
-              <div className={styles.kAlert}>
-                <QosIcon name="alert" size={12} />
-                {kpi.alert}
-              </div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
 
       <div className={styles.dashGrid}>
         <div className={`${styles.card} ${styles.cardScroll}`}>
@@ -385,7 +378,7 @@ export default async function AdminDashboardPage({
               <h2>Estado de las cuentas</h2>
               <div className={styles.sectionHeadAct}>
                 <Link href="/admin/heroes" className={styles.linkMore}>
-                  Ver todas
+                  Ver todas ›
                 </Link>
               </div>
             </div>
@@ -405,9 +398,10 @@ export default async function AdminDashboardPage({
               <thead>
                 <tr>
                   <th>Hero</th>
-                  <th>Calendario</th>
-                  <th>Publ.</th>
-                  <th style={{ textAlign: "right" }}>Riesgo</th>
+                  <th>Cronograma</th>
+                  <th>Publicados</th>
+                  <th>Riesgo</th>
+                  <th style={{ textAlign: "right" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -423,7 +417,10 @@ export default async function AdminDashboardPage({
                             {hero.name.slice(0, 2).toUpperCase()}
                           </span>
                         )}
-                        {hero.name}
+                        <span>
+                          {hero.name}
+                          {hero.industry && <small>{hero.industry}</small>}
+                        </span>
                       </Link>
                     </td>
                     <td>
@@ -457,7 +454,7 @@ export default async function AdminDashboardPage({
                     <td className={styles.paceCell}>
                       {published}/{target ?? "—"}
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td>
                       {risk ? (
                         <span
                           className={`${styles.riskPill} ${
@@ -481,6 +478,11 @@ export default async function AdminDashboardPage({
                           Sin meta
                         </span>
                       )}
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <Link href={`/admin/heroes/${hero.id}`} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}>
+                        Abrir
+                      </Link>
                     </td>
                   </tr>
                 ))}

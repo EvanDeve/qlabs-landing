@@ -89,6 +89,16 @@ export function diaCorto(fecha: string | Date): string {
   });
 }
 
+/** Formato largo para el encabezado del Dashboard: "viernes 18 de septiembre". */
+export function diaLargo(fecha: string | Date): string {
+  const [anio, mes, dia] = diaCR(fecha).split("-").map(Number);
+  // es-CR mete una coma después del día de la semana ("viernes, 18 de…");
+  // en un encabezado en mayúsculas chicas sobra.
+  return new Date(Date.UTC(anio, mes - 1, dia))
+    .toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
+    .replace(",", "");
+}
+
 /**
  * Con cuántos días de anticipación una publicación pasa a "publica pronto".
  *

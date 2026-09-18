@@ -89,6 +89,25 @@
   min-height: 100vh;
 }
 
+/* ---- Tema del panel del equipo (`.temaQos`) ----
+   Lo pone el layout de /admin, no el shell, porque el shell y este archivo
+   los comparten los paneles del marketplace, que siguen con el violeta y los
+   pills de la marca. Es el look monocromo de la referencia: lienzo gris
+   neutro, tinta casi negra, sidebar carbón, botón primario negro, tarjetas
+   sin sombra. El violeta queda para el logo, la barra del ítem activo, links
+   y foco.
+   Cada override va con `:where(.temaQos)` —que no suma especificidad— y
+   pegado a la regla base que reemplaza: así le gana a la base solo por
+   orden, y las media queries de más abajo (móvil, `.encabezadoPropio`) le
+   siguen ganando exactamente como le ganan a la base. Con `.temaQos .x` a
+   secas, el padding de móvil de `.content` perdía contra el de escritorio. */
+:where(.temaQos) .qosRoot {
+  --side-bg: #1a1820;
+  --side-bg-2: #141218;
+  --canvas: #f5f5f7;
+  --ink: #121118;
+}
+
 .qosRoot *,
 .qosRoot *::before,
 .qosRoot *::after {
@@ -193,6 +212,11 @@
   overflow: hidden;
   z-index: 40;
 }
+/* Carbón, para que el logo y el violeta del ítem activo sean lo único de
+   color. El índigo de arriba sigue siendo el fondo del login. */
+:where(.temaQos) .sidebar {
+  background: linear-gradient(185deg, var(--side-bg) 0%, var(--side-bg-2) 100%);
+}
 .sbBrand {
   display: flex;
   flex-direction: column;
@@ -218,6 +242,9 @@
   text-transform: uppercase;
   color: var(--b-300);
   margin-top: 3px;
+}
+:where(.temaQos) .sub {
+  color: rgba(255, 255, 255, 0.45);
 }
 /* El botón del menú es SOLO de teléfono: en escritorio la sidebar ya está a la
    vista y abrirla no significa nada.
@@ -280,6 +307,9 @@
   background: linear-gradient(90deg, rgba(109, 84, 243, 0.32), rgba(109, 84, 243, 0.12));
   color: #fff;
   font-weight: 600;
+}
+:where(.temaQos) .navItemActive {
+  background: rgba(255, 255, 255, 0.08);
 }
 .navItemActive .navIc {
   color: #fff;
@@ -487,20 +517,39 @@
   align-items: center;
   gap: 16px;
 }
-.tbCrumb {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+/* Sin línea abajo: la cabecera es parte del lienzo, no una barra. */
+:where(.temaQos) .topbar {
+  background: rgba(245, 245, 247, 0.86);
+  border-bottom: 0;
+  padding: 24px 32px 12px;
+}
+/* La línea chica arriba del título. En el marketplace sigue siendo el rastro
+   de siempre (12px gris); en Q·OS pasa a mayúsculas chicas espaciadas. */
+.tbEyebrow {
   font-size: 12px;
   color: var(--ink-3);
   margin-bottom: 1px;
 }
-.tbTitle {
+:where(.temaQos) .tbEyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+/* `.qosRoot h1` compite con esta clase (ver .authTitle): va con prefijo. */
+.qosRoot .tbTitle {
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
+}
+:where(.temaQos) .qosRoot .tbTitle {
+  font-size: 30px;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
 }
 .tbActions {
   margin-left: auto;
@@ -614,7 +663,7 @@
   color: var(--ink-2);
 }
 .tbMes input {
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
   padding: 6px 10px;
@@ -654,6 +703,13 @@
   width: 100%;
   margin: 0 auto;
 }
+/* A todo el ancho, con el mismo margen lateral que la cabecera: así el borde
+   izquierdo de las tarjetas cae justo debajo del título. */
+:where(.temaQos) .content {
+  padding: 10px 32px 32px;
+  max-width: none;
+  margin: 0;
+}
 
 /* ============================================================
    COMPONENTES GENÉRICOS
@@ -678,6 +734,15 @@
 .btn.btnPrimary:hover {
   background: var(--b-600);
   box-shadow: 0 4px 12px rgba(109, 84, 243, 0.4);
+}
+/* Negro y sin sombra: el primario de la referencia. */
+:where(.temaQos) .btn.btnPrimary {
+  background: var(--ink);
+  box-shadow: none;
+}
+:where(.temaQos) .btn.btnPrimary:hover {
+  background: #27252e;
+  box-shadow: none;
 }
 .btn.btnGhost {
   background: var(--surface);
@@ -738,6 +803,9 @@
   background: var(--b-500);
   box-shadow: none;
 }
+:where(.temaQos) .btn.btnPrimary:disabled:hover {
+  background: var(--ink);
+}
 .btn.btnDanger:disabled:hover {
   background: #e5484d;
   box-shadow: none;
@@ -756,6 +824,9 @@
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--sh-sm);
+}
+:where(.temaQos) .card {
+  box-shadow: none;
 }
 .cardPad {
   padding: 18px;
@@ -797,6 +868,15 @@
 .linkMore:hover {
   color: var(--b-700);
   background: rgba(109, 84, 243, 0.08);
+}
+:where(.temaQos) .linkMore {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+:where(.temaQos) .linkMore:hover {
+  color: var(--ink);
+  background: rgba(18, 17, 24, 0.06);
 }
 .linkMore:focus-visible {
   outline: 2px solid var(--b-500);
@@ -892,6 +972,11 @@
   padding: 3px 9px;
   border-radius: var(--r-full);
 }
+:where(.temaQos) .riskPill {
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 10px;
+}
 .riskOk {
   background: var(--ok-bg);
   color: var(--ok);
@@ -913,9 +998,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: var(--r-full);
   border: 1px solid transparent;
   cursor: pointer;
@@ -939,9 +1024,9 @@
 }
 
 .paceCell {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .paceOk {
   color: var(--ok);
@@ -973,6 +1058,68 @@
 /* ============================================================
    DASHBOARD
    ============================================================ */
+/* Stats del Dashboard (reemplazan a las tarjetas .kpi con ícono): una sola
+   tarjeta por fila, las stats separadas por un divisor fino, sin ícono y con
+   el número en tinta. El color va en la sub-línea (data-tone), que es lo que
+   dice si el número es bueno o malo. */
+.statCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  margin-bottom: 16px;
+}
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.stat {
+  padding: 22px 24px 20px;
+  min-width: 0;
+}
+.stat + .stat {
+  border-left: 1px solid var(--line-2);
+}
+.statLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+.statNum {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.statSub {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: 8px;
+}
+.statSub[data-tone="ok"] {
+  color: var(--ok);
+}
+.statSub[data-tone="warn"] {
+  color: var(--warn);
+}
+.statSub[data-tone="risk"] {
+  color: var(--risk);
+}
+.statAlert {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warn);
+  margin-top: 6px;
+}
+
+/* Las `.kpi*` siguen acá mientras las use alguna otra vista (Loyalty todavía
+   las dibuja); el Dashboard ya no. */
 .kpiRow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1200,9 +1347,10 @@
   border-bottom: none;
 }
 .weekWhen {
-  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-3);
   width: 52px;
   flex-shrink: 0;
@@ -1250,20 +1398,22 @@
 }
 .acctTable th {
   text-align: left;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-weight: 600;
-  padding: 0 12px 10px;
+  padding: 0 12px 12px;
   border-bottom: 1px solid var(--line);
 }
 .acctTable td {
-  padding: 11px 12px;
+  padding: 14px 12px;
   border-bottom: 1px solid var(--line-2);
-  font-size: 13px;
+  font-size: 13.5px;
   vertical-align: middle;
+}
+.acctTable tbody tr:last-child td {
+  border-bottom: none;
 }
 .acctTable tr {
   cursor: pointer;
@@ -1275,13 +1425,20 @@
 .acctHero {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-weight: 600;
+  line-height: 1.25;
+}
+.acctHero small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-3);
 }
 .heroMono {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   font-family: var(--font-display);
@@ -3891,6 +4048,15 @@
    RESPONSIVE
    ============================================================ */
 @media (max-width: 1140px) {
+  .statRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stat:nth-child(odd) {
+    border-left: none;
+  }
+  .stat:nth-child(n + 3) {
+    border-top: 1px solid var(--line-2);
+  }
   .kpiRow {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -3954,6 +4120,13 @@
   }
 }
 @media (max-width: 560px) {
+  .statRow {
+    grid-template-columns: 1fr;
+  }
+  .stat + .stat {
+    border-left: none;
+    border-top: 1px solid var(--line-2);
+  }
   .kpiRow {
     grid-template-columns: 1fr;
   }
@@ -5189,6 +5362,26 @@
   border-radius: var(--r-sm);
   background: var(--line);
   animation: wsPulse 1.4s ease-in-out infinite;
+}
+
+/* Siluetas de carga: lo que pinta el loading.tsx de cada sección mientras
+   llega la página. Un bloque gris que late con el mismo wsPulse. La FORMA no
+   vive acá: cada loading.tsx la arma con las clases estructurales reales de
+   su pantalla (statCard, kcol, calLayout, wsPanel…), así cuando el contenido
+   reemplaza a la silueta no salta nada. */
+.skel {
+  display: block;
+  background: var(--line);
+  border-radius: var(--r-sm);
+  animation: wsPulse 1.4s ease-in-out infinite;
+}
+.skelCircle {
+  border-radius: var(--r-full);
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel {
+    animation: none;
+  }
 }
 
 .wsEmpty {

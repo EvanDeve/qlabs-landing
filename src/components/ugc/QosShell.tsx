@@ -46,6 +46,8 @@ export type QosNavItem = {
   label: string;
   icon: string;
   group?: string;
+  /** Lo que va en mayúsculas chicas arriba del título. Sin esto, el grupo. */
+  eyebrow?: string;
   count?: number;
   /**
    * No se dibuja en el menú, pero sí cuenta para saber en qué página se está.
@@ -263,16 +265,15 @@ export default function QosShell({
               <QosIcon name="menu" size={18} />
             </button>
             <div className={styles.tbHeading}>
-              {/* El segundo escalón sale del grupo del item activo y solo cae en
-                  `section` si el item no tiene grupo. Con `section` fijo, el
-                  rastro se contradecía con el menú: /admin/transcripcion
-                  decía "Operación" y el item vive en "Herramientas". */}
-              <div className={styles.tbCrumb}>
-                <span>Q Labs</span>
-                <span>/</span>
-                <span>{activeItem?.group ?? section}</span>
-              </div>
-              <div className={styles.tbTitle}>{activeItem?.label ?? "Q·OS"}</div>
+              {/* Una sola línea chica arriba del título, como en un panel de
+                  Apple: el item dice qué va ahí (el Dashboard pone la fecha de
+                  hoy) y si no, el grupo del menú, que es lo que el usuario acaba
+                  de tocar. Solo cae en `section` si el item no tiene grupo: con
+                  `section` fijo, el rastro se contradecía con el menú
+                  (/admin/transcripcion decía "Operación" y el item vive en
+                  "Herramientas"). El nombre del panel ya está en la sidebar. */}
+              <div className={styles.tbEyebrow}>{activeItem?.eyebrow ?? activeItem?.group ?? section}</div>
+              <h1 className={styles.tbTitle}>{activeItem?.label ?? "Q·OS"}</h1>
             </div>
             <div className={styles.tbActions}>
               {/* Controles que encuadran la pantalla —hoy el mes del
