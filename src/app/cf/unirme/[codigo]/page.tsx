@@ -2,7 +2,15 @@ import Link from "next/link";
 import { leerInvitacion } from "@/lib/cf/invitacion";
 import { salirCfAction } from "@/lib/actions/close-friends";
 import { CF } from "@/lib/cf/copy";
-import { BOTON, BOTON_SUAVE, Encabezado, LogoNegocio, Pantalla, PantallaMensaje } from "@/components/cf/ui";
+import {
+  BOTON,
+  BOTON_SUAVE,
+  CuponRegalo,
+  Encabezado,
+  LogoNegocio,
+  Pantalla,
+  PantallaMensaje,
+} from "@/components/cf/ui";
 import UnirmeConSesion from "@/components/cf/UnirmeConSesion";
 
 export const dynamic = "force-dynamic";
@@ -21,12 +29,15 @@ function Paso({ n, children }: { n: number; children: React.ReactNode }) {
 }
 
 /**
- * Lo que abre el QR del negocio. Cuenta el escaneo y, según quién mira:
+ * Lo que abre el QR de un cupón (o de un negocio). Cuenta el escaneo y, según
+ * quién mira:
  *
- *   sin sesión              → la invitación y de acá al registro
- *   miembro, ya vinculado   → "ya sos parte", al panel
- *   miembro de otro negocio → unirse con un toque, sin formulario
- *   creador / marca / admin → Close Friends es con otro correo
+ *   sin sesión                    → el cupón de regalo y de acá al registro
+ *   miembro, ya tiene ese cupón   → "ya está en tu wallet"
+ *   miembro, cupón nuevo          → agregarlo con un toque (y unirse, si no era
+ *                                   de este negocio)
+ *   miembro, QR sin cupón, ya era → "ya sos parte"
+ *   creador / marca / admin       → Close Friends es con otro correo
  */
 export default async function UnirmePage({ params }: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await params;
@@ -41,23 +52,34 @@ export default async function UnirmePage({ params }: { params: Promise<{ codigo:
     );
   }
 
-  const { negocio, logoUrl } = invitacion;
+  const { negocio, logoUrl, cupon } = invitacion;
+  const esMiembro = sesion?.rol === "member";
 
-  if (sesion?.rol === "member" && sesion.vinculado) {
+  if (esMiembro && cupon && sesion.yaTieneCupon) {
     return (
       <PantallaMensaje
-        titulo={`Ya sos parte de ${negocio}`}
-        detalle="Tus cupones de este negocio están en tu panel."
-        accion={{ href: "/cf", texto: "Ir a mis cupones" }}
+        titulo="Ya está en tu wallet"
+        detalle={`${cupon.title}, de ${negocio}, ya lo tenés. Mostralo en caja desde tus cupones.`}
+        accion={{ href: "/cf/cupones", texto: "Ir a mis cupones" }}
       />
     );
   }
 
-  if (sesion?.rol && sesion.rol !== "member") {
+  if (esMiembro && !cupon && sesion.vinculado) {
+    return (
+      <PantallaMensaje
+        titulo={`Ya sos parte de ${negocio}`}
+        detalle="Tus cupones de este negocio están en tu wallet."
+        accion={{ href: "/cf", texto: "Ir a mi wallet" }}
+      />
+    );
+  }
+
+  if (sesion?.rol && !esMiembro) {
     return (
       <PantallaMensaje
         titulo="Estás con tu cuenta de trabajo"
-        detalle={`Tenés la sesión abierta con tu cuenta de ${NOMBRE_DE_ROL[sesion.rol]}. ${CF.programa} es para clientes y va con otro correo: cerrá la sesión y registrate con tu correo personal.`}
+        detalle={`Tenés la sesión abierta con tu cuenta de ${NOMBRE_DE_ROL[sesion.rol as keyof typeof NOMBRE_DE_ROL]}. ${CF.programa} es para clientes y va con otro correo: cerrá la sesión y registrate con tu correo personal.`}
       >
         <form action={salirCfAction}>
           <input type="hidden" name="codigo" value={invitacion.codigo} />
@@ -69,39 +91,53 @@ export default async function UnirmePage({ params }: { params: Promise<{ codigo:
     );
   }
 
+  const conRegalo = cupon?.disponible;
+
   return (
     <Pantalla>
       <Encabezado />
 
-      <div className="mt-10">
+      <div className="mt-8">
         <LogoNegocio nombre={negocio} logoUrl={logoUrl} />
         {/* Dos renglones a propósito: el nombre del negocio arranca línea
             propia en vez de quedar donde caiga el salto automático. */}
-        <h1 className="mt-6 text-[32px] font-extrabold leading-[1.12] tracking-tight">
-          <span className="block">Te invitó</span>
+        <h1 className="mt-5 text-[32px] font-extrabold leading-[1.12] tracking-tight">
+          <span className="block">{esMiembro ? "Un cupón de" : "Te invitó"}</span>
           <span className="block text-violet-deep">{negocio}</span>
         </h1>
-        <p className="mt-4 text-base leading-relaxed text-ink-soft">
-          Unite a {CF.programa} y accedé a los cupones que {negocio} guarda para sus clientes. Sin apps que
-          descargar.
-        </p>
+        {!esMiembro && (
+          <p className="mt-4 text-base leading-relaxed text-ink-soft">
+            Unite a {CF.programa} y guardá los cupones de {negocio} en tu teléfono. Sin apps que descargar.
+          </p>
+        )}
       </div>
 
-      {sesion?.rol === "member" ? (
-        <div className="mt-auto pt-10">
-          <UnirmeConSesion codigo={invitacion.codigo} negocio={negocio} />
+      {cupon && (
+        <div className="mt-6">
+          <CuponRegalo cupon={cupon} />
+        </div>
+      )}
+
+      {esMiembro ? (
+        <div className="mt-auto pt-8">
+          <UnirmeConSesion
+            codigo={invitacion.codigo}
+            negocio={negocio}
+            preguntarCompartir={!sesion.vinculado}
+            conCupon={Boolean(conRegalo)}
+          />
         </div>
       ) : (
         <>
-          <ol className="mt-8 flex flex-col gap-2.5">
+          <ol className="mt-6 flex flex-col gap-2.5">
             <Paso n={1}>Registrate en un minuto</Paso>
-            <Paso n={2}>Reclamá los cupones de {negocio}</Paso>
+            <Paso n={2}>{conRegalo ? "El cupón queda en tu wallet" : `Reclamá los cupones de ${negocio}`}</Paso>
             <Paso n={3}>Mostrá tu código en caja</Paso>
           </ol>
 
-          <div className="mt-auto flex flex-col gap-2 pt-10">
+          <div className="mt-auto flex flex-col gap-2 pt-8">
             <Link href={`/cf/unirme/${invitacion.codigo}/registro`} className={BOTON}>
-              Unirme
+              {conRegalo ? "Unirme y guardar el cupón" : "Unirme"}
             </Link>
             <Link href={`/cf/entrar?next=/cf/unirme/${invitacion.codigo}`} className={BOTON_SUAVE}>
               Ya soy miembro

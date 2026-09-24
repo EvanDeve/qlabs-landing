@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { destinoDeSesion } from "@/lib/ugc/estado-cuenta";
@@ -11,7 +12,9 @@ import { destinoDeSesion } from "@/lib/ugc/estado-cuenta";
  * Una cuenta de creador, marca o admin que llegue acá vuelve a su panel sin
  * error, igual que pasa entre los paneles del marketplace.
  */
-export async function requireMember() {
+// `cache`: el layout y la página la llaman en el mismo request; así la
+// consulta corre una vez.
+export const requireMember = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,4 +36,4 @@ export async function requireMember() {
   }
 
   return { user, supabase, miembro };
-}
+});

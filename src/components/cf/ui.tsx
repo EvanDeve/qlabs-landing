@@ -151,3 +151,32 @@ export function MensajeError({ children }: { children?: React.ReactNode }) {
     </p>
   );
 }
+
+/**
+ * El cupón que regala el QR, en la página del QR y en el registro. Si ya no se
+ * puede reclamar (agotado, pausado, vencido) se dice antes de que la persona
+ * llene nada: igual se puede unir, pero sin engaño.
+ */
+export function CuponRegalo({
+  cupon,
+}: {
+  cupon: { title: string; description: string; imageUrl: string | null; disponible: boolean };
+}) {
+  return (
+    <div className="overflow-hidden rounded-card bg-white ring-1 ring-line">
+      {cupon.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={cupon.imageUrl} alt="" className="h-36 w-full object-cover" />
+      )}
+      <div className="p-4">
+        <p className="text-[13px] font-bold text-violet-deep">
+          {cupon.disponible ? "Tu regalo por unirte" : "Este cupón ya no está disponible"}
+        </p>
+        <p className={`mt-1 text-lg font-extrabold leading-snug ${cupon.disponible ? "" : "text-ink-soft line-through"}`}>
+          {cupon.title}
+        </p>
+        <p className="mt-1 text-[15px] leading-relaxed text-ink-soft">{cupon.description}</p>
+      </div>
+    </div>
+  );
+}

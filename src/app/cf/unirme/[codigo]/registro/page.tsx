@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { leerInvitacion } from "@/lib/cf/invitacion";
-import { Encabezado, LogoNegocio, Pantalla, PantallaMensaje } from "@/components/cf/ui";
+import { CuponRegalo, Encabezado, LogoNegocio, Pantalla, PantallaMensaje } from "@/components/cf/ui";
 import FormularioRegistro from "@/components/cf/FormularioRegistro";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,12 @@ export default async function RegistroPage({ params }: { params: Promise<{ codig
           <p className="text-xl font-extrabold leading-tight">{invitacion.negocio}</p>
         </div>
       </div>
+      {/* Se recuerda qué se lleva: es el motivo por el que está llenando esto. */}
+      {invitacion.cupon?.disponible && (
+        <div className="mb-8">
+          <CuponRegalo cupon={invitacion.cupon} />
+        </div>
+      )}
       <FormularioRegistro codigo={invitacion.codigo} negocio={invitacion.negocio} />
     </Pantalla>
   );

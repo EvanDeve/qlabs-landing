@@ -1,6 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import type { ResultadoReclamo } from "@/lib/database.types";
+import type { ReclamarState } from "@/lib/actions/loyalty";
+import { qrSvg } from "@/lib/ugc/loyalty";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { destinoDeSesion } from "@/lib/ugc/estado-cuenta";
@@ -119,7 +123,7 @@ async function verificarCodigoAction(_prev: EstadoRegistro, formData: FormData):
     return { paso: "codigo", email: datos.email, enviadoEn, error: mensajeDeAuth(authError.message, authError.status) };
   }
 
-  const { error } = await supabase.rpc("completar_registro_miembro", {
+  const { data, error } = await supabase.rpc("completar_registro_miembro", {
     p_code: codigo,
     p_full_name: datos.fullName,
     p_phone: telefonoCR(datos.phone),
@@ -142,7 +146,18 @@ async function verificarCodigoAction(_prev: EstadoRegistro, formData: FormData):
     return { paso: "datos", error: mensaje };
   }
 
-  redirect("/cf");
+  redirect(destinoTrasUnirse(data?.cupon ?? null));
+}
+
+/**
+ * A dónde ir después de unirse por un QR. Si el QR traía un cupón, la wallet lo
+ * anuncia: "se agregó" o por qué no (agotado, vencido). `?cupon=` lo lee el
+ * Inicio de /cf; no lleva el código ni ids, solo el resultado.
+ */
+function destinoTrasUnirse(cupon: ResultadoReclamo | null): string {
+  if (!cupon) return "/cf?unido=1";
+  if (cupon.ok) return `/cf?cupon=${cupon.nuevo ? "nuevo" : "ya_estaba"}`;
+  return `/cf?cupon=${cupon.motivo}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -161,7 +176,7 @@ export async function unirmeConSesionAction(_prev: EstadoUnirme, formData: FormD
   if (!codigo) return { error: "Este código de invitación no es válido." };
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("completar_registro_miembro", {
+  const { data, error } = await supabase.rpc("completar_registro_miembro", {
     p_code: codigo,
     p_full_name: null,
     p_phone: null,
@@ -174,7 +189,7 @@ export async function unirmeConSesionAction(_prev: EstadoUnirme, formData: FormD
   });
 
   if (error) return { error: error.message };
-  redirect("/cf");
+  redirect(destinoTrasUnirse(data?.cupon ?? null));
 }
 
 // ---------------------------------------------------------------------------
@@ -253,4 +268,103 @@ export async function salirCfAction(formData: FormData) {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect(codigo ? `/cf/unirme/${codigo}` : "/cf/entrar");
+}
+
+// ---------------------------------------------------------------------------
+// Adentro del panel
+// ---------------------------------------------------------------------------
+
+/**
+ * Reclamar un cupón desde "Disponibles". Mismo contrato que el del creador
+ * (`reclamarCuponAction`) para que la grilla sea la misma: toda la regla vive
+ * en `claim_coupon_member`, y su mensaje se muestra tal cual.
+ */
+export async function reclamarCuponMiembroAction(_prev: ReclamarState, formData: FormData): Promise<ReclamarState> {
+  const couponId = String(formData.get("coupon_id") ?? "");
+  if (!couponId) return { error: "Cupón inválido." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("claim_coupon_member", { p_coupon: couponId });
+  if (error) {
+    const esperado = error.message?.trim();
+    return { error: esperado && esperado.length < 120 ? esperado : "No se pudo reclamar el cupón. Intentá de nuevo." };
+  }
+  if (!data?.code) return { error: "No se pudo reclamar el cupón. Intentá de nuevo." };
+
+  revalidatePath("/cf", "layout");
+  return { reclamo: { code: data.code, expires_at: data.expires_at, qr: await qrSvg(data.code) } };
+}
+
+export type EstadoPerfil = { error?: string; ok?: string } | null;
+
+/**
+ * Editar nombre, WhatsApp y nombre de agente. Va con el cliente de sesión: los
+ * grants por columna de `members` son los que deciden qué se puede tocar
+ * (ver 20260924120000), no este action.
+ */
+export async function actualizarPerfilMiembroAction(_prev: EstadoPerfil, formData: FormData): Promise<EstadoPerfil> {
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  const phone = telefonoCR(String(formData.get("phone") ?? ""));
+  const agentName = String(formData.get("agent_name") ?? "").trim();
+
+  if (fullName.length < 2 || fullName.length > 80) return { error: "Poné tu nombre." };
+  if (!phone) return { error: "Revisá tu WhatsApp: tiene que ser un número de Costa Rica de 8 dígitos." };
+  if (!/^[A-Za-z0-9ÁÉÍÓÚÑÜáéíóúñü._]{3,20}$/.test(agentName)) {
+    return { error: "El nombre de agente va de 3 a 20 caracteres: letras, números, punto o guion bajo." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/cf/entrar");
+
+  const { data: filas, error } = await supabase
+    .from("members")
+    .update({ full_name: fullName, phone, agent_name: agentName })
+    .eq("profile_id", user.id)
+    // Un UPDATE que la RLS no deja pasar no es un error: son cero filas.
+    .select("profile_id");
+
+  if (error?.code === "23505") return { error: "Ese nombre de agente ya está tomado. Probá con otro." };
+  if (error || !filas?.length) return { error: "No se pudo guardar. Intentá de nuevo." };
+
+  // El saludo de la barra lateral sale de `profiles.display_name`.
+  await supabase.from("profiles").update({ display_name: agentName }).eq("id", user.id);
+
+  revalidatePath("/cf", "layout");
+  return { ok: "Guardado." };
+}
+
+/**
+ * Prender o apagar un permiso opcional. Cada cambio es una fila nueva en
+ * `member_consents` con la versión del texto: el historial queda.
+ */
+export async function cambiarConsentimientoAction(formData: FormData): Promise<{ error?: string }> {
+  const kind = String(formData.get("kind") ?? "");
+  if (kind !== "share_with_brand" && kind !== "whatsapp_marketing") return { error: "Permiso inválido." };
+  const brand = String(formData.get("brand_id") ?? "") || null;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cambiar_consentimiento", {
+    p_kind: kind,
+    p_brand: kind === "share_with_brand" ? brand : null,
+    p_granted: formData.get("granted") === "true",
+    p_version_textos: VERSION_TEXTOS,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/cf/perfil");
+  return {};
+}
+
+export async function pedirEliminacionAction(_prev: EstadoPerfil, formData: FormData): Promise<EstadoPerfil> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("pedir_eliminacion_miembro", {
+    p_reason: String(formData.get("reason") ?? "").trim() || null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/cf", "layout");
+  return { ok: "Listo. Recibimos tu pedido." };
 }

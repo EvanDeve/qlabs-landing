@@ -195,7 +195,8 @@ describe("los códigos QR del negocio", () => {
 
   it("la página pública muestra el negocio, sin ids, y solo con código activo", async () => {
     const { data } = await admin.rpc("invitacion_publica", { p_code: codigoX.toLowerCase() });
-    expect(data).toEqual({ brand_name: "CF Test X", logo_url: null, slug: expect.any(String) });
+    // Un QR del negocio a secas no trae cupón (los QR de cupón, más abajo).
+    expect(data).toEqual({ brand_name: "CF Test X", logo_url: null, slug: expect.any(String), cupon: null });
 
     const { data: inactivo } = await admin.rpc("invitacion_publica", { p_code: codigoInactivo });
     expect(inactivo).toBeNull();
@@ -582,5 +583,111 @@ describe("pedir la eliminación", () => {
   it("otro miembro no ve ese pedido", async () => {
     const { data } = await miembroA.client.from("member_deletion_requests").select("id");
     expect(data).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El QR es del cupón (20260924150000)
+
+describe("el QR de un cupón", () => {
+  let cuponTorta: string;
+  let qrTorta: string;
+  let nuevo: TestUser;
+  let tarde: TestUser;
+
+  beforeAll(async () => {
+    const { data, error } = await admin
+      .from("coupons")
+      .insert({
+        brand_id: marcaY.id,
+        title: "Torta gratis",
+        description: "Una porción",
+        type: "producto",
+        claim_validity_days: 14,
+        status: "publicado",
+        stock_total: 1,
+        audience: "members",
+        member_scope: "brand_members",
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`setup cupón torta: ${error.message}`);
+    cuponTorta = data.id;
+    [nuevo, tarde] = await Promise.all([makeUser("sin-rol"), makeUser("sin-rol")]);
+  });
+
+  afterAll(async () => {
+    await admin.from("member_audit_log").delete().in("member_id", [nuevo.id, tarde.id]);
+  });
+
+  it("nace solo al crear un cupón para miembros, y la marca lo ve", async () => {
+    const { data } = await marcaY.client.from("brand_invite_codes").select("code, label").eq("coupon_id", cuponTorta);
+    expect(data).toHaveLength(1);
+    expect(data![0].label).toBe("Torta gratis");
+    qrTorta = data![0].code;
+  });
+
+  it("un cupón solo para creadores no tiene QR", async () => {
+    const { data } = await admin.from("coupons").select("id").eq("brand_id", marcaX.id).eq("title", "X creadores").single();
+    const { data: qr } = await admin.from("brand_invite_codes").select("id").eq("coupon_id", data!.id);
+    expect(qr).toEqual([]);
+  });
+
+  it("la página del QR muestra el cupón", async () => {
+    const { data } = await admin.rpc("invitacion_publica", { p_code: qrTorta });
+    expect(data.cupon).toMatchObject({ title: "Torta gratis", disponible: true });
+  });
+
+  it("registrarse por el QR deja el cupón en la wallet", async () => {
+    const { data, error } = await nuevo.client.rpc("completar_registro_miembro", registro(qrTorta));
+    expect(error).toBeNull();
+    expect(data.cupon).toMatchObject({ ok: true, nuevo: true });
+
+    const { data: mios } = await nuevo.client.from("redemptions").select("coupon_id, status");
+    expect(mios).toEqual([{ coupon_id: cuponTorta, status: "reclamado" }]);
+  });
+
+  it("escanearlo otra vez no es un error ni duplica", async () => {
+    const { data, error } = await nuevo.client.rpc("completar_registro_miembro", registro(qrTorta));
+    expect(error).toBeNull();
+    expect(data.cupon).toMatchObject({ ok: true, nuevo: false });
+    const { data: mios } = await nuevo.client.from("redemptions").select("id");
+    expect(mios).toHaveLength(1);
+  });
+
+  it("con el cupón agotado, la persona igual queda como miembro", async () => {
+    const { data, error } = await tarde.client.rpc("completar_registro_miembro", registro(qrTorta));
+    expect(error).toBeNull();
+    expect(data).toMatchObject({ nuevo: true, cupon: { ok: false, motivo: "agotado" } });
+    expect(await rolDe(tarde.id)).toBe("member");
+  });
+
+  it("un miembro con la app escanea el QR de otro negocio y queda unido con el cupón", async () => {
+    // miembroA es de X y de Y; uno nuevo de X solo, para que el vínculo sea nuevo.
+    const soloX = await makeUser("sin-rol");
+    await soloX.client.rpc("completar_registro_miembro", registro(codigoX));
+    const { data: cupon } = await admin
+      .from("coupons")
+      .insert({
+        brand_id: marcaY.id,
+        title: "Café de bienvenida",
+        description: "x",
+        type: "producto",
+        claim_validity_days: 14,
+        status: "publicado",
+        stock_total: 5,
+        audience: "both",
+        member_scope: "brand_members",
+      })
+      .select("id")
+      .single();
+    const { data: qr } = await admin.from("brand_invite_codes").select("code").eq("coupon_id", cupon!.id).single();
+
+    const { data } = await soloX.client.rpc(
+      "completar_registro_miembro",
+      { ...registro(qr!.code), p_full_name: null, p_phone: null, p_birthdate: null, p_agent_name: null }
+    );
+    expect(data).toMatchObject({ nuevo: false, vinculo_nuevo: true, cupon: { ok: true, nuevo: true } });
+    await admin.from("member_audit_log").delete().eq("member_id", soloX.id);
   });
 });

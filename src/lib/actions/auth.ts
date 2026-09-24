@@ -120,18 +120,20 @@ export async function signOutAction() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  let esAdmin = false;
+  let rol: string | null = null;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
-    esAdmin = profile?.role === "admin";
+    rol = profile?.role ?? null;
   }
 
   await supabase.auth.signOut();
-  redirect(esAdmin ? "/admin/login" : "/ugc/login");
+  // El miembro de Close Friends usa el mismo shell (QosShell): vuelve a su
+  // propia puerta, no al login del marketplace con su "¿sos creador o marca?".
+  redirect(rol === "admin" ? "/admin/login" : rol === "member" ? "/cf/entrar" : "/ugc/login");
 }
 
 const ESPERA_ENTRE_RESETS_MS = 60_000;

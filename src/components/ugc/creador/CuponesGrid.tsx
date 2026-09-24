@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import CuponQR, { type CuponQRData } from "@/components/ugc/creador/CuponQR";
 import { reclamarCuponAction, type ReclamarState } from "@/lib/actions/loyalty";
+import { reclamarCuponMiembroAction } from "@/lib/actions/close-friends";
 import { LABEL_TIPO_CUPON, LEYENDA_EVENTO, diasRestantes } from "@/lib/ugc/loyalty";
 import styles from "@/styles/qos.module.css";
 
@@ -45,12 +46,19 @@ const FILTROS = [
 export default function CuponesGrid({
   cupones,
   nivelActual,
+  para = "creador",
 }: {
   cupones: CuponVista[];
   nivelActual: number;
+  /**
+   * La misma grilla sirve a los miembros de Close Friends, que no tienen nivel
+   * (todos sus cupones vienen con `minLevel` 1) y reclaman por otra función.
+   * La tarjeta, la confirmación y el QR son los mismos.
+   */
+  para?: "creador" | "miembro";
 }) {
   const [state, formAction, pending] = useActionState<ReclamarState, FormData>(
-    reclamarCuponAction,
+    para === "miembro" ? reclamarCuponMiembroAction : reclamarCuponAction,
     null
   );
 
@@ -105,7 +113,13 @@ export default function CuponesGrid({
     <>
       <div className={styles.recListaHead}>
         <span>
-          {paraSuNivel === 1 ? "1 cupón para tu nivel" : `${paraSuNivel} cupones para tu nivel`}
+          {para === "miembro"
+            ? paraSuNivel === 1
+              ? "1 cupón para vos"
+              : `${paraSuNivel} cupones para vos`
+            : paraSuNivel === 1
+              ? "1 cupón para tu nivel"
+              : `${paraSuNivel} cupones para tu nivel`}
         </span>
         <button type="button" className={styles.recFiltrar} onClick={() => setFiltroAbierto((v) => !v)}>
           {filtroAbierto ? "Listo" : "Filtrar"}

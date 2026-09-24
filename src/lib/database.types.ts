@@ -38,6 +38,10 @@ export type CouponMemberScope = "all_members" | "brand_members";
 export type MemberStatus = "activo" | "eliminacion_pedida" | "suspendido";
 export type ConsentKind = "terms" | "share_with_brand" | "whatsapp_marketing";
 export type DeletionRequestStatus = "pendiente" | "resuelta";
+/** Lo que devuelve `reclamar_para_miembro` (y el `cupon` del registro). */
+export type ResultadoReclamo =
+  | { ok: true; nuevo: boolean; code: string; redemption_id: string }
+  | { ok: false; motivo: "no_existe" | "no_disponible" | "vencido" | "agotado" };
 export type MemberAuditAction =
   | "alta"
   | "vinculo"
@@ -1152,6 +1156,10 @@ export interface Database {
           active: boolean;
           scans: number;
           signups: number;
+          // El cupón que regala este QR (20260924150000). Lo pone el trigger
+          // `qr_para_cupon` al crear un cupón para miembros; null = QR del
+          // negocio a secas.
+          coupon_id: string | null;
           created_at: string;
         };
         // brand_id sale de auth.uid() y el código lo genera la base: la marca
@@ -1400,6 +1408,8 @@ export interface Database {
           vinculo_nuevo: boolean;
           expediente_code: string;
           agent_name: string;
+          /** Solo si el QR es de un cupón. Nunca hace fallar el alta. */
+          cupon: ResultadoReclamo | null;
         };
       };
       cambiar_consentimiento: {
@@ -1434,7 +1444,18 @@ export interface Database {
       // Las cuatro de abajo son solo service_role (páginas públicas y freno).
       invitacion_publica: {
         Args: { p_code: string; p_contar_escaneo?: boolean };
-        Returns: { brand_name: string; logo_url: string | null; slug: string | null } | null;
+        Returns: {
+          brand_name: string;
+          logo_url: string | null;
+          slug: string | null;
+          cupon: {
+            title: string;
+            description: string;
+            type: CouponType;
+            image_url: string | null;
+            disponible: boolean;
+          } | null;
+        } | null;
       };
       agente_disponible: {
         Args: { p_agent_name: string };

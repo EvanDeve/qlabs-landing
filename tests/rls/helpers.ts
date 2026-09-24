@@ -75,8 +75,25 @@ export function track(id: string) {
 export async function cleanup() {
   const errores: string[] = [];
   for (const id of created.splice(0)) {
-    const { error } = await admin.auth.admin.deleteUser(id);
-    if (error) errores.push(`${id}: ${error.message}`);
+    // Reintento: la Admin API a veces devuelve un error vacío ({}) aunque el
+    // borrado termine igual —pasó el 2026-09-24 con una marca cargada de
+    // cupones y QR—. Lo que cuenta es si la cuenta sigue existiendo.
+    let ultimo: string | null = null;
+    for (let intento = 0; intento < 3; intento++) {
+      const { error } = await admin.auth.admin.deleteUser(id);
+      if (!error) {
+        ultimo = null;
+        break;
+      }
+      const { data } = await admin.auth.admin.getUserById(id);
+      if (!data.user) {
+        ultimo = null;
+        break;
+      }
+      ultimo = error.message || JSON.stringify(error);
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    if (ultimo) errores.push(`${id}: ${ultimo}`);
   }
   // Que se vea fuerte: dejar cuentas colgando en el proyecto real no es
   // aceptable, y el proyecto real es también producción.
