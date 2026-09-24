@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Dato, { Contacto, SiHay } from "@/components/legal/Dato";
 import { LEGAL, COMISION_PORCENTAJE, PAGO_CREADOR_PORCENTAJE } from "@/lib/legal";
+import { CF } from "@/lib/cf/copy";
 
 // ⚠️ BORRADOR PENDIENTE DE REVISIÓN LEGAL (redactado 2026-07-27).
 //
@@ -294,14 +295,39 @@ export default function TerminosPage() {
         funcionalidades, avisando con antelación razonable cuando el cambio afecte campañas en curso.
       </p>
 
-      <h2 id="datos">12. Datos personales</h2>
+      <h2 id="close-friends">12. {CF.programa}</h2>
+      <p>
+        {CF.programa} es el programa de {LEGAL.nombreComercial} para los clientes de los negocios que
+        usan la plataforma. Te unís escaneando el código QR que te muestra el negocio, y con eso
+        accedés a los cupones que ese negocio publica para sus miembros.
+      </p>
+      <ul>
+        <li>Es solo para <strong>mayores de 18 años</strong>.</li>
+        <li>
+          Tenés <strong>una sola cuenta</strong>, aunque te unas a varios negocios. Tu nombre de
+          agente es público dentro de la plataforma y no puede imitar el de otra persona.
+        </li>
+        <li>
+          Cada cupón se reclama <strong>una vez por persona</strong>, vence en la fecha que dice y
+          se canjea solo en el negocio que lo publicó. Lo que incluye y sus condiciones los define
+          ese negocio, que es quien responde por entregarlo.
+        </li>
+        <li>
+          Un correo que ya tiene una cuenta de creador o de negocio no puede ser también miembro.
+        </li>
+        <li>
+          Podés pedir la eliminación de tu cuenta en cualquier momento desde tu perfil.
+        </li>
+      </ul>
+
+      <h2 id="datos">13. Datos personales</h2>
       <p>
         El tratamiento de datos personales se rige por nuestra{" "}
         <Link href="/legal/privacidad">Política de privacidad</Link>, conforme a la Ley N.º 8968 de
         Protección de la Persona frente al Tratamiento de sus Datos Personales.
       </p>
 
-      <h2 id="cambios">13. Cambios a estos términos</h2>
+      <h2 id="cambios">14. Cambios a estos términos</h2>
       <p>
         Podemos actualizar estos términos. Si el cambio es relevante, lo avisamos por correo o dentro
         de la plataforma con al menos 15 días de antelación. Las campañas ya aceptadas se rigen por
@@ -309,14 +335,14 @@ export default function TerminosPage() {
         entrada en vigencia implica aceptar la nueva versión.
       </p>
 
-      <h2 id="ley">14. Ley aplicable y jurisdicción</h2>
+      <h2 id="ley">15. Ley aplicable y jurisdicción</h2>
       <p>
         Estos términos se rigen por las leyes de la República de Costa Rica. Cualquier controversia
         se somete a los tribunales de Costa Rica, sin perjuicio de que intentemos primero resolverla
         de buena fe entre las partes.
       </p>
 
-      <h2 id="contacto">15. Contacto</h2>
+      <h2 id="contacto">16. Contacto</h2>
       <p>
         Escribinos a <Contacto /> para cualquier
         consulta sobre estos términos, una disputa o el estado de tu cuenta.

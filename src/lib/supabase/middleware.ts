@@ -12,12 +12,20 @@ import type { Database } from "@/lib/database.types";
 // ninguno de los prefijos protegidos.
 const PUBLIC_PATHS = ["/admin/login", "/admin/recuperar"];
 
+// Close Friends: todo `/cf` es del miembro con sesión, salvo la puerta
+// (`/cf/entrar`) y la página del QR (`/cf/unirme/<código>` y su registro),
+// que son justamente para quien todavía no tiene cuenta. Van por prefijo
+// porque el código del QR es parte de la ruta. El manifest también: el
+// navegador lo pide desde la página del QR, antes de que haya sesión.
+const PUBLIC_PREFIXES = ["/cf/unirme", "/cf/entrar", "/cf/manifest.webmanifest"];
+
 const PROTECTED_PREFIXES = [
   "/ugc/creador",
   "/ugc/marca",
   "/admin",
   "/ugc/onboarding",
   "/ugc/pendiente",
+  "/cf",
 ];
 
 export async function updateSession(request: NextRequest) {
@@ -51,8 +59,10 @@ export async function updateSession(request: NextRequest) {
   // público del creador (y "/ugc/marcas/..." vs "/ugc/marca") quedaba detrás del
   // login: justo las dos páginas pensadas para compartirse por fuera de la app.
   const { pathname } = request.nextUrl;
+  const esPublica = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
   const isProtected =
     !PUBLIC_PATHS.includes(pathname) &&
+    !PUBLIC_PREFIXES.some(esPublica) &&
     PROTECTED_PREFIXES.some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
     );
@@ -61,7 +71,12 @@ export async function updateSession(request: NextRequest) {
     // Cada árbol rebota a su propia puerta: el equipo no tiene por qué pasar
     // por el login del marketplace (con su paso de "¿sos creador o marca?")
     // para entrar a Q·OS.
-    const login = pathname === "/admin" || pathname.startsWith("/admin/") ? "/admin/login" : "/ugc/login";
+    const login =
+      pathname === "/admin" || pathname.startsWith("/admin/")
+        ? "/admin/login"
+        : pathname === "/cf" || pathname.startsWith("/cf/")
+          ? "/cf/entrar"
+          : "/ugc/login";
     const loginUrl = new URL(login, request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);

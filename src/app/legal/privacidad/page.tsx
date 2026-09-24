@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Dato, { Contacto, SiHay } from "@/components/legal/Dato";
 import { LEGAL } from "@/lib/legal";
+import { CF } from "@/lib/cf/copy";
 
 // ⚠️ BORRADOR PENDIENTE DE REVISIÓN LEGAL (redactado 2026-07-27).
 //
@@ -11,6 +12,10 @@ import { LEGAL } from "@/lib/legal";
 // que guarde datos personales nuevos, hay que actualizar la tabla de la
 // sección 3 — una política que describe menos de lo que se recoge es
 // justamente el incumplimiento que la Ley 8968 castiga.
+//
+// 1.1 (2026-09-24): Close Friends — members, member_consents,
+// member_brand_links, member_deletion_requests. Esta versión es la que queda
+// guardada en `member_consents.text_version` (ver src/lib/cf/copy.ts).
 
 export const metadata: Metadata = {
   title: "Política de privacidad — UGC·CRC",
@@ -125,6 +130,15 @@ export default function PrivacidadPage() {
                 visitas al sitio.
               </td>
             </tr>
+            <tr>
+              <td>{CF.miembro}</td>
+              <td>
+                Nombre, WhatsApp, fecha de nacimiento, nombre de agente, número de expediente, los
+                negocios a los que te uniste y por qué código QR, los permisos que diste o
+                retiraste (con fecha y versión del texto), y los cupones que reclamaste y
+                canjeaste.
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -145,6 +159,10 @@ export default function PrivacidadPage() {
         <li>Avisarte por correo y dentro de la plataforma cuando pasa algo que te toca.</li>
         <li>Coordinar el cobro y el pago de cada campaña.</li>
         <li>Resolver disputas entre las partes.</li>
+        <li>
+          En {CF.programa}: darte acceso a los cupones de los negocios a los que te uniste y
+          validar que sos mayor de edad.
+        </li>
         <li>Entender de forma agregada cómo se usa el sitio para mejorarlo.</li>
       </ul>
       <p>No vendemos tus datos ni los usamos para publicidad de terceros.</p>
@@ -169,6 +187,14 @@ export default function PrivacidadPage() {
           <strong>El contenido que entregás</strong> lo ve la marca de esa campaña.
         </li>
       </ul>
+      <h3>Los negocios de {CF.programa}</h3>
+      <p>
+        Cada negocio al que te unís ve tu <strong>nombre de agente</strong>, cuándo te uniste y
+        los cupones que reclamaste y canjeaste con él. Tu nombre, tu WhatsApp y tu correo los ve{" "}
+        <strong>solo si marcaste la casilla de compartirlos con ese negocio</strong>, y dejan de
+        verse en cuanto la desmarcás desde tu perfil. Un negocio nunca ve tus datos con otros
+        negocios ni tu fecha de nacimiento.
+      </p>
       <p>
         Estas fronteras no dependen solo de la interfaz: están aplicadas en la base de datos con
         reglas de acceso por fila.
@@ -224,7 +250,9 @@ export default function PrivacidadPage() {
         </li>
         <li>
           <strong>Al eliminar tu cuenta</strong>, borramos tu perfil, tus aplicaciones, tu portafolio
-          y tus archivos.
+          y tus archivos. En {CF.programa} la eliminación se pide desde tu perfil y la
+          completamos en un máximo de cinco días hábiles; queda solo un registro de que existió
+          la cuenta y de sus canjes, sin tu nombre ni tus datos de contacto.
         </li>
         <li>
           <strong>Registros de campañas pagadas</strong>: conservamos lo mínimo necesario para

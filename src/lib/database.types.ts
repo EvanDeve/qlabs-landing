@@ -1384,10 +1384,12 @@ export interface Database {
       completar_registro_miembro: {
         Args: {
           p_code: string;
-          p_full_name: string;
-          p_phone: string;
-          p_birthdate: string;
-          p_agent_name: string;
+          // Los cuatro de abajo se ignoran si la cuenta ya es miembro (solo se
+          // suma el vínculo): por eso pueden ir en null al unirse con sesión.
+          p_full_name: string | null;
+          p_phone: string | null;
+          p_birthdate: string | null;
+          p_agent_name: string | null;
           p_acepta_terminos: boolean;
           p_comparte_con_marca: boolean;
           p_whatsapp: boolean;

@@ -31,8 +31,10 @@ export default async function OnboardingPage({
     .eq("id", user.id)
     .single();
 
-  if (profile?.role === "admin") {
-    redirect(ROLE_DASHBOARD.admin);
+  // El miembro de Close Friends no tiene onboarding del marketplace: su ficha
+  // nace completa al registrarse por el QR.
+  if (profile?.role === "admin" || profile?.role === "member") {
+    redirect(ROLE_DASHBOARD[profile.role]);
   }
 
   // Quien ya completó el registro vuelve acá para CORREGIR lo que puso mientras

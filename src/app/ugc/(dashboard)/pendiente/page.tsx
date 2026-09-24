@@ -43,8 +43,9 @@ export default async function PendientePage() {
   }
 
   // Un admin no pasa por verificación y no tiene fila que mirar.
-  if (profile.role === "admin") {
-    redirect(ROLE_DASHBOARD.admin);
+  // Admin y miembro no pasan por verificación: cada uno a su panel.
+  if (profile.role === "admin" || profile.role === "member") {
+    redirect(ROLE_DASHBOARD[profile.role]);
   }
 
   const esCreador = profile.role === "creator";
