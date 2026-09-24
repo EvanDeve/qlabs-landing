@@ -6,7 +6,7 @@ import RefrescoVivo from "@/components/cf/RefrescoVivo";
 
 export default async function CuponesCfPage() {
   const { supabase } = await requireMember();
-  const { disponibles, mios } = await cuponesDelMiembro(supabase);
+  const { mios } = await cuponesDelMiembro(supabase);
 
   return (
     <>
@@ -16,7 +16,7 @@ export default async function CuponesCfPage() {
         titulo="Cupones"
         descripcion="Mostrá el QR en caja. Cada cupón se usa una vez."
       />
-      <CuponesMiembroTabs disponibles={disponibles} mios={mios} />
+      <CuponesMiembroTabs mios={mios} />
     </>
   );
 }

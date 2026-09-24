@@ -52,6 +52,18 @@ function registro(code: string, extra: Record<string, unknown> = {}) {
   };
 }
 
+/** Lo que pasa cuando un miembro con sesión escanea el QR de un cupón. */
+async function escanear(quien: TestUser, couponId: string) {
+  const { data: qr } = await admin.from("brand_invite_codes").select("code").eq("coupon_id", couponId).single();
+  return quien.client.rpc("completar_registro_miembro", {
+    ...registro(qr!.code),
+    p_full_name: null,
+    p_phone: null,
+    p_birthdate: null,
+    p_agent_name: null,
+  });
+}
+
 async function rolDe(id: string) {
   const { data } = await admin.from("profiles").select("role").eq("id", id).single();
   return data?.role ?? null;
@@ -454,9 +466,6 @@ describe("lo que el miembro puede escribir", () => {
 
 describe("los cupones", () => {
   let cXMiembros: string;
-  let cYSoloSusMiembros: string;
-  let cYTodosLosMiembros: string;
-  let cXCreadores: string;
   let cXUltimo: string;
   let codigoDeB: string;
 
@@ -469,8 +478,6 @@ describe("los cupones", () => {
       .from("coupons")
       .insert([
         { ...base, brand_id: marcaX.id, title: "X miembros", stock_total: 5, audience: "members", member_scope: "brand_members" },
-        { ...base, brand_id: marcaY.id, title: "Y solo suyos", stock_total: 5, audience: "members", member_scope: "brand_members" },
-        { ...base, brand_id: marcaY.id, title: "Y para todos", stock_total: 5, audience: "members", member_scope: "all_members" },
         { ...base, brand_id: marcaX.id, title: "X creadores", stock_total: 5, audience: "creators", member_scope: "brand_members" },
         { ...base, brand_id: marcaX.id, title: "X último", stock_total: 1, audience: "both", member_scope: "brand_members" },
       ])
@@ -478,41 +485,40 @@ describe("los cupones", () => {
     if (error) throw new Error(`setup coupons: ${error.message}`);
     const idDe = (t: string) => data!.find((c) => c.title === t)!.id;
     cXMiembros = idDe("X miembros");
-    cYSoloSusMiembros = idDe("Y solo suyos");
-    cYTodosLosMiembros = idDe("Y para todos");
-    cXCreadores = idDe("X creadores");
     cXUltimo = idDe("X último");
   });
 
-  it("B (solo de X) ve los de X y los de Y para todos; no los de Y solo suyos ni los de creadores", async () => {
+  it("no hay vitrina: un miembro no ve ningún cupón que no tenga en su wallet", async () => {
     const { data } = await miembroB.client.from("coupons").select("id");
-    const ids = new Set(data!.map((c) => c.id));
-    expect(ids.has(cXMiembros)).toBe(true);
-    expect(ids.has(cYTodosLosMiembros)).toBe(true);
-    expect(ids.has(cXUltimo)).toBe(true);
-    expect(ids.has(cYSoloSusMiembros)).toBe(false);
-    expect(ids.has(cXCreadores)).toBe(false);
+    expect(data).toEqual([]);
   });
 
-  it("y con el id a mano tampoco reclama el que no le toca", async () => {
-    const { error } = await miembroB.client.rpc("claim_coupon_member", { p_coupon: cYSoloSusMiembros });
-    expect(error?.message).toContain("ya no existe");
-    const { error: e2 } = await miembroB.client.rpc("claim_coupon_member", { p_coupon: cXCreadores });
-    expect(e2?.message).toContain("ya no existe");
+  it("y reclamar desde el panel ya no existe: la única puerta es el QR", async () => {
+    const { error } = await miembroB.client.rpc("claim_coupon_member" as never, { p_coupon: cXMiembros } as never);
+    expect(error).not.toBeNull();
+    const { data } = await admin.from("redemptions").select("id").eq("coupon_id", cXMiembros);
+    expect(data).toEqual([]);
   });
 
-  it("reclama el suyo y recibe un código como el de Loyalty Loop", async () => {
-    const { data, error } = await miembroB.client.rpc("claim_coupon_member", { p_coupon: cXMiembros });
+  it("escanear el QR deja el cupón en la wallet, con un código como el de Loyalty Loop", async () => {
+    const { data, error } = await escanear(miembroB, cXMiembros);
     expect(error).toBeNull();
-    expect(data!.code).toMatch(/^QL-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{2}$/);
-    expect(data!.member_id).toBe(miembroB.id);
-    expect(data!.creator_id).toBeNull();
-    codigoDeB = data!.code;
+    expect(data.cupon).toMatchObject({ ok: true, nuevo: true });
+    codigoDeB = data.cupon.code;
+    expect(codigoDeB).toMatch(/^QL-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{2}$/);
+
+    const { data: mio } = await miembroB.client.from("redemptions").select("member_id, creator_id").eq("code", codigoDeB).single();
+    expect(mio).toEqual({ member_id: miembroB.id, creator_id: null });
+    // Y ahora sí ve la ficha de ese cupón, y solo esa.
+    const { data: visibles } = await miembroB.client.from("coupons").select("id");
+    expect(visibles).toEqual([{ id: cXMiembros }]);
   });
 
-  it("no lo reclama dos veces", async () => {
-    const { error } = await miembroB.client.rpc("claim_coupon_member", { p_coupon: cXMiembros });
-    expect(error?.message).toContain("Ya reclamaste");
+  it("escanearlo dos veces no lo duplica", async () => {
+    const { data } = await escanear(miembroB, cXMiembros);
+    expect(data.cupon).toMatchObject({ ok: true, nuevo: false, code: codigoDeB });
+    const { data: filas } = await admin.from("redemptions").select("id").eq("coupon_id", cXMiembros);
+    expect(filas).toHaveLength(1);
   });
 
   it("un miembro no ve los reclamos de otro", async () => {
@@ -532,16 +538,15 @@ describe("los cupones", () => {
     expect(error?.message).toContain("Solo las cuentas de creador");
   });
 
-  it("dos reclamos simultáneos del último lugar: entra uno solo", async () => {
-    const [ra, rb] = await Promise.all([
-      miembroA.client.rpc("claim_coupon_member", { p_coupon: cXUltimo }),
-      miembroB.client.rpc("claim_coupon_member", { p_coupon: cXUltimo }),
-    ]);
-    const exitos = [ra, rb].filter((r) => !r.error);
-    expect(exitos).toHaveLength(1);
-    // El que pierde espera el lock y, según cuánto tardó, encuentra el cupón ya
-    // marcado agotado o cuenta el stock lleno. Los dos mensajes son correctos.
-    expect([ra, rb].find((r) => r.error)!.error!.message).toMatch(/Se agotaron|ya no está disponible/);
+  it("dos personas escanean a la vez el QR del último lugar: entra una sola", async () => {
+    const [ra, rb] = await Promise.all([escanear(miembroA, cXUltimo), escanear(miembroB, cXUltimo)]);
+    // Ninguna de las dos falla: el alta/vínculo se hace igual, y el cupón
+    // agotado se informa en `cupon` (ver 20260924150000).
+    expect(ra.error).toBeNull();
+    expect(rb.error).toBeNull();
+    const resultados = [ra.data.cupon, rb.data.cupon];
+    expect(resultados.filter((c) => c.ok)).toHaveLength(1);
+    expect(resultados.find((c) => !c.ok)).toMatchObject({ ok: false, motivo: "agotado" });
 
     const { data } = await admin.from("redemptions").select("id").eq("coupon_id", cXUltimo);
     expect(data).toHaveLength(1);
@@ -589,9 +594,9 @@ describe("pedir la eliminación", () => {
     expect(ficha!.status).toBe("eliminacion_pedida");
   });
 
-  it("y con la cuenta en ese estado ya no reclama cupones", async () => {
-    const { error } = await miembroB.client.rpc("claim_coupon_member", { p_coupon: crypto.randomUUID() });
-    expect(error?.message).toContain("no puede reclamar");
+  it("y con la cuenta en ese estado ya no suma cupones escaneando", async () => {
+    const { error } = await miembroB.client.rpc("completar_registro_miembro", registro(codigoX));
+    expect(error?.message).toContain("no puede sumar negocios ni cupones");
   });
 
   it("otro miembro no ve ese pedido", async () => {

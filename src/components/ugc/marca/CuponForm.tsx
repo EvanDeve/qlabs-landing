@@ -178,29 +178,13 @@ export default function CuponForm({
         <p className={styles.fieldHint}>
           {audiencia === "creators"
             ? "Lo ven los creadores de UGC·CRC en Recompensas."
-            : `Los clientes son los miembros de ${CF.programa}. Al guardarlo, el cupón genera su QR para mostrar en tu local.`}
+            : `Los clientes son los miembros de ${CF.programa}. Al guardarlo, el cupón genera su QR: se lo lleva quien lo escanea en tu local, y queda unido a tu negocio.`}
         </p>
       </div>
 
-      {audiencia !== "creators" && (
-        <div className={styles.field}>
-          <label htmlFor="member_scope">¿Qué clientes lo ven en su app?</label>
-          <select
-            id="member_scope"
-            name="member_scope"
-            className={styles.selectInp}
-            defaultValue={cupon?.memberScope ?? "brand_members"}
-          >
-            <option value="brand_members">Solo los que se unieron a mi negocio</option>
-            <option value="all_members">Todos los miembros de {CF.programa}</option>
-          </select>
-          <p className={styles.fieldHint}>
-            Quien escanea el QR del cupón lo recibe siempre, y queda unido a tu negocio.
-          </p>
-        </div>
-      )}
-      {/* NOT NULL en la base: va aunque el cupón sea solo para creadores. */}
-      {audiencia === "creators" && <input type="hidden" name="member_scope" value={cupon?.memberScope ?? "brand_members"} />}
+      {/* `member_scope` quedó sin uso (20260924180000): un cliente consigue el
+          cupón solo escaneando su QR. Va igual porque la columna es NOT NULL. */}
+      <input type="hidden" name="member_scope" value={cupon?.memberScope ?? "brand_members"} />
 
       <div style={{ display: "grid", gridTemplateColumns: audiencia === "members" ? "1fr" : "1fr 1fr", gap: "14px" }}>
         <div className={styles.field}>

@@ -1381,12 +1381,6 @@ export interface Database {
         Args: { p_code: string };
         Returns: Database["public"]["Tables"]["redemptions"]["Row"];
       };
-      // Close Friends. Mismo contrato que claim_coupon, con las reglas del
-      // miembro: audiencia y vínculo con el negocio en vez de nivel.
-      claim_coupon_member: {
-        Args: { p_coupon: string };
-        Returns: Database["public"]["Tables"]["redemptions"]["Row"];
-      };
       // El alta del miembro, ya con sesión. Si la cuenta ya era miembro, solo
       // suma el vínculo con el negocio del código.
       completar_registro_miembro: {

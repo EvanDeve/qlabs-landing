@@ -162,7 +162,7 @@ export default function PrivacidadPage() {
         <li>Coordinar el cobro y el pago de cada campaña.</li>
         <li>Resolver disputas entre las partes.</li>
         <li>
-          En {CF.programa}: darte acceso a los cupones de los negocios a los que te uniste y
+          En {CF.programa}: guardar en tu wallet los cupones que conseguís escaneando su QR, y
           validar que sos mayor de edad.
         </li>
         <li>Entender de forma agregada cómo se usa el sitio para mejorarlo.</li>

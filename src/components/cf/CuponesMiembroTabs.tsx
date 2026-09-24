@@ -1,23 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import CuponesGrid, { type CuponVista } from "@/components/ugc/creador/CuponesGrid";
 import MisCupones, { type MiCupon } from "@/components/ugc/creador/MisCupones";
 import styles from "@/styles/qos.module.css";
 
 /**
- * Las dos vistas de los cupones del miembro, con las mismas tarjetas que
- * Recompensas del creador. Arranca en "Mis cupones" si tiene alguno por usar:
- * lo más común al abrir esta pantalla es ir a mostrar uno en caja.
+ * La wallet: lo que tiene para usar y lo que ya usó. No hay "Disponibles" a
+ * propósito —un cupón entra solo escaneando su QR en el negocio
+ * (20260924180000)—, así que acá no se ofrece nada que la persona no tenga.
  */
-export default function CuponesMiembroTabs({ disponibles, mios }: { disponibles: CuponVista[]; mios: MiCupon[] }) {
-  const [tab, setTab] = useState<"disponibles" | "mios">(
-    mios.some((m) => m.estado === "por_usar") ? "mios" : "disponibles"
-  );
+export default function CuponesMiembroTabs({ mios }: { mios: MiCupon[] }) {
+  const [tab, setTab] = useState<"por_usar" | "usados">("por_usar");
+  const porUsar = mios.filter((m) => m.estado === "por_usar").length;
+  const usados = mios.length - porUsar;
 
   const TABS = [
-    { valor: "mios" as const, label: "Mis cupones" },
-    { valor: "disponibles" as const, label: "Disponibles" },
+    { valor: "por_usar" as const, label: `Por usar${porUsar ? ` · ${porUsar}` : ""}` },
+    { valor: "usados" as const, label: `Historial${usados ? ` · ${usados}` : ""}` },
   ];
 
   return (
@@ -37,15 +36,15 @@ export default function CuponesMiembroTabs({ disponibles, mios }: { disponibles:
         ))}
       </div>
 
-      {tab === "mios" ? (
-        <MisCupones cupones={mios} />
-      ) : disponibles.length === 0 ? (
-        <div className={`${styles.card} ${styles.empty}`}>
-          No hay cupones nuevos por ahora. Cuando uno de tus negocios publique uno, te va a aparecer acá.
-        </div>
-      ) : (
-        <CuponesGrid cupones={disponibles} nivelActual={1} para="miembro" />
-      )}
+      <MisCupones
+        cupones={mios}
+        solo={tab}
+        vacio={
+          tab === "por_usar"
+            ? "No tenés cupones por usar. Cuando escanees el QR de un cupón en uno de tus negocios, va a aparecer acá."
+            : "Todavía no usaste ningún cupón. Los que canjees o se te venzan quedan acá."
+        }
+      />
     </div>
   );
 }

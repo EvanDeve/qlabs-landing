@@ -16,8 +16,8 @@ import styles from "@/styles/qos.module.css";
 const AVISO_CUPON: Record<string, { tono: "ok" | "info"; texto: string }> = {
   nuevo: { tono: "ok", texto: "¡Listo! Tu cupón se agregó a tu wallet." },
   ya_estaba: { tono: "info", texto: "Ese cupón ya estaba en tu wallet." },
-  agotado: { tono: "info", texto: "Te uniste, pero ese cupón se agotó. Mirá los demás en Cupones." },
-  vencido: { tono: "info", texto: "Te uniste, pero ese cupón ya venció. Mirá los demás en Cupones." },
+  agotado: { tono: "info", texto: "Te uniste, pero ese cupón ya se agotó." },
+  vencido: { tono: "info", texto: "Te uniste, pero ese cupón ya venció." },
   no_disponible: { tono: "info", texto: "Te uniste, pero ese cupón ya no está disponible." },
   no_existe: { tono: "info", texto: "Te uniste, pero ese cupón ya no está disponible." },
 };
@@ -102,14 +102,10 @@ export default async function InicioCfPage({ searchParams }: { searchParams: Pro
       </div>
       {porUsar.length === 0 ? (
         <div className={`${styles.card} ${styles.empty}`}>
-          No tenés cupones por usar. Mirá los disponibles en{" "}
-          <Link href="/cf/cupones" style={{ color: "#5641D8", fontWeight: 700 }}>
-            Cupones
-          </Link>
-          .
+          No tenés cupones por usar. Cuando escanees el QR de un cupón en uno de tus negocios, va a aparecer acá.
         </div>
       ) : (
-        <MisCupones cupones={porUsar} />
+        <MisCupones cupones={porUsar} solo="por_usar" />
       )}
 
       <div className={styles.recSeccion}>Tus negocios · {negocios.length}</div>

@@ -26,31 +26,53 @@ export type MiCupon = {
   qr: string | null;
 };
 
-export default function MisCupones({ cupones }: { cupones: MiCupon[] }) {
+export default function MisCupones({
+  cupones,
+  solo,
+  vacio,
+}: {
+  cupones: MiCupon[];
+  /**
+   * Una sola de las dos secciones. La wallet de Close Friends las separa en
+   * pestañas ("Por usar" / "Historial"); Recompensas del creador las muestra
+   * juntas.
+   */
+  solo?: "por_usar" | "usados";
+  /** El texto cuando no hay nada que mostrar. */
+  vacio?: string;
+}) {
   const [abierto, setAbierto] = useState<CuponQRData | null>(null);
 
-  if (cupones.length === 0) {
+  const visibles =
+    solo === "por_usar"
+      ? cupones.filter((c) => c.estado === "por_usar")
+      : solo === "usados"
+        ? cupones.filter((c) => c.estado !== "por_usar")
+        : cupones;
+
+  if (visibles.length === 0) {
     return (
       <div className={`${styles.card} ${styles.empty}`}>
-        Todavía no reclamaste ningún cupón. Los que reclames van a quedar acá con su código y su
-        fecha de vencimiento.
+        {vacio ??
+          "Todavía no reclamaste ningún cupón. Los que reclames van a quedar acá con su código y su fecha de vencimiento."}
       </div>
     );
   }
 
   // "Por usar" se ordena por vencimiento y no por fecha de reclamo: lo único
   // que importa en esta lista es qué se me vence primero.
-  const porUsar = cupones
+  const porUsar = visibles
     .filter((c) => c.estado === "por_usar")
     .sort((a, b) => a.diasRestantes - b.diasRestantes);
   // Canjeados y vencidos van juntos: los dos son historial y ya no se tocan.
-  const usados = cupones.filter((c) => c.estado !== "por_usar");
+  const usados = visibles.filter((c) => c.estado !== "por_usar");
 
   return (
     <>
-      <div className={styles.recSeccion}>Por usar · {porUsar.length}</div>
+      {/* Con `solo`, el nombre de la sección ya lo dice la pestaña. */}
+      {!solo && <div className={styles.recSeccion}>Por usar · {porUsar.length}</div>}
 
-      {porUsar.length === 0 ? (
+      {solo === "usados" ? null : porUsar.length === 0 ? (
         <div className={`${styles.card} ${styles.empty}`}>
           No tenés cupones por usar. Mirá la pestaña Disponibles.
         </div>
@@ -128,7 +150,7 @@ export default function MisCupones({ cupones }: { cupones: MiCupon[] }) {
 
       {usados.length > 0 && (
         <>
-          <div className={styles.recSeccion}>Ya usados</div>
+          {solo !== "usados" && <div className={styles.recSeccion}>Ya usados</div>}
           <div className={styles.histCard}>
             {usados.map((c) => (
               <div key={c.id} className={styles.usadoFila}>

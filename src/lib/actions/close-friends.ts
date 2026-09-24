@@ -3,8 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { ResultadoReclamo } from "@/lib/database.types";
-import type { ReclamarState } from "@/lib/actions/loyalty";
-import { qrSvg } from "@/lib/ugc/loyalty";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { destinoDeSesion } from "@/lib/ugc/estado-cuenta";
@@ -274,27 +272,6 @@ export async function salirCfAction(formData: FormData) {
 // ---------------------------------------------------------------------------
 // Adentro del panel
 // ---------------------------------------------------------------------------
-
-/**
- * Reclamar un cupón desde "Disponibles". Mismo contrato que el del creador
- * (`reclamarCuponAction`) para que la grilla sea la misma: toda la regla vive
- * en `claim_coupon_member`, y su mensaje se muestra tal cual.
- */
-export async function reclamarCuponMiembroAction(_prev: ReclamarState, formData: FormData): Promise<ReclamarState> {
-  const couponId = String(formData.get("coupon_id") ?? "");
-  if (!couponId) return { error: "Cupón inválido." };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("claim_coupon_member", { p_coupon: couponId });
-  if (error) {
-    const esperado = error.message?.trim();
-    return { error: esperado && esperado.length < 120 ? esperado : "No se pudo reclamar el cupón. Intentá de nuevo." };
-  }
-  if (!data?.code) return { error: "No se pudo reclamar el cupón. Intentá de nuevo." };
-
-  revalidatePath("/cf", "layout");
-  return { reclamo: { code: data.code, expires_at: data.expires_at, qr: await qrSvg(data.code) } };
-}
 
 export type EstadoPerfil = { error?: string; ok?: string } | null;
 

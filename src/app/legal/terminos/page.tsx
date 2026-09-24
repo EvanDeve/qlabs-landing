@@ -298,8 +298,9 @@ export default function TerminosPage() {
       <h2 id="close-friends">12. {CF.programa}</h2>
       <p>
         {CF.programa} es el programa de {LEGAL.nombreComercial} para los clientes de los negocios que
-        usan la plataforma. Te unís escaneando el código QR que te muestra el negocio, y con eso
-        accedés a los cupones que ese negocio publica para sus miembros.
+        usan la plataforma. Te unís escaneando el código QR de un cupón que te muestra el negocio: el
+        cupón queda en tu wallet y quedás unido a ese negocio. Los cupones se consiguen solo así,
+        escaneando su QR.
       </p>
       <ul>
         <li>Es solo para <strong>mayores de 18 años</strong>.</li>
