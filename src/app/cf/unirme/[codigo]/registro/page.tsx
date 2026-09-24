@@ -39,7 +39,7 @@ export default async function RegistroPage({ params }: { params: Promise<{ codig
           <CuponRegalo cupon={invitacion.cupon} />
         </div>
       )}
-      <FormularioRegistro codigo={invitacion.codigo} negocio={invitacion.negocio} />
+      <FormularioRegistro codigo={invitacion.codigo} />
     </Pantalla>
   );
 }

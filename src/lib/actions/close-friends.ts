@@ -168,8 +168,8 @@ export type EstadoUnirme = { error?: string } | null;
 
 /**
  * Un miembro que escanea el QR de otro negocio no llena nada de nuevo: un toque
- * y queda vinculado. Solo se le pregunta lo que es por negocio, compartir sus
- * datos con ESTE negocio.
+ * y queda vinculado (y con el cupón del QR, si trae uno). El permiso de
+ * compartir su contacto es general y ya lo dio o no al registrarse.
  */
 export async function unirmeConSesionAction(_prev: EstadoUnirme, formData: FormData): Promise<EstadoUnirme> {
   const codigo = limpiarCodigoInvitacion(String(formData.get("codigo") ?? ""));
@@ -183,7 +183,8 @@ export async function unirmeConSesionAction(_prev: EstadoUnirme, formData: FormD
     p_birthdate: null,
     p_agent_name: null,
     p_acepta_terminos: true,
-    p_comparte_con_marca: formData.get("comparte_con_marca") === "on",
+    // Se ignoran para una cuenta que ya es miembro.
+    p_comparte_con_marca: false,
     p_whatsapp: false,
     p_version_textos: VERSION_TEXTOS,
   });
@@ -343,12 +344,12 @@ export async function actualizarPerfilMiembroAction(_prev: EstadoPerfil, formDat
 export async function cambiarConsentimientoAction(formData: FormData): Promise<{ error?: string }> {
   const kind = String(formData.get("kind") ?? "");
   if (kind !== "share_with_brand" && kind !== "whatsapp_marketing") return { error: "Permiso inválido." };
-  const brand = String(formData.get("brand_id") ?? "") || null;
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("cambiar_consentimiento", {
     p_kind: kind,
-    p_brand: kind === "share_with_brand" ? brand : null,
+    // Los dos permisos son generales (20260924170000): nunca por negocio.
+    p_brand: null,
     p_granted: formData.get("granted") === "true",
     p_version_textos: VERSION_TEXTOS,
   });

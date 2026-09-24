@@ -37,7 +37,7 @@ export const LEGAL = {
 
   /** Fecha de la versión vigente de ambos documentos. */
   vigenciaDesde: "24 de septiembre de 2026",
-  version: "1.1",
+  version: "1.2",
 } as const;
 
 /** Comisión que retiene la agencia. Espejo de AGENCY_FEE_RATE en ugc/payout.ts. */

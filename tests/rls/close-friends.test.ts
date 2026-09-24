@@ -259,7 +259,8 @@ describe("el registro", () => {
       expect.arrayContaining([
         { kind: "terms", granted: true, brand_id: null, text_version: VERSION },
         { kind: "whatsapp_marketing", granted: true, brand_id: null, text_version: VERSION },
-        { kind: "share_with_brand", granted: true, brand_id: marcaX.id, text_version: VERSION },
+        // General (20260924170000): vale para todos los negocios, no para X.
+        { kind: "share_with_brand", granted: true, brand_id: null, text_version: VERSION },
       ])
     );
 
@@ -344,10 +345,15 @@ describe("lo que ve cada quien", () => {
     expect(b).toMatchObject({ agent_name: agenteB, comparte_contacto: false, full_name: null, phone: null, email: null });
   });
 
-  it("el consentimiento es por negocio: a Y, A no le compartió nada", async () => {
+  it("el permiso es general: Y, el negocio que A sumó después, también ve su contacto", async () => {
     const { data } = await marcaY.client.rpc("miembros_de_mi_marca");
     expect(data).toHaveLength(1);
-    expect(data![0]).toMatchObject({ member_id: miembroA.id, comparte_contacto: false, phone: null });
+    expect(data![0]).toMatchObject({ member_id: miembroA.id, comparte_contacto: true, phone: "+50688887777" });
+  });
+
+  it("sumar un negocio no pregunta ni cambia el permiso", async () => {
+    const { data: filas } = await miembroA.client.from("member_consents").select("id").eq("kind", "share_with_brand");
+    expect(filas).toHaveLength(1);
   });
 
   it("una marca no ve los vínculos de otra", async () => {
@@ -355,35 +361,43 @@ describe("lo que ve cada quien", () => {
     expect(data).toEqual([{ member_id: miembroA.id }]);
   });
 
-  it("retirar el consentimiento esconde el contacto en el acto", async () => {
+  it("retirar el permiso esconde el contacto en TODOS sus negocios en el acto", async () => {
     const { error } = await miembroA.client.rpc("cambiar_consentimiento", {
       p_kind: "share_with_brand",
-      p_brand: marcaX.id,
+      p_brand: null,
       p_granted: false,
       p_version_textos: VERSION,
     });
     expect(error).toBeNull();
 
-    const { data } = await marcaX.client.rpc("miembros_de_mi_marca");
-    expect(data!.find((m: { member_id: string }) => m.member_id === miembroA.id)).toMatchObject({ comparte_contacto: false, phone: null });
+    for (const marca of [marcaX, marcaY]) {
+      const { data } = await marca.client.rpc("miembros_de_mi_marca");
+      expect(data!.find((m: { member_id: string }) => m.member_id === miembroA.id)).toMatchObject({
+        comparte_contacto: false,
+        phone: null,
+      });
+    }
 
     // Append-only: la fila vieja sigue ahí, es el historial.
-    const { data: filas } = await miembroA.client
-      .from("member_consents")
-      .select("granted")
-      .eq("kind", "share_with_brand")
-      .eq("brand_id", marcaX.id);
+    const { data: filas } = await miembroA.client.from("member_consents").select("granted").eq("kind", "share_with_brand");
     expect(filas).toHaveLength(2);
   });
 
-  it("no se puede compartir con un negocio al que no está vinculado", async () => {
+  it("un permiso se guarda siempre general, aunque llegue con un negocio", async () => {
     const { error } = await miembroB.client.rpc("cambiar_consentimiento", {
       p_kind: "share_with_brand",
       p_brand: marcaY.id,
-      p_granted: true,
+      p_granted: false,
       p_version_textos: VERSION,
     });
-    expect(error?.message).toContain("No estás vinculado");
+    expect(error).toBeNull();
+    const { data } = await miembroB.client
+      .from("member_consents")
+      .select("brand_id")
+      .eq("kind", "share_with_brand")
+      .order("id", { ascending: false })
+      .limit(1);
+    expect(data).toEqual([{ brand_id: null }]);
   });
 
   it("un creador no llama la lista de miembros de nadie", async () => {

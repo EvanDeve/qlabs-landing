@@ -40,7 +40,7 @@ const VACIO: Valores = {
  * paso del código reenvía los mismos datos en campos ocultos — el servidor no
  * los guarda entre un paso y otro.
  */
-export default function FormularioRegistro({ codigo, negocio }: { codigo: string; negocio: string }) {
+export default function FormularioRegistro({ codigo }: { codigo: string }) {
   const [estado, accion, enviando] = useActionState<EstadoRegistro, FormData>(registroAction, { paso: "datos" });
   const [v, setV] = useState<Valores>(VACIO);
   // El paso lo decide el servidor, salvo "Cambiar correo", que es solo volver.
@@ -228,9 +228,9 @@ export default function FormularioRegistro({ codigo, negocio }: { codigo: string
           name="comparte_con_marca"
           checked={v.comparte_con_marca}
           onChange={set("comparte_con_marca")}
-          ayuda={`Opcional. Si no la marcás, ${negocio} te ve solo por tu nombre de agente.`}
+          ayuda="Opcional. Si no la marcás, te ven solo por tu nombre de agente. Lo cambiás cuando quieras desde tu perfil."
         >
-          Compartir mi nombre y contacto con {negocio}
+          Compartir mi nombre y contacto con los negocios a los que me una
         </Casilla>
         <Casilla name="whatsapp" checked={v.whatsapp} onChange={set("whatsapp")} ayuda="Opcional. Lo podés apagar cuando quieras.">
           Recibir avisos de ofertas y eventos por WhatsApp

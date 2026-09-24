@@ -13,6 +13,8 @@ import { CF } from "@/lib/cf/copy";
 // sección 3 — una política que describe menos de lo que se recoge es
 // justamente el incumplimiento que la Ley 8968 castiga.
 //
+// 1.2 (2026-09-24): compartir el contacto pasa a ser UN permiso para todos los
+// negocios a los que la persona se une, no uno por negocio (20260924170000).
 // 1.1 (2026-09-24): Close Friends — members, member_consents,
 // member_brand_links, member_deletion_requests. Esta versión es la que queda
 // guardada en `member_consents.text_version` (ver src/lib/cf/copy.ts).
@@ -190,9 +192,10 @@ export default function PrivacidadPage() {
       <h3>Los negocios de {CF.programa}</h3>
       <p>
         Cada negocio al que te unís ve tu <strong>nombre de agente</strong>, cuándo te uniste y
-        los cupones que reclamaste y canjeaste con él. Tu nombre, tu WhatsApp y tu correo los ve{" "}
-        <strong>solo si marcaste la casilla de compartirlos con ese negocio</strong>, y dejan de
-        verse en cuanto la desmarcás desde tu perfil. Un negocio nunca ve tus datos con otros
+        los cupones que reclamaste y canjeaste con él. Tu nombre, tu WhatsApp y tu correo los ven{" "}
+        <strong>solo si marcaste la casilla de compartirlos con los negocios a los que te unís</strong>:
+        es un solo permiso que vale para todos ellos, los de hoy y los que sumes después, y dejan de
+        verse en todos en cuanto lo apagás desde tu perfil. Un negocio nunca ve lo que hacés con otros
         negocios ni tu fecha de nacimiento.
       </p>
       <p>

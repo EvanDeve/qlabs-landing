@@ -25,31 +25,26 @@ export default async function PerfilCfPage() {
     ? await supabase.from("brand_public_profiles").select("profile_id, brand_name, logo_url").in("profile_id", ids)
     : { data: [] };
 
-  const vigente = (kind: string, brandId: string | null) =>
-    consents?.find((c) => c.kind === kind && c.brand_id === brandId)?.granted ?? false;
+  // Los dos permisos son generales (20260924170000): la fila vigente es la que
+  // no tiene negocio. Las viejas por negocio quedan como historial.
+  const vigente = (kind: string) => consents?.find((c) => c.kind === kind && c.brand_id === null)?.granted ?? false;
 
+  const nombres = ids.map((id) => marcas?.find((m) => m.profile_id === id)?.brand_name).filter(Boolean);
   const permisos: Permiso[] = [
     {
+      kind: "share_with_brand",
+      titulo: "Compartir mis datos con mis negocios",
+      detalle: `Nombre, WhatsApp y correo${nombres.length ? `, hoy con ${nombres.join(", ")}` : ""} y los que se sumen. Si no, te ven solo por tu nombre de agente.`,
+      icono: "🤝",
+      granted: vigente("share_with_brand"),
+    },
+    {
       kind: "whatsapp_marketing",
-      brandId: null,
       titulo: "Avisos por WhatsApp",
       detalle: "Ofertas y eventos de tus negocios",
-      granted: vigente("whatsapp_marketing", null),
+      icono: "💬",
+      granted: vigente("whatsapp_marketing"),
     },
-    ...ids.flatMap((id) => {
-      const m = marcas?.find((x) => x.profile_id === id);
-      if (!m) return [];
-      return [
-        {
-          kind: "share_with_brand" as const,
-          brandId: id,
-          titulo: `Compartir mis datos con ${m.brand_name}`,
-          detalle: "Nombre, WhatsApp y correo. Si no, te ve solo por tu nombre de agente.",
-          logo: { nombre: m.brand_name, url: m.logo_url },
-          granted: vigente("share_with_brand", id),
-        },
-      ];
-    }),
   ];
 
   return (

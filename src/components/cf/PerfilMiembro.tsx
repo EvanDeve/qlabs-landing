@@ -7,7 +7,6 @@ import {
   pedirEliminacionAction,
   type EstadoPerfil,
 } from "@/lib/actions/close-friends";
-import BrandAvatar from "@/components/ugc/BrandAvatar";
 import styles from "@/styles/qos.module.css";
 
 // 16 px de letra en todo campo: con menos, iOS hace zoom al enfocarlo.
@@ -71,10 +70,9 @@ export function DatosMiembro({ fullName, phone, agentName }: { fullName: string;
 
 export type Permiso = {
   kind: "share_with_brand" | "whatsapp_marketing";
-  brandId: string | null;
   titulo: string;
   detalle: string;
-  logo?: { nombre: string; url: string | null };
+  icono: string;
   granted: boolean;
 };
 
@@ -96,14 +94,10 @@ export function PermisosMiembro({ permisos }: { permisos: Permiso[] }) {
   return (
     <div className={styles.histCard}>
       {vista.map((p, i) => (
-        <label key={`${p.kind}-${p.brandId}`} className={styles.usadoFila} style={{ cursor: "pointer", minHeight: 56 }}>
-          {p.logo ? (
-            <BrandAvatar name={p.logo.nombre} logoUrl={p.logo.url} size={38} radius={12} />
-          ) : (
-            <span style={{ width: 38, height: 38, borderRadius: 12, background: "#E7F7F1", display: "grid", placeItems: "center" }} aria-hidden>
-              💬
-            </span>
-          )}
+        <label key={p.kind} className={styles.usadoFila} style={{ cursor: "pointer", minHeight: 56 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 12, background: "#ECE7FB", display: "grid", placeItems: "center", flexShrink: 0 }} aria-hidden>
+            {p.icono}
+          </span>
           <div style={{ minWidth: 0 }}>
             <div className={styles.usadoTitulo}>{p.titulo}</div>
             <div className={styles.usadoDetalle}>{p.detalle}</div>
@@ -117,7 +111,6 @@ export function PermisosMiembro({ permisos }: { permisos: Permiso[] }) {
               const granted = e.target.checked;
               const fd = new FormData();
               fd.set("kind", p.kind);
-              if (p.brandId) fd.set("brand_id", p.brandId);
               fd.set("granted", String(granted));
               setError(null);
               empezar(async () => {

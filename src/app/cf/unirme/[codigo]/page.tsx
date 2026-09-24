@@ -123,7 +123,6 @@ export default async function UnirmePage({ params }: { params: Promise<{ codigo:
           <UnirmeConSesion
             codigo={invitacion.codigo}
             negocio={negocio}
-            preguntarCompartir={!sesion.vinculado}
             conCupon={Boolean(conRegalo)}
           />
         </div>
