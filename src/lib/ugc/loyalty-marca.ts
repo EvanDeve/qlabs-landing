@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { CF } from "@/lib/cf/copy";
 
 export type ReclamoEncontrado = {
   code: string;
@@ -34,14 +35,36 @@ export async function buscarReclamoPorCodigo(
 
   const { data: reclamo } = await supabase
     .from("redemptions")
-    .select("code, status, expires_at, coupon_id, creator_id")
+    .select("code, status, expires_at, coupon_id, creator_id, member_id")
     .eq("code", limpio)
     .maybeSingle();
 
   if (!reclamo) return null;
 
-  const [{ data: cupon }, { data: creador }, { data: nivel }] = await Promise.all([
-    supabase.from("coupons").select("title, type").eq("id", reclamo.coupon_id).maybeSingle(),
+  const { data: cupon } = await supabase
+    .from("coupons")
+    .select("title, type")
+    .eq("id", reclamo.coupon_id)
+    .maybeSingle();
+
+  // Un reclamo de un miembro de Close Friends: no hay handle, avatar ni nivel.
+  // El canje en sí es el mismo (`redeem_coupon` no mira quién reclamó).
+  if (!reclamo.creator_id) {
+    return {
+      code: reclamo.code,
+      status: reclamo.status,
+      expiresAt: reclamo.expires_at,
+      couponTitle: cupon?.title ?? "Cupón",
+      couponType: cupon?.type ?? "producto",
+      esEvento: cupon?.type === "evento",
+      creatorHandle: CF.miembro,
+      creatorAvatar: null,
+      creatorLevel: 1,
+      creatorLevelName: CF.programa,
+    };
+  }
+
+  const [{ data: creador }, { data: nivel }] = await Promise.all([
     supabase
       .from("creator_public_profiles")
       .select("handle, avatar_url")

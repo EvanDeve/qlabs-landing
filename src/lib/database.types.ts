@@ -10,7 +10,9 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type AppRole = "creator" | "brand" | "admin";
+// 'member' = el cliente de un negocio (Close Friends). Nadie se lo elige: lo
+// pone `completar_registro_miembro` al validar el QR. Ver 20260924110000.
+export type AppRole = "creator" | "brand" | "admin" | "member";
 export type CampaignStatus = "draft" | "published" | "in_progress" | "completed" | "cancelled";
 export type CampaignUsageScope = "organico" | "pauta" | "todo_medio";
 export type CampaignUsageDuration = "meses_3" | "meses_6" | "meses_12" | "perpetuo";
@@ -30,6 +32,19 @@ export type PortfolioMediaType = "image" | "video";
 export type CouponType = "producto" | "servicio" | "evento";
 export type CouponStatus = "borrador" | "publicado" | "pausado" | "agotado" | "vencido";
 export type RedemptionStatus = "reclamado" | "canjeado" | "expirado";
+// Close Friends. Ver 20260924120000 y 20260924130000.
+export type CouponAudience = "creators" | "members" | "both";
+export type CouponMemberScope = "all_members" | "brand_members";
+export type MemberStatus = "activo" | "eliminacion_pedida" | "suspendido";
+export type ConsentKind = "terms" | "share_with_brand" | "whatsapp_marketing";
+export type DeletionRequestStatus = "pendiente" | "resuelta";
+export type MemberAuditAction =
+  | "alta"
+  | "vinculo"
+  | "consentimiento"
+  | "reclamo"
+  | "canje"
+  | "eliminacion_pedida";
 export type PointAction =
   | "profile_completed"
   | "book_upload"
@@ -1032,6 +1047,8 @@ export interface Database {
           event_location: string | null;
           conditions: string | null;
           status: CouponStatus;
+          audience: CouponAudience;
+          member_scope: CouponMemberScope;
           created_at: string;
         };
         Insert: {
@@ -1049,18 +1066,23 @@ export interface Database {
           event_location?: string | null;
           conditions?: string | null;
           status?: CouponStatus;
+          audience?: CouponAudience;
+          member_scope?: CouponMemberScope;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["coupons"]["Insert"]>;
         Relationships: [];
       };
-      // Se escribe solo por `claim_coupon` (y por `redeem_coupon` en la fase 3):
-      // no hay policy de INSERT ni de UPDATE para nadie.
+      // Se escribe solo por `claim_coupon` / `claim_coupon_member` y por
+      // `redeem_coupon`: no hay policy de INSERT ni de UPDATE para nadie.
+      // Quien reclama es un creador O un miembro: exactamente uno de los dos
+      // viene lleno (check `redemptions_un_titular`).
       redemptions: {
         Row: {
           id: string;
           coupon_id: string;
-          creator_id: string;
+          creator_id: string | null;
+          member_id: string | null;
           code: string;
           status: RedemptionStatus;
           claimed_at: string;
@@ -1071,7 +1093,8 @@ export interface Database {
         Insert: {
           id?: string;
           coupon_id: string;
-          creator_id: string;
+          creator_id?: string | null;
+          member_id?: string | null;
           code: string;
           status?: RedemptionStatus;
           claimed_at?: string;
@@ -1080,6 +1103,105 @@ export interface Database {
           validated_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["redemptions"]["Insert"]>;
+        Relationships: [];
+      };
+      members: {
+        Row: {
+          profile_id: string;
+          expediente_code: string;
+          agent_name: string;
+          agent_name_norm: string;
+          full_name: string;
+          phone: string;
+          birthdate: string;
+          status: MemberStatus;
+          created_at: string;
+        };
+        // El alta es `completar_registro_miembro`. Desde la sesión, el miembro
+        // solo puede actualizar estas tres columnas (grants por columna).
+        Insert: never;
+        Update: {
+          full_name?: string;
+          phone?: string;
+          agent_name?: string;
+        };
+        Relationships: [];
+      };
+      // Append-only: el vigente es el último por (miembro, tipo, marca). Se
+      // escribe por `completar_registro_miembro` y `cambiar_consentimiento`.
+      member_consents: {
+        Row: {
+          id: number;
+          member_id: string;
+          kind: ConsentKind;
+          brand_id: string | null;
+          granted: boolean;
+          text_version: string;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      brand_invite_codes: {
+        Row: {
+          id: string;
+          brand_id: string;
+          code: string;
+          label: string;
+          active: boolean;
+          scans: number;
+          signups: number;
+          created_at: string;
+        };
+        // brand_id sale de auth.uid() y el código lo genera la base: la marca
+        // solo manda la etiqueta (grants por columna).
+        Insert: { label?: string };
+        Update: { label?: string; active?: boolean };
+        Relationships: [];
+      };
+      member_brand_links: {
+        Row: {
+          member_id: string;
+          brand_id: string;
+          invite_code_id: string | null;
+          joined_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      member_deletion_requests: {
+        Row: {
+          id: string;
+          member_id: string;
+          reason: string | null;
+          status: DeletionRequestStatus;
+          created_at: string;
+          resolved_at: string | null;
+          resolved_by: string | null;
+        };
+        Insert: never;
+        Update: {
+          status?: DeletionRequestStatus;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+        };
+        Relationships: [];
+      };
+      // Solo admin lo lee; lo escriben las funciones y triggers de Close Friends.
+      member_audit_log: {
+        Row: {
+          id: number;
+          member_id: string;
+          actor_id: string | null;
+          action: MemberAuditAction;
+          brand_id: string | null;
+          detail: Json;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
     };
@@ -1160,6 +1282,18 @@ export interface Database {
       };
       // staff_members sin los datos de contacto. La lee cualquiera del equipo;
       // la tabla de atrás es solo de directores.
+      // El consentimiento vigente de cada (miembro, tipo, marca). Invoker.
+      member_consents_vigentes: {
+        Row: {
+          member_id: string;
+          kind: ConsentKind;
+          brand_id: string | null;
+          granted: boolean;
+          text_version: string;
+          created_at: string;
+        };
+        Relationships: [];
+      };
       staff_directory: {
         Row: {
           profile_id: string;
@@ -1239,6 +1373,75 @@ export interface Database {
         Args: { p_code: string };
         Returns: Database["public"]["Tables"]["redemptions"]["Row"];
       };
+      // Close Friends. Mismo contrato que claim_coupon, con las reglas del
+      // miembro: audiencia y vínculo con el negocio en vez de nivel.
+      claim_coupon_member: {
+        Args: { p_coupon: string };
+        Returns: Database["public"]["Tables"]["redemptions"]["Row"];
+      };
+      // El alta del miembro, ya con sesión. Si la cuenta ya era miembro, solo
+      // suma el vínculo con el negocio del código.
+      completar_registro_miembro: {
+        Args: {
+          p_code: string;
+          p_full_name: string;
+          p_phone: string;
+          p_birthdate: string;
+          p_agent_name: string;
+          p_acepta_terminos: boolean;
+          p_comparte_con_marca: boolean;
+          p_whatsapp: boolean;
+          p_version_textos: string;
+        };
+        Returns: {
+          nuevo: boolean;
+          vinculo_nuevo: boolean;
+          expediente_code: string;
+          agent_name: string;
+        };
+      };
+      cambiar_consentimiento: {
+        Args: {
+          p_kind: ConsentKind;
+          p_brand: string | null;
+          p_granted: boolean;
+          p_version_textos: string;
+        };
+        Returns: undefined;
+      };
+      pedir_eliminacion_miembro: {
+        Args: { p_reason: string | null };
+        Returns: Database["public"]["Tables"]["member_deletion_requests"]["Row"];
+      };
+      // La lista de la marca. Contacto en null si no hay consentimiento vigente.
+      miembros_de_mi_marca: {
+        Args: Record<string, never>;
+        Returns: {
+          member_id: string;
+          agent_name: string;
+          comparte_contacto: boolean;
+          full_name: string | null;
+          phone: string | null;
+          email: string | null;
+          joined_at: string;
+          origen: string | null;
+          reclamados: number;
+          canjeados: number;
+        }[];
+      };
+      // Las cuatro de abajo son solo service_role (páginas públicas y freno).
+      invitacion_publica: {
+        Args: { p_code: string; p_contar_escaneo?: boolean };
+        Returns: { brand_name: string; logo_url: string | null; slug: string | null } | null;
+      };
+      agente_disponible: {
+        Args: { p_agent_name: string };
+        Returns: boolean;
+      };
+      frenar_registro: {
+        Args: { p_clave: string; p_max: number; p_ventana_segundos: number };
+        Returns: boolean;
+      };
       // Barrido diario. Solo service_role: lo corre el cron, no el usuario.
       expirar_loyalty: {
         Args: Record<string, never>;
@@ -1266,6 +1469,11 @@ export interface Database {
       coupon_type: CouponType;
       coupon_status: CouponStatus;
       redemption_status: RedemptionStatus;
+      coupon_audience: CouponAudience;
+      coupon_member_scope: CouponMemberScope;
+      member_status: MemberStatus;
+      consent_kind: ConsentKind;
+      deletion_request_status: DeletionRequestStatus;
     };
   };
 }

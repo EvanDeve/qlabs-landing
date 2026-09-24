@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { estadoDeNivel, labelAccion, fechaCorta, COLOR_NIVEL, type Nivel } from "@/lib/ugc/loyalty";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import { CF } from "@/lib/cf/copy";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ export default async function AdminLoyaltyPage() {
     }
   }
 
-  const creatorIds = [...new Set([...porCreador.keys(), ...canjes.map((r) => r.creator_id)])];
+  const creatorIds = [...new Set([...porCreador.keys(), ...canjes.flatMap((r) => (r.creator_id ? [r.creator_id] : []))])];
   const couponIds = [...new Set(canjes.map((r) => r.coupon_id))];
 
   const [{ data: creadores }, { data: cupones }, { data: aprobadas }] = await Promise.all([
@@ -87,6 +88,8 @@ export default async function AdminLoyaltyPage() {
   }
   const canjesDe = new Map<string, number>();
   for (const r of canjes.filter((r) => r.status === "canjeado")) {
+    // Los canjes de miembros de Close Friends no suman a ningún creador.
+    if (!r.creator_id) continue;
     canjesDe.set(r.creator_id, (canjesDe.get(r.creator_id) ?? 0) + 1);
   }
 
@@ -234,7 +237,7 @@ export default async function AdminLoyaltyPage() {
                     <td>{marcaDe.get(cupon?.brand_id ?? "") ?? "—"}</td>
                     <td>{cupon?.title ?? "—"}</td>
                     <td>
-                      <b>{handleDe.get(r.creator_id) ?? "—"}</b>
+                      <b>{r.creator_id ? (handleDe.get(r.creator_id) ?? "—") : CF.miembroCorto}</b>
                     </td>
                     <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{r.code}</td>
                     <td>

@@ -8,6 +8,7 @@ import AvataresAplicantes, { type CaraAplicante } from "@/components/ugc/marca/A
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 import PantallaHeader from "@/components/ugc/PantallaHeader";
+import { CF } from "@/lib/cf/copy";
 
 export const dynamic = "force-dynamic";
 
@@ -116,11 +117,12 @@ export default async function MarcaResumenPage() {
         // 20260826140000.
         .from("creator_public_profiles")
         .select("profile_id, handle")
-        .in("profile_id", [...new Set(sinUsar.map((s) => s.creatorId))])
+        .in("profile_id", [...new Set(sinUsar.flatMap((s) => (s.creatorId ? [s.creatorId] : [])))])
     : { data: [] };
 
-  const handleDe = (id: string) =>
-    displayHandle((handlesCupon ?? []).find((h) => h.profile_id === id)?.handle ?? "");
+  // Sin creatorId es un miembro de Close Friends, que no tiene handle.
+  const handleDe = (id: string | null) =>
+    id ? displayHandle((handlesCupon ?? []).find((h) => h.profile_id === id)?.handle ?? "") : CF.miembro;
 
   const caras: CaraAplicante[] = porRevisar.map((a) => ({
     id: a.id,

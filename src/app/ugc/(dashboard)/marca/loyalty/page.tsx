@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import LoyaltyMarcaTabs, { type CuponMarca, type CanjeFila } from "@/components/ugc/marca/LoyaltyMarcaTabs";
 import { fechaCorta, fechaLarga } from "@/lib/ugc/loyalty";
+import { CF } from "@/lib/cf/copy";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export default async function LoyaltyMarcaPage() {
 
   // El nivel de cada creador sale de `creator_level()` una vez por persona, no
   // una por fila: en un canje repetido la misma cuenta aparece varias veces.
-  const creatorIds = [...new Set((reclamos ?? []).map((r) => r.creator_id))];
+  const creatorIds = [...new Set((reclamos ?? []).flatMap((r) => (r.creator_id ? [r.creator_id] : [])))];
   const [{ data: creadores }, niveles] = await Promise.all([
     creatorIds.length
       ? supabase.from("creator_public_profiles").select("profile_id, handle").in("profile_id", creatorIds)
@@ -112,8 +113,10 @@ export default async function LoyaltyMarcaPage() {
   const canjes: CanjeFila[] = (reclamos ?? []).map((r) => ({
     id: r.id,
     fecha: fechaCorta(r.redeemed_at ?? r.claimed_at),
-    handle: handleDe.get(r.creator_id) ?? "Creador",
-    nivel: nombreNivel.get(nivelDe.get(r.creator_id) ?? 1) ?? "Bronce",
+    // Un miembro de Close Friends no tiene handle ni nivel: se lo nombra como
+    // tal. Su nombre de agente llega con la sección Close Friends de la marca.
+    handle: r.creator_id ? (handleDe.get(r.creator_id) ?? "Creador") : CF.miembro,
+    nivel: r.creator_id ? (nombreNivel.get(nivelDe.get(r.creator_id) ?? 1) ?? "Bronce") : CF.programa,
     cupon: tituloDe.get(r.coupon_id) ?? "Cupón",
     code: r.code,
     status: r.status,

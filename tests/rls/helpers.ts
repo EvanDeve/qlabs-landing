@@ -34,7 +34,12 @@ export type TestUser = {
 // auth.users(id) on delete cascade, y el resto del marketplace cuelga de ahí.
 const created: string[] = [];
 
-export async function makeUser(role: "creator" | "brand" | "admin"): Promise<TestUser> {
+/**
+ * "sin-rol" es una cuenta recién verificada que todavía no eligió nada: así
+ * llega quien se registra desde el QR de Close Friends, antes de que
+ * `completar_registro_miembro` la haga miembro.
+ */
+export async function makeUser(role: "creator" | "brand" | "admin" | "sin-rol"): Promise<TestUser> {
   const email = `rlstest.${role}.${randomUUID()}@testmail.cr`;
   const password = randomUUID();
 
@@ -42,17 +47,29 @@ export async function makeUser(role: "creator" | "brand" | "admin"): Promise<Tes
     email,
     password,
     email_confirm: true,
-    // El trigger handle_new_user copia esto a profiles.role.
-    user_metadata: { role },
+    // El trigger handle_new_user copia creator|brand a profiles.role. Admin ya
+    // no sale del metadata (20260924100000): se pone abajo con service role,
+    // igual que hace `inviteStaffAction`.
+    user_metadata: role === "creator" || role === "brand" ? { role } : {},
   });
   if (error || !data.user) throw new Error(`No se pudo crear el usuario de prueba: ${error?.message}`);
   created.push(data.user.id);
+
+  if (role === "admin") {
+    const { error: rolError } = await admin.from("profiles").update({ role: "admin" }).eq("id", data.user.id);
+    if (rolError) throw new Error(`No se pudo poner el rol admin de prueba: ${rolError.message}`);
+  }
 
   const client = anonClient();
   const { error: signInError } = await client.auth.signInWithPassword({ email, password });
   if (signInError) throw new Error(`No se pudo iniciar sesión de prueba: ${signInError.message}`);
 
   return { id: data.user.id, email, client };
+}
+
+/** Registra para el teardown una cuenta creada por fuera de makeUser. */
+export function track(id: string) {
+  created.push(id);
 }
 
 export async function cleanup() {

@@ -10,8 +10,8 @@ import type { StaffRole } from "@/lib/database.types";
 
 export type InviteStaffState = { error: string } | { message: string } | null;
 
-// Invita a un colaborador nuevo por email: crea el auth.users (rol admin vía
-// metadata, mismo trigger handle_new_user que el signup normal) y le manda el
+// Invita a un colaborador nuevo por email: crea el auth.users (el trigger
+// handle_new_user deja el perfil sin rol y acá se le pone admin) y le manda el
 // correo de invitación de Supabase para que defina su contraseña en
 // /auth/set-password. Ya queda asignado a un staff_role en el mismo paso.
 export async function inviteStaffAction(
@@ -44,6 +44,19 @@ export async function inviteStaffAction(
         ? "Ese email ya tiene una cuenta."
         : "No se pudo enviar la invitación. Intentá de nuevo.",
     };
+  }
+
+  // El rol va aparte y con service role: `handle_new_user` ya no toma 'admin'
+  // del metadata (lo manda cualquiera que llame a /auth/v1/signup), solo
+  // creator o brand. Ver 20260924100000. El `role` del metadata de arriba se
+  // deja porque no molesta y documenta la intención en auth.users.
+  const { error: rolError } = await admin
+    .from("profiles")
+    .update({ role: "admin" })
+    .eq("id", data.user.id);
+  if (rolError) {
+    console.error("[inviteStaffAction] no se pudo poner el rol admin:", rolError.message);
+    return { error: "Se mandó la invitación, pero la cuenta quedó sin acceso al panel: hay que ponerle el rol admin a mano en Supabase." };
   }
 
   await admin

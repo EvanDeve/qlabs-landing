@@ -49,6 +49,9 @@ export async function destinoDeSesion(
 
   const role = profile.role as AppRole;
   if (role === "admin") return ROLE_DASHBOARD.admin;
+  // El miembro no pasa por verificación ni por el onboarding del marketplace:
+  // su ficha nace completa en `completar_registro_miembro`.
+  if (role === "member") return ROLE_DASHBOARD.member;
 
   const tabla = role === "creator" ? "creator_profiles" : "brand_profiles";
   const { data: fila } = await supabase
