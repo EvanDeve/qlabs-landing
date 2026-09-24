@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import LoyaltyMarcaTabs, { type CuponMarca, type CanjeFila } from "@/components/ugc/marca/LoyaltyMarcaTabs";
+import LoyaltyMarcaTabs, {
+  type CuponMarca,
+  type CanjeFila,
+  type MiembroFila,
+} from "@/components/ugc/marca/LoyaltyMarcaTabs";
+import { qrUnirmeSvg } from "@/lib/cf/qr";
 import { fechaCorta, fechaLarga } from "@/lib/ugc/loyalty";
 import { CF } from "@/lib/cf/copy";
 import styles from "@/styles/qos.module.css";
@@ -12,11 +17,28 @@ export default async function LoyaltyMarcaPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: marca }, { data: cupones }, { data: umbrales }] = await Promise.all([
+  const [{ data: marca }, { data: cupones }, { data: umbrales }, { data: qrs }, { data: miembros }] = await Promise.all([
     supabase.from("brand_profiles").select("brand_name").eq("profile_id", user!.id).maybeSingle(),
     supabase.from("coupons").select("*").eq("brand_id", user!.id).order("created_at", { ascending: false }),
     supabase.from("level_thresholds").select("*").order("min_points"),
+    // Los QR de sus cupones para clientes (los crea el trigger `qr_para_cupon`).
+    supabase.from("brand_invite_codes").select("code, coupon_id, active, scans, signups").not("coupon_id", "is", null),
+    // Contacto solo con consentimiento vigente: lo decide la función, no esto.
+    supabase.rpc("miembros_de_mi_marca"),
   ]);
+
+  const qrDe = new Map((qrs ?? []).map((q) => [q.coupon_id, q]));
+  // Como imagen (data URL) y no SVG en línea: el SVG de `qrcode` trae su propio
+  // ancho y alto, y metido en una caja chica se desborda.
+  const svgDe = new Map(
+    await Promise.all(
+      (qrs ?? []).map(
+        async (q) =>
+          [q.code, `data:image/svg+xml;base64,${Buffer.from(await qrUnirmeSvg(q.code)).toString("base64")}`] as const
+      )
+    )
+  );
+  const agenteDe = new Map((miembros ?? []).map((m) => [m.member_id, m.agent_name]));
 
   const lista = cupones ?? [];
   const ids = lista.map((c) => c.id);
@@ -28,7 +50,7 @@ export default async function LoyaltyMarcaPage() {
     ids.length
       ? supabase
           .from("redemptions")
-          .select("id, coupon_id, creator_id, code, status, claimed_at, redeemed_at, expires_at")
+          .select("id, coupon_id, creator_id, member_id, code, status, claimed_at, redeemed_at, expires_at")
           .in("coupon_id", ids)
           .order("claimed_at", { ascending: false })
       : Promise.resolve({ data: [] as never[] }),
@@ -73,7 +95,16 @@ export default async function LoyaltyMarcaPage() {
   const cuponesVista: CuponMarca[] = lista.map((c) => {
     const stock = stockDe.get(c.id);
     const vigentes = vigentesDe.get(c.id);
+    const qr = qrDe.get(c.id);
     return {
+      audience: c.audience,
+      memberScope: c.member_scope,
+      // Un cupón que volvió a ser solo de creadores conserva su fila de QR,
+      // pero ya no regala nada: no se muestra.
+      qr:
+        qr && c.audience !== "creators"
+          ? { code: qr.code, activo: qr.active, scans: qr.scans, signups: qr.signups, imagen: svgDe.get(qr.code) ?? null }
+          : null,
       id: c.id,
       title: c.title,
       type: c.type,
@@ -113,9 +144,12 @@ export default async function LoyaltyMarcaPage() {
   const canjes: CanjeFila[] = (reclamos ?? []).map((r) => ({
     id: r.id,
     fecha: fechaCorta(r.redeemed_at ?? r.claimed_at),
-    // Un miembro de Close Friends no tiene handle ni nivel: se lo nombra como
-    // tal. Su nombre de agente llega con la sección Close Friends de la marca.
-    handle: r.creator_id ? (handleDe.get(r.creator_id) ?? "Creador") : CF.miembro,
+    // Un miembro de Close Friends no tiene handle ni nivel: va su nombre de
+    // agente. Solo se conoce si está vinculado a esta marca (lo normal: el QR
+    // del cupón lo vincula); si no, se lo nombra como miembro a secas.
+    handle: r.creator_id
+      ? (handleDe.get(r.creator_id) ?? "Creador")
+      : (agenteDe.get(r.member_id ?? "") ?? CF.miembro),
     nivel: r.creator_id ? (nombreNivel.get(nivelDe.get(r.creator_id) ?? 1) ?? "Bronce") : CF.programa,
     cupon: tituloDe.get(r.coupon_id) ?? "Cupón",
     code: r.code,
@@ -128,11 +162,25 @@ export default async function LoyaltyMarcaPage() {
       : null,
   }));
 
+  const miembrosVista: MiembroFila[] = (miembros ?? []).map((m) => ({
+    id: m.member_id,
+    agente: m.agent_name,
+    comparte: m.comparte_contacto,
+    nombre: m.full_name,
+    telefono: m.phone,
+    email: m.email,
+    desde: fechaCorta(m.joined_at),
+    origen: m.origen,
+    reclamados: m.reclamados,
+    canjeados: m.canjeados,
+  }));
+
   return (
     <div className={styles.mcCol}>
       <LoyaltyMarcaTabs
         cupones={cuponesVista}
         canjes={canjes}
+        miembros={miembrosVista}
         niveles={(umbrales ?? []).map((n) => ({ level: n.level, name: n.name }))}
         nombreMarca={marca?.brand_name ?? "tu negocio"}
       />

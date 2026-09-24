@@ -691,3 +691,43 @@ describe("el QR de un cupón", () => {
     await admin.from("member_audit_log").delete().eq("member_id", soloX.id);
   });
 });
+
+describe("apagar el QR de un cupón", () => {
+  it("la marca apaga el suyo y deja de abrir el registro; no toca el de otra", async () => {
+    const { data: cupon } = await admin
+      .from("coupons")
+      .insert({
+        brand_id: marcaY.id,
+        title: "Para apagar",
+        description: "x",
+        type: "producto",
+        claim_validity_days: 5,
+        status: "publicado",
+        stock_total: 5,
+        audience: "members",
+        member_scope: "brand_members",
+      })
+      .select("id")
+      .single();
+    const { data: qr } = await admin.from("brand_invite_codes").select("code").eq("coupon_id", cupon!.id).single();
+
+    // Otra marca: cero filas, sin error (así responde la RLS en un UPDATE).
+    const { data: ajeno } = await marcaX.client
+      .from("brand_invite_codes")
+      .update({ active: false })
+      .eq("code", qr!.code)
+      .select("code");
+    expect(ajeno).toEqual([]);
+
+    const { data: propio, error } = await marcaY.client
+      .from("brand_invite_codes")
+      .update({ active: false })
+      .eq("code", qr!.code)
+      .select("active");
+    expect(error).toBeNull();
+    expect(propio).toEqual([{ active: false }]);
+
+    const { data: publica } = await admin.rpc("invitacion_publica", { p_code: qr!.code });
+    expect(publica).toBeNull();
+  });
+});

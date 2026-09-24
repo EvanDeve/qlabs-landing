@@ -3,12 +3,38 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { CouponStatus, CouponType, Database } from "@/lib/database.types";
+import type {
+  CouponAudience,
+  CouponMemberScope,
+  CouponStatus,
+  CouponType,
+  Database,
+} from "@/lib/database.types";
 import { COUPON_IMAGE_BUCKET, rutaDeImagen } from "@/lib/ugc/coupon-images";
 
 export type CuponState = { error: string } | { ok: string } | null;
 
 const TIPOS: CouponType[] = ["producto", "servicio", "evento"];
+
+/**
+ * Para quién es el cupón (20260924130000). Se leen y se guardan SIEMPRE los dos
+ * campos juntos: un cupón solo para creadores igual lleva `member_scope`, que
+ * no se usa pero es NOT NULL.
+ *
+ * Los miembros no tienen niveles, así que un cupón solo para ellos se guarda
+ * con nivel 1: si no, el nivel quedaría puesto y sin sentido, y al pasarlo
+ * después a "Ambos" frenaría a los creadores sin que nadie lo haya elegido.
+ */
+function leerAudiencia(formData: FormData):
+  | { error: string }
+  | { audience: CouponAudience; member_scope: CouponMemberScope; min_level: number } {
+  const audience = String(formData.get("audience") ?? "creators") as CouponAudience;
+  const memberScope = String(formData.get("member_scope") ?? "brand_members") as CouponMemberScope;
+  if (!["creators", "members", "both"].includes(audience)) return { error: "Elegí para quién es el cupón." };
+  if (!["all_members", "brand_members"].includes(memberScope)) return { error: "Elegí quién de Close Friends lo ve." };
+  const minLevel = audience === "members" ? 1 : Number(formData.get("min_level") ?? 1);
+  return { audience, member_scope: memberScope, min_level: minLevel };
+}
 
 /**
  * Crear un cupón. La marca elige si lo deja en borrador o lo publica; si no
@@ -31,7 +57,8 @@ export async function crearCuponAction(
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const type = String(formData.get("type") ?? "producto") as CouponType;
-  const minLevel = Number(formData.get("min_level") ?? 1);
+  const para = leerAudiencia(formData);
+  if ("error" in para) return para;
   const stockTotal = Number(formData.get("stock_total") ?? 0);
   const conditions = String(formData.get("conditions") ?? "").trim() || null;
   const imageUrl = String(formData.get("image_url") ?? "").trim() || null;
@@ -41,7 +68,7 @@ export async function crearCuponAction(
   const publicar = formData.get("publicar") === "1";
 
   if (!title) return { error: "Ponele un título al cupón." };
-  if (!description) return { error: "Contá qué recibe el creador al canjearlo." };
+  if (!description) return { error: "Contá qué recibe quien lo canjee." };
   if (!TIPOS.includes(type)) return { error: "Tipo de cupón inválido." };
   if (!Number.isInteger(stockTotal) || stockTotal < 1) {
     return { error: "El stock tiene que ser al menos 1." };
@@ -67,7 +94,7 @@ export async function crearCuponAction(
     title,
     description,
     type,
-    min_level: minLevel,
+    ...para,
     stock_total: stockTotal,
     conditions,
     image_url: imageUrl,
@@ -134,14 +161,15 @@ export async function editarCuponAction(
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const minLevel = Number(formData.get("min_level") ?? 1);
+  const para = leerAudiencia(formData);
+  if ("error" in para) return para;
   const stockTotal = Number(formData.get("stock_total") ?? 0);
   const conditions = String(formData.get("conditions") ?? "").trim() || null;
   const imageUrl = String(formData.get("image_url") ?? "").trim() || null;
   const quitarImagen = formData.get("quitar_imagen") === "1";
 
   if (!title) return { error: "Ponele un título al cupón." };
-  if (!description) return { error: "Contá qué recibe el creador al canjearlo." };
+  if (!description) return { error: "Contá qué recibe quien lo canjee." };
   if (!Number.isInteger(stockTotal) || stockTotal < 1) {
     return { error: "El stock tiene que ser al menos 1." };
   }
@@ -162,7 +190,7 @@ export async function editarCuponAction(
   const update: Database["public"]["Tables"]["coupons"]["Update"] = {
     title,
     description,
-    min_level: minLevel,
+    ...para,
     stock_total: stockTotal,
     conditions,
   };
@@ -307,4 +335,22 @@ export async function canjearAction(
   revalidatePath(`/ugc/marca/validar/${code.toUpperCase()}`);
 
   return { ok: "Canje confirmado. El código quedó quemado.", code: data!.code };
+}
+
+/**
+ * Prender o apagar el QR de un cupón. Apagarlo no toca el cupón ni lo ya
+ * reclamado: solo hace que ese QR —impreso, fotografiado, reenviado— deje de
+ * abrir el registro. Es la salida cuando un QR se filtra.
+ *
+ * Va con el cliente de sesión: la RLS de `brand_invite_codes` y su grant por
+ * columna (solo `label` y `active`) son los que deciden.
+ */
+export async function cambiarQrAction(formData: FormData) {
+  const code = String(formData.get("code") ?? "");
+  const activo = formData.get("activo") === "1";
+  if (!code) return;
+
+  const supabase = await createClient();
+  await supabase.from("brand_invite_codes").update({ active: activo }).eq("code", code);
+  revalidatePath("/ugc/marca/loyalty");
 }

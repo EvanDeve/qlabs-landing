@@ -17,6 +17,9 @@ import EscanearQR from "./EscanearQR";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 import PantallaHeader from "@/components/ugc/PantallaHeader";
+import QrCupon, { type QrDeCupon } from "./QrCupon";
+import { CF } from "@/lib/cf/copy";
+import type { CouponAudience, CouponMemberScope } from "@/lib/database.types";
 
 export type CuponMarca = {
   id: string;
@@ -37,6 +40,34 @@ export type CuponMarca = {
   eventDateInput: string | null;
   reclamosVigentes: number;
   ultimoVence: string | null;
+  audience: CouponAudience;
+  memberScope: CouponMemberScope;
+  /** Solo en cupones para clientes (Close Friends). */
+  qr: QrDeCupon | null;
+};
+
+/**
+ * Un miembro de Close Friends vinculado a esta marca, tal como lo devuelve
+ * `miembros_de_mi_marca()`: nombre, teléfono y correo vienen en null si no dio
+ * permiso de compartirlos con ESTE negocio.
+ */
+export type MiembroFila = {
+  id: string;
+  agente: string;
+  comparte: boolean;
+  nombre: string | null;
+  telefono: string | null;
+  email: string | null;
+  desde: string;
+  origen: string | null;
+  reclamados: number;
+  canjeados: number;
+};
+
+const PARA_QUIEN: Record<CouponAudience, string> = {
+  creators: "creadores",
+  members: "clientes",
+  both: "creadores y clientes",
 };
 
 export type CanjeFila = {
@@ -59,16 +90,18 @@ const ESTADO_LABEL: Record<string, string> = {
   vencido: "Vencido",
 };
 
-type Tab = "cupones" | "nuevo" | "validar" | "canjes";
+type Tab = "cupones" | "nuevo" | "validar" | "canjes" | "miembros";
 
 export default function LoyaltyMarcaTabs({
   cupones,
   canjes,
+  miembros,
   niveles,
   nombreMarca,
 }: {
   cupones: CuponMarca[];
   canjes: CanjeFila[];
+  miembros: MiembroFila[];
   niveles: { level: number; name: string }[];
   nombreMarca: string;
 }) {
@@ -98,7 +131,7 @@ export default function LoyaltyMarcaTabs({
     <>
       <PantallaHeader
         titulo="Loyalty"
-        descripcion="Cupones para que los creadores lleguen a tu local."
+        descripcion="Cupones para que los creadores y tus clientes vuelvan a tu local."
         accion={
           <button type="button" className={styles.mcNuevo} onClick={() => setTab("nuevo")}>
             <QosIcon name="plus" size={15} />
@@ -116,7 +149,7 @@ export default function LoyaltyMarcaTabs({
         </span>
         <span className={styles.mcDecidirTxt}>
           <span className={styles.mcDecidirNum}>Validar un canje</span>
-          <span className={styles.mcDecidirSub}>Escaneá el QR del creador</span>
+          <span className={styles.mcDecidirSub}>Escaneá el QR del cupón</span>
         </span>
         <QosIcon name="chevR" size={17} />
       </Link>
@@ -155,10 +188,21 @@ export default function LoyaltyMarcaTabs({
         >
           Canjes{canjes.length > 0 ? ` · ${canjes.length}` : ""}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "miembros"}
+          onClick={() => setTab("miembros")}
+          className={`${styles.trTabBtn} ${tab === "miembros" ? styles.trTabOn : ""}`}
+        >
+          Clientes{miembros.length > 0 ? ` · ${miembros.length}` : ""}
+        </button>
       </div>
 
       {tab === "cupones" ? (
         <ListaCupones cupones={cupones} niveles={niveles} />
+      ) : tab === "miembros" ? (
+        <ListaMiembros miembros={miembros} />
       ) : (
         <>
           <TablaCanjes canjes={canjes} />
@@ -207,8 +251,8 @@ function ListaCupones({
               <div style={{ minWidth: 0 }}>
                 <div className={styles.mcCardTitulo}>{c.title}</div>
                 <div className={styles.mcCardMeta}>
-                  {LABEL_TIPO_CUPON[c.type] ?? c.type}
-                  {c.minLevel > 1 ? ` · para nivel ${c.minLevelName} o más` : " · para todos"}
+                  {LABEL_TIPO_CUPON[c.type] ?? c.type} · para {PARA_QUIEN[c.audience]}
+                  {c.audience !== "members" && c.minLevel > 1 ? ` (nivel ${c.minLevelName} o más)` : ""}
                 </div>
               </div>
               <span
@@ -258,6 +302,8 @@ function ListaCupones({
 
             {c.type === "evento" && <p className={styles.mcCanjeAviso}>🎟️ {LEYENDA_EVENTO}</p>}
 
+            {c.qr && <QrCupon qr={c.qr} />}
+
             <div className={styles.mcAplicanteBotones}>
               {c.status !== "publicado" && c.status !== "vencido" && (
                 <form action={cambiarEstadoCuponAction} style={{ flex: 1 }}>
@@ -293,6 +339,8 @@ function ListaCupones({
                       eventLocation: c.eventLocation,
                       conditions: c.conditions,
                       imageUrl: c.imageUrl,
+                      audience: c.audience,
+                      memberScope: c.memberScope,
                     })
                   }
                   className={styles.mcAceptar}
@@ -375,7 +423,7 @@ function Validador({ nombreMarca }: { nombreMarca: string }) {
     <div className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "560px" }}>
       <h2 style={{ fontSize: "16px", marginBottom: "6px" }}>Validar un canje</h2>
       <p style={{ fontSize: "13px", color: "var(--ink-2)", marginBottom: "18px" }}>
-        Escaneá el QR del creador con la cámara, o digitá acá el código corto que te muestra.
+        Escaneá el QR del creador o del cliente con la cámara, o digitá acá el código corto que te muestra.
       </p>
 
       <EscanearQR onCodigo={alEscanear} />
@@ -623,6 +671,77 @@ function TablaCanjes({ canjes }: { canjes: CanjeFila[] }) {
           </div>
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * Los clientes de la marca que se unieron a Close Friends. El contacto solo
+ * aparece si la persona lo compartió con ESTE negocio; si no, es su nombre de
+ * agente y nada más — así lo decide la base, no esta pantalla.
+ */
+function ListaMiembros({ miembros }: { miembros: MiembroFila[] }) {
+  if (miembros.length === 0) {
+    return (
+      <div className={`${styles.card} ${styles.empty}`}>
+        Todavía no se unió nadie. Creá un cupón para clientes y mostrá su QR en tu local: quien lo escanea se une a{" "}
+        {CF.programa} y aparece acá.
+      </div>
+    );
+  }
+
+  const conContacto = miembros.filter((m) => m.comparte).length;
+
+  return (
+    <>
+      <p style={{ fontSize: 13, color: "var(--ink-2)", margin: "0 2px 12px" }}>
+        {conContacto} de {miembros.length} te compartieron su contacto. El resto lo ves solo por su nombre de agente.
+      </p>
+      <div className={styles.histCard}>
+        {miembros.map((m) => (
+          <div key={m.id} className={styles.usadoFila} style={{ alignItems: "flex-start" }}>
+            <span
+              aria-hidden
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                background: "#ECE7FB",
+                color: "#5641D8",
+                fontWeight: 800,
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              {m.agente.slice(0, 1).toUpperCase()}
+            </span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className={styles.usadoTitulo}>{m.agente}</div>
+              {m.comparte ? (
+                <div className={styles.usadoDetalle} style={{ lineHeight: 1.5 }}>
+                  {m.nombre}
+                  <br />
+                  {m.telefono && (
+                    <a href={`https://wa.me/${m.telefono.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ color: "#5641D8", fontWeight: 700 }}>
+                      {m.telefono}
+                    </a>
+                  )}
+                  {m.email && <> · {m.email}</>}
+                </div>
+              ) : (
+                <div className={styles.usadoDetalle}>No compartió su contacto</div>
+              )}
+              <div className={styles.usadoDetalle} style={{ marginTop: 4 }}>
+                Desde {m.desde}
+                {m.origen && <> · por &quot;{m.origen}&quot;</>} · {m.reclamados}{" "}
+                {m.reclamados === 1 ? "reclamo" : "reclamos"} · {m.canjeados}{" "}
+                {m.canjeados === 1 ? "canje" : "canjes"}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </>
   );
 }

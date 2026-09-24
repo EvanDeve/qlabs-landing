@@ -103,7 +103,7 @@ export default function EscanerPantalla() {
       </div>
 
       <div className={styles.mcEscanerPie}>
-        {error ?? aviso ?? "Poné el QR del creador dentro del recuadro."}
+        {error ?? aviso ?? "Poné el QR del cupón dentro del recuadro."}
         {/* Siempre a la vista y no solo cuando falla: en un mostrador con mala
             luz, buscar el camino manual recién cuando la cámara no anda es
             justo el momento en que menos se quiere buscar nada. */}

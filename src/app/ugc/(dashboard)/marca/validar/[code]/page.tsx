@@ -9,7 +9,7 @@ import styles from "@/styles/qos.module.css";
 export const dynamic = "force-dynamic";
 
 /**
- * A dónde lleva el QR del creador.
+ * A dónde lleva el QR del creador (o del cliente de Close Friends).
  *
  * Vive dentro de `(dashboard)/marca` a propósito: así hereda `requireRole`, y
  * escanear sin sesión de marca manda al login en vez de mostrar datos de un
@@ -101,7 +101,7 @@ export default async function ValidarCodigoPage({
               <span className={styles.mcCanjeV}>{reclamo.couponTitle}</span>
             </div>
             <div className={styles.mcCanjeFila}>
-              <span className={styles.mcCanjeK}>Creador</span>
+              <span className={styles.mcCanjeK}>{reclamo.esMiembro ? "Cliente" : "Creador"}</span>
               <span className={styles.mcCanjeV}>
                 {reclamo.creatorHandle} · {reclamo.creatorLevelName}
               </span>
@@ -124,11 +124,11 @@ export default async function ValidarCodigoPage({
 
           {reclamo.status === "canjeado" ? (
             <p className={styles.mcCanjeAviso}>
-              Cada código se quema al confirmarse — un canje por creador por cupón.
+              Cada código se quema al confirmarse — un canje por {reclamo.esMiembro ? "cliente" : "creador"} por cupón.
             </p>
           ) : reclamo.status === "expirado" ? (
             <p className={styles.mcCanjeAviso}>
-              Venció el {fechaLarga(reclamo.expiresAt)}. Si todavía queda stock, el creador puede
+              Venció el {fechaLarga(reclamo.expiresAt)}. Si todavía queda stock, {reclamo.esMiembro ? "el cliente" : "el creador"} puede
               volver a reclamarlo.
             </p>
           ) : (

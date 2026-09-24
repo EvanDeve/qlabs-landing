@@ -7,7 +7,15 @@ import { COUPON_IMAGE_BUCKET, MAX_COUPON_IMAGE_BYTES } from "@/lib/ugc/coupon-im
 import { subirArchivoDirecto, pesoLegible } from "@/lib/ugc/uploads";
 import { createClient } from "@/lib/supabase/client";
 import { LEYENDA_EVENTO, LABEL_TIPO_CUPON } from "@/lib/ugc/loyalty";
+import { CF } from "@/lib/cf/copy";
+import type { CouponAudience, CouponMemberScope } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
+
+const AUDIENCIAS: { valor: CouponAudience; label: string }[] = [
+  { valor: "creators", label: "Creadores" },
+  { valor: "members", label: "Clientes" },
+  { valor: "both", label: "Ambos" },
+];
 
 export type CuponEditable = {
   id: string;
@@ -22,6 +30,8 @@ export type CuponEditable = {
   eventLocation: string | null;
   conditions: string | null;
   imageUrl: string | null;
+  audience: CouponAudience;
+  memberScope: CouponMemberScope;
 };
 
 /**
@@ -50,6 +60,7 @@ export default function CuponForm({
 
   const editando = Boolean(cupon);
   const [tipo, setTipo] = useState(cupon?.type ?? "producto");
+  const [audiencia, setAudiencia] = useState<CouponAudience>(cupon?.audience ?? "creators");
   const [imagen, setImagen] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(cupon?.imageUrl ?? null);
   const [quitarImagen, setQuitarImagen] = useState(false);
@@ -117,6 +128,7 @@ export default function CuponForm({
         setImagen(null);
         setPreview(null);
         setTipo("producto");
+        setAudiencia("creators");
         if (fileRef.current) fileRef.current.value = "";
       }
       router.refresh();
@@ -144,7 +156,53 @@ export default function CuponForm({
         />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+      {/* ── Para quién ── Los clientes son los miembros de Close Friends: un
+          cupón para ellos trae su propio QR, que se muestra en el local. */}
+      <div className={styles.field}>
+        <label>¿Para quién es?</label>
+        <input type="hidden" name="audience" value={audiencia} />
+        <div className={styles.segmented} role="radiogroup" aria-label="Para quién es el cupón">
+          {AUDIENCIAS.map((a) => (
+            <button
+              key={a.valor}
+              type="button"
+              role="radio"
+              aria-checked={audiencia === a.valor}
+              className={`${styles.segItem} ${audiencia === a.valor ? styles.segItemOn : ""}`}
+              onClick={() => setAudiencia(a.valor)}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+        <p className={styles.fieldHint}>
+          {audiencia === "creators"
+            ? "Lo ven los creadores de UGC·CRC en Recompensas."
+            : `Los clientes son los miembros de ${CF.programa}. Al guardarlo, el cupón genera su QR para mostrar en tu local.`}
+        </p>
+      </div>
+
+      {audiencia !== "creators" && (
+        <div className={styles.field}>
+          <label htmlFor="member_scope">¿Qué clientes lo ven en su app?</label>
+          <select
+            id="member_scope"
+            name="member_scope"
+            className={styles.selectInp}
+            defaultValue={cupon?.memberScope ?? "brand_members"}
+          >
+            <option value="brand_members">Solo los que se unieron a mi negocio</option>
+            <option value="all_members">Todos los miembros de {CF.programa}</option>
+          </select>
+          <p className={styles.fieldHint}>
+            Quien escanea el QR del cupón lo recibe siempre, y queda unido a tu negocio.
+          </p>
+        </div>
+      )}
+      {/* NOT NULL en la base: va aunque el cupón sea solo para creadores. */}
+      {audiencia === "creators" && <input type="hidden" name="member_scope" value={cupon?.memberScope ?? "brand_members"} />}
+
+      <div style={{ display: "grid", gridTemplateColumns: audiencia === "members" ? "1fr" : "1fr 1fr", gap: "14px" }}>
         <div className={styles.field}>
           <label htmlFor="type">Tipo</label>
           {editando ? (
@@ -170,8 +228,10 @@ export default function CuponForm({
           )}
         </div>
 
+        {/* Los clientes no tienen niveles: el selector es solo de creadores. */}
+        {audiencia !== "members" && (
         <div className={styles.field}>
-          <label htmlFor="min_level">¿Quién puede reclamarlo?</label>
+          <label htmlFor="min_level">¿Qué creadores pueden reclamarlo?</label>
           <select
             id="min_level"
             name="min_level"
@@ -188,6 +248,7 @@ export default function CuponForm({
             Los niveles altos reflejan entregas aprobadas y ratings reales.
           </p>
         </div>
+        )}
       </div>
 
       <div className={styles.field}>
@@ -198,7 +259,7 @@ export default function CuponForm({
           required
           rows={3}
           defaultValue={cupon?.description ?? ""}
-          placeholder="Contale al creador qué recibe al canjear este cupón"
+          placeholder="Contá qué recibe quien canjee este cupón"
           className={styles.inp}
           style={{ resize: "vertical" }}
         />
@@ -393,7 +454,7 @@ export default function CuponForm({
 
       {!editando && (
         <p style={{ marginTop: "12px", fontSize: "12px", color: "var(--ink-3)" }}>
-          Tus cupones se publican al instante. Un canje por creador por cupón.
+          Tus cupones se publican al instante. Un canje por persona por cupón.
         </p>
       )}
     </form>

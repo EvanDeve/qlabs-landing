@@ -13,6 +13,8 @@ export type ReclamoEncontrado = {
   creatorAvatar: string | null;
   creatorLevel: number;
   creatorLevelName: string;
+  /** Lo reclamó un miembro de Close Friends (un cliente), no un creador. */
+  esMiembro: boolean;
 };
 
 /**
@@ -47,9 +49,14 @@ export async function buscarReclamoPorCodigo(
     .eq("id", reclamo.coupon_id)
     .maybeSingle();
 
-  // Un reclamo de un miembro de Close Friends: no hay handle, avatar ni nivel.
-  // El canje en sí es el mismo (`redeem_coupon` no mira quién reclamó).
+  // Un reclamo de un miembro de Close Friends: no hay handle, avatar ni nivel;
+  // se muestra su nombre de agente, que es lo que ve en su propia app y puede
+  // confirmar en la caja. La marca no lee `members`: el alias sale de
+  // `miembros_de_mi_marca()`, que solo trae a los vinculados a ella (lo normal,
+  // porque el QR del cupón vincula). El canje en sí es el mismo.
   if (!reclamo.creator_id) {
+    const { data: miembros } = await supabase.rpc("miembros_de_mi_marca");
+    const agente = miembros?.find((m) => m.member_id === reclamo.member_id)?.agent_name;
     return {
       code: reclamo.code,
       status: reclamo.status,
@@ -57,10 +64,11 @@ export async function buscarReclamoPorCodigo(
       couponTitle: cupon?.title ?? "Cupón",
       couponType: cupon?.type ?? "producto",
       esEvento: cupon?.type === "evento",
-      creatorHandle: CF.miembro,
+      creatorHandle: agente ?? CF.miembro,
       creatorAvatar: null,
       creatorLevel: 1,
-      creatorLevelName: CF.programa,
+      creatorLevelName: agente ? CF.miembro : CF.programa,
+      esMiembro: true,
     };
   }
 
@@ -91,5 +99,6 @@ export async function buscarReclamoPorCodigo(
     creatorAvatar: creador?.avatar_url ?? null,
     creatorLevel: nivelNum,
     creatorLevelName: umbral?.name ?? "Bronce",
+    esMiembro: false,
   };
 }
