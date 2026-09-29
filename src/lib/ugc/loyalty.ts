@@ -82,6 +82,15 @@ export const LABEL_TIPO_CUPON: Record<string, string> = {
   evento: "Evento",
 };
 
+/** El estado de un cupón como lo ve la marca. "Activo" y no "Publicado": es lo que dice el mockup de 2026-09-29. */
+export const ESTADO_CUPON: Record<string, string> = {
+  borrador: "Borrador",
+  publicado: "Activo",
+  pausado: "Pausado",
+  agotado: "Agotado",
+  vencido: "Vencido",
+};
+
 /**
  * La leyenda de los eventos es fija y no editable por la marca — decisión de
  * producto, no un default. Evita el malentendido caro: el creador llega a una

@@ -108,7 +108,7 @@ export default function EscanerPantalla() {
             luz, buscar el camino manual recién cuando la cámara no anda es
             justo el momento en que menos se quiere buscar nada. */}
         <br />
-        <Link href="/ugc/marca/loyalty" className={styles.mcEscanerManual}>
+        <Link href="/ugc/marca/loyalty/canjes#buscar" className={styles.mcEscanerManual}>
           Buscar el código a mano
         </Link>
       </div>

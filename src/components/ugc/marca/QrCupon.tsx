@@ -1,15 +1,7 @@
 import { cambiarQrAction } from "@/lib/actions/cupones";
 import { CF } from "@/lib/cf/copy";
 import styles from "@/styles/qos.module.css";
-
-export type QrDeCupon = {
-  code: string;
-  activo: boolean;
-  scans: number;
-  signups: number;
-  /** El QR como data URL (SVG), generado en el servidor. */
-  imagen: string | null;
-};
+import type { QrDeCupon } from "@/lib/ugc/loyalty-panel";
 
 /**
  * El QR de un cupón para clientes, dentro de su tarjeta: lo que la marca

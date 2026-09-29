@@ -116,7 +116,7 @@ export async function crearCuponAction(
     return { error: "No se pudo guardar el cupón. Intentá de nuevo." };
   }
 
-  revalidatePath("/ugc/marca/loyalty");
+  revalidatePath("/ugc/marca/loyalty", "layout");
   return { ok: publicar ? "Cupón publicado." : "Borrador guardado." };
 }
 
@@ -242,7 +242,7 @@ export async function editarCuponAction(
     await supabase.storage.from(COUPON_IMAGE_BUCKET).remove([anterior]);
   }
 
-  revalidatePath("/ugc/marca/loyalty");
+  revalidatePath("/ugc/marca/loyalty", "layout");
   revalidatePath("/ugc/creador/recompensas");
   return { ok: "Cupón actualizado." };
 }
@@ -263,7 +263,7 @@ export async function cambiarEstadoCuponAction(formData: FormData) {
   if (!id || !["borrador", "publicado", "pausado"].includes(status)) return;
 
   await supabase.from("coupons").update({ status }).eq("id", id).eq("brand_id", user.id);
-  revalidatePath("/ugc/marca/loyalty");
+  revalidatePath("/ugc/marca/loyalty", "layout");
 }
 
 export async function borrarCuponAction(formData: FormData) {
@@ -296,7 +296,7 @@ export async function borrarCuponAction(formData: FormData) {
     await supabase.storage.from(COUPON_IMAGE_BUCKET).remove([ruta]);
   }
 
-  revalidatePath("/ugc/marca/loyalty");
+  revalidatePath("/ugc/marca/loyalty", "layout");
 }
 
 export type CanjeState = { error: string } | { ok: string; code: string } | null;
@@ -331,7 +331,7 @@ export async function canjearAction(
     };
   }
 
-  revalidatePath("/ugc/marca/loyalty");
+  revalidatePath("/ugc/marca/loyalty", "layout");
   revalidatePath(`/ugc/marca/validar/${code.toUpperCase()}`);
 
   return { ok: "Canje confirmado. El código quedó quemado.", code: data!.code };
@@ -352,5 +352,5 @@ export async function cambiarQrAction(formData: FormData) {
 
   const supabase = await createClient();
   await supabase.from("brand_invite_codes").update({ active: activo }).eq("code", code);
-  revalidatePath("/ugc/marca/loyalty");
+  revalidatePath("/ugc/marca/loyalty", "layout");
 }

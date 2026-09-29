@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
 import {
   cambiarEstadoCuponAction,
@@ -9,60 +9,24 @@ import {
   canjearAction,
   type CanjeState,
 } from "@/lib/actions/cupones";
-import CuponForm, { type CuponEditable } from "./CuponForm";
+import CuponForm from "./CuponForm";
 import { buscarCodigoAction, type BusquedaState } from "@/lib/actions/validar";
-import { LABEL_TIPO_CUPON, LEYENDA_EVENTO } from "@/lib/ugc/loyalty";
+import { ESTADO_CUPON, LABEL_TIPO_CUPON, LEYENDA_EVENTO } from "@/lib/ugc/loyalty";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import EscanearQR from "./EscanearQR";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
-import PantallaHeader from "@/components/ugc/PantallaHeader";
-import QrCupon, { type QrDeCupon } from "./QrCupon";
+import QrCupon from "./QrCupon";
 import { CF } from "@/lib/cf/copy";
-import type { CouponAudience, CouponMemberScope } from "@/lib/database.types";
-
-export type CuponMarca = {
-  id: string;
-  title: string;
-  type: string;
-  description: string;
-  status: string;
-  minLevel: number;
-  minLevelName: string;
-  stockTotal: number;
-  stockAvailable: number;
-  vigencia: string;
-  eventLocation: string | null;
-  conditions: string | null;
-  imageUrl: string | null;
-  claimValidityDays: number | null;
-  /** YYYY-MM-DD para el <input type="date"> de la edición. */
-  eventDateInput: string | null;
-  reclamosVigentes: number;
-  ultimoVence: string | null;
-  audience: CouponAudience;
-  memberScope: CouponMemberScope;
-  /** Solo en cupones para clientes (Close Friends). */
-  qr: QrDeCupon | null;
-};
+import type { CuponMarca, CanjeFila, MiembroFila, NivelOpcion } from "@/lib/ugc/loyalty-panel";
+import type { CouponAudience } from "@/lib/database.types";
 
 /**
- * Un miembro de Close Friends vinculado a esta marca, tal como lo devuelve
- * `miembros_de_mi_marca()`: nombre, teléfono y correo vienen en null si no dio
- * permiso de compartirlos con ESTE negocio.
+ * Las piezas de cliente de Loyalty de la marca. Hasta el rediseño de
+ * 2026-09-29 esto era una sola pantalla con pestañas (Cupones · Canjes ·
+ * Clientes); ahora cada una tiene su ruta bajo `/ugc/marca/loyalty/*` y el
+ * inicio es un índice. Los datos los arma `cargarLoyaltyMarca`.
  */
-export type MiembroFila = {
-  id: string;
-  agente: string;
-  comparte: boolean;
-  nombre: string | null;
-  telefono: string | null;
-  email: string | null;
-  desde: string;
-  origen: string | null;
-  reclamados: number;
-  canjeados: number;
-};
 
 const PARA_QUIEN: Record<CouponAudience, string> = {
   creators: "creadores",
@@ -70,331 +34,169 @@ const PARA_QUIEN: Record<CouponAudience, string> = {
   both: "creadores y clientes",
 };
 
-export type CanjeFila = {
-  id: string;
-  fecha: string;
-  handle: string;
-  nivel: string;
-  cupon: string;
-  code: string;
-  status: string;
-  vence: string | null;
-  diasRestantes: number | null;
-};
-
-const ESTADO_LABEL: Record<string, string> = {
-  borrador: "Borrador",
-  publicado: "Publicado",
-  pausado: "Pausado",
-  agotado: "Agotado",
-  vencido: "Vencido",
-};
-
-type Tab = "cupones" | "nuevo" | "validar" | "canjes" | "miembros";
-
-export default function LoyaltyMarcaTabs({
-  cupones,
-  canjes,
-  miembros,
-  niveles,
-  nombreMarca,
-}: {
-  cupones: CuponMarca[];
-  canjes: CanjeFila[];
-  miembros: MiembroFila[];
-  niveles: { level: number; name: string }[];
-  nombreMarca: string;
-}) {
-  const [tab, setTab] = useState<Tab>("cupones");
-
-  const activos = cupones.filter((c) => c.status === "publicado").length;
-  const reclamados = canjes.filter((c) => c.status === "reclamado").length;
-  const hechos = canjes.filter((c) => c.status === "canjeado").length;
-
-  if (tab === "nuevo") {
-    return (
-      <>
-        <div className={styles.mcFormBar}>
-          <button type="button" onClick={() => setTab("cupones")} className={styles.mcCancelar}>
-            Cancelar
-          </button>
-          <span className={styles.mcFormTitulo}>Nuevo cupón</span>
-        </div>
-        {/* Vuelve a la lista al guardar: es una acción con principio y fin, no
-            una pestaña donde quedarse. */}
-        <CuponForm niveles={niveles} onListo={() => setTab("cupones")} />
-      </>
-    );
-  }
+/**
+ * Un cupón entero: lo que antes era su tarjeta en la lista. Acá viven el QR,
+ * publicar/pausar y borrar; la lista del inicio es solo para elegir.
+ */
+export function CuponDetalle({ c, niveles }: { c: CuponMarca; niveles: NivelOpcion[] }) {
+  const router = useRouter();
+  const [editando, setEditando] = useState(false);
+  const usados = c.stockTotal - c.stockAvailable;
+  const porcentaje = c.stockTotal > 0 ? (usados / c.stockTotal) * 100 : 0;
 
   return (
     <>
-      <PantallaHeader
-        titulo="Loyalty"
-        descripcion="Cupones para que los creadores y tus clientes vuelvan a tu local."
-        accion={
-          <button type="button" className={styles.mcNuevo} onClick={() => setTab("nuevo")}>
-            <QosIcon name="plus" size={15} />
-            Nuevo
-          </button>
-        }
-      />
+      <div className={styles.mcCard}>
+        {c.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={c.imageUrl} alt="" className={styles.mcCuponFoto} />
+        )}
 
-      {/* La tarjeta negra lleva a la cámara. Es el gesto que se hace con alguien
-          parado enfrente, así que va arriba de todo y no escondido en una
-          pestaña. */}
-      <Link href="/ugc/marca/validar" className={styles.mcValidarCard}>
-        <span className={styles.mcValidarIc}>
-          <QosIcon name="grid" size={20} />
-        </span>
-        <span className={styles.mcDecidirTxt}>
-          <span className={styles.mcDecidirNum}>Validar un canje</span>
-          <span className={styles.mcDecidirSub}>Escaneá el QR del cupón</span>
-        </span>
-        <QosIcon name="chevR" size={17} />
-      </Link>
-
-      <div className={styles.mcStats}>
-        {(
-          [
-            [activos, activos === 1 ? "cupón activo" : "cupones activos"],
-            [reclamados, reclamados === 1 ? "reclamado" : "reclamados"],
-            [hechos, hechos === 1 ? "canje hecho" : "canjes hechos"],
-          ] as const
-        ).map(([n, label]) => (
-          <div key={label} className={styles.mcStat}>
-            <div className={styles.mcStatNum}>{n}</div>
-            <div className={styles.mcStatLabel}>{label}</div>
+        <div className={styles.mcCardTop}>
+          <div style={{ minWidth: 0 }}>
+            <div className={styles.mcCardTitulo}>{c.title}</div>
+            <div className={styles.mcCardMeta}>
+              {LABEL_TIPO_CUPON[c.type] ?? c.type} · para {PARA_QUIEN[c.audience]}
+              {c.audience !== "members" && c.minLevel > 1 ? ` (nivel ${c.minLevelName} o más)` : ""}
+            </div>
           </div>
-        ))}
+          <span
+            className={`${styles.lmPill} ${
+              c.status === "publicado" ? styles.lmPillOk : c.status === "borrador" ? styles.lmPillBorrador : ""
+            }`}
+          >
+            {ESTADO_CUPON[c.status] ?? c.status}
+          </span>
+        </div>
+
+        {c.description && <p className={styles.mcCuponDesc}>{c.description}</p>}
+
+        {/* El stock: cuánto queda, no cuánto se usó. Lo que decide si hay que
+            reponer es el número de la derecha. */}
+        <div className={styles.mcStock}>
+          <div className={styles.mcStockFila}>
+            <span>Stock</span>
+            <b>
+              {c.stockAvailable} de {c.stockTotal} disponibles
+            </b>
+          </div>
+          <div className={styles.mcStockVia}>
+            <div className={styles.mcStockFill} style={{ width: `${porcentaje}%` }} />
+          </div>
+        </div>
+
+        <div className={styles.mcCuponTabla}>
+          <div className={styles.mcCanjeFila}>
+            <span className={styles.mcCanjeK}>{c.type === "evento" ? "Fecha del evento" : "Vigencia"}</span>
+            <span className={styles.mcCanjeV}>{c.vigencia}</span>
+          </div>
+          {c.type === "evento" && c.eventLocation && (
+            <div className={styles.mcCanjeFila}>
+              <span className={styles.mcCanjeK}>Lugar</span>
+              <span className={styles.mcCanjeV}>{c.eventLocation}</span>
+            </div>
+          )}
+          {c.conditions && (
+            <div className={styles.mcCanjeFila}>
+              <span className={styles.mcCanjeK}>Condiciones</span>
+              <span className={styles.mcCanjeV}>{c.conditions}</span>
+            </div>
+          )}
+          {c.reclamosVigentes > 0 && (
+            <div className={styles.mcCanjeFila}>
+              <span className={styles.mcCanjeK}>
+                {c.reclamosVigentes === 1 ? "Código sin usar" : "Códigos sin usar"}
+              </span>
+              <span className={styles.mcCanjeV}>
+                {c.reclamosVigentes}
+                {c.ultimoVence && ` · vence el ${c.ultimoVence}`}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {c.type === "evento" && <p className={styles.mcCanjeAviso}>🎟️ {LEYENDA_EVENTO}</p>}
+
+        {c.qr && <QrCupon qr={c.qr} />}
+
+        <div className={styles.mcAplicanteBotones}>
+          {c.status !== "vencido" && (
+            <button type="button" onClick={() => setEditando(true)} className={styles.mcAceptar}>
+              Editar
+            </button>
+          )}
+          {c.status !== "publicado" && c.status !== "vencido" && (
+            <form action={cambiarEstadoCuponAction} style={{ flex: 1, display: "flex" }}>
+              <input type="hidden" name="coupon_id" value={c.id} />
+              <input type="hidden" name="status" value="publicado" />
+              <button type="submit" className={styles.mcVerBook}>
+                {c.status === "pausado" ? "Reactivar" : "Publicar"}
+              </button>
+            </form>
+          )}
+          {c.status === "publicado" && (
+            <form action={cambiarEstadoCuponAction} style={{ flex: 1, display: "flex" }}>
+              <input type="hidden" name="coupon_id" value={c.id} />
+              <input type="hidden" name="status" value="pausado" />
+              <button type="submit" className={styles.mcVerBook}>
+                Pausar
+              </button>
+            </form>
+          )}
+          {/* Solo se puede borrar lo que nadie reclamó: si alguien ya tiene
+              el código, borrar el cupón le desaparece el QR de la mano. */}
+          {usados === 0 && (
+            <ConfirmDeleteButton
+              action={async () => {
+                const fd = new FormData();
+                fd.set("coupon_id", c.id);
+                await borrarCuponAction(fd);
+                router.push("/ugc/marca/loyalty");
+              }}
+              confirmMessage={`Se borra el cupón "${c.title}". No se puede deshacer.`}
+              className={styles.mcRechazar}
+            >
+              <QosIcon name="x" size={16} />
+            </ConfirmDeleteButton>
+          )}
+        </div>
+
+        {c.reclamosVigentes > 0 && (
+          <p className={styles.mcCuponNota}>
+            {c.status === "pausado"
+              ? "Está pausado, pero el código que ya reclamaron sigue valiendo."
+              : "Si lo pausás, el código que ya reclamaron sigue valiendo."}
+          </p>
+        )}
       </div>
 
-      <div className={styles.trTabs} role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "cupones"}
-          onClick={() => setTab("cupones")}
-          className={`${styles.trTabBtn} ${tab === "cupones" ? styles.trTabOn : ""}`}
-        >
-          Cupones{cupones.length > 0 ? ` · ${cupones.length}` : ""}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "canjes"}
-          onClick={() => setTab("canjes")}
-          className={`${styles.trTabBtn} ${tab === "canjes" ? styles.trTabOn : ""}`}
-        >
-          Canjes{canjes.length > 0 ? ` · ${canjes.length}` : ""}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "miembros"}
-          onClick={() => setTab("miembros")}
-          className={`${styles.trTabBtn} ${tab === "miembros" ? styles.trTabOn : ""}`}
-        >
-          Clientes{miembros.length > 0 ? ` · ${miembros.length}` : ""}
-        </button>
-      </div>
-
-      {tab === "cupones" ? (
-        <ListaCupones cupones={cupones} niveles={niveles} />
-      ) : tab === "miembros" ? (
-        <ListaMiembros miembros={miembros} />
-      ) : (
-        <>
-          <TablaCanjes canjes={canjes} />
-          {/* El buscador manual vive con los canjes: es la salida para cuando la
-              cámara no sirve, y es adonde manda "Buscar el código a mano" de la
-              pantalla del escáner. */}
-          <Validador nombreMarca={nombreMarca} />
-        </>
+      {editando && (
+        <CuponForm
+          cupon={{
+            id: c.id,
+            title: c.title,
+            description: c.description,
+            type: c.type,
+            minLevel: c.minLevel,
+            stockTotal: c.stockTotal,
+            reclamados: usados,
+            claimValidityDays: c.claimValidityDays,
+            eventDateInput: c.eventDateInput,
+            eventLocation: c.eventLocation,
+            conditions: c.conditions,
+            imageUrl: c.imageUrl,
+            audience: c.audience,
+            memberScope: c.memberScope,
+          }}
+          niveles={niveles}
+          onCerrar={() => setEditando(false)}
+        />
       )}
     </>
   );
 }
 
-function ListaCupones({
-  cupones,
-  niveles,
-}: {
-  cupones: CuponMarca[];
-  niveles: { level: number; name: string }[];
-}) {
-  const [editando, setEditando] = useState<CuponEditable | null>(null);
-
-  if (cupones.length === 0) {
-    return (
-      <div className={`${styles.card} ${styles.empty}`}>
-        Todavía no creaste ningún cupón. Empezá por &quot;+ Nuevo cupón&quot;.
-      </div>
-    );
-  }
-
-  return (
-    <>
-    <div>
-      {cupones.map((c) => {
-        const usados = c.stockTotal - c.stockAvailable;
-        const porcentaje = c.stockTotal > 0 ? (usados / c.stockTotal) * 100 : 0;
-
-        return (
-          <div key={c.id} className={styles.mcCard}>
-            {c.imageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={c.imageUrl} alt="" className={styles.mcCuponFoto} />
-            )}
-
-            <div className={styles.mcCardTop}>
-              <div style={{ minWidth: 0 }}>
-                <div className={styles.mcCardTitulo}>{c.title}</div>
-                <div className={styles.mcCardMeta}>
-                  {LABEL_TIPO_CUPON[c.type] ?? c.type} · para {PARA_QUIEN[c.audience]}
-                  {c.audience !== "members" && c.minLevel > 1 ? ` (nivel ${c.minLevelName} o más)` : ""}
-                </div>
-              </div>
-              <span
-                className={`${styles.mcEstado} ${
-                  c.status === "publicado" ? "" : styles.mcEstadoQuieto
-                }`}
-              >
-                {ESTADO_LABEL[c.status] ?? c.status}
-              </span>
-            </div>
-
-            {c.description && <p className={styles.mcCuponDesc}>{c.description}</p>}
-
-            {/* El stock: cuánto queda, no cuánto se usó. Lo que decide si hay
-                que reponer es el número de la derecha. */}
-            <div className={styles.mcStock}>
-              <div className={styles.mcStockFila}>
-                <span>Stock</span>
-                <b>
-                  {c.stockAvailable} de {c.stockTotal} disponibles
-                </b>
-              </div>
-              <div className={styles.mcStockVia}>
-                <div className={styles.mcStockFill} style={{ width: `${porcentaje}%` }} />
-              </div>
-            </div>
-
-            <div className={styles.mcCuponTabla}>
-              {c.claimValidityDays && (
-                <div className={styles.mcCanjeFila}>
-                  <span className={styles.mcCanjeK}>Vigencia del reclamo</span>
-                  <span className={styles.mcCanjeV}>{c.claimValidityDays} días</span>
-                </div>
-              )}
-              {c.reclamosVigentes > 0 && (
-                <div className={styles.mcCanjeFila}>
-                  <span className={styles.mcCanjeK}>
-                    {c.reclamosVigentes === 1 ? "Código sin usar" : "Códigos sin usar"}
-                  </span>
-                  <span className={styles.mcCanjeV}>
-                    {c.reclamosVigentes}
-                    {c.ultimoVence && ` · vence el ${c.ultimoVence}`}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {c.type === "evento" && <p className={styles.mcCanjeAviso}>🎟️ {LEYENDA_EVENTO}</p>}
-
-            {c.qr && <QrCupon qr={c.qr} />}
-
-            <div className={styles.mcAplicanteBotones}>
-              {c.status !== "publicado" && c.status !== "vencido" && (
-                <form action={cambiarEstadoCuponAction} style={{ flex: 1 }}>
-                  <input type="hidden" name="coupon_id" value={c.id} />
-                  <input type="hidden" name="status" value="publicado" />
-                  <button type="submit" className={styles.mcVerBook} style={{ width: "100%" }}>
-                    {c.status === "pausado" ? "Reactivar" : "Publicar"}
-                  </button>
-                </form>
-              )}
-              {c.status === "publicado" && (
-                <form action={cambiarEstadoCuponAction} style={{ flex: 1 }}>
-                  <input type="hidden" name="coupon_id" value={c.id} />
-                  <input type="hidden" name="status" value="pausado" />
-                  <button type="submit" className={styles.mcVerBook} style={{ width: "100%" }}>
-                    Pausar
-                  </button>
-                </form>
-              )}
-              {c.status !== "vencido" && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setEditando({
-                      id: c.id,
-                      title: c.title,
-                      description: c.description,
-                      type: c.type,
-                      minLevel: c.minLevel,
-                      stockTotal: c.stockTotal,
-                      claimValidityDays: c.claimValidityDays,
-                      eventDateInput: c.eventDateInput,
-                      eventLocation: c.eventLocation,
-                      conditions: c.conditions,
-                      imageUrl: c.imageUrl,
-                      audience: c.audience,
-                      memberScope: c.memberScope,
-                    })
-                  }
-                  className={styles.mcAceptar}
-                  style={{ background: "var(--b-100)", color: "var(--b-700)" }}
-                >
-                  Editar
-                </button>
-              )}
-              {/* Solo se puede borrar lo que nadie reclamó: si alguien ya tiene
-                  el código, borrar el cupón le desaparece el QR de la mano. */}
-              {usados === 0 && (
-                <ConfirmDeleteButton
-                  action={async () => {
-                    const fd = new FormData();
-                    fd.set("coupon_id", c.id);
-                    await borrarCuponAction(fd);
-                  }}
-                  confirmMessage={`Se borra el cupón "${c.title}". No se puede deshacer.`}
-                  className={styles.mcRechazar}
-                >
-                  <QosIcon name="x" size={16} />
-                </ConfirmDeleteButton>
-              )}
-            </div>
-
-            {c.reclamosVigentes > 0 && (
-              <p className={styles.mcCuponNota}>
-                {c.status === "pausado"
-                  ? "Está pausado, pero el código que ya reclamaron sigue valiendo."
-                  : "Si lo pausás, el código que ya reclamaron sigue valiendo."}
-              </p>
-            )}
-          </div>
-        );
-      })}
-    </div>
-
-    {editando && (
-      <div className={styles.modalOverlay} onClick={() => setEditando(null)}>
-        <div
-          className={styles.modalCard}
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: "680px", maxHeight: "88vh", overflowY: "auto" }}
-        >
-          <h2 style={{ fontSize: "18px", marginBottom: "16px" }}>Editar cupón</h2>
-          <CuponForm cupon={editando} niveles={niveles} onListo={() => setEditando(null)} />
-        </div>
-      </div>
-    )}
-    </>
-  );
-}
-
-function Validador({ nombreMarca }: { nombreMarca: string }) {
+export function Validador({ nombreMarca }: { nombreMarca: string }) {
   const [busqueda, buscarAction, buscando] = useActionState<BusquedaState, FormData>(
     buscarCodigoAction,
     null
@@ -420,7 +222,7 @@ function Validador({ nombreMarca }: { nombreMarca: string }) {
   }
 
   return (
-    <div className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "560px" }}>
+    <div id="buscar" className={`${styles.card} ${styles.cardPad}`} style={{ maxWidth: "560px", marginTop: 24 }}>
       <h2 style={{ fontSize: "16px", marginBottom: "6px" }}>Validar un canje</h2>
       <p style={{ fontSize: "13px", color: "var(--ink-2)", marginBottom: "18px" }}>
         Escaneá el QR del creador o del cliente con la cámara, o digitá acá el código corto que te muestra.
@@ -571,7 +373,7 @@ function Validador({ nombreMarca }: { nombreMarca: string }) {
   );
 }
 
-function TablaCanjes({ canjes }: { canjes: CanjeFila[] }) {
+export function TablaCanjes({ canjes }: { canjes: CanjeFila[] }) {
   if (canjes.length === 0) {
     return (
       <div className={styles.mcVacio}>
@@ -680,7 +482,7 @@ function TablaCanjes({ canjes }: { canjes: CanjeFila[] }) {
  * aparece si la persona lo compartió con ESTE negocio; si no, es su nombre de
  * agente y nada más — así lo decide la base, no esta pantalla.
  */
-function ListaMiembros({ miembros }: { miembros: MiembroFila[] }) {
+export function ListaMiembros({ miembros }: { miembros: MiembroFila[] }) {
   if (miembros.length === 0) {
     return (
       <div className={`${styles.card} ${styles.empty}`}>

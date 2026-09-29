@@ -127,7 +127,7 @@ function describe(notification: Notification): { text: string; href: string } {
     const titulo = String(payload.coupon_title ?? "un cupón");
     return {
       text: `Nuevo canje en tu local: "${titulo}"`,
-      href: "/ugc/marca/loyalty",
+      href: "/ugc/marca/loyalty/canjes",
     };
   }
 
