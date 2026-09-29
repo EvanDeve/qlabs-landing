@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CouponAudience, CouponMemberScope, Database } from "@/lib/database.types";
-import { qrUnirmeSvg } from "@/lib/cf/qr";
+import { qrUnirmeSvg, urlUnirme } from "@/lib/cf/qr";
 import { fechaCorta, fechaLarga } from "@/lib/ugc/loyalty";
 import { diaCR } from "@/lib/ugc/calendar";
 import { CF } from "@/lib/cf/copy";
@@ -23,6 +23,8 @@ export type QrDeCupon = {
   signups: number;
   /** El QR como data URL (SVG), generado en el servidor. Null si no se pidió. */
   imagen: string | null;
+  /** Adónde lleva el QR. Es también "el link del cupón": abrirlo es lo mismo que escanearlo. */
+  url: string;
 };
 
 export type CuponMarca = {
@@ -190,7 +192,14 @@ export async function cargarLoyaltyMarca(
       // pero ya no regala nada: no se muestra.
       qr:
         qr && c.audience !== "creators"
-          ? { code: qr.code, activo: qr.active, scans: qr.scans, signups: qr.signups, imagen: svgDe.get(qr.code) ?? null }
+          ? {
+              code: qr.code,
+              activo: qr.active,
+              scans: qr.scans,
+              signups: qr.signups,
+              imagen: svgDe.get(qr.code) ?? null,
+              url: urlUnirme(qr.code),
+            }
           : null,
       id: c.id,
       title: c.title,

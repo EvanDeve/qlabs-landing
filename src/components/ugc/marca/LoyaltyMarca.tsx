@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import {
   cambiarEstadoCuponAction,
+  cambiarQrAction,
   borrarCuponAction,
   canjearAction,
   type CanjeState,
@@ -16,7 +17,7 @@ import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import EscanearQR from "./EscanearQR";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
-import QrCupon from "./QrCupon";
+import { useToast } from "@/components/ugc/Toaster";
 import { CF } from "@/lib/cf/copy";
 import type { CuponMarca, CanjeFila, MiembroFila, NivelOpcion } from "@/lib/ugc/loyalty-panel";
 import type { CouponAudience } from "@/lib/database.types";
@@ -28,6 +29,30 @@ import type { CouponAudience } from "@/lib/database.types";
  * inicio es un índice. Los datos los arma `cargarLoyaltyMarca`.
  */
 
+/**
+ * Copiar al portapapeles con respaldo. `navigator.clipboard` falla fuera de
+ * HTTPS, en algunos WebView y en Safari viejo; ahí el camino de siempre es un
+ * textarea seleccionado + `execCommand("copy")`, que sigue funcionando aunque
+ * esté marcado como obsoleto.
+ */
+async function copiarTexto(texto: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    const t = document.createElement("textarea");
+    t.value = texto;
+    t.setAttribute("readonly", "");
+    t.style.position = "fixed";
+    t.style.opacity = "0";
+    document.body.appendChild(t);
+    t.select();
+    const ok = document.execCommand("copy");
+    t.remove();
+    return ok;
+  }
+}
+
 const PARA_QUIEN: Record<CouponAudience, string> = {
   creators: "creadores",
   members: "clientes",
@@ -35,140 +60,290 @@ const PARA_QUIEN: Record<CouponAudience, string> = {
 };
 
 /**
- * Un cupón entero: lo que antes era su tarjeta en la lista. Acá viven el QR,
- * publicar/pausar y borrar; la lista del inicio es solo para elegir.
+ * El detalle de un cupón (mockups 4e–4g, 2026-09-29): foto con el estado
+ * encima, los tres números, compartir (QR + link), los detalles, el estado con
+ * su interruptor y los últimos canjes. Editar vive arriba a la derecha y abre
+ * la misma hoja de siempre.
  */
-export function CuponDetalle({ c, niveles }: { c: CuponMarca; niveles: NivelOpcion[] }) {
+export function CuponDetalle({
+  c,
+  niveles,
+  canjes,
+}: {
+  c: CuponMarca;
+  niveles: NivelOpcion[];
+  /** Los reclamos de ESTE cupón, del más nuevo al más viejo. */
+  canjes: CanjeFila[];
+}) {
   const router = useRouter();
+  const toast = useToast();
   const [editando, setEditando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  const [, cambiando] = useTransition();
   const usados = c.stockTotal - c.stockAvailable;
   const porcentaje = c.stockTotal > 0 ? (usados / c.stockTotal) * 100 : 0;
+  const activo = c.status === "publicado";
+
+  async function copiarLink() {
+    if (!c.qr) return;
+    if (!(await copiarTexto(c.qr.url))) {
+      toast("No se pudo copiar el link.", "error");
+      return;
+    }
+    // El "haptic" del mockup: donde el navegador lo permite (Android). iOS no
+    // expone vibración a la web, así que ahí la confirmación es el botón verde.
+    navigator.vibrate?.(12);
+    setCopiado(true);
+    toast("Link copiado");
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
+  function enviar(accion: (fd: FormData) => Promise<void>, campos: Record<string, string>) {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(campos)) fd.set(k, v);
+    cambiando(async () => {
+      await accion(fd);
+      router.refresh();
+    });
+  }
+
+  const pill = (
+    <span className={`${styles.lmHeroPill} ${activo ? styles.lmHeroPillOk : ""}`}>
+      {ESTADO_CUPON[c.status] ?? c.status}
+    </span>
+  );
 
   return (
     <>
-      <div className={styles.mcCard}>
-        {c.imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.imageUrl} alt="" className={styles.mcCuponFoto} />
-        )}
-
-        <div className={styles.mcCardTop}>
-          <div style={{ minWidth: 0 }}>
-            <div className={styles.mcCardTitulo}>{c.title}</div>
-            <div className={styles.mcCardMeta}>
-              {LABEL_TIPO_CUPON[c.type] ?? c.type} · para {PARA_QUIEN[c.audience]}
-              {c.audience !== "members" && c.minLevel > 1 ? ` (nivel ${c.minLevelName} o más)` : ""}
-            </div>
-          </div>
-          <span
-            className={`${styles.lmPill} ${
-              c.status === "publicado" ? styles.lmPillOk : c.status === "borrador" ? styles.lmPillBorrador : ""
-            }`}
-          >
-            {ESTADO_CUPON[c.status] ?? c.status}
-          </span>
-        </div>
-
-        {c.description && <p className={styles.mcCuponDesc}>{c.description}</p>}
-
-        {/* El stock: cuánto queda, no cuánto se usó. Lo que decide si hay que
-            reponer es el número de la derecha. */}
-        <div className={styles.mcStock}>
-          <div className={styles.mcStockFila}>
-            <span>Stock</span>
-            <b>
-              {c.stockAvailable} de {c.stockTotal} disponibles
-            </b>
-          </div>
-          <div className={styles.mcStockVia}>
-            <div className={styles.mcStockFill} style={{ width: `${porcentaje}%` }} />
-          </div>
-        </div>
-
-        <div className={styles.mcCuponTabla}>
-          <div className={styles.mcCanjeFila}>
-            <span className={styles.mcCanjeK}>{c.type === "evento" ? "Fecha del evento" : "Vigencia"}</span>
-            <span className={styles.mcCanjeV}>{c.vigencia}</span>
-          </div>
-          {c.type === "evento" && c.eventLocation && (
-            <div className={styles.mcCanjeFila}>
-              <span className={styles.mcCanjeK}>Lugar</span>
-              <span className={styles.mcCanjeV}>{c.eventLocation}</span>
-            </div>
-          )}
-          {c.conditions && (
-            <div className={styles.mcCanjeFila}>
-              <span className={styles.mcCanjeK}>Condiciones</span>
-              <span className={styles.mcCanjeV}>{c.conditions}</span>
-            </div>
-          )}
-          {c.reclamosVigentes > 0 && (
-            <div className={styles.mcCanjeFila}>
-              <span className={styles.mcCanjeK}>
-                {c.reclamosVigentes === 1 ? "Código sin usar" : "Códigos sin usar"}
-              </span>
-              <span className={styles.mcCanjeV}>
-                {c.reclamosVigentes}
-                {c.ultimoVence && ` · vence el ${c.ultimoVence}`}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {c.type === "evento" && <p className={styles.mcCanjeAviso}>🎟️ {LEYENDA_EVENTO}</p>}
-
-        {c.qr && <QrCupon qr={c.qr} />}
-
-        <div className={styles.mcAplicanteBotones}>
-          {c.status !== "vencido" && (
-            <button type="button" onClick={() => setEditando(true)} className={styles.mcAceptar}>
-              Editar
-            </button>
-          )}
-          {c.status !== "publicado" && c.status !== "vencido" && (
-            <form action={cambiarEstadoCuponAction} style={{ flex: 1, display: "flex" }}>
-              <input type="hidden" name="coupon_id" value={c.id} />
-              <input type="hidden" name="status" value="publicado" />
-              <button type="submit" className={styles.mcVerBook}>
-                {c.status === "pausado" ? "Reactivar" : "Publicar"}
-              </button>
-            </form>
-          )}
-          {c.status === "publicado" && (
-            <form action={cambiarEstadoCuponAction} style={{ flex: 1, display: "flex" }}>
-              <input type="hidden" name="coupon_id" value={c.id} />
-              <input type="hidden" name="status" value="pausado" />
-              <button type="submit" className={styles.mcVerBook}>
-                Pausar
-              </button>
-            </form>
-          )}
-          {/* Solo se puede borrar lo que nadie reclamó: si alguien ya tiene
-              el código, borrar el cupón le desaparece el QR de la mano. */}
-          {usados === 0 && (
-            <ConfirmDeleteButton
-              action={async () => {
-                const fd = new FormData();
-                fd.set("coupon_id", c.id);
-                await borrarCuponAction(fd);
-                router.push("/ugc/marca/loyalty");
-              }}
-              confirmMessage={`Se borra el cupón "${c.title}". No se puede deshacer.`}
-              className={styles.mcRechazar}
-            >
-              <QosIcon name="x" size={16} />
-            </ConfirmDeleteButton>
-          )}
-        </div>
-
-        {c.reclamosVigentes > 0 && (
-          <p className={styles.mcCuponNota}>
-            {c.status === "pausado"
-              ? "Está pausado, pero el código que ya reclamaron sigue valiendo."
-              : "Si lo pausás, el código que ya reclamaron sigue valiendo."}
-          </p>
+      <div className={styles.lmDetBar}>
+        <Link href="/ugc/marca/loyalty" className={styles.mcCancelar}>
+          <QosIcon name="chevL" size={18} />
+          Loyalty
+        </Link>
+        {c.status !== "vencido" && (
+          <button type="button" className={styles.lmGuardar} onClick={() => setEditando(true)}>
+            Editar
+          </button>
         )}
       </div>
+
+      {c.imageUrl ? (
+        <div className={styles.lmHero}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={c.imageUrl} alt="" />
+          {pill}
+        </div>
+      ) : (
+        <div style={{ marginBottom: 10 }}>{pill}</div>
+      )}
+
+      <h1 className={styles.lmDetTit}>{c.title}</h1>
+      <div className={styles.lmDetMeta}>
+        {LABEL_TIPO_CUPON[c.type] ?? c.type} · para {PARA_QUIEN[c.audience]}
+      </div>
+      {c.description && <p className={styles.lmDetDesc}>{c.description}</p>}
+
+      {/* Los tres números: cuánto queda (lo que decide si hay que reponer),
+          cuántos lo pidieron y cuántos todavía no vinieron al local. */}
+      <div className={styles.lmCard} style={{ marginTop: 18 }}>
+        <div className={styles.lmStats}>
+          <div className={styles.lmStat}>
+            <div className={styles.lmStatNum}>{c.stockAvailable}</div>
+            <div className={styles.lmStatLbl}>de {c.stockTotal} disponibles</div>
+          </div>
+          <div className={styles.lmStat}>
+            <div className={styles.lmStatNum}>{usados}</div>
+            <div className={styles.lmStatLbl}>{usados === 1 ? "reclamado" : "reclamados"}</div>
+          </div>
+          <div className={styles.lmStat}>
+            <div className={styles.lmStatNum}>{c.reclamosVigentes}</div>
+            <div className={styles.lmStatLbl}>sin usar</div>
+          </div>
+        </div>
+        <div className={styles.lmBarra}>
+          <div className={styles.lmBarraFill} style={{ width: `${porcentaje}%` }} />
+        </div>
+      </div>
+
+      {c.qr && (
+        <>
+          <p className={styles.mcFormSec}>Compartir</p>
+          <div className={styles.lmCard}>
+            <div className={styles.lmQrFila}>
+              {c.qr.imagen ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={c.qr.imagen}
+                  alt="QR del cupón"
+                  className={`${styles.lmQrImg} ${c.qr.activo ? "" : styles.lmQrApagado}`}
+                />
+              ) : (
+                <span />
+              )}
+              <div style={{ minWidth: 0 }}>
+                <div className={styles.lmQrTit}>QR y link del cupón</div>
+                <div className={styles.lmQrSub}>
+                  {c.qr.scans} {c.qr.scans === 1 ? "escaneo" : "escaneos"} · {c.qr.signups}{" "}
+                  {c.qr.signups === 1 ? "se unió" : "se unieron"} a {CF.programa}
+                </div>
+                <div className={styles.lmChips}>
+                  <a href={`/ugc/marca/qr/${c.qr.code}?formato=png`} className={styles.lmChipBtn} download>
+                    PNG
+                  </a>
+                  <a href={`/ugc/marca/qr/${c.qr.code}?formato=svg`} className={styles.lmChipBtn} download>
+                    SVG
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* El link es el mismo destino del QR: abrirlo en el teléfono es
+                lo mismo que escanearlo en el local. */}
+            <div className={styles.lmLinkFila}>
+              <QosIcon name="link" size={16} />
+              <span className={styles.lmLinkTxt}>{c.qr.url.replace(/^https?:\/\/(www\.)?/, "")}</span>
+              <button
+                type="button"
+                onClick={copiarLink}
+                className={`${styles.lmCopiar} ${copiado ? styles.lmCopiado : ""}`}
+              >
+                <QosIcon name={copiado ? "check" : "copy"} size={15} />
+                {copiado ? "Copiado" : "Copiar"}
+              </button>
+            </div>
+            <p className={styles.lmAyuda}>
+              Mandalo por WhatsApp o redes. Quien lo abre por primera vez se registra como cliente y reclama el
+              cupón.
+            </p>
+          </div>
+        </>
+      )}
+
+      <p className={styles.mcFormSec}>Detalles</p>
+      <div className={styles.lmLista}>
+        <div className={styles.lmDato}>
+          <span className={styles.lmDatoK}>{c.type === "evento" ? "Fecha del evento" : "Vigencia"}</span>
+          <span className={styles.lmDatoV}>{c.vigencia}</span>
+        </div>
+        {c.type === "evento" && c.eventLocation && (
+          <div className={styles.lmDato}>
+            <span className={styles.lmDatoK}>Lugar</span>
+            <span className={styles.lmDatoV}>{c.eventLocation}</span>
+          </div>
+        )}
+        {c.audience !== "members" && (
+          <div className={styles.lmDato}>
+            <span className={styles.lmDatoK}>Qué creadores</span>
+            <span className={styles.lmDatoV}>{c.minLevel > 1 ? `${c.minLevelName} o más` : "Todos"}</span>
+          </div>
+        )}
+        {c.reclamosVigentes > 0 && (
+          <div className={styles.lmDato}>
+            <span className={styles.lmDatoK}>
+              {c.reclamosVigentes === 1 ? "Código sin usar" : "Códigos sin usar"}
+            </span>
+            <span className={styles.lmDatoV}>
+              {c.reclamosVigentes}
+              {c.ultimoVence && ` · vence el ${c.ultimoVence}`}
+            </span>
+          </div>
+        )}
+        <div className={styles.lmDato}>
+          <span className={styles.lmDatoK}>Condiciones</span>
+          <span className={styles.lmDatoV}>{c.conditions || "Ninguna"}</span>
+        </div>
+      </div>
+      {c.type === "evento" && <p className={styles.lmAyuda}>🎟️ {LEYENDA_EVENTO}</p>}
+
+      <p className={styles.mcFormSec}>Estado</p>
+      <div className={styles.lmLista}>
+        {c.qr && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={c.qr.activo}
+            className={styles.lmAccionFila}
+            onClick={() => enviar(cambiarQrAction, { code: c.qr!.code, activo: c.qr!.activo ? "0" : "1" })}
+          >
+            QR y link activos
+            <span className={`${styles.lmSwitch} ${c.qr.activo ? styles.lmSwitchOn : ""}`} aria-hidden />
+          </button>
+        )}
+        {activo && (
+          <button
+            type="button"
+            className={`${styles.lmAccionFila} ${styles.lmRojo}`}
+            onClick={() => enviar(cambiarEstadoCuponAction, { coupon_id: c.id, status: "pausado" })}
+          >
+            Pausar cupón
+          </button>
+        )}
+        {!activo && c.status !== "vencido" && (
+          <button
+            type="button"
+            className={`${styles.lmAccionFila} ${styles.lmVioleta}`}
+            onClick={() => enviar(cambiarEstadoCuponAction, { coupon_id: c.id, status: "publicado" })}
+          >
+            {c.status === "pausado" ? "Reactivar cupón" : "Publicar cupón"}
+          </button>
+        )}
+        {/* Solo se puede borrar lo que nadie reclamó: si alguien ya tiene el
+            código, borrar el cupón le desaparece el QR de la mano. */}
+        {usados === 0 && (
+          <ConfirmDeleteButton
+            action={async () => {
+              const fd = new FormData();
+              fd.set("coupon_id", c.id);
+              await borrarCuponAction(fd);
+              router.push("/ugc/marca/loyalty");
+            }}
+            confirmMessage={`Se borra el cupón "${c.title}". No se puede deshacer.`}
+            className={`${styles.lmAccionFila} ${styles.lmRojo}`}
+          >
+            Borrar cupón
+          </ConfirmDeleteButton>
+        )}
+      </div>
+      <p className={styles.lmAyuda}>
+        {c.qr ? "Apagar el QR corta nuevos escaneos y el link. " : ""}
+        {c.status === "pausado"
+          ? "Está pausado: nadie más lo reclama, pero los códigos ya emitidos siguen valiendo."
+          : "Si lo pausás, nadie más lo reclama, pero los códigos ya emitidos siguen valiendo."}
+      </p>
+
+      {canjes.length > 0 && (
+        <>
+          <p className={styles.mcFormSec}>Últimos canjes</p>
+          <div className={styles.lmLista}>
+            {canjes.slice(0, 5).map((k) => (
+              <div key={k.id} className={styles.lmCanjeFila}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className={styles.lmCanjeNom}>{k.handle}</div>
+                  <div className={styles.lmCanjeSub}>
+                    {k.status === "canjeado"
+                      ? `Canjeó el ${k.fecha}`
+                      : k.status === "reclamado"
+                        ? `Reclamó el ${k.fecha} · sin usar`
+                        : `Reclamó el ${k.fecha} · venció`}
+                  </div>
+                </div>
+                <span
+                  className={`${styles.lmPill} ${
+                    k.status === "canjeado" ? styles.lmPillOk : k.status === "reclamado" ? styles.lmPillBorrador : ""
+                  }`}
+                >
+                  {k.status === "canjeado" ? "Canjeado" : k.status === "reclamado" ? "Sin usar" : "Vencido"}
+                </span>
+              </div>
+            ))}
+          </div>
+          {canjes.length > 5 && (
+            <Link href="/ugc/marca/loyalty/canjes" className={styles.lmLinkBtn} style={{ display: "block", margin: "10px 4px 0" }}>
+              Ver los {canjes.length} canjes
+            </Link>
+          )}
+        </>
+      )}
 
       {editando && (
         <CuponForm
