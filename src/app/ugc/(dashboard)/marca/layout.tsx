@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/require-role";
 import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
+
+// El acceso directo en Android abre como app solo si la página declara un
+// manifest. Ver `manifestDePanel`.
+export const metadata: Metadata = { manifest: "/ugc/marca.webmanifest" };
 
 export default async function MarcaLayout({
   children,

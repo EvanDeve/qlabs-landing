@@ -19,6 +19,9 @@ export function GET() {
       background_color: "#F6F4FD",
       theme_color: "#F6F4FD",
       icons: [
+        // Android pide 192 y 512 para ofrecer "Instalar": sin el de 192 el
+        // acceso directo abría en una pestaña del navegador.
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
         { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
         { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
       ],

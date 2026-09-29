@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/require-role";
 import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
 import { displayHandle } from "@/lib/ugc/handles";
+
+// El acceso directo en Android abre como app solo si la página declara un
+// manifest. Ver `manifestDePanel`.
+export const metadata: Metadata = { manifest: "/ugc/creador.webmanifest" };
 
 // Los grupos se arman por el ORDEN de este array: el shell corta un grupo
 // nuevo cada vez que cambia el `group`, así que items del mismo grupo tienen
