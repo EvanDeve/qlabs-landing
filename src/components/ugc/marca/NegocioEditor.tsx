@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition, useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/ugc/Toaster";
 import { updateBrandProfileAction, type UpdateBrandProfileState } from "@/lib/actions/brand-profile";
 import { BRAND_LOGO_BUCKET, MAX_BRAND_LOGO_FILE_BYTES } from "@/lib/ugc/brand-logos";
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
@@ -43,11 +44,10 @@ const ETIQUETA: Record<Campo, string> = {
  * caminos que se desincronizan. Misma decisión que del lado del creador.
  */
 export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) {
-  const [estado, formAction] = useActionState<UpdateBrandProfileState, FormData>(
+  const [estado, formAction, guardando] = useActionState<UpdateBrandProfileState, FormData>(
     updateBrandProfileAction,
     null
   );
-  const formRef = useRef<HTMLFormElement>(null);
   const inputLogo = useRef<HTMLInputElement>(null);
 
   const [campo, setCampo] = useState<Campo | null>(null);
@@ -63,11 +63,38 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
   const [subiendo, setSubiendo] = useState(false);
   const [errorLogo, setErrorLogo] = useState<string | null>(null);
 
-  // Se deriva del resultado del action en vez de vivir en un estado con
-  // temporizador: un `setState` sincrónico dentro de un efecto encadena
-  // renders, y acá no aporta nada — el aviso puede quedarse hasta el próximo
-  // guardado, que es exactamente lo que significa.
-  const guardado = Boolean(estado && "ok" in estado);
+  const toast = useToast();
+
+  // Desde 2026-09-29 nada se guarda solo (lo pidió Evan): cada hoja cierra con
+  // "Listo" y lo editado queda pendiente hasta el botón "Guardar cambios" de
+  // abajo, que aparece solo si hay algo distinto de lo guardado. `base` es la
+  // foto de lo que está en la base; `enviado`, la de lo que se mandó, que pasa
+  // a ser la base recién cuando el action dice ok.
+  const [base, setBase] = useState(() => ({
+    brand_name: inicial.brand_name,
+    industry: inicial.industry ?? "",
+    location: inicial.location ?? "",
+    description: inicial.description ?? "",
+    website: inicial.website ?? "",
+    instagram_handle: inicial.instagram_handle ?? "",
+  }));
+  const [enviado, setEnviado] = useState<{ valores: typeof base; logoPath: string } | null>(null);
+  const [estadoVisto, setEstadoVisto] = useState(estado);
+  if (estado !== estadoVisto) {
+    setEstadoVisto(estado);
+    if (estado && "ok" in estado && enviado) {
+      const { valores: v, logoPath: lp } = enviado;
+      setBase(v);
+      // Si mientras guardaba se eligió OTRO logo, ese sigue pendiente.
+      if (logoPath === lp) setLogoPath("");
+      setEnviado(null);
+    }
+  }
+  // El aviso va en un toast y no en el render de arriba: dispararlo desde el
+  // render lo repetiría en cada repintado.
+  useEffect(() => {
+    if (estado && "ok" in estado) toast("Cambios guardados.");
+  }, [estado, toast]);
 
   async function cambiarLogo(f: File) {
     setErrorLogo(null);
@@ -87,21 +114,10 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
         maxBytes: MAX_BRAND_LOGO_FILE_BYTES,
         extFallback: "png",
       });
+      // El archivo ya está en Storage; el perfil lo apunta recién con
+      // "Guardar cambios", como cualquier otro campo.
       setLogoPath(path);
       setLogoPreview(URL.createObjectURL(f));
-      // Cambiar el logo es un gesto completo: se guarda solo, sin dejarlo
-      // pendiente de un botón que no está a la vista.
-      //
-      // ⚠️ La ruta va METIDA A MANO en el envío. Antes esto era
-      // `setTimeout(() => requestSubmit(), 0)` confiando en que para entonces
-      // React ya hubiera escrito `logoPath` en el input escondido — y no: el
-      // formulario salía con `logo_path` vacío, el resto de los campos se
-      // guardaba, la pantalla decía "Guardado" y mostraba la foto (la vista
-      // previa es local), pero `logo_url` quedaba en null. Se notaba recién al
-      // volver al perfil. El archivo sí llegaba a Storage, huérfano.
-      const datos = new FormData(formRef.current!);
-      datos.set("logo_path", path);
-      startTransition(() => formAction(datos));
     } catch (err) {
       setErrorLogo(err instanceof Error ? err.message : "No se pudo subir el logo.");
     } finally {
@@ -110,9 +126,19 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
     }
   }
 
-  function guardar() {
-    setCampo(null);
-    formRef.current?.requestSubmit();
+  /**
+   * Se arma el envío a mano con los valores del estado, no leyendo el
+   * formulario: los inputs escondidos pueden no haberse repintado todavía, y
+   * así fue como se perdió el logo (`0c4a9cd`).
+   */
+  function guardarCambios() {
+    if (guardando) return;
+    const v = { ...valores };
+    setEnviado({ valores: v, logoPath });
+    const datos = new FormData();
+    for (const [k, val] of Object.entries(v)) datos.set(k, val);
+    datos.set("logo_path", logoPath);
+    startTransition(() => formAction(datos));
   }
 
   const valores: Record<Campo, string> = {
@@ -123,6 +149,9 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
     website: sitio,
     instagram_handle: instagram,
   };
+  const hayCambios =
+    logoPath !== "" || (Object.keys(valores) as Campo[]).some((k) => valores[k] !== base[k]);
+
   const setter: Record<Campo, (v: string) => void> = {
     brand_name: setNombre,
     industry: setIndustria,
@@ -144,18 +173,6 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
 
   return (
     <>
-      <form ref={formRef} action={formAction}>
-        {/* El estado completo viaja en inputs escondidos: las filas son de
-            lectura y quien edita es la hoja, pero cada guardado tiene que
-            escribir una foto consistente de lo que la marca está viendo. */}
-        <input type="hidden" name="logo_path" value={logoPath} />
-        <input type="hidden" name="brand_name" value={nombre} />
-        <input type="hidden" name="industry" value={industria} />
-        <input type="hidden" name="location" value={zona} />
-        <input type="hidden" name="description" value={descripcion} />
-        <input type="hidden" name="website" value={sitio} />
-        <input type="hidden" name="instagram_handle" value={instagram} />
-      </form>
 
       <PantallaHeader
         titulo="Mi negocio"
@@ -216,7 +233,6 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
 
       {errorLogo && <p className={styles.entError}>{errorLogo}</p>}
       {estado && "error" in estado && <p className={styles.entError}>{estado.error}</p>}
-      {guardado && <p className={styles.perfilOk}>Guardado</p>}
 
       <p className={styles.perfilSeccion}>Lo que ven los creadores</p>
       <div className={styles.hojaTabla}>
@@ -256,11 +272,11 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
           pie={
             <button
               type="button"
-              onClick={guardar}
+              onClick={() => setCampo(null)}
               className={`${styles.trBoton} ${styles.trBotonPrim}`}
               style={{ marginTop: 0 }}
             >
-              Guardar
+              Listo
             </button>
           }
         >
@@ -292,6 +308,19 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
             />
           )}
         </Hoja>
+      )}
+
+      {/* Solo cuando hay algo sin guardar: un botón siempre a la vista
+          diciendo "Guardar" sin nada que guardar no dice nada. */}
+      {hayCambios && (
+        <>
+          <div className={styles.trPieAire} />
+          <div className={styles.trPie}>
+            <button type="button" onClick={guardarCambios} disabled={guardando} className={styles.trPiePill}>
+              {guardando ? "Guardando…" : "Guardar cambios"}
+            </button>
+          </div>
+        </>
       )}
     </>
   );

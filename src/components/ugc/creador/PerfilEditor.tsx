@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition, useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/ugc/Toaster";
 import {
   updateCreatorProfileDetailsAction,
   type UpdateCreatorProfileDetailsState,
@@ -77,6 +78,34 @@ export default function PerfilEditor({
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [errorFoto, setErrorFoto] = useState<string | null>(null);
   const fotoRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+
+  // Desde 2026-09-29 nada se guarda solo (lo pidió Evan): cada hoja cierra con
+  // "Listo" y lo editado queda pendiente hasta "Guardar cambios", que aparece
+  // solo si hay algo distinto de lo guardado. Se compara una foto en JSON de
+  // todo lo editable: son listas (nichos, habilidades, marcas) y compararlas
+  // campo por campo sería repetir su forma acá.
+  //
+  // Antes los idiomas eran la trampa: el chip cambiaba en pantalla pero no
+  // guardaba nada, y el cambio se perdía salvo que después se guardara otra
+  // fila. Con el botón, tocar un idioma ya cuenta como cambio pendiente.
+  const foto = JSON.stringify({ bio, city, followers, instagram, tiktok, niches, languages, skills, marcas });
+  const [base, setBase] = useState(foto);
+  const [enviado, setEnviado] = useState<{ foto: string; avatarPath: string } | null>(null);
+  const [estadoVisto, setEstadoVisto] = useState(state);
+  if (state !== estadoVisto) {
+    setEstadoVisto(state);
+    if (state && "ok" in state && enviado) {
+      setBase(enviado.foto);
+      // Si mientras guardaba se eligió OTRA foto, esa sigue pendiente.
+      if (avatarPath === enviado.avatarPath) setAvatarPath("");
+      setEnviado(null);
+    }
+  }
+  useEffect(() => {
+    if (state && "ok" in state) toast("Cambios guardados.");
+  }, [state, toast]);
+  const hayCambios = avatarPath !== "" || foto !== base;
 
   async function cambiarFoto(f: File) {
     setErrorFoto(null);
@@ -92,16 +121,10 @@ export default function PerfilEditor({
         maxBytes: MAX_AVATAR_FILE_BYTES,
         extFallback: "jpg",
       });
+      // El archivo ya está en Storage; el perfil lo apunta recién con
+      // "Guardar cambios", como cualquier otro campo.
       setAvatarPath(path);
       setAvatarPreview(URL.createObjectURL(f));
-      // Se guarda de una: cambiar la foto es un gesto completo en sí mismo, y
-      // dejarla "pendiente de guardar" sin un botón a la vista se pierde.
-      // La ruta va metida a mano en el envío: esperar a que React la escriba
-      // en el input escondido (`setTimeout` + `requestSubmit`) mandaba
-      // `avatar_path` vacío y la foto no quedaba guardada. Ver NegocioEditor.
-      const datos = new FormData(formRef.current!);
-      datos.set("avatar_path", path);
-      startTransition(() => formAction(datos));
     } catch (err) {
       setErrorFoto(err instanceof Error ? err.message : "No se pudo subir la foto.");
     } finally {
@@ -117,9 +140,15 @@ export default function PerfilEditor({
    * que pueden desincronizarse. Además así cada guardado escribe una foto
    * consistente de lo que el creador está viendo.
    */
-  function guardar() {
-    setCampo(null);
-    formRef.current?.requestSubmit();
+  function guardarCambios() {
+    if (pending) return;
+    // El botón se toca con todo ya repintado, así que el formulario tiene los
+    // valores al día. La ruta de la foto va igual a mano: es la que ya se
+    // perdió una vez por leerla del input escondido (`0c4a9cd`).
+    const datos = new FormData(formRef.current!);
+    datos.set("avatar_path", avatarPath);
+    setEnviado({ foto, avatarPath });
+    startTransition(() => formAction(datos));
   }
 
   const filas: { campo: Campo; etiqueta: string; valor: string; vacio?: boolean }[] = [
@@ -324,8 +353,6 @@ export default function PerfilEditor({
         {errorFoto && <p className={styles.entError}>{errorFoto}</p>}
         {subiendoFoto && <p className={styles.perfilAyuda}>Subiendo la foto…</p>}
         {state && "error" in state && <p className={styles.entError}>{state.error}</p>}
-        {state && "ok" in state && <p className={styles.perfilOk}>Listo, se guardó.</p>}
-        {pending && <p className={styles.perfilAyuda}>Guardando…</p>}
       </form>
 
       {campo && (
@@ -333,8 +360,13 @@ export default function PerfilEditor({
           titulo={TITULO[campo]}
           onClose={() => setCampo(null)}
           pie={
-            <button type="button" className={styles.entEnviar} style={{ marginTop: 0 }} onClick={guardar}>
-              Guardar
+            <button
+              type="button"
+              className={styles.entEnviar}
+              style={{ marginTop: 0 }}
+              onClick={() => setCampo(null)}
+            >
+              Listo
             </button>
           }
         >
@@ -420,6 +452,19 @@ export default function PerfilEditor({
 
           {campo === "brands" && <EditorMarcas marcas={marcas} onCambio={setMarcas} />}
         </Hoja>
+      )}
+
+      {/* Solo cuando hay algo sin guardar: un botón siempre a la vista
+          diciendo "Guardar" sin nada que guardar no dice nada. */}
+      {hayCambios && (
+        <>
+          <div className={styles.trPieAire} />
+          <div className={styles.trPie}>
+            <button type="button" onClick={guardarCambios} disabled={pending} className={styles.trPiePill}>
+              {pending ? "Guardando…" : "Guardar cambios"}
+            </button>
+          </div>
+        </>
       )}
     </>
   );
