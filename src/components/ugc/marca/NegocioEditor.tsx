@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import { updateBrandProfileAction, type UpdateBrandProfileState } from "@/lib/actions/brand-profile";
 import { BRAND_LOGO_BUCKET, MAX_BRAND_LOGO_FILE_BYTES } from "@/lib/ugc/brand-logos";
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
@@ -91,7 +91,17 @@ export default function NegocioEditor({ inicial }: { inicial: NegocioInicial }) 
       setLogoPreview(URL.createObjectURL(f));
       // Cambiar el logo es un gesto completo: se guarda solo, sin dejarlo
       // pendiente de un botón que no está a la vista.
-      setTimeout(() => formRef.current?.requestSubmit(), 0);
+      //
+      // ⚠️ La ruta va METIDA A MANO en el envío. Antes esto era
+      // `setTimeout(() => requestSubmit(), 0)` confiando en que para entonces
+      // React ya hubiera escrito `logoPath` en el input escondido — y no: el
+      // formulario salía con `logo_path` vacío, el resto de los campos se
+      // guardaba, la pantalla decía "Guardado" y mostraba la foto (la vista
+      // previa es local), pero `logo_url` quedaba en null. Se notaba recién al
+      // volver al perfil. El archivo sí llegaba a Storage, huérfano.
+      const datos = new FormData(formRef.current!);
+      datos.set("logo_path", path);
+      startTransition(() => formAction(datos));
     } catch (err) {
       setErrorLogo(err instanceof Error ? err.message : "No se pudo subir el logo.");
     } finally {

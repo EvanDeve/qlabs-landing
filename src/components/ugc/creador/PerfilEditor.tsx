@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import {
   updateCreatorProfileDetailsAction,
   type UpdateCreatorProfileDetailsState,
@@ -96,7 +96,12 @@ export default function PerfilEditor({
       setAvatarPreview(URL.createObjectURL(f));
       // Se guarda de una: cambiar la foto es un gesto completo en sí mismo, y
       // dejarla "pendiente de guardar" sin un botón a la vista se pierde.
-      setTimeout(() => formRef.current?.requestSubmit(), 0);
+      // La ruta va metida a mano en el envío: esperar a que React la escriba
+      // en el input escondido (`setTimeout` + `requestSubmit`) mandaba
+      // `avatar_path` vacío y la foto no quedaba guardada. Ver NegocioEditor.
+      const datos = new FormData(formRef.current!);
+      datos.set("avatar_path", path);
+      startTransition(() => formAction(datos));
     } catch (err) {
       setErrorFoto(err instanceof Error ? err.message : "No se pudo subir la foto.");
     } finally {
