@@ -31,8 +31,8 @@ export const CONTENT_PRIORITY_STYLE: Record<ContentPriority, string> = {
 };
 
 // Q·OS conserva "Reels" en plural: acá la etiqueta describe el canal donde
-// publica el equipo, no una pieza suelta. Los tres últimos existen para el
-// tablero del creador —Q·OS no los ofrece— pero necesitan etiqueta igual, por
+// publica el equipo, no una pieza suelta. Stories, Fotos y Facebook existen para
+// el tablero del creador —Q·OS no los ofrece— pero necesitan etiqueta igual, por
 // si un día aparece uno en el calendario.
 export const CONTENT_PLATFORM_LABEL: Record<ContentPlatform, string> = {
   instagram: "Instagram",
@@ -41,6 +41,7 @@ export const CONTENT_PLATFORM_LABEL: Record<ContentPlatform, string> = {
   stories: "Stories",
   photos: "Fotos",
   facebook: "Facebook",
+  youtube: "YouTube",
 };
 
 /** El punto de color de cada prioridad, para las listas de filtro. */

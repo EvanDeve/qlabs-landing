@@ -15,6 +15,7 @@ const PLATAFORMA: Record<string, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
   reels: "Reels",
+  youtube: "YouTube",
 };
 
 /**

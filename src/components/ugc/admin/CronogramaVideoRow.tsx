@@ -184,6 +184,7 @@ export default function CronogramaVideoRow({
                 <option value="instagram">Instagram</option>
                 <option value="tiktok">TikTok</option>
                 <option value="reels">Reels</option>
+                <option value="youtube">YouTube</option>
               </select>
             </div>
           </div>

@@ -81,7 +81,8 @@ export type ContentPlatform =
   | "reels"
   | "stories"
   | "photos"
-  | "facebook";
+  | "facebook"
+  | "youtube";
 
 // Nota: el tablero del creador NO tiene enum de etapas. Sus columnas son filas
 // de `creator_task_columns` para que cada creador arme las suyas — un enum de

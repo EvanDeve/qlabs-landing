@@ -1001,7 +1001,7 @@ function validarPropuesta(valor: unknown, ctx: ContextoValidacion): PropuestaPie
 
 const TIPOS_DE_EVENTO: CalendarEventType[] = ["publicacion", "grabacion", "reunion", "entrega", "guion"];
 const PRIORIDADES: ContentPriority[] = ["baja", "media", "alta"];
-const PLATAFORMAS: ContentPlatform[] = ["instagram", "tiktok", "reels"];
+const PLATAFORMAS: ContentPlatform[] = ["instagram", "tiktok", "reels", "youtube"];
 const APROBACIONES: ContentApproval[] = ["pendiente", "correccion", "revisado"];
 
 /**

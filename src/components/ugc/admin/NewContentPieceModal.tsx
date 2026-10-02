@@ -72,6 +72,7 @@ export default function NewContentPieceModal({
                   <option value="instagram">Instagram</option>
                   <option value="tiktok">TikTok</option>
                   <option value="reels">Reels</option>
+                  <option value="youtube">YouTube</option>
                 </select>
               </div>
             )}

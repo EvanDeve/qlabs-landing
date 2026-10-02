@@ -54,6 +54,7 @@ export const PLATFORM_LABEL: Record<ContentPlatform, string> = {
   photos: "Fotos",
   instagram: "Instagram",
   facebook: "Facebook",
+  youtube: "YouTube",
 };
 
 /**
