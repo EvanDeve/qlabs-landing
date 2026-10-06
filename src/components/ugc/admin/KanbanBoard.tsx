@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   DndContext,
@@ -197,7 +198,6 @@ export default function KanbanBoard({
         brands={brands}
         staff={staff}
         boards={boards}
-        gestionarBoards={gestionarBoards}
         seccion={seccion}
         filtros={filtros}
         count={enPantalla}
@@ -205,17 +205,27 @@ export default function KanbanBoard({
         onBusqueda={setBusqueda}
         fueraDeLaPestana={fueraDeLaPestana}
         acciones={
-          // "Nueva columna" ya no vive acá: se mudó al final del tablero, donde
-          // además se ve dónde va a caer la columna nueva.
-          <button
-            type="button"
-            onClick={() => setCreatingInColumn(visibleColumns[0]?.id ?? null)}
-            disabled={visibleColumns.length === 0}
-            className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`}
-          >
-            <QosIcon name="plus" size={14} />
-            Nueva pieza
-          </button>
+          <>
+            {/* Mismo botón que "Nueva pieza", pegado a él: es la otra cosa que
+                se crea desde el tablero. Solo para directores. */}
+            {gestionarBoards && (
+              <Link href="/admin/pipeline/boards" className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`}>
+                <QosIcon name="plus" size={14} />
+                Nuevo board
+              </Link>
+            )}
+            {/* "Nueva columna" ya no vive acá: se mudó al final del tablero, donde
+                además se ve dónde va a caer la columna nueva. */}
+            <button
+              type="button"
+              onClick={() => setCreatingInColumn(visibleColumns[0]?.id ?? null)}
+              disabled={visibleColumns.length === 0}
+              className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`}
+            >
+              <QosIcon name="plus" size={14} />
+              Nueva pieza
+            </button>
+          </>
         }
       />
 

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
 import type { PipelineSection } from "@/lib/database.types";
@@ -56,7 +55,6 @@ export default function PipelineFilters({
   brands,
   staff,
   boards,
-  gestionarBoards,
   seccion,
   filtros,
   count,
@@ -69,8 +67,6 @@ export default function PipelineFilters({
   staff: Option[];
   /** Los boards que esta persona puede ver, en orden. El primero es el de la URL sin `?seccion=`. */
   boards: PipelineBoard[];
-  /** Director: muestra el acceso a crear boards y elegir quién entra. */
-  gestionarBoards: boolean;
   /** null = la pestaña "Todo". */
   seccion: PipelineSection | null;
   filtros: FiltrosPipeline;
@@ -163,11 +159,6 @@ export default function PipelineFilters({
           >
             Todo
           </button>
-          {gestionarBoards && (
-            <Link href="/admin/pipeline/boards" className={styles.pipeTab} title="Crear boards y elegir quién entra">
-              + Boards
-            </Link>
-          )}
         </div>
 
         {/* No hay debounce ni botón: filtra sobre lo que ya está en memoria, así
