@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireArea } from "@/lib/auth/areas";
 import { fechaCorta } from "@/lib/ugc/loyalty";
 import { CF } from "@/lib/cf/copy";
+import { resolverEliminacionAction } from "@/lib/actions/close-friends-admin";
+import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import type { MemberStatus } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
 
@@ -30,7 +32,7 @@ function diasDesde(iso: string): number {
  * Close Friends desde adentro: cuántos clientes se sumaron, por qué negocio,
  * y qué pidieron. Es solo lectura —el alta, los vínculos y los canjes pasan
  * por las funciones de la base— salvo las solicitudes de eliminación, que
- * esperan que alguien del equipo las atienda.
+ * alguien del equipo atiende borrando la cuenta (resolverEliminacionAction).
  *
  * Los datos personales (teléfono, fecha de nacimiento) NO se muestran: para
  * administrar el programa alcanza con el nombre de agente y el expediente.
@@ -58,9 +60,11 @@ export default async function AdminCloseFriendsPage({
       .order("created_at", { ascending: false }),
     supabase.from("member_brand_links").select("member_id, brand_id, joined_at"),
     supabase.from("brand_invite_codes").select("brand_id, scans, signups, active"),
-    // Solo los de miembros: los de creadores son Loyalty Loop y tienen su
-    // propia pantalla.
-    supabase.from("redemptions").select("coupon_id, member_id, status").not("member_id", "is", null),
+    // Los que no son de creadores (esos son Loyalty Loop y tienen su propia
+    // pantalla). Por `creator_id` y no por `member_id`: el canje de alguien
+    // que pidió que lo borraran queda sin titular, y sigue siendo un canje
+    // del negocio.
+    supabase.from("redemptions").select("coupon_id, member_id, status").is("creator_id", null),
     supabase
       .from("member_deletion_requests")
       .select("id, member_id, reason, created_at")
@@ -168,11 +172,12 @@ export default async function AdminCloseFriendsPage({
                   <th>Motivo</th>
                   <th>Pedida</th>
                   <th style={{ textAlign: "right" }}>Días esperando</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {pendientes.map((s) => {
-                  const m = miembroPorId.get(s.member_id);
+                  const m = s.member_id ? miembroPorId.get(s.member_id) : undefined;
                   const dias = diasDesde(s.created_at);
                   return (
                     <tr key={s.id}>
@@ -184,6 +189,16 @@ export default async function AdminCloseFriendsPage({
                       <td style={{ whiteSpace: "nowrap", color: "var(--ink-2)" }}>{fechaCorta(s.created_at)}</td>
                       <td style={{ textAlign: "right" }}>
                         <span className={`${styles.riskPill} ${dias >= 7 ? styles.riskRisk : styles.riskWarn}`}>{dias}</span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <ConfirmDeleteButton
+                          action={resolverEliminacionAction.bind(null, s.id)}
+                          confirmMessage={`Se borra la cuenta de ${m?.agent_name ?? "este miembro"} con todos sus datos personales, consentimientos y vínculos con negocios. Sus canjes quedan en los registros de cada negocio, sin su nombre. No se puede deshacer.`}
+                          className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger}`}
+                          style={{ whiteSpace: "nowrap" }}
+                        >
+                          Eliminar cuenta
+                        </ConfirmDeleteButton>
                       </td>
                     </tr>
                   );

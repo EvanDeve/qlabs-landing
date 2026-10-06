@@ -1222,7 +1222,8 @@ export interface Database {
       member_deletion_requests: {
         Row: {
           id: string;
-          member_id: string;
+          // null cuando ya se atendió: la cuenta se borró (20261006130000).
+          member_id: string | null;
           reason: string | null;
           status: DeletionRequestStatus;
           created_at: string;
@@ -1232,6 +1233,7 @@ export interface Database {
         Insert: never;
         Update: {
           status?: DeletionRequestStatus;
+          reason?: string | null;
           resolved_at?: string | null;
           resolved_by?: string | null;
         };
