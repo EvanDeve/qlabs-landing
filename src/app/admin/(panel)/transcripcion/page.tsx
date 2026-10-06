@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireArea } from "@/lib/auth/areas";
 import TranscriptionTool from "@/components/ugc/admin/TranscriptionTool";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  * herramienta, y una copia significaría arreglar cada bug dos veces.
  */
 export default async function AdminTranscripcionPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
   const {
     data: { user },
   } = await supabase.auth.getUser();

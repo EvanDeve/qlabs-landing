@@ -1,5 +1,5 @@
+import { requireArea } from "@/lib/auth/areas";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { toggleCalendarMonthAction } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { coloresDeHeroes } from "@/lib/ugc/content-meta";
@@ -17,7 +17,7 @@ export default async function AdminDashboardPage({
 }: {
   searchParams: Promise<{ mes?: string }>;
 }) {
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
 
   const now = new Date();
   const in7Days = sumarDias(now, 7);

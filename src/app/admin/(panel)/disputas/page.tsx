@@ -1,4 +1,4 @@
-import { requireDirector } from "@/lib/auth/require-director";
+import { requireArea } from "@/lib/auth/areas";
 import ResolveDisputeForm from "@/components/ugc/admin/ResolveDisputeForm";
 import { creatorPayout } from "@/lib/ugc/payout";
 import styles from "@/styles/qos.module.css";
@@ -6,7 +6,7 @@ import styles from "@/styles/qos.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function DisputasPage() {
-  const { supabase } = await requireDirector();
+  const { supabase } = await requireArea("ugc");
 
   const { data: disputas } = await supabase
     .from("applications")

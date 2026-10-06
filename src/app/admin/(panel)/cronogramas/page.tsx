@@ -1,5 +1,5 @@
+import { requireArea } from "@/lib/auth/areas";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { mesCR, nombreDeMes, sumarMeses } from "@/lib/ugc/cronograma";
 import NuevoCronogramaButton from "@/components/ugc/admin/NuevoCronogramaButton";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * los últimos seis meses?". Para lo segundo está el expediente del Hero.
  */
 export default async function CronogramasPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
 
   const [{ data: heroes }, { data: meses }, { data: columnas }] = await Promise.all([
     supabase.from("agency_clients").select("id, name, logo_url, archived").order("name"),

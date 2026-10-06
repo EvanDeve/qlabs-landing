@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { accesoDeApi } from "@/lib/auth/acceso-api";
+import { tengoArea } from "@/lib/auth/areas";
 import { generarVoz, hayApiKey } from "@/lib/ugc/elevenlabs";
 import {
   MODELO_POR_DEFECTO,
@@ -31,6 +32,11 @@ export async function POST(request: Request) {
   const acceso = await accesoDeApi(["admin"]);
   if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const { user, supabase } = acceso;
+  // Y es de la agencia: el rol UGC no tiene la pantalla de Voz, así que
+  // tampoco tiene por qué poder gastar desde el REST.
+  if (!(await tengoArea("agencia"))) {
+    return NextResponse.json({ error: "Tu cuenta no tiene acceso a esto." }, { status: 403 });
+  }
 
   if (!hayApiKey()) {
     console.error("[voz] falta ELEVENLABS_API_KEY");

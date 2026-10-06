@@ -1,3 +1,4 @@
+import { requireArea } from "@/lib/auth/areas";
 import {
   startOfMonth,
   endOfMonth,
@@ -7,7 +8,6 @@ import {
   format,
 } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
-import { createClient } from "@/lib/supabase/server";
 import CalendarView from "@/components/ugc/admin/CalendarView";
 import { COSTA_RICA_TZ, diaCR, esTipoDeEvento, horaCR, type CalendarItem } from "@/lib/ugc/calendar";
 import { coloresDeHeroes } from "@/lib/ugc/content-meta";
@@ -68,7 +68,7 @@ export default async function CalendarioPage({
   const queryStartStr = format(queryStart, "yyyy-MM-dd");
   const queryEndStr = format(queryEnd, "yyyy-MM-dd");
 
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
 
   const [{ data: agencyClients }, { data: staffMembers }, { data: calendarEvents }, { data: contentPieces }] =
     await Promise.all([
@@ -79,7 +79,7 @@ export default async function CalendarioPage({
       // staff_directory y no staff_members: la tabla quedó cerrada a
     // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
     // expone solo lo que el tablero necesita para pintar responsables.
-    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true),
+    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true).neq("staff_role", "ugc"),
       supabase
         .from("calendar_events")
         .select("*")

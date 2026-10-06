@@ -1,4 +1,4 @@
-import { requireDirector } from "@/lib/auth/require-director";
+import { requireArea } from "@/lib/auth/areas";
 import { markCampaignCompletedAction } from "@/lib/actions/admin";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
 import VerificacionAcciones from "@/components/ugc/admin/VerificacionAcciones";
@@ -32,9 +32,9 @@ function EstadoPill({ estado, femenino }: { estado: EstadoCuenta; femenino: bool
 }
 
 export default async function AdminMarketplacePage() {
-  // Ruta de Sistema: solo directores. La RLS igual no le devolvería
-  // las filas a nadie más, pero rebotar es mejor que una página vacía.
-  const { supabase } = await requireDirector();
+  // Área UGC: directores y el rol ugc. La RLS igual no le devolvería las
+  // filas a nadie más, pero rebotar es mejor que una página vacía.
+  const { supabase } = await requireArea("ugc");
 
   const [{ data: creatorProfiles }, { data: campaigns }, { data: applications }, { data: allBrands }] =
     await Promise.all([

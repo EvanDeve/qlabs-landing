@@ -67,7 +67,8 @@ export type StaffRole =
   | "editor"
   | "qa"
   | "community"
-  | "ventas";
+  | "ventas"
+  | "ugc";
 // Nota: no hay enum de etapas. Las columnas del pipeline —tanto el del admin
 // (`content_columns`) como el del creador (`creator_task_columns`)— son filas
 // configurables, porque un enum de Postgres no se puede extender en runtime.

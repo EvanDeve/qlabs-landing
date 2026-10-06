@@ -1,6 +1,6 @@
+import { requireArea } from "@/lib/auth/areas";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { updateHeroProfileAction, setHeroArchivedAction } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import HeroLogoField from "@/components/ugc/admin/HeroLogoField";
@@ -18,7 +18,7 @@ function colorFor(id: string) {
 
 export default async function HeroDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
 
   const { data: client } = await supabase.from("agency_clients").select("*").eq("id", id).maybeSingle();
 

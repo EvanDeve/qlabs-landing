@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireArea } from "@/lib/auth/areas";
 import KanbanBoard from "@/components/ugc/admin/KanbanBoard";
 import {
   STAFF_ROLE_LABEL,
@@ -47,7 +47,7 @@ export default async function PipelinePage({
   const filtroFecha = diaExacto ? null : parseFiltroFecha(fecha);
   const seccionActiva = parseSeccion(seccion);
   const verArchivados = archivados === "1";
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
 
   const [{ data: agencyClients }, { data: staffMembers }, { data: columns }, piecesQuery] =
     await Promise.all([
@@ -58,7 +58,7 @@ export default async function PipelinePage({
     // staff_directory y no staff_members: la tabla quedó cerrada a
     // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
     // expone solo lo que el tablero necesita para pintar responsables.
-    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true),
+    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true).neq("staff_role", "ugc"),
     supabase.from("content_columns").select("*").order("position", { ascending: true }),
     (() => {
       // El orden manda la fecha de publicación, no la creación: lo que el

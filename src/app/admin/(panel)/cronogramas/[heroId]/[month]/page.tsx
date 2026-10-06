@@ -1,7 +1,7 @@
+import { requireArea } from "@/lib/auth/areas";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { agregarVideoAction, borrarCronogramaAction } from "@/lib/actions/cronogramas";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import { parseMes, nombreDeMes, estadoDelGuion } from "@/lib/ugc/cronograma";
@@ -48,7 +48,7 @@ export default async function ArmarCronogramaPage({
   const mes = parseMes(month);
   if (!mes) notFound();
 
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
 
   const [{ data: hero }, { data: cronograma }, { data: videos }] = await Promise.all([
     supabase.from("agency_clients").select("id, name").eq("id", heroId).maybeSingle(),

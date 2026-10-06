@@ -236,4 +236,5 @@ export const STAFF_ROLE_LABEL: Record<StaffRole, string> = {
   qa: "QA",
   community: "Community Manager",
   ventas: "Ventas",
+  ugc: "UGC",
 };

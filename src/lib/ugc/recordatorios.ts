@@ -52,7 +52,10 @@ export async function getMiembrosNotificables(
     .select("profile_id, phone_e164, reminder_hour")
     .eq("active", true)
     .eq("wa_opt_in", true)
-    .not("phone_e164", "is", null);
+    .not("phone_e164", "is", null)
+    // El recordatorio es la agenda de la agencia; a alguien de UGC le llegaría
+    // vacío todos los días.
+    .neq("staff_role", "ugc");
 
   if (error) {
     console.error("[recordatorios] no se pudo listar el equipo:", error.message);

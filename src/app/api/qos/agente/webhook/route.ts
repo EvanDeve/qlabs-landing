@@ -185,6 +185,15 @@ async function atenderEntrante(
     return;
   }
 
+  // McLovin es el asistente de la agencia: su contexto es el tablero, los
+  // Heroes y la agenda. Alguien con rol UGC no ve nada de eso en Q·OS, y el
+  // webhook lee con service-role, así que si lo dejáramos seguir la RLS no lo
+  // frenaría.
+  if (miembro.staff_role === "ugc") {
+    await responder(admin, miembro.profile_id, telefono, "Por ahora McLovin solo atiende lo de la agencia. Lo de UGC lo manejás desde Q·OS.");
+    return;
+  }
+
   const [{ data: perfil }, { data: columnas }, { data: clientes }, { data: previos }, ajustes, { data: equipo }] =
     await Promise.all([
     admin.from("profiles").select("display_name").eq("id", miembro.profile_id).maybeSingle(),
@@ -207,7 +216,7 @@ async function atenderEntrante(
     // El equipo, para poder ponerle responsable a un evento. Sale de
     // staff_members y no de la vista staff_directory: esa filtra por sesión de
     // admin y acá el cliente es service-role, así que devolvería cero filas.
-    admin.from("staff_members").select("profile_id").eq("active", true),
+    admin.from("staff_members").select("profile_id").eq("active", true).neq("staff_role", "ugc"),
   ]);
 
   // Los tres en paralelo: no dependen uno del otro y encadenarlos eran tres
@@ -368,7 +377,9 @@ async function armarReporteDirector(admin: Admin): Promise<string | null> {
     const { data: equipo } = await admin
       .from("staff_members")
       .select("profile_id, staff_role")
-      .eq("active", true);
+      .eq("active", true)
+      // El reporte es de la agencia: la gente de UGC no tiene piezas.
+      .neq("staff_role", "ugc");
     if (!equipo?.length) return null;
 
     const { data: perfiles } = await admin

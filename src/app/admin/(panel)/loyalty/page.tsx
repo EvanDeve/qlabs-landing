@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireArea } from "@/lib/auth/areas";
 import { estadoDeNivel, labelAccion, fechaCorta, COLOR_NIVEL, type Nivel } from "@/lib/ugc/loyalty";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { CF } from "@/lib/cf/copy";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * Por eso todo lo que se ve es lectura del ledger y del registro de canjes.
  */
 export default async function AdminLoyaltyPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireArea("ugc");
 
   const [{ data: eventos }, { data: umbrales }, { data: reclamos }] = await Promise.all([
     supabase

@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth/require-role";
+import { areasDelRol } from "@/lib/auth/areas";
 import QosShell, { type QosNavItem } from "@/components/ugc/QosShell";
 import Toaster from "@/components/ugc/Toaster";
 import SelectorDeMes from "@/components/ugc/admin/SelectorDeMes";
@@ -18,25 +19,44 @@ export default async function AdminLayout({
 }>) {
   const { user, supabase } = await requireRole("admin");
 
-  const [{ data: notifications }, { data: profile }, { data: staffMember }, { data: activePieces }, { data: heroes }] =
-    await Promise.all([
-      supabase
-        .from("notifications")
-        .select("*")
-        .eq("profile_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(15),
-      supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single(),
-      supabase.from("staff_members").select("staff_role, active").eq("profile_id", user.id).maybeSingle(),
-      // Piezas activas = las que NO están en una columna marcada como
-      // "publicadas". Se pregunta por la bandera y no por el nombre: el equipo
-      // puede renombrar sus columnas.
-      supabase
-        .from("content_pieces")
-        .select("id, brand_id, content_columns!inner(is_done)")
-        .eq("content_columns.is_done", false),
-      supabase.from("agency_clients").select("id, archived"),
-    ]);
+  const [{ data: notifications }, { data: profile }, { data: staffMember }] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("*")
+      .eq("profile_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(15),
+    supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single(),
+    supabase.from("staff_members").select("staff_role, active").eq("profile_id", user.id).maybeSingle(),
+  ]);
+
+  // Qué mitad del panel ve cada quien: la agencia, lo de UGC, o las dos (el
+  // director). Esto solo arma el menú — quien pegue la URL igual rebota
+  // (requireArea / requireDirector) y la RLS no le devuelve las filas.
+  const areas = areasDelRol(staffMember);
+  const { director } = areas;
+
+  // Los contadores solo se piden si su item se va a mostrar: para quien no lo
+  // ve, la consulta sería trabajo tirado a la basura (y a alguien de UGC la
+  // RLS ya no le devolvería las piezas).
+  const [{ data: activePieces }, { data: heroes }, { count: disputasAbiertas }] = await Promise.all([
+    areas.agencia
+      ? // Piezas activas = las que NO están en una columna marcada como
+        // "publicadas". Se pregunta por la bandera y no por el nombre: el
+        // equipo puede renombrar sus columnas.
+        supabase
+          .from("content_pieces")
+          .select("id, brand_id, content_columns!inner(is_done)")
+          .eq("content_columns.is_done", false)
+      : { data: [] },
+    areas.agencia ? supabase.from("agency_clients").select("id, archived") : { data: [] },
+    // Las disputas van con contador en el nav: si nadie las ve, quedan
+    // abiertas indefinidamente y ese es justo el problema que vinieron a
+    // resolver.
+    areas.ugc
+      ? supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "disputed")
+      : { count: 0 },
+  ]);
 
   // Los dos contadores del menú ignoran a los Heroes archivados: el badge de
   // Pipeline tiene que coincidir con lo que se ve al abrirlo, y el de Heroes
@@ -47,21 +67,7 @@ export default async function AdminLayout({
   // Una tarjeta sin Hero nunca es de un Hero archivado: es interna y se queda.
   const piezasActivas = (activePieces ?? []).filter((p) => !p.brand_id || !archivedHeroIds.has(p.brand_id));
 
-  // El grupo Sistema es solo de directores: ahí viven los teléfonos del
-  // equipo, las conversaciones de WhatsApp y el cerebro del agente. Esto solo
-  // arma el menú — quien pegue la URL igual rebota (requireDirector) y la RLS
-  // no le devuelve las filas (is_director, migración 20260803000000).
-  const director = staffMember?.staff_role === "director" && staffMember.active;
-
-  // Las disputas van con contador en el nav: si nadie las ve, quedan abiertas
-  // indefinidamente y ese es justo el problema que vinieron a resolver.
-  // Solo se cuenta si el item se va a mostrar: para el resto del equipo la
-  // consulta sería trabajo tirado a la basura.
-  const { count: disputasAbiertas } = director
-    ? await supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "disputed")
-    : { count: 0 };
-
-  const navItems: QosNavItem[] = [
+  const navAgencia: QosNavItem[] = [
     // La fecha de hoy en Costa Rica, como eyebrow: el Dashboard es la pantalla
     // del presente y "viernes 18 de septiembre" dice más que "Operación".
     { href: "/admin", label: "Dashboard", icon: "grid", group: "Operación", eyebrow: diaLargo(new Date()) },
@@ -88,11 +94,39 @@ export default async function AdminLayout({
     // El otro extremo del mismo flujo: Transcripción convierte video en guion,
     // Voz convierte ese guion en audio. Van juntas porque se usan seguidas.
     { href: "/admin/voz", label: "Voz", icon: "play", group: "Herramientas" },
+  ];
+
+  // Lo del marketplace era parte de Sistema (solo directores) hasta que
+  // existió el rol UGC: ahora es su propio grupo.
+  const navUgc: QosNavItem[] = [
+    // `eyebrow` con la fecha solo si es la primera pantalla del menú: para el
+    // director, el Dashboard de la agencia ya la lleva.
+    {
+      href: "/admin/ugc",
+      label: "Resumen",
+      icon: "grid",
+      group: "UGC",
+      ...(areas.agencia ? {} : { eyebrow: diaLargo(new Date()) }),
+    },
+    { href: "/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "UGC" },
+    { href: "/admin/loyalty", label: "Loyalty Loop", icon: "book", group: "UGC" },
+    {
+      href: "/admin/disputas",
+      label: "Disputas",
+      icon: "megaphone",
+      group: "UGC",
+      count: disputasAbiertas ?? 0,
+    },
+  ];
+
+  const navItems: QosNavItem[] = [
+    ...(areas.agencia ? navAgencia : []),
+    ...(areas.ugc ? navUgc : []),
 
     // No va en el menú: se entra tocando la propia cara en el pie de la
     // sidebar. Está en la lista para que el título de la barra diga "Mi perfil"
     // y no herede "Dashboard" por prefijo.
-    { href: "/admin/perfil", label: "Mi perfil", icon: "users", group: "Herramientas", hidden: true },
+    { href: "/admin/perfil", label: "Mi perfil", icon: "users", group: "Cuenta", hidden: true },
 
     // Los grupos del sidebar se cortan por orden del array: todo lo de
     // "Sistema" va junto y al final, o aparecería un segundo encabezado
@@ -104,15 +138,6 @@ export default async function AdminLayout({
           // del Chat, y dos items pegados con el mismo icono no se distinguen.
           { href: "/admin/mclovin", label: "McLovin", icon: "sparkle", group: "Sistema" },
           { href: "/admin/chat", label: "Chat", icon: "chat", group: "Sistema" },
-          { href: "/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "Sistema" },
-          { href: "/admin/loyalty", label: "Loyalty Loop", icon: "book", group: "Sistema" },
-          {
-            href: "/admin/disputas",
-            label: "Disputas",
-            icon: "megaphone",
-            group: "Sistema",
-            count: disputasAbiertas ?? 0,
-          },
         ] satisfies QosNavItem[])
       : []),
   ];
@@ -132,7 +157,7 @@ export default async function AdminLayout({
           userAvatarUrl={profile?.avatar_url ?? null}
           profileHref="/admin/perfil"
           userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
-          topbarActions={<SelectorDeMes />}
+          topbarActions={areas.agencia ? <SelectorDeMes /> : undefined}
         >
           {children}
         </QosShell>

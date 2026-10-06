@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireArea } from "@/lib/auth/areas";
 import VoiceTool from "@/components/ugc/admin/VoiceTool";
 import { VOICEOVER_BUCKET } from "@/lib/ugc/voz";
 
@@ -24,7 +24,7 @@ function nombreDeFuente(t: { file_name: string | null; source_url: string | null
 // Sin encabezado propio, igual que Transcripción: el título lo pone la topbar y
 // esta página es un espacio de trabajo a pantalla completa.
 export default async function VozPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
   const {
     data: { user },
   } = await supabase.auth.getUser();

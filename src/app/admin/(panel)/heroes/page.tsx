@@ -1,5 +1,5 @@
+import { requireArea } from "@/lib/auth/areas";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { deleteHeroAction, setHeroArchivedAction } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { diaCR } from "@/lib/ugc/calendar";
@@ -27,7 +27,7 @@ type HeroRow = {
 };
 
 export default async function HeroesPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireArea("agencia");
 
   const { data: clients } = await supabase
     .from("agency_clients")
