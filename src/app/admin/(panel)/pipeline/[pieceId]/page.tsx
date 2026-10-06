@@ -1,4 +1,4 @@
-import { requireArea } from "@/lib/auth/areas";
+import { requirePipeline } from "@/lib/auth/areas";
 import { notFound } from "next/navigation";
 import { STAFF_ROLE_LABEL, hrefDelPipeline } from "@/lib/ugc/content-meta";
 import ContentPieceEditor from "@/components/ugc/admin/ContentPieceEditor";
@@ -37,7 +37,7 @@ export default async function PiezaPage({
   // que es lo que corresponde a "esta pieza no existe".
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pieceId)) notFound();
 
-  const { supabase } = await requireArea("agencia");
+  const { supabase } = await requirePipeline();
 
   const [{ data: piece }, { data: columns }, { data: brands }, { data: staff }] = await Promise.all([
     supabase.from("content_pieces").select("*").eq("id", pieceId).maybeSingle(),
@@ -46,7 +46,7 @@ export default async function PiezaPage({
     // nombre tiene que seguir apareciendo en el select o el formulario mandaría
     // la pieza al primer Hero de la lista al guardar.
     supabase.from("agency_clients").select("id, name").order("name"),
-    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true).neq("staff_role", "ugc"),
+    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true),
   ]);
 
   if (!piece) notFound();

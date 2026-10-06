@@ -1,4 +1,4 @@
-import { requireArea } from "@/lib/auth/areas";
+import { requirePipeline } from "@/lib/auth/areas";
 import KanbanBoard from "@/components/ugc/admin/KanbanBoard";
 import {
   STAFF_ROLE_LABEL,
@@ -45,20 +45,29 @@ export default async function PipelinePage({
   // sí se hace. Un `?mes=` viejo en un link guardado ya no filtra nada; el
   // tablero sale completo, que es el comportamiento seguro.
   const filtroFecha = diaExacto ? null : parseFiltroFecha(fecha);
-  const seccionActiva = parseSeccion(seccion);
   const verArchivados = archivados === "1";
-  const { supabase } = await requireArea("agencia");
+  // Los boards llegan filtrados por la RLS: solo aquellos donde está esta
+  // persona (el director, todos). La pestaña de la URL se valida contra esos.
+  const { supabase, areas, boards } = await requirePipeline();
+  const seccionActiva = parseSeccion(seccion, boards);
 
   const [{ data: agencyClients }, { data: staffMembers }, { data: columns }, piecesQuery] =
     await Promise.all([
     // drive_url viaja para poner el botón del Drive del Hero en cada tarjeta:
     // es el MISMO que se carga en el expediente del Hero, no uno por pieza
     // (`content_pieces.drive_url`, que sigue viviendo en el drawer).
-    supabase.from("agency_clients").select("id, name, logo_url, drive_url, archived").order("name"),
+    // Quien no es de la agencia (alguien de UGC metido en un board) no ve los
+    // Heroes: la RLS se los negaría igual, así que ni se piden.
+    areas.agencia
+      ? supabase.from("agency_clients").select("id, name, logo_url, drive_url, archived").order("name")
+      : Promise.resolve({ data: [] as { id: string; name: string; logo_url: string | null; drive_url: string | null; archived: boolean }[] }),
     // staff_directory y no staff_members: la tabla quedó cerrada a
     // directores porque guarda teléfonos y opt-in de WhatsApp. La vista
     // expone solo lo que el tablero necesita para pintar responsables.
-    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true).neq("staff_role", "ugc"),
+    //
+    // Con UGC incluido: alguien de UGC puede estar en un board y hacerse
+    // cargo de una tarjeta.
+    supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true),
     supabase.from("content_columns").select("*").order("position", { ascending: true }),
     (() => {
       // El orden manda la fecha de publicación, no la creación: lo que el
@@ -173,6 +182,8 @@ export default async function PipelinePage({
       <KanbanBoard
         pieces={contentPieces}
         columns={columns ?? []}
+        boards={boards}
+        gestionarBoards={areas.director}
         seccion={seccionActiva}
         brands={brands}
         staff={staff}

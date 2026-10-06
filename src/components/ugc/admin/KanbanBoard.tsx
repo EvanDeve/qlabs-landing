@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import type { Database, PipelineSection } from "@/lib/database.types";
 import { updateContentPieceColumnAction } from "@/lib/actions/content-pieces";
-import type { ContentColumn } from "@/lib/ugc/content-columns";
+import type { ContentColumn, PipelineBoard } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { diaCorto, estadoPublicacion } from "@/lib/ugc/calendar";
 import { vistaDelPipeline } from "@/lib/ugc/content-meta";
@@ -60,6 +60,8 @@ export type StaffOption = {
 export default function KanbanBoard({
   pieces,
   columns,
+  boards,
+  gestionarBoards,
   seccion,
   brands,
   staff,
@@ -69,6 +71,10 @@ export default function KanbanBoard({
   pieces: ContentPiece[];
   /** TODAS las columnas, no solo las de la sección abierta. */
   columns: ContentColumn[];
+  /** Los boards que esta persona puede ver, en orden. */
+  boards: PipelineBoard[];
+  /** Director: la barra ofrece ir a crear boards. */
+  gestionarBoards: boolean;
   /** Pestaña abierta; null = "Todo". */
   seccion: PipelineSection | null;
   brands: BrandOption[];
@@ -190,6 +196,8 @@ export default function KanbanBoard({
       <PipelineFilters
         brands={brands}
         staff={staff}
+        boards={boards}
+        gestionarBoards={gestionarBoards}
         seccion={seccion}
         filtros={filtros}
         count={enPantalla}
@@ -284,6 +292,7 @@ export default function KanbanBoard({
             columns.filter((c) => c.section === columnModal.section).length === 1
           }
           seccionAbierta={seccion}
+          boards={boards}
           onClose={() => setColumnModal(null)}
         />
       )}

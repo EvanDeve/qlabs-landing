@@ -1,76 +1,50 @@
-import type { Database, PipelineSection } from "@/lib/database.types";
+import type { Database, PipelineBoardKind, PipelineSection } from "@/lib/database.types";
 
 export type ContentColumn = Database["public"]["Tables"]["content_columns"]["Row"];
 
 /**
- * Las pestañas del tablero. El orden de este array ES el orden en que se
- * pintan, y "video" va primero porque es donde el equipo pasa el mes: los
- * guiones se escriben en una tanda de dos o tres días y después esas columnas
- * quedan quietas.
+ * Un board del Pipeline (una pestaña). Desde 20261006120000 son filas de
+ * `pipeline_boards`, las crea el director y cada uno tiene su gente: la RLS
+ * solo devuelve los boards —y las columnas y tarjetas— donde estás.
  *
- * "IT" y "Admin" van al final: son los carriles de tareas —lo técnico de la
- * plataforma y lo administrativo de la agencia—, no contenido de un Hero, así
- * que son los que menos gente abre.
- *
- * ⚠️ La sección solo reparte columnas entre pestañas. Los conteos por Hero
- * —publicados del mes, atrasadas, carga, y la agenda de McLovin— NO la miran,
- * así que una pieza de IT o Admin suma como cualquier otra. Lo que la deja
- * afuera es lo mismo que con los guiones: su columna final marcada `is_done` y
- * no cargarle nunca `publish_date`.
- *
- * Agregar una sección: sumar el valor al check (migración 20260803100000;
- * 20260807100000 para 'it'; 20260911120000 para 'admin'), al tipo
- * `PipelineSection`, una entrada acá y otra en `NOMBRE_DE_CARRIL` (tablero.ts;
- * el tipo obliga). Si es un carril de tareas y no de videos, también en
- * `CARRILES_DE_TAREAS`, acá abajo.
+ * ⚠️ El board solo reparte columnas entre pestañas. Los conteos por Hero
+ * —publicados del mes, atrasadas, carga— miran solo el board 'video'.
  */
-export const SECCIONES_PIPELINE: { id: PipelineSection; label: string }[] = [
-  { id: "video", label: "Videos" },
-  // El id sigue siendo 'guion' aunque la pestaña diga Cronogramas: está en el
-  // check de content_columns y en las URLs que el equipo tiene guardadas.
-  // Ver la migración 20260812200000.
-  { id: "guion", label: "Cronogramas" },
-  { id: "it", label: "IT" },
-  { id: "admin", label: "Admin" },
-];
+export type PipelineBoard = { id: PipelineSection; name: string; kind: PipelineBoardKind };
 
 /**
- * Los carriles donde una tarjeta es una tarea y no un video: sin guion, sin
+ * Los boards donde una tarjeta es una tarea y no un video: sin guion, sin
  * plataforma, sin hora de salida, y su fecha es "para cuándo tiene que estar"
  * y no una publicación. El editor, el modal de pieza nueva, el Calendario y la
- * agenda de McLovin preguntan esto y NUNCA por el id del carril: cuando IT era
- * el único, la condición vivía copiada en cuatro lugares.
+ * agenda de McLovin preguntan esto y NUNCA por el id del board.
+ *
+ * Se resuelve con el id, sin ir a buscar el board: el tipo no cambia después
+ * de creado y viaja en el id (`t_…`), cosa que la base garantiza con el check
+ * `pipeline_boards_kind_en_id`. IT y Admin son los dos de antes.
  */
-const CARRILES_DE_TAREAS: ReadonlySet<PipelineSection> = new Set(["it", "admin"]);
-
-export function esCarrilDeTareas(section: PipelineSection | string | null | undefined): boolean {
-  return !!section && CARRILES_DE_TAREAS.has(section as PipelineSection);
+export function esCarrilDeTareas(section: PipelineSection | null | undefined): boolean {
+  return !!section && (section === "it" || section === "admin" || section.startsWith("t_"));
 }
 
-/** La sección que abre el tablero cuando la URL no dice otra cosa. */
-export const SECCION_POR_DEFECTO: PipelineSection = "video";
-
 /**
- * Valida el `?seccion=` de la URL. Devuelve null para "Todo" —que es una vista
- * real, no la ausencia de filtro— y el default cuando el valor no existe, para
- * que una URL vieja o mal tipeada no muestre un tablero vacío sin explicación.
+ * Valida el `?seccion=` de la URL contra los boards que esta persona puede
+ * ver. Devuelve null para "Todo" —que es una vista real, no la ausencia de
+ * filtro— y el primer board visible cuando el valor no existe o no es suyo,
+ * para que una URL vieja o ajena no muestre un tablero vacío sin explicación.
  */
-export function parseSeccion(valor: string | undefined): PipelineSection | null {
+export function parseSeccion(valor: string | undefined, boards: PipelineBoard[]): PipelineSection | null {
   if (valor === "todo") return null;
-  if (SECCIONES_PIPELINE.some((s) => s.id === valor)) return valor as PipelineSection;
-  return SECCION_POR_DEFECTO;
+  if (boards.some((b) => b.id === valor)) return valor as PipelineSection;
+  return boards[0]?.id ?? null;
 }
 
 /**
- * La sección que viene del formulario de columna. A diferencia de parseSeccion,
- * acá "todo" NO es válido: es una vista del tablero, no un lugar donde una
- * columna pueda vivir. Cae al default en vez de fallar porque el check de la
- * base rechazaría el insert con un error de Postgres que nadie puede leer.
+ * El board que viene del formulario de columna. Si no existe o no es tuyo, el
+ * insert lo frena la base (FK y RLS); acá solo se descarta lo que no es texto.
  */
 export function parseSeccionColumna(valor: unknown): PipelineSection {
-  return SECCIONES_PIPELINE.some((s) => s.id === valor)
-    ? (valor as PipelineSection)
-    : SECCION_POR_DEFECTO;
+  // "todo" es una vista, no un lugar donde una columna pueda vivir.
+  return typeof valor === "string" && valor && valor !== "todo" ? valor : "video";
 }
 
 /**

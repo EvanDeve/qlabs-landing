@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
 import type { PipelineSection } from "@/lib/database.types";
-import { SECCIONES_PIPELINE, SECCION_POR_DEFECTO } from "@/lib/ugc/content-columns";
+import type { PipelineBoard } from "@/lib/ugc/content-columns";
 import { CONTENT_PRIORITY_DOT, FILTROS_FECHA, type FiltroFecha } from "@/lib/ugc/content-meta";
 import { diaCorto } from "@/lib/ugc/calendar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
@@ -54,6 +55,8 @@ export type FiltrosPipeline = {
 export default function PipelineFilters({
   brands,
   staff,
+  boards,
+  gestionarBoards,
   seccion,
   filtros,
   count,
@@ -64,6 +67,10 @@ export default function PipelineFilters({
 }: {
   brands: Option[];
   staff: Option[];
+  /** Los boards que esta persona puede ver, en orden. El primero es el de la URL sin `?seccion=`. */
+  boards: PipelineBoard[];
+  /** Director: muestra el acceso a crear boards y elegir quién entra. */
+  gestionarBoards: boolean;
   /** null = la pestaña "Todo". */
   seccion: PipelineSection | null;
   filtros: FiltrosPipeline;
@@ -137,15 +144,15 @@ export default function PipelineFilters({
         {/* Botones y no <Link>: los filtros activos viajan en el query y un href
             fijo los borraría. Misma razón por la que todo acá pasa por setFilter. */}
         <div className={styles.pipeTabs}>
-          {SECCIONES_PIPELINE.map((s) => (
+          {boards.map((s, i) => (
             <button
               key={s.id}
               type="button"
-              onClick={() => setFilter("seccion", s.id === SECCION_POR_DEFECTO ? "" : s.id)}
+              onClick={() => setFilter("seccion", i === 0 ? "" : s.id)}
               className={`${styles.pipeTab} ${seccion === s.id ? styles.pipeTabOn : ""}`}
               aria-current={seccion === s.id ? "page" : undefined}
             >
-              {s.label}
+              {s.name}
             </button>
           ))}
           <button
@@ -156,6 +163,11 @@ export default function PipelineFilters({
           >
             Todo
           </button>
+          {gestionarBoards && (
+            <Link href="/admin/pipeline/boards" className={styles.pipeTab} title="Crear boards y elegir quién entra">
+              + Boards
+            </Link>
+          )}
         </div>
 
         {/* No hay debounce ni botón: filtra sobre lo que ya está en memoria, así
@@ -205,17 +217,21 @@ export default function PipelineFilters({
           Filtros
         </span>
 
-        <FiltroDropdown
-          label="Hero"
-          valorLabel={nombreDe(brands, brand) ?? "Todos"}
-          activo={Boolean(brand)}
-          seleccionado={brand ?? ""}
-          onElegir={(id) => setFilter("brand", id)}
-          opciones={[
-            { id: "", label: "Todos" },
-            ...brands.map((b) => ({ id: b.id, label: b.name, color: b.color })),
-          ]}
-        />
+        {/* Sin Heroes (alguien de UGC en un board: no los ve) el filtro
+            sería un menú vacío. */}
+        {brands.length > 0 && (
+          <FiltroDropdown
+            label="Hero"
+            valorLabel={nombreDe(brands, brand) ?? "Todos"}
+            activo={Boolean(brand)}
+            seleccionado={brand ?? ""}
+            onElegir={(id) => setFilter("brand", id)}
+            opciones={[
+              { id: "", label: "Todos" },
+              ...brands.map((b) => ({ id: b.id, label: b.name, color: b.color })),
+            ]}
+          />
+        )}
 
         <FiltroDropdown
           label="Responsable"

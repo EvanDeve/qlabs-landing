@@ -256,25 +256,31 @@ export default function ContentPieceEditor({
             {/* El Hero se puede corregir después de crear la pieza: antes
                 quedaba fijo y una pieza cargada en la marca equivocada solo se
                 arreglaba borrándola y volviéndola a crear. */}
-            <div className={styles.field}>
-              <label>Hero{esTarea ? " (opcional)" : ""}</label>
-              <select
-                name="brand_id"
-                value={brandId}
-                onChange={(e) => setBrandId(e.target.value)}
-                className={styles.inp}
-              >
-                {/* Una tarea interna no es de ningún cliente. La opción existe
-                    solo en el carril de IT: en video, una pieza sin Hero no se
-                    sabría a quién facturarle ni en qué expediente mirarla. */}
-                {esTarea && <option value="">Sin Hero — interna</option>}
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Sin lista de Heroes (alguien de UGC metido en un board: la RLS
+                no se los muestra) el campo no se dibuja. Un <select> sin la
+                opción de la pieza enviaría "" y le borraría el Hero al guardar;
+                sin el campo, el action no toca brand_id. */}
+            {brands.length > 0 && (
+              <div className={styles.field}>
+                <label>Hero{esTarea ? " (opcional)" : ""}</label>
+                <select
+                  name="brand_id"
+                  value={brandId}
+                  onChange={(e) => setBrandId(e.target.value)}
+                  className={styles.inp}
+                >
+                  {/* Una tarea interna no es de ningún cliente. La opción existe
+                      solo en el carril de IT: en video, una pieza sin Hero no se
+                      sabría a quién facturarle ni en qué expediente mirarla. */}
+                  {esTarea && <option value="">Sin Hero — interna</option>}
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className={styles.field}>
               <label>Responsable</label>

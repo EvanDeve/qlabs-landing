@@ -39,8 +39,16 @@ export default async function AdminLayout({
   // Los contadores solo se piden si su item se va a mostrar: para quien no lo
   // ve, la consulta sería trabajo tirado a la basura (y a alguien de UGC la
   // RLS ya no le devolvería las piezas).
+  // El Pipeline no es un área: lo ve quien esté en al menos un board (la RLS
+  // devuelve solo esos; al director, todos). Puede faltarle a alguien de la
+  // agencia y tenerlo alguien de UGC.
+  const { count: boardsVisibles } = await supabase
+    .from("pipeline_boards")
+    .select("id", { count: "exact", head: true });
+  const tienePipeline = (boardsVisibles ?? 0) > 0;
+
   const [{ data: activePieces }, { data: heroes }, { count: disputasAbiertas }] = await Promise.all([
-    areas.agencia
+    tienePipeline
       ? // Piezas activas = las que NO están en una columna marcada como
         // "publicadas". Se pregunta por la bandera y no por el nombre: el
         // equipo puede renombrar sus columnas.
@@ -67,17 +75,16 @@ export default async function AdminLayout({
   // Una tarjeta sin Hero nunca es de un Hero archivado: es interna y se queda.
   const piezasActivas = (activePieces ?? []).filter((p) => !p.brand_id || !archivedHeroIds.has(p.brand_id));
 
+  const itemPipeline = (group: string): QosNavItem[] =>
+    tienePipeline
+      ? [{ href: "/admin/pipeline", label: "Pipeline", icon: "columns", group, count: piezasActivas.length }]
+      : [];
+
   const navAgencia: QosNavItem[] = [
     // La fecha de hoy en Costa Rica, como eyebrow: el Dashboard es la pantalla
     // del presente y "viernes 18 de septiembre" dice más que "Operación".
     { href: "/admin", label: "Dashboard", icon: "grid", group: "Operación", eyebrow: diaLargo(new Date()) },
-    {
-      href: "/admin/pipeline",
-      label: "Pipeline",
-      icon: "columns",
-      group: "Operación",
-      count: piezasActivas.length,
-    },
+    ...itemPipeline("Operación"),
     { href: "/admin/calendario", label: "Calendario", icon: "calendar", group: "Operación" },
 
     // Va pegada al Calendario y antes de Heroes: los items de un mismo grupo
@@ -108,6 +115,9 @@ export default async function AdminLayout({
       group: "UGC",
       ...(areas.agencia ? {} : { eyebrow: diaLargo(new Date()) }),
     },
+    // Alguien de UGC que está en un board: el Pipeline va con lo suyo. (Al
+    // director ya le aparece en Operación.)
+    ...(areas.agencia ? [] : itemPipeline("UGC")),
     { href: "/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "UGC" },
     { href: "/admin/loyalty", label: "Loyalty Loop", icon: "book", group: "UGC" },
     {
@@ -134,6 +144,15 @@ export default async function AdminLayout({
     ...(director
       ? ([
           { href: "/admin/equipo", label: "Equipo", icon: "briefcase", group: "Sistema" },
+          // Hija del Pipeline: se entra desde "+ Boards" en sus pestañas.
+          {
+            href: "/admin/pipeline/boards",
+            label: "Boards",
+            icon: "columns",
+            group: "Sistema",
+            hidden: true,
+            parentHref: "/admin/pipeline",
+          },
           // McLovin lleva la chispa y no el globo de chat: el globo ahora es
           // del Chat, y dos items pegados con el mismo icono no se distinguen.
           { href: "/admin/mclovin", label: "McLovin", icon: "sparkle", group: "Sistema" },

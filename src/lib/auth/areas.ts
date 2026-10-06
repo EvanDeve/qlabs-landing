@@ -73,3 +73,22 @@ export async function tengoArea(area: Area): Promise<boolean> {
 
   return areasDelRol(staff)[area];
 }
+
+/**
+ * Puerta del Pipeline. No es un área: entra quien esté en al menos un board
+ * (el director, a todos). Por eso alguien de UGC puede tener Pipeline y
+ * alguien de la agencia puede no tenerlo. Devuelve los boards ya filtrados por
+ * la RLS, en orden.
+ */
+export async function requirePipeline() {
+  const { user, supabase } = await requireRole("admin");
+  const [{ data: staff }, { data: boards }] = await Promise.all([
+    supabase.from("staff_members").select("staff_role, active").eq("profile_id", user.id).maybeSingle(),
+    supabase.from("pipeline_boards").select("id, name, kind").order("position").order("created_at"),
+  ]);
+
+  const areas = areasDelRol(staff);
+  if (!boards?.length) redirect(inicioDe(areas));
+
+  return { user, supabase, areas, boards };
+}

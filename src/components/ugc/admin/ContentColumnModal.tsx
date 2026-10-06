@@ -7,12 +7,7 @@ import {
   deleteContentColumnAction,
   type ColumnState,
 } from "@/lib/actions/content-columns";
-import {
-  COLORES_COLUMNA,
-  SECCIONES_PIPELINE,
-  SECCION_POR_DEFECTO,
-  type ContentColumn,
-} from "@/lib/ugc/content-columns";
+import { COLORES_COLUMNA, type ContentColumn, type PipelineBoard } from "@/lib/ugc/content-columns";
 import type { PipelineSection } from "@/lib/database.types";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
@@ -24,6 +19,7 @@ export default function ContentColumnModal({
   pieceCount,
   esUnicaDelCarril,
   seccionAbierta,
+  boards,
   onClose,
 }: {
   column: ContentColumn | null;
@@ -42,6 +38,8 @@ export default function ContentColumnModal({
    * el que lo sufre es justo el que está armando una sección nueva.
    */
   seccionAbierta: PipelineSection | null;
+  /** Los boards donde esta persona puede poner una columna. */
+  boards: PipelineBoard[];
   onClose: () => void;
 }) {
   const editando = Boolean(column);
@@ -55,7 +53,7 @@ export default function ContentColumnModal({
   // o de guiones no significan nada. Que aparezcan y desaparezcan al cambiar el
   // carril es lo que hace que no haya que explicarlo.
   const [seccion, setSeccion] = useState<PipelineSection>(
-    column?.section ?? seccionAbierta ?? SECCION_POR_DEFECTO
+    column?.section ?? seccionAbierta ?? boards[0]?.id ?? "video"
   );
   const esVideo = seccion === "video";
 
@@ -134,9 +132,9 @@ export default function ContentColumnModal({
               className={styles.selectInp}
               style={{ width: "100%" }}
             >
-              {SECCIONES_PIPELINE.map((s) => (
+              {boards.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.label}
+                  {s.name}
                 </option>
               ))}
             </select>

@@ -89,7 +89,11 @@ export type ContentPlatform =
 // de `creator_task_columns` para que cada creador arme las suyas — un enum de
 // Postgres no se puede extender en runtime. Ver 20260727100000.
 /** Pestaña del tablero. Ver la migración 20260803100000. */
-export type PipelineSection = "guion" | "video" | "it" | "admin";
+// El id de un board del pipeline (pipeline_boards.id). Los cuatro de siempre
+// son 'video', 'guion', 'it' y 'admin'; los que crea el director, `v_…` o
+// `t_…` según su tipo. Migración 20261006120000.
+export type PipelineSection = string;
+export type PipelineBoardKind = "videos" | "tareas";
 export type CalendarEventType = "publicacion" | "grabacion" | "reunion" | "entrega" | "guion";
 export type CalendarEventStatus = "programado" | "hecho" | "pausado";
 export type CalendarMonthStatus = "pendiente" | "aprobado";
@@ -658,6 +662,40 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["content_columns"]["Insert"]>;
+        Relationships: [];
+      };
+      // Las pestañas del Pipeline. Migración 20261006120000.
+      pipeline_boards: {
+        Row: {
+          id: PipelineSection;
+          name: string;
+          kind: PipelineBoardKind;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id: PipelineSection;
+          name: string;
+          kind: PipelineBoardKind;
+          position?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["pipeline_boards"]["Insert"]>;
+        Relationships: [];
+      };
+      // Quién entra a cada board. El director entra a todos sin estar acá.
+      pipeline_board_members: {
+        Row: {
+          board_id: PipelineSection;
+          profile_id: string;
+          created_at: string;
+        };
+        Insert: {
+          board_id: PipelineSection;
+          profile_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["pipeline_board_members"]["Insert"]>;
         Relationships: [];
       };
       content_pieces: {

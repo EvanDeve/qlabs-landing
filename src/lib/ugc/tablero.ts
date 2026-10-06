@@ -46,12 +46,20 @@ export function columnasDelCarril(columnas: ColumnaDelTablero[], columnId: strin
  * español: "el carril de it no tiene…". El valor de la columna es un
  * identificador, no un texto para mostrar.
  */
-export const NOMBRE_DE_CARRIL: Record<PipelineSection, string> = {
+const NOMBRE_DE_CARRIL: Record<string, string> = {
   guion: "guiones",
   video: "video",
   it: "IT",
   admin: "Admin",
 };
+
+/**
+ * Los boards que crea el director tienen ids como `t_8f3k2a`, que no se le
+ * leen a nadie: para esos se dice "ese board".
+ */
+export function nombreDeCarril(carril: PipelineSection): string {
+  return NOMBRE_DE_CARRIL[carril] ? `el carril de ${NOMBRE_DE_CARRIL[carril]}` : "ese board";
+}
 
 export type Destino = { ok: true; columna: ColumnaDelTablero } | { ok: false; nota: string };
 
@@ -102,7 +110,7 @@ export function columnaFinalDe(columnas: ColumnaDelTablero[], columnIdActual: st
   return {
     ok: false,
     nota: carril
-      ? `No pude cerrarla: en el carril de ${NOMBRE_DE_CARRIL[carril]} no hay ninguna columna marcada como terminada, así que no tengo a dónde moverla. Eso se marca una vez desde Q·OS, editando la columna.`
+      ? `No pude cerrarla: en ${nombreDeCarril(carril)} no hay ninguna columna marcada como terminada, así que no tengo a dónde moverla. Eso se marca una vez desde Q·OS, editando la columna.`
       : "No pude cerrarla: no encontré el carril de esa tarjeta.",
   };
 }
