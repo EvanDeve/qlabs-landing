@@ -7,6 +7,7 @@ import { soyDirector } from "@/lib/auth/require-director";
 import { normalizarTelefonoCR } from "@/lib/whatsapp/twilio";
 import { enviarRecordatorioDiario } from "@/lib/ugc/recordatorios";
 import type { StaffRole } from "@/lib/database.types";
+import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
 
 export type InviteStaffState = { error: string } | { message: string } | null;
 
@@ -223,6 +224,38 @@ export async function testReminderAction(
     };
   }
   return { error: `No se pudo enviar — ${resultado.error}` };
+}
+
+export type CambiarRolState = { error?: string; ok?: string } | null;
+
+/**
+ * Cambia el puesto de alguien del equipo desde Equipo. Escribe con la sesión:
+ * `staff_members_all_director` ya deja solo a directores, y el chequeo de acá
+ * es para devolver un error legible.
+ *
+ * El propio no se puede cambiar. Así un director no se baja a sí mismo por
+ * error y nunca queda el equipo sin nadie que pueda volver a subirlo.
+ */
+export async function cambiarRolAction(_prev: CambiarRolState, formData: FormData): Promise<CambiarRolState> {
+  if (!(await soyDirector())) return { error: "Solo un director puede cambiar roles." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const profileId = String(formData.get("profile_id") ?? "");
+  const staffRole = String(formData.get("staff_role") ?? "") as StaffRole;
+  if (!profileId || !(staffRole in STAFF_ROLE_LABEL)) return { error: "Elegí un rol." };
+  if (profileId === user?.id) return { error: "Tu propio rol lo tiene que cambiar otro director." };
+
+  const { error } = await supabase.from("staff_members").update({ staff_role: staffRole }).eq("profile_id", profileId);
+  if (error) return { error: "No se pudo cambiar el rol." };
+
+  revalidatePath("/admin/equipo");
+  // Cambia qué secciones ve y, si pasa a UGC o sale de director, qué boards.
+  revalidatePath("/admin", "layout");
+  return { ok: `Ahora es ${STAFF_ROLE_LABEL[staffRole]}.` };
 }
 
 export async function setStaffActiveAction(formData: FormData) {

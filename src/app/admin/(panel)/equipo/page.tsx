@@ -7,6 +7,7 @@ import InviteStaffForm from "@/components/ugc/admin/InviteStaffForm";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import StaffWhatsAppRow from "@/components/ugc/admin/StaffWhatsAppRow";
 import StaffAvatar from "@/components/ugc/admin/StaffAvatar";
+import StaffRoleSelect from "@/components/ugc/admin/StaffRoleSelect";
 import type { StaffRole } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
 
@@ -17,7 +18,7 @@ const STAFF_ROLES = Object.keys(STAFF_ROLE_LABEL) as StaffRole[];
 export default async function EquipoPage() {
   // Ruta de Sistema: solo directores. La RLS igual no le devolvería
   // las filas a nadie más, pero rebotar es mejor que una página vacía.
-  const { supabase } = await requireDirector();
+  const { user, supabase } = await requireDirector();
 
   const [{ data: adminProfiles }, { data: staffMembers }, { data: waMessages }] = await Promise.all([
     supabase.from("profiles").select("id, display_name, avatar_url").eq("role", "admin"),
@@ -52,7 +53,11 @@ export default async function EquipoPage() {
             />
             <div className={styles.attnBody}>
               <div className={styles.attnTitle}>{profileById.get(staff.profile_id)?.display_name ?? "Sin nombre"}</div>
-              <div className={styles.attnMeta}>{STAFF_ROLE_LABEL[staff.staff_role]}</div>
+              <StaffRoleSelect
+                profileId={staff.profile_id}
+                rol={staff.staff_role}
+                esPropio={staff.profile_id === user.id}
+              />
             </div>
             <form action={setStaffActiveAction}>
               <input type="hidden" name="profile_id" value={staff.profile_id} />
