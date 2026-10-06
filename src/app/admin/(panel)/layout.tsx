@@ -120,6 +120,7 @@ export default async function AdminLayout({
     ...(areas.agencia ? [] : itemPipeline("UGC")),
     { href: "/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "UGC" },
     { href: "/admin/loyalty", label: "Loyalty Loop", icon: "book", group: "UGC" },
+    { href: "/admin/close-friends", label: "Close Friends", icon: "qr", group: "UGC" },
     {
       href: "/admin/disputas",
       label: "Disputas",
