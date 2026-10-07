@@ -1509,6 +1509,50 @@
   color: #fff;
   box-shadow: var(--sh-sm);
 }
+/* "· 3 por verificar" en las pestañas del Marketplace. En el celular se achica
+   a "· 3": con la frase entera, la pestaña activa quedaba fuera del riel. */
+.tabAvisoCorto {
+  display: none;
+}
+@media (max-width: 560px) {
+  .tabAvisoLargo {
+    display: none;
+  }
+  .tabAvisoCorto {
+    display: inline;
+  }
+  /* Las cuatro pestañas no entran en una fila de 390: se reparten el ancho y
+     el número baja abajo del nombre. Con el riel deslizándose, la activa
+     podía quedar fuera de la pantalla. */
+  .mktTabs {
+    display: flex;
+    width: 100%;
+  }
+  .qosRoot .mktTabs .pipeTab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.25;
+    border-radius: 14px;
+  }
+  .mktTabs {
+    border-radius: 17px;
+  }
+  /* Tres botones (Ver book, Verificar, Rechazar) no dejan lugar al texto:
+     bajan a su propia línea en vez de montarse sobre el handle. Modificador
+     propio porque .attnItem lo comparten muchas pantallas. */
+  .mktFila {
+    flex-wrap: wrap;
+  }
+  .mktFila .attnRight {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
 /* ---- Los filtros del tablero ----
    Dejaron de ser `<select>` nativos: cada uno es un botón en pastilla que
    muestra QUÉ filtra y POR QUÉ VALOR ("Hero · Todos"), y abre su propia lista.
