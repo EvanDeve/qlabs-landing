@@ -51,3 +51,8 @@ export function coincide(busqueda: string, campos: (string | null | undefined)[]
     .join(" ");
   return palabras.every((p) => texto.includes(p));
 }
+
+/** La ficha del creador en Q·OS. Un solo lugar arma la URL: la linkean varias pantallas. */
+export function rutaFichaCreador(profileId: string): string {
+  return `/admin/marketplace/creador/${profileId}`;
+}

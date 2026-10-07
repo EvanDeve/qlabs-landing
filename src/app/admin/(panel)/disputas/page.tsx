@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { requireArea } from "@/lib/auth/areas";
 import ResolveDisputeForm from "@/components/ugc/admin/ResolveDisputeForm";
 import { FiltroAdmin, PestanasAdmin } from "@/components/ugc/admin/PestanasAdmin";
 import { creatorPayout } from "@/lib/ugc/payout";
-import { coincide, leerEstado } from "@/lib/ugc/marketplace-admin";
+import { coincide, leerEstado, rutaFichaCreador } from "@/lib/ugc/marketplace-admin";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
@@ -171,7 +172,9 @@ export default async function DisputasPage({
                     )}
                     <div style={{ fontSize: "13px", color: "var(--ink-3)", marginTop: "3px" }}>
                       {campaign ? (brandNameById.get(campaign.brand_id) ?? "Marca") : "Marca"} ·{" "}
-                      {handleById.get(d.creator_id) ?? nameById.get(d.creator_id) ?? "Creador"}
+                      <Link href={rutaFichaCreador(d.creator_id)} className={styles.fichaLink}>
+                        {handleById.get(d.creator_id) ?? nameById.get(d.creator_id) ?? "Creador"}
+                      </Link>
                     </div>
                   </div>
                   {campaign && (

@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { requireArea } from "@/lib/auth/areas";
 import { estadoDeNivel, labelAccion, fechaCorta, COLOR_NIVEL, type Nivel } from "@/lib/ugc/loyalty";
-import { coincide, leerEstado } from "@/lib/ugc/marketplace-admin";
+import { coincide, leerEstado, rutaFichaCreador } from "@/lib/ugc/marketplace-admin";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { FiltroAdmin, PestanasAdmin, TarjetaLista } from "@/components/ugc/admin/PestanasAdmin";
 import { CF } from "@/lib/cf/copy";
@@ -246,7 +247,9 @@ async function TablaCreadores({
             {filas.map((f) => (
               <tr key={f.id}>
                 <td>
-                  <b>{f.handle}</b>
+                  <Link href={rutaFichaCreador(f.id)} className={styles.fichaLink}>
+                    <b>{f.handle}</b>
+                  </Link>
                 </td>
                 <td>
                   <span
@@ -359,7 +362,13 @@ async function TablaCanjes({
                   <td>{r.marca}</td>
                   <td>{r.cupon}</td>
                   <td>
-                    <b>{r.quien}</b>
+                    {r.creator_id ? (
+                      <Link href={rutaFichaCreador(r.creator_id)} className={styles.fichaLink}>
+                        <b>{r.quien}</b>
+                      </Link>
+                    ) : (
+                      <b>{r.quien}</b>
+                    )}
                   </td>
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{r.code}</td>
                   <td>

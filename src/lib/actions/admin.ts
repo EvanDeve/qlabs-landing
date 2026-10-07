@@ -29,6 +29,7 @@ export async function setCreatorVerifiedAction(formData: FormData) {
   }
 
   revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/marketplace/creador/[id]", "page");
 }
 
 export async function setBrandVerifiedAction(formData: FormData) {
@@ -103,6 +104,7 @@ export async function setCreatorRejectedAction(formData: FormData) {
     });
   }
   revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/marketplace/creador/[id]", "page");
 }
 
 export async function setBrandRejectedAction(formData: FormData) {

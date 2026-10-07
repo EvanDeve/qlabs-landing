@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireArea } from "@/lib/auth/areas";
 import { markCampaignCompletedAction } from "@/lib/actions/admin";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
@@ -12,6 +13,7 @@ import {
   leerEstado,
   leerPestana,
   type PestanaMarketplace,
+  rutaFichaCreador,
 } from "@/lib/ugc/marketplace-admin";
 import { FiltroAdmin, PestanasAdmin, TarjetaLista } from "@/components/ugc/admin/PestanasAdmin";
 import type { ApplicationStatus, CampaignStatus } from "@/lib/database.types";
@@ -220,7 +222,10 @@ async function ListaCreadores({
           >
             <div className={styles.attnBody}>
               <div className={styles.attnTitle}>
-                {displayHandle(creator.handle)} <EstadoPill estado={est} femenino={false} />
+                <Link href={rutaFichaCreador(creator.profile_id)} className={styles.fichaLink}>
+                  {displayHandle(creator.handle)}
+                </Link>{" "}
+                <EstadoPill estado={est} femenino={false} />
               </div>
               <div className={styles.attnMeta}>
                 {/* El nombre suele ser el mismo handle; repetido no dice nada. */}
@@ -464,7 +469,9 @@ async function ListaAplicaciones({
           <div key={app.id} className={`${styles.attnItem} ${styles.mktFila}`} style={{ cursor: "default" }}>
             <div className={styles.attnBody}>
               <div className={styles.attnTitle}>
-                {handle ? displayHandle(handle) : "Creador"}{" "}
+                <Link href={rutaFichaCreador(app.creator_id)} className={styles.fichaLink}>
+                  {handle ? displayHandle(handle) : "Creador"}
+                </Link>{" "}
                 <Pill
                   label={APPLICATION_STATUS_LABEL[app.status]}
                   estilo={APPLICATION_STATUS_STYLE[app.status]}
