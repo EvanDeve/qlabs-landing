@@ -4,8 +4,14 @@ import { Skel, SkelLineas, SkelPantalla } from "@/components/ugc/Skeleton";
 export default function Loading() {
   return (
     <SkelPantalla>
-      <Skel w={120} h={24} style={{ marginBottom: 10 }} />
       <Skel w="55%" h={11} style={{ marginBottom: 22 }} />
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <Skel w={240} h={34} r={999} />
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <Skel w={260} h={35} r={9} />
+        <Skel w={70} h={30} r={9} />
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {Array.from({ length: 2 }, (_, i) => (
           <div key={i} className={`${styles.card} ${styles.cardPad}`}>

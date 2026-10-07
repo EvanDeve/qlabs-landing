@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireArea } from "@/lib/auth/areas";
 import { markCampaignCompletedAction } from "@/lib/actions/admin";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
@@ -14,7 +13,7 @@ import {
   leerPestana,
   type PestanaMarketplace,
 } from "@/lib/ugc/marketplace-admin";
-import { QosIcon } from "@/lib/ugc/qos-icons";
+import { FiltroAdmin, PestanasAdmin, TarjetaLista } from "@/components/ugc/admin/PestanasAdmin";
 import type { ApplicationStatus, CampaignStatus } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
@@ -144,102 +143,31 @@ export default async function AdminMarketplacePage({ searchParams }: { searchPar
 
   return (
     <div>
-      {/* Links y no botones: cambiar de pestaña limpia la búsqueda y el estado,
-          que son de cada pestaña (un estado de campaña no existe en Marcas). */}
-      <div className={styles.pipeBar} style={{ marginBottom: 16 }}>
-        <nav className={`${styles.pipeTabs} ${styles.mktTabs}`} aria-label="Secciones del marketplace">
-          {PESTANAS_MARKETPLACE.map((p) => {
-            const porVerificar = pendientes[p.id] ?? 0;
-            return (
-              <Link
-                key={p.id}
-                href={`/admin/marketplace?tab=${p.id}`}
-                className={`${styles.pipeTab} ${tab === p.id ? styles.pipeTabOn : ""}`}
-                aria-current={tab === p.id ? "page" : undefined}
-              >
-                <span>{p.label}</span>{" "}
-                <span>
-                  {totales[p.id]}
-                  {porVerificar > 0 && (
-                    <>
-                      <span className={styles.tabAvisoLargo}> · {porVerificar} por verificar</span>
-                      <span className={styles.tabAvisoCorto}>
-                        {" "}
-                        · {porVerificar}
-                      </span>
-                    </>
-                  )}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Un GET de toda la vida, como en Close Friends: funciona sin JS. */}
-      <form method="get" action="/admin/marketplace" className={styles.pipeBar} style={{ marginBottom: 16 }}>
-        <input type="hidden" name="tab" value={tab} />
-        <label className={styles.pipeSearch}>
-          <QosIcon name="search" size={14} />
-          <input type="search" name="q" defaultValue={q} placeholder={placeholder[tab]} aria-label="Buscar" />
-        </label>
-        <select name="estado" defaultValue={estado ?? ""} className={styles.selectInp} aria-label="Estado">
-          <option value="">Todos los estados</option>
-          {opcionesEstado.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}>
-          Filtrar
-        </button>
-        {(q || estado) && (
-          <Link
-            href={`/admin/marketplace?tab=${tab}`}
-            className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
-          >
-            Limpiar
-          </Link>
-        )}
-      </form>
-
+      <PestanasAdmin
+        base="/admin/marketplace"
+        label="Secciones del marketplace"
+        activa={tab}
+        pestanas={PESTANAS_MARKETPLACE.map((p) => ({
+          id: p.id,
+          label: p.label,
+          count: totales[p.id],
+          aviso: { n: pendientes[p.id] ?? 0, texto: "por verificar" },
+        }))}
+      />
+      <FiltroAdmin
+        base="/admin/marketplace"
+        tab={tab}
+        q={q}
+        placeholder={placeholder[tab]}
+        estado={estado}
+        opciones={opcionesEstado}
+      />
       {lista}
     </div>
   );
 }
 
 type Supabase = Awaited<ReturnType<typeof requireArea>>["supabase"];
-
-function Tarjeta({
-  titulo,
-  mostrados,
-  total,
-  children,
-  vacio,
-}: {
-  titulo: string;
-  mostrados: number;
-  total: number;
-  children: React.ReactNode;
-  vacio: string;
-}) {
-  return (
-    <div className={`${styles.card} ${styles.cardPad}`}>
-      <div className={styles.sectionHead}>
-        <h2>
-          {titulo} ({mostrados}
-          {mostrados !== total ? ` de ${total}` : ""})
-        </h2>
-      </div>
-      {mostrados === 0 ? (
-        <div className={styles.empty}>{total === 0 ? vacio : "Nada coincide con ese filtro."}</div>
-      ) : (
-        children
-      )}
-    </div>
-  );
-}
 
 async function ListaCreadores({
   supabase,
@@ -272,7 +200,7 @@ async function ListaCreadores({
   });
 
   return (
-    <Tarjeta
+    <TarjetaLista
       titulo="Creadores"
       mostrados={filtrados.length}
       total={todos.length}
@@ -325,7 +253,7 @@ async function ListaCreadores({
           </div>
         );
       })}
-    </Tarjeta>
+    </TarjetaLista>
   );
 }
 
@@ -352,7 +280,12 @@ async function ListaMarcas({
   );
 
   return (
-    <Tarjeta titulo="Marcas" mostrados={filtradas.length} total={todas.length} vacio="Todavía no hay marcas.">
+    <TarjetaLista
+      titulo="Marcas"
+      mostrados={filtradas.length}
+      total={todas.length}
+      vacio="Todavía no hay marcas."
+    >
       {filtradas.map((brand) => {
         const est = estadoCuenta(brand);
         return (
@@ -387,7 +320,7 @@ async function ListaMarcas({
           </div>
         );
       })}
-    </Tarjeta>
+    </TarjetaLista>
   );
 }
 
@@ -417,7 +350,7 @@ async function ListaCampanas({
   );
 
   return (
-    <Tarjeta
+    <TarjetaLista
       titulo="Campañas"
       mostrados={filtradas.length}
       total={todas.length}
@@ -454,7 +387,7 @@ async function ListaCampanas({
           </div>
         </div>
       ))}
-    </Tarjeta>
+    </TarjetaLista>
   );
 }
 
@@ -518,7 +451,7 @@ async function ListaAplicaciones({
   });
 
   return (
-    <Tarjeta
+    <TarjetaLista
       titulo="Aplicaciones"
       mostrados={filtradas.length}
       total={totalGeneral}
@@ -552,6 +485,6 @@ async function ListaAplicaciones({
           anteriores.
         </div>
       )}
-    </Tarjeta>
+    </TarjetaLista>
   );
 }

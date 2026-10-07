@@ -1524,11 +1524,11 @@
   /* Las cuatro pestañas no entran en una fila de 390: se reparten el ancho y
      el número baja abajo del nombre. Con el riel deslizándose, la activa
      podía quedar fuera de la pantalla. */
-  .mktTabs {
+  .admTabs {
     display: flex;
     width: 100%;
   }
-  .qosRoot .mktTabs .pipeTab {
+  .qosRoot .admTabs .pipeTab {
     flex: 1 1 0;
     min-width: 0;
     padding: 6px 4px;
@@ -1538,7 +1538,7 @@
     line-height: 1.25;
     border-radius: 14px;
   }
-  .mktTabs {
+  .admTabs {
     border-radius: 17px;
   }
   /* Tres botones (Ver book, Verificar, Rechazar) no dejan lugar al texto:
