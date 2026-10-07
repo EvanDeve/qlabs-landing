@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireArea } from "@/lib/auth/areas";
 import { fechaCorta } from "@/lib/ugc/loyalty";
 import { CF } from "@/lib/cf/copy";
+import { cargarCfPorNegocio } from "@/lib/cf/por-negocio";
 import { resolverEliminacionAction } from "@/lib/actions/close-friends-admin";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import type { MemberStatus } from "@/lib/database.types";
@@ -47,72 +48,21 @@ export default async function AdminCloseFriendsPage({
   const { supabase } = await requireArea("ugc");
   const { negocio, estado } = await searchParams;
 
-  const [
-    { data: miembros },
-    { data: vinculos },
-    { data: codigos },
-    { data: canjesDeMiembros },
-    { data: solicitudes },
-  ] = await Promise.all([
+  const [{ data: miembros }, { data: solicitudes }, { negocios, vinculos: listaVinculos }] = await Promise.all([
     supabase
       .from("members")
       .select("profile_id, expediente_code, agent_name, status, created_at")
       .order("created_at", { ascending: false }),
-    supabase.from("member_brand_links").select("member_id, brand_id, joined_at"),
-    supabase.from("brand_invite_codes").select("brand_id, scans, signups, active"),
-    // Los que no son de creadores (esos son Loyalty Loop y tienen su propia
-    // pantalla). Por `creator_id` y no por `member_id`: el canje de alguien
-    // que pidió que lo borraran queda sin titular, y sigue siendo un canje
-    // del negocio.
-    supabase.from("redemptions").select("coupon_id, member_id, status").is("creator_id", null),
     supabase
       .from("member_deletion_requests")
       .select("id, member_id, reason, created_at")
       .eq("status", "pendiente")
       .order("created_at", { ascending: true }),
+    cargarCfPorNegocio(supabase),
   ]);
 
   const listaMiembros = miembros ?? [];
-  const listaVinculos = vinculos ?? [];
-  const listaCanjes = canjesDeMiembros ?? [];
-
-  // Los negocios que tocan el programa: con QR o con algún miembro.
-  const brandIds = [
-    ...new Set([...(codigos ?? []).map((c) => c.brand_id), ...listaVinculos.map((v) => v.brand_id)]),
-  ];
-  const couponIds = [...new Set(listaCanjes.map((r) => r.coupon_id))];
-  const [{ data: marcas }, { data: cupones }] = await Promise.all([
-    brandIds.length
-      ? supabase.from("brand_profiles").select("profile_id, brand_name").in("profile_id", brandIds)
-      : Promise.resolve({ data: [] as { profile_id: string; brand_name: string }[] }),
-    couponIds.length
-      ? supabase.from("coupons").select("id, brand_id").in("id", couponIds)
-      : Promise.resolve({ data: [] as { id: string; brand_id: string }[] }),
-  ]);
-  const nombreDeMarca = new Map((marcas ?? []).map((m) => [m.profile_id, m.brand_name]));
-  const marcaDeCupon = new Map((cupones ?? []).map((c) => [c.id, c.brand_id]));
-
-  // ---- Por negocio ----
-  type Fila = { id: string; nombre: string; miembros: number; escaneos: number; registros: number; reclamados: number; canjeados: number };
-  const porNegocio = new Map<string, Fila>(
-    brandIds.map((id) => [
-      id,
-      { id, nombre: nombreDeMarca.get(id) ?? "Negocio sin nombre", miembros: 0, escaneos: 0, registros: 0, reclamados: 0, canjeados: 0 },
-    ])
-  );
-  for (const v of listaVinculos) porNegocio.get(v.brand_id)!.miembros++;
-  for (const c of codigos ?? []) {
-    const f = porNegocio.get(c.brand_id)!;
-    f.escaneos += c.scans;
-    f.registros += c.signups;
-  }
-  for (const r of listaCanjes) {
-    const f = porNegocio.get(marcaDeCupon.get(r.coupon_id) ?? "");
-    if (!f) continue;
-    f.reclamados++;
-    if (r.status === "canjeado") f.canjeados++;
-  }
-  const negocios = [...porNegocio.values()].sort((a, b) => b.miembros - a.miembros || a.nombre.localeCompare(b.nombre, "es"));
+  const porNegocio = new Map(negocios.map((n) => [n.id, n]));
 
   // ---- Miembros, con el filtro de la URL ----
   const negociosDe = new Map<string, string[]>();
@@ -318,7 +268,7 @@ export default async function AdminCloseFriendsPage({
                     </td>
                     <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{m.expediente_code}</td>
                     <td style={{ color: "var(--ink-2)" }}>
-                      {(negociosDe.get(m.profile_id) ?? []).map((id) => nombreDeMarca.get(id) ?? "—").join(", ") || "—"}
+                      {(negociosDe.get(m.profile_id) ?? []).map((id) => porNegocio.get(id)?.nombre ?? "—").join(", ") || "—"}
                     </td>
                     <td>
                       <span className={`${styles.riskPill} ${PILL_ESTADO[m.status].clase}`}>{PILL_ESTADO[m.status].label}</span>

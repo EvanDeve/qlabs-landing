@@ -3,9 +3,14 @@ import { requireArea } from "@/lib/auth/areas";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { estadoCuenta } from "@/lib/ugc/estado-cuenta";
 import { displayHandle } from "@/lib/ugc/handles";
+import { cargarCfPorNegocio } from "@/lib/cf/por-negocio";
+import { CF } from "@/lib/cf/copy";
 import styles from "@/styles/qos.module.css";
 
 export const dynamic = "force-dynamic";
+
+/** En el Resumen alcanza con los de arriba; la lista entera vive en Close Friends. */
+const MAX_NEGOCIOS = 8;
 
 /**
  * La primera pantalla del área UGC: cuánto hay de cada cosa y qué está
@@ -28,6 +33,8 @@ export default async function ResumenUgcPage() {
     miembrosActivos,
     canjeados,
     reclamados,
+    eliminacionesPendientes,
+    { negocios },
   ] = await Promise.all([
     // Creadores y marcas sí vienen enteros (solo las columnas del estado): son
     // pocos, y de acá salen tanto los totales como la lista de pendientes.
@@ -53,6 +60,13 @@ export default async function ResumenUgcPage() {
     contar(supabase.from("members").select("profile_id", { count: "exact", head: true }).eq("status", "activo")),
     contar(supabase.from("redemptions").select("id", { count: "exact", head: true }).eq("status", "canjeado")),
     contar(supabase.from("redemptions").select("id", { count: "exact", head: true }).eq("status", "reclamado")),
+    contar(
+      supabase
+        .from("member_deletion_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pendiente")
+    ),
+    cargarCfPorNegocio(supabase),
   ]);
 
   const listaCreadores = creadores ?? [];
@@ -151,6 +165,68 @@ export default async function ResumenUgcPage() {
               </div>
             </Link>
           ))
+        )}
+      </div>
+      <div className={styles.card} style={{ padding: 18 }}>
+        <div className={styles.sectionHead}>
+          <h2>{CF.programa} por negocio</h2>
+          <Link href="/admin/close-friends" className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}>
+            Ir a {CF.programa}
+          </Link>
+        </div>
+        {/* Lo único del programa que espera a alguien del equipo: se avisa acá
+            y se atiende en la pantalla de Close Friends. */}
+        {eliminacionesPendientes > 0 && (
+          <Link href="/admin/close-friends" className={styles.attnItem} style={{ marginBottom: 12 }}>
+            <div className={styles.attnBody}>
+              <div className={styles.attnTitle}>
+                {eliminacionesPendientes === 1
+                  ? "1 solicitud de eliminación pendiente"
+                  : `${eliminacionesPendientes} solicitudes de eliminación pendientes`}
+              </div>
+              <div className={styles.attnMeta}>Un miembro pidió que se borre su cuenta.</div>
+            </div>
+            <span className={`${styles.riskPill} ${styles.riskRisk}`}>Atender</span>
+          </Link>
+        )}
+        {negocios.length === 0 ? (
+          <p className={styles.attnMeta}>Ningún negocio tiene QR ni miembros todavía.</p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className={styles.acctTable}>
+              <thead>
+                <tr>
+                  <th>Negocio</th>
+                  <th style={{ textAlign: "right" }}>Miembros</th>
+                  <th style={{ textAlign: "right" }}>Escaneos</th>
+                  <th style={{ textAlign: "right" }}>Registros</th>
+                  <th style={{ textAlign: "right" }}>Canjes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {negocios.slice(0, MAX_NEGOCIOS).map((n) => (
+                  <tr key={n.id}>
+                    <td>
+                      <Link href={`/admin/close-friends?negocio=${n.id}#miembros`}>
+                        <b>{n.nombre}</b>
+                      </Link>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <b>{n.miembros}</b>
+                    </td>
+                    <td style={{ textAlign: "right" }}>{n.escaneos}</td>
+                    <td style={{ textAlign: "right" }}>{n.registros}</td>
+                    <td style={{ textAlign: "right" }}>{n.canjeados}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {negocios.length > MAX_NEGOCIOS && (
+              <p className={styles.attnMeta} style={{ paddingTop: 10 }}>
+                Los {MAX_NEGOCIOS} con más miembros de {negocios.length}. El resto, en {CF.programa}.
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>
