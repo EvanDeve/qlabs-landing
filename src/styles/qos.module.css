@@ -13349,3 +13349,51 @@
 .fichaPuntos i[data-on] {
   background: var(--b-500);
 }
+/* ---- Loyalty (mockup 1d): tabla + panel del creador elegido ---- */
+.loyGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 310px);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1140px) {
+  .loyGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.loyGrid .tablaLista th,
+.loyGrid .tablaLista td {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.loyPanelHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.loyBarra {
+  height: 5px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  margin-top: 14px;
+  overflow: hidden;
+}
+.loyBarra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.loyMotivo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+.loyMotivo + .loyMotivo {
+  border-top: 1px solid var(--line-2);
+}
+.loyMotivo b {
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
