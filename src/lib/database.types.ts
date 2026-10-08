@@ -1,6 +1,12 @@
-// Hand-written to match supabase/migrations/*.sql — regenerate with
-// `npm run db:types` once a local (Docker) or hosted Supabase project exists:
-//   supabase gen types typescript --local > src/lib/database.types.ts
+// Escrito a mano para que coincida con supabase/migrations/*.sql: no hay
+// Supabase local y el CLI no tiene sesión contra prod. Se mantiene a mano al
+// escribir cada migración. Para compararlo con prod, el OpenAPI de PostgREST
+// (GET /rest/v1/ con la service-role y `Accept: application/openapi+json`)
+// lista las tablas, vistas, columnas y funciones reales.
+//
+// Funciones: solo se tipan las que la app llama con `.rpc()`. Las auxiliares
+// de policies y triggers (tiene_aplicacion_en, puede_ver_board, slugify…)
+// existen en prod pero no van acá a propósito.
 
 export type Json =
   | string
@@ -169,14 +175,9 @@ export interface Database {
           languages: string[];
           instagram_handle: string | null;
           tiktok_handle: string | null;
-          rate_min: number | null;
-          rate_max: number | null;
           verified: boolean;
           rejected_at: string | null;
           rejection_reason: string | null;
-          avg_views: number | null;
-          engagement_rate: number | null;
-          avg_reach: number | null;
         };
         Insert: {
           profile_id: string;
@@ -186,14 +187,9 @@ export interface Database {
           languages?: string[];
           instagram_handle?: string | null;
           tiktok_handle?: string | null;
-          rate_min?: number | null;
-          rate_max?: number | null;
           verified?: boolean;
           rejected_at?: string | null;
           rejection_reason?: string | null;
-          avg_views?: number | null;
-          engagement_rate?: number | null;
-          avg_reach?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["creator_profiles"]["Insert"]>;
         Relationships: [];
@@ -214,34 +210,6 @@ export interface Database {
           position?: number;
         };
         Update: Partial<Database["public"]["Tables"]["creator_skills"]["Insert"]>;
-        Relationships: [];
-      };
-      creator_services: {
-        Row: {
-          id: string;
-          creator_id: string;
-          service: string;
-        };
-        Insert: {
-          id?: string;
-          creator_id: string;
-          service: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["creator_services"]["Insert"]>;
-        Relationships: [];
-      };
-      creator_addons: {
-        Row: {
-          id: string;
-          creator_id: string;
-          addon: string;
-        };
-        Insert: {
-          id?: string;
-          creator_id: string;
-          addon: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["creator_addons"]["Insert"]>;
         Relationships: [];
       };
       creator_past_brands: {
@@ -306,7 +274,6 @@ export interface Database {
           target_audience: string | null;
           deadline_days: number | null;
           status: CampaignStatus;
-          min_tier: string | null;
           created_at: string;
           published_at: string | null;
           compensation_details: string | null;
@@ -327,7 +294,6 @@ export interface Database {
           target_audience?: string | null;
           deadline_days?: number | null;
           status?: CampaignStatus;
-          min_tier?: string | null;
           created_at?: string;
           published_at?: string | null;
           compensation_details?: string | null;
@@ -713,7 +679,6 @@ export interface Database {
           // ni zona. Ver la migración 20260801000000 — pasarlas por `new Date()`
           // y compararlas como instantes es exactamente el bug que arregló.
           publish_date: string | null;
-          record_date: string | null;
           // Columna `time` sin zona: llega como 'HH:mm:ss' y es hora de Costa
           // Rica. Va aparte de publish_date justamente para no volver a meter
           // una hora dentro de un día. Ver la migración 20260812000000.
@@ -749,7 +714,6 @@ export interface Database {
           priority?: ContentPriority;
           platform?: ContentPlatform;
           publish_date?: string | null;
-          record_date?: string | null;
           publish_time?: string | null;
           drive_url?: string | null;
           script_url?: string | null;
@@ -817,6 +781,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["password_reset_throttle"]["Insert"]>;
         Relationships: [];
       };
+      // El freno del registro de miembros (Close Friends). Sin policies a
+      // propósito: solo la escribe `frenar_registro`, que corre como su dueño.
+      member_signup_throttle: {
+        Row: {
+          clave: string;
+          ventana_inicio: string;
+          intentos: number;
+        };
+        Insert: {
+          clave: string;
+          ventana_inicio?: string;
+          intentos?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["member_signup_throttle"]["Insert"]>;
+        Relationships: [];
+      };
       creator_task_columns: {
         Row: {
           id: string;
@@ -872,7 +852,6 @@ export interface Database {
           id: string;
           type: CalendarEventType;
           brand_id: string | null;
-          content_piece_id: string | null;
           title: string;
           starts_at: string;
           responsible_id: string | null;
@@ -884,7 +863,6 @@ export interface Database {
           id?: string;
           type: CalendarEventType;
           brand_id?: string | null;
-          content_piece_id?: string | null;
           title: string;
           starts_at: string;
           responsible_id?: string | null;
@@ -1285,8 +1263,6 @@ export interface Database {
           instagram_handle: string | null;
           tiktok_handle: string | null;
           verified: boolean;
-          engagement_rate: number | null;
-          avg_views: number | null;
           display_name: string | null;
           bio: string | null;
           city: string | null;

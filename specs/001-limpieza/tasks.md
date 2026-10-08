@@ -35,7 +35,7 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
   Se escribe después de que T06–T08 estén **desplegados en prod**. Evan la corre.
   *Hecho cuando:* Evan la corrió, `creator_delivery_stats` responde 404, las tablas no existen y `/ugc` y los perfiles públicos de creador cargan.
 
-- [ ] **T10 — Tipos de la base al día** (RF-07)
+- [x] **T10 — Tipos de la base al día** (RF-07)
   *Hecho cuando:* `database.types.ts` coincide con prod y `npx tsc --noEmit` no da errores.
 
 - [ ] **T11 — Validación final y mudanza** (RF-01, RF-08)
