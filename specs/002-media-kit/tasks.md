@@ -23,15 +23,15 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Actualizar `src/lib/database.types.ts` a mano con lo de T04.
   *Hecho cuando:* coincide con el OpenAPI de prod y `npx tsc --noEmit` no da errores.
 
-- [ ] **T06 — Tests RLS de destacadas** (RF-01, RF-02, RF-05)
+- [x] **T06 — Tests RLS de destacadas** (RF-01, RF-02, RF-05)
   `tests/rls/media-kit-destacadas.test.ts`: fijar 3 en orden, reordenar, 4 ids fallan, una cuarta por `update` directo choca con el unique, ids de otro creador fallan, anon no ejecuta la rpc, borrar una destacada la saca.
   *Hecho cuando:* `npm run test:rls` pasa y la consulta del README no deja cuentas `rlstest`.
 
-- [ ] **T07 — Tests RLS del teléfono** (RF-06, RF-07, RF-10, RF-12, RF-12b, RF-12c)
+- [x] **T07 — Tests RLS del teléfono** (RF-06, RF-07, RF-10, RF-12, RF-12b, RF-12c)
   `tests/rls/media-kit-telefono.test.ts`: escritura propia y checks; la vista sin el número y con `tiene_telefono`; `ver_telefono_creador` para anon (sin permiso), otro creador, marca sin verificar, marca verificada, admin, creador sin verificar, `mostrar_telefono = false`, y marca a la que se le saca la verificación; una notificación por marca+creador+día y ninguna a admins reales. `afterAll` borra las `telefono_visto` de prueba antes de `cleanup()`.
   *Hecho cuando:* `npm run test:rls` pasa, no quedan cuentas `rlstest` y no queda ninguna notificación `telefono_visto` con `brand_id` de prueba.
 
-- [ ] **T08 — Tests RLS de visitas** (RF-13, RF-14, RF-16, RF-17, RF-19, RF-21)
+- [x] **T08 — Tests RLS de visitas** (RF-13, RF-14, RF-16, RF-17, RF-19, RF-21)
   `tests/rls/media-kit-visitas.test.ts`: anon suma 1 y repite sin sumar; otro anon suma; dueño y admin no suman; marca suma como `de_marcas`; creador sin verificar no suma; una fila de hace 31 días (sembrada con service role) no entra en la ventana; nadie más que el dueño y admin lee totales ni filas.
   *Hecho cuando:* `npm run test:rls` pasa y no quedan cuentas `rlstest`.
 
