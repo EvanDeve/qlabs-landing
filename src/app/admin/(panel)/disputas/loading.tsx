@@ -4,34 +4,26 @@ import { Skel, SkelLineas, SkelPantalla } from "@/components/ugc/Skeleton";
 export default function Loading() {
   return (
     <SkelPantalla>
-      <Skel w="55%" h={11} style={{ marginBottom: 22 }} />
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <Skel w={240} h={34} r={999} />
+      <Skel w="40%" h={12} style={{ marginBottom: 18 }} />
+      <div className={styles.barraAdmin}>
+        <Skel w={200} h={34} r={11} />
+        <Skel w={220} h={35} r={9} />
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <Skel w={260} h={35} r={9} />
-        <Skel w={70} h={30} r={9} />
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {Array.from({ length: 2 }, (_, i) => (
-          <div key={i} className={`${styles.card} ${styles.cardPad}`}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 14, marginBottom: 16 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <Skel w={220} h={15} />
-                <Skel w={160} h={10} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
-                <Skel w={130} h={10} />
-                <Skel w={110} h={10} />
-              </div>
+      <div className={styles.dispGrid}>
+        <div className={styles.dispLista}>
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className={`${styles.card} ${styles.dispItem}`}>
+              <Skel w={90} h={18} r={9} style={{ marginBottom: 10 }} />
+              <Skel w="80%" h={12} style={{ marginBottom: 6 }} />
+              <Skel w="60%" h={9} />
             </div>
-            <SkelLineas n={2} />
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              <Skel w={120} h={32} r={9} />
-              <Skel w={120} h={32} r={9} />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className={`${styles.card} ${styles.dispDetalle}`}>
+          <Skel w={260} h={18} style={{ marginBottom: 10 }} />
+          <Skel w="45%" h={10} style={{ marginBottom: 20 }} />
+          <SkelLineas n={5} />
+        </div>
       </div>
     </SkelPantalla>
   );

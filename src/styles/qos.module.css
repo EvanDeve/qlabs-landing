@@ -13451,3 +13451,137 @@
     margin-left: -2px;
   }
 }
+/* ---- Disputas (mockup 1f): lista a la izquierda, detalle a la derecha ---- */
+.dispGrid {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .dispGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.dispLista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.qosRoot .dispItem {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  transition: var(--t-fast);
+}
+.qosRoot .dispItem:hover {
+  border-color: var(--line-strong);
+}
+.qosRoot .dispItemOn {
+  border-color: var(--b-400);
+  box-shadow: 0 0 0 3px var(--b-50);
+  background: var(--b-50);
+}
+.dispItemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dispDetalle {
+  padding: 20px 22px;
+}
+.dispDetalleHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.dispDetalleHead h2 {
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+.dispCajas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+@media (max-width: 560px) {
+  .dispCajas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.dispMotivo {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 4px 0 18px;
+}
+.dispResolucion {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-3);
+}
+.dispResolucion p {
+  font-size: 13.5px;
+  margin-top: 4px;
+}
+.decisionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 560px) {
+  .decisionGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.decisionCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.decisionCard:hover {
+  border-color: var(--line-strong);
+}
+.decisionCard input {
+  margin-top: 3px;
+  accent-color: var(--b-500);
+}
+.decisionCard b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.decisionCard small {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.decisionOn {
+  border-color: var(--b-500);
+  box-shadow: 0 0 0 3px var(--b-50);
+}
+.decisionPie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.dispDetalleHead .riskPill,
+.dispItemTop .riskPill {
+  white-space: nowrap;
+  flex-shrink: 0;
+}

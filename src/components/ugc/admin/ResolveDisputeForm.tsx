@@ -4,35 +4,66 @@ import { useActionState, useState } from "react";
 import { resolveDisputeAction, type ConflictActionState } from "@/lib/actions/conflicts";
 import styles from "@/styles/qos.module.css";
 
-// Resolver una disputa manda correo a las dos partes, así que la nota es
-// obligatoria: es el registro de por qué se decidió lo que se decidió.
-export default function ResolveDisputeForm({ applicationId }: { applicationId: string }) {
+const DECISIONES = [
+  {
+    id: "approve",
+    titulo: "Dar la entrega por aprobada",
+    detalle: "Se libera el pago al creador",
+  },
+  {
+    id: "cancel",
+    titulo: "Cancelar la colaboración",
+    detalle: "No se paga y la aplicación se cierra",
+  },
+] as const;
+
+/**
+ * "Tu decisión" (mockup 1f): las dos salidas como tarjetas con lo que
+ * implica cada una, la nota y a quién le llega.
+ *
+ * Resolver una disputa manda correo a las dos partes, así que la nota es
+ * obligatoria: es el registro de por qué se decidió lo que se decidió.
+ */
+export default function ResolveDisputeForm({
+  applicationId,
+  marca,
+  creador,
+}: {
+  applicationId: string;
+  marca: string;
+  creador: string;
+}) {
   const [decision, setDecision] = useState<"approve" | "cancel">("approve");
   const [state, formAction, pending] = useActionState<ConflictActionState, FormData>(
     resolveDisputeAction,
-    null
+    null,
   );
 
   return (
-    <form action={formAction} style={{ marginTop: "16px" }}>
+    <form action={formAction}>
       <input type="hidden" name="application_id" value={applicationId} />
-      <input type="hidden" name="decision" value={decision} />
-
-      <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
-        <button
-          type="button"
-          onClick={() => setDecision("approve")}
-          className={`${styles.subtab} ${decision === "approve" ? styles.subtabOn : ""}`}
-        >
-          Dar la entrega por aprobada
-        </button>
-        <button
-          type="button"
-          onClick={() => setDecision("cancel")}
-          className={`${styles.subtab} ${decision === "cancel" ? styles.subtabOn : ""}`}
-        >
-          Cancelar la colaboración
-        </button>
+      <div className={styles.fichaK} style={{ marginBottom: 8, color: "var(--ink)", fontSize: 13 }}>
+        Tu decisión
+      </div>
+      <div className={styles.decisionGrid} role="radiogroup" aria-label="Tu decisión">
+        {DECISIONES.map((d) => (
+          <label
+            key={d.id}
+            className={`${styles.decisionCard} ${decision === d.id ? styles.decisionOn : ""}`}
+          >
+            <input
+              type="radio"
+              name="decision"
+              value={d.id}
+              checked={decision === d.id}
+              onChange={() => setDecision(d.id)}
+            />
+            <span>
+              <b>{d.titulo}</b>
+              <small>{d.detalle}</small>
+            </span>
+          </label>
+        ))}
       </div>
 
       <textarea
@@ -40,22 +71,21 @@ export default function ResolveDisputeForm({ applicationId }: { applicationId: s
         required
         minLength={10}
         rows={3}
-        placeholder="Cómo se resolvió y por qué. Lo van a leer las dos partes."
+        placeholder="Nota para las dos partes (obligatoria)…"
         className={styles.inp}
-        style={{ width: "100%", resize: "vertical", marginBottom: "10px" }}
+        style={{ width: "100%", resize: "vertical", margin: "12px 0 10px" }}
       />
 
       {state && "error" in state && (
         <p style={{ fontSize: "13px", color: "var(--risk)", marginBottom: "10px" }}>{state.error}</p>
       )}
 
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button type="submit" disabled={pending} className={`${styles.btn} ${styles.btnPrimary}`}>
-          {pending
-            ? "Resolviendo…"
-            : decision === "approve"
-              ? "Aprobar y avisar a ambos"
-              : "Cancelar y avisar a ambos"}
+      <div className={styles.decisionPie}>
+        <span>
+          Les llega por correo a {marca} y a {creador}.
+        </span>
+        <button type="submit" disabled={pending} className={`${styles.btn} ${styles.btnAccent}`}>
+          {pending ? "Resolviendo…" : "Resolver disputa"}
         </button>
       </div>
     </form>
