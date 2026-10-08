@@ -13397,3 +13397,57 @@
   font-size: 13.5px;
   font-variant-numeric: tabular-nums;
 }
+/* ---- Close Friends (mockup 1e) ---- */
+/* Una franja por cosa urgente, con el borde izquierdo en rojo. */
+.franjaRisk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-left: 3px solid var(--risk);
+  font-size: 13px;
+}
+.franjaTxt {
+  flex: 1;
+  min-width: 200px;
+  color: var(--ink-2);
+}
+.filtroSelects {
+  display: flex;
+  gap: 2px;
+}
+.qosRoot .selectMini {
+  border: 0;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  padding: 4px 2px;
+  cursor: pointer;
+  max-width: 150px;
+}
+.qosRoot .selectMini:hover {
+  color: var(--ink);
+}
+/* "Por negocio" tiene seis columnas y "Miembros" cinco: la primera necesita
+   un poco más de ancho para no desbordar. */
+.cfGrid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+@media (max-width: 1140px) {
+  .cfGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sectionHeadWrap {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+@media (max-width: 560px) {
+  .sectionHeadWrap .filtroSelects {
+    width: 100%;
+    flex-wrap: wrap;
+    margin-left: -2px;
+  }
+}
