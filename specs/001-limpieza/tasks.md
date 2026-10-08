@@ -31,7 +31,7 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
 - [x] **T08 — Fuera `content_pieces.record_date` del código** (RF-01, RF-03)
   *Hecho cuando:* `grep` da 0 en `src/`, el test de agenda pasa, y el inicio, el calendario y el kanban de Q·OS se ven igual. Si "reprogramar" de McLovin necesita más que quitar la columna: parar y preguntar.
 
-- [ ] **T09 — Migración `limpieza_001`** (RF-03, RF-04, RF-05)
+- [x] **T09 — Migración `limpieza_001`** (RF-03, RF-04, RF-05)
   Se escribe después de que T06–T08 estén **desplegados en prod**. Evan la corre.
   *Hecho cuando:* Evan la corrió, `creator_delivery_stats` responde 404, las tablas no existen y `/ugc` y los perfiles públicos de creador cargan.
 

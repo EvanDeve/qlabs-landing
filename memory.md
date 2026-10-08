@@ -4,7 +4,7 @@
 
 ## Estado actual (2026-10-08)
 - **En prod:** marketplace completo (creador y marca rediseñados estilo iOS), Q·OS (agencia + área UGC rediseñada, mockups 1a–1f), Loyalty Loop, Close Friends (rol `member`, entra por QR), cronogramas mensuales con links para el Hero y para quien graba.
-- **Tarea activa:** spec `001-limpieza` aprobada, con plan y 11 tareas en `specs/001-limpieza/tasks.md`; T01–T08 hechas; T09 (migración) espera a que el deploy de T06–T08 esté en prod.
+- **Tarea activa:** spec `001-limpieza` aprobada, con plan y 11 tareas en `specs/001-limpieza/tasks.md`; T01–T09 hechas (migración `limpieza_001` corrida en prod el 2026-10-08).
 - **Recién hecho:**
   - `e586f42` nichos de creador: catálogo de 22, máximo 5, filtro `?nicho=` en Q·OS.
   - `ff9f563` links de acceso con `token_hash` y botón "Continuar" (los filtros de correo corporativos quemaban las invitaciones) + "Reenviar acceso" en Equipo.
