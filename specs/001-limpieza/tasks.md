@@ -17,7 +17,7 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
 - [x] **T04 — CSS muerto de `qos.module.css`** (RF-01, RF-02)
   *Hecho cuando:* se borraron las clases verificadas, el build pasa y la recorrida visual de Q·OS no muestra cambios.
 
-- [ ] **T05 — Regla de apuntes en un solo lugar** (RF-06)
+- [x] **T05 — Regla de apuntes en un solo lugar** (RF-06)
   Test primero, después `src/lib/ugc/apuntes.ts`, que usa `/grabacion`.
   *Hecho cuando:* el test pasa y `/grabacion/[token]` muestra lo mismo que antes.
 

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nombreDeMes, horaCorta } from "@/lib/ugc/cronograma";
 import { diaCorto } from "@/lib/ugc/calendar";
+import { apuntesDe } from "@/lib/ugc/apuntes";
 import CronogramaGrabacion from "@/components/ugc/CronogramaGrabacion";
 
 export const dynamic = "force-dynamic";
@@ -31,22 +32,6 @@ export const dynamic = "force-dynamic";
  * así se queda—, y la ruta vive fuera de `/ugc` y `/admin`, así que el proxy
  * ni la mira.
  */
-
-/**
- * Los apuntes de un video: los de la tarjeta del pipeline si ya es tarjeta, y
- * si no, las notas de producción del propio cronograma.
- *
- * El orden importa y no es arbitrario. Los dos campos dicen lo mismo —si va
- * grabación o voice over— pero viven en momentos distintos: la tarjeta nace
- * recién cuando el cliente aprueba, así que antes de eso lo único que hay son
- * las notas del cronograma. Medido contra producción el 2026-08-26: 93 de 104
- * videos tienen notas del cronograma y solo 32 son tarjeta. Con la tarjeta
- * primero, después de aprobado gana lo último que escribió el equipo sobre el
- * tablero, que es donde lo sigue afinando.
- */
-function apuntesDe(notasDelCronograma: string | null, apuntesDeLaTarjeta: string | null | undefined): string | null {
-  return apuntesDeLaTarjeta?.trim() || notasDelCronograma?.trim() || null;
-}
 
 async function cargar(token: string) {
   // Forma antes que consulta: `crew_token` es uuid, y un token con cualquier

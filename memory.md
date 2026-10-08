@@ -4,7 +4,7 @@
 
 ## Estado actual (2026-10-08)
 - **En prod:** marketplace completo (creador y marca rediseñados estilo iOS), Q·OS (agencia + área UGC rediseñada, mockups 1a–1f), Loyalty Loop, Close Friends (rol `member`, entra por QR), cronogramas mensuales con links para el Hero y para quien graba.
-- **Tarea activa:** spec `001-limpieza` aprobada, con plan y 11 tareas en `specs/001-limpieza/tasks.md`; T01–T04 hechas.
+- **Tarea activa:** spec `001-limpieza` aprobada, con plan y 11 tareas en `specs/001-limpieza/tasks.md`; T01–T05 hechas.
 - **Recién hecho:**
   - `e586f42` nichos de creador: catálogo de 22, máximo 5, filtro `?nicho=` en Q·OS.
   - `ff9f563` links de acceso con `token_hash` y botón "Continuar" (los filtros de correo corporativos quemaban las invitaciones) + "Reenviar acceso" en Equipo.
@@ -14,7 +14,7 @@
 - Los correos de acceso los manda la app por Resend; los de Supabase ya no se usan para invitar ni recuperar.
 - Supabase guarda un solo token de recuperación por cuenta: un link nuevo invalida el anterior.
 - Vercel a veces no promueve el deploy solo: si algo "no cambió" en prod, revisar `vercel ls --prod`.
-- Los apuntes del cronograma viven en dos campos: mirar los dos.
+- Los apuntes del cronograma viven en dos campos a propósito; cuál gana lo decide `apuntesDe` en `src/lib/ugc/apuntes.ts`.
 
 ## En pausa (no tocar sin que Evan lo pida)
 - McLovin (agente de WhatsApp): la salida por WhatsApp está caída desde ~30/8 por un tema de cuenta de Meta, no de código.
