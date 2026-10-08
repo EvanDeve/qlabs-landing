@@ -178,6 +178,8 @@ export interface Database {
           verified: boolean;
           rejected_at: string | null;
           rejection_reason: string | null;
+          telefono_e164: string | null;
+          mostrar_telefono: boolean;
         };
         Insert: {
           profile_id: string;
@@ -190,6 +192,8 @@ export interface Database {
           verified?: boolean;
           rejected_at?: string | null;
           rejection_reason?: string | null;
+          telefono_e164?: string | null;
+          mostrar_telefono?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["creator_profiles"]["Insert"]>;
         Relationships: [];
@@ -403,6 +407,7 @@ export interface Database {
           position: number;
           created_at: string;
           views: number | null;
+          orden_destacada: number | null;
         };
         Insert: {
           id?: string;
@@ -414,6 +419,7 @@ export interface Database {
           position?: number;
           created_at?: string;
           views?: number | null;
+          orden_destacada?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["portfolio_items"]["Insert"]>;
         Relationships: [];
@@ -795,6 +801,40 @@ export interface Database {
           intentos?: number;
         };
         Update: Partial<Database["public"]["Tables"]["member_signup_throttle"]["Insert"]>;
+        Relationships: [];
+      };
+      kit_visitas: {
+        Row: {
+          creator_id: string;
+          dia: string;
+          huella: string;
+          es_marca: boolean;
+          created_at: string;
+        };
+        Insert: {
+          creator_id: string;
+          dia: string;
+          huella: string;
+          es_marca?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["kit_visitas"]["Insert"]>;
+        Relationships: [];
+      };
+      kit_telefono_vistas: {
+        Row: {
+          creator_id: string;
+          brand_id: string;
+          dia: string;
+          created_at: string;
+        };
+        Insert: {
+          creator_id: string;
+          brand_id: string;
+          dia: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["kit_telefono_vistas"]["Insert"]>;
         Relationships: [];
       };
       creator_task_columns: {
@@ -1267,6 +1307,7 @@ export interface Database {
           bio: string | null;
           city: string | null;
           avatar_url: string | null;
+          tiene_telefono: boolean;
         };
         Relationships: [];
       };
@@ -1331,6 +1372,22 @@ export interface Database {
       };
     };
     Functions: {
+      fijar_destacadas: {
+        Args: { p_ids: string[] };
+        Returns: undefined;
+      };
+      ver_telefono_creador: {
+        Args: { p_creator: string };
+        Returns: string | null;
+      };
+      registrar_visita_kit: {
+        Args: { p_creator: string; p_anonimo?: string | null };
+        Returns: undefined;
+      };
+      resumen_visitas_kit: {
+        Args: { p_creator: string; p_desde: string };
+        Returns: { total: number; de_marcas: number }[];
+      };
       current_app_role: {
         Args: Record<string, never>;
         Returns: AppRole | null;

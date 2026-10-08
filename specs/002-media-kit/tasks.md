@@ -19,7 +19,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Escribir `supabase/migrations/20261008200000_media_kit.sql` como dice el plan. Antes: `grep` de dependencias de `creator_public_profiles` y comparar sus columnas con el OpenAPI de prod. Es aditiva, así que se puede correr con el código de hoy en prod. Evan la corre.
   *Hecho cuando:* Evan la corrió y el OpenAPI de prod muestra `orden_destacada`, `telefono_e164`, `mostrar_telefono`, `tiene_telefono` en la vista, las tablas `kit_visitas` y `kit_telefono_vistas` y las rpc `fijar_destacadas`, `ver_telefono_creador`, `registrar_visita_kit` y `resumen_visitas_kit`; `/ugc` y un kit público siguen cargando.
 
-- [ ] **T05 — Tipos de la base** (todos)
+- [x] **T05 — Tipos de la base** (todos)
   Actualizar `src/lib/database.types.ts` a mano con lo de T04.
   *Hecho cuando:* coincide con el OpenAPI de prod y `npx tsc --noEmit` no da errores.
 
