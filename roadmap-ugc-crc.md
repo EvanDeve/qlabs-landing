@@ -194,9 +194,7 @@ Vas a construir **UGC·CRC**, un marketplace que conecta negocios costarricenses
 
 ## Design system
 
-Existen dos prototipos HTML en este repo que son la referencia visual 1:1 — replicá sus componentes en React, no rediseñes:
-- **qlabs-final.html** → la landing (/) con la sección UGC·CRC del puente de los dos héroes
-- **final_prototipo_ugc.html** → todo el marketplace (/ugc y dashboards)
+> **Histórico:** los dos prototipos que se nombraban acá se descartaron y se borraron del repo en la spec 001. La referencia de diseño vigente está en `docs/constitution.md` §4.
 
 Tokens:
 - Fuentes: 'Plus Jakarta Sans' (weight 800 para headings, 400-700 body) + 'Space Mono' para labels/datos/eyebrows

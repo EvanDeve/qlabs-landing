@@ -1,0 +1,695 @@
+<title>Q·OS como producto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap">
+
+<style>
+  :root {
+    --ground:      #FBFAFE;
+    --surface:     #FFFFFF;
+    --surface-2:   #F6F4FD;
+    --ink:         #0A0B10;
+    --ink-2:       #5B5570;
+    --ink-3:       #8B85A0;
+    --line:        rgba(10, 11, 16, 0.10);
+    --line-soft:   rgba(10, 11, 16, 0.06);
+    --violet:      #705CF6;
+    --violet-deep: #5641D8;
+    --violet-wash: #EFECFD;
+    --trust:       #17A673;
+    --trust-wash:  #E7F7F1;
+    --coral:       #D9432F;
+    --coral-wash:  #FDEDEA;
+    --shadow:      0 1px 2px rgba(10, 11, 16, .04), 0 8px 24px -12px rgba(10, 11, 16, .10);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0B0A11;
+      --surface:     #141320;
+      --surface-2:   #1B1929;
+      --ink:         #F3F1FA;
+      --ink-2:       #A9A3C0;
+      --ink-3:       #7B7595;
+      --line:        rgba(243, 241, 250, 0.14);
+      --line-soft:   rgba(243, 241, 250, 0.07);
+      --violet:      #9E8DFF;
+      --violet-deep: #B9ADFF;
+      --violet-wash: #221E3B;
+      --trust:       #4FD3A0;
+      --trust-wash:  #12281F;
+      --coral:       #FF8A75;
+      --coral-wash:  #2E1712;
+      --shadow:      0 1px 2px rgba(0, 0, 0, .40), 0 8px 24px -12px rgba(0, 0, 0, .60);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0B0A11;
+    --surface:     #141320;
+    --surface-2:   #1B1929;
+    --ink:         #F3F1FA;
+    --ink-2:       #A9A3C0;
+    --ink-3:       #7B7595;
+    --line:        rgba(243, 241, 250, 0.14);
+    --line-soft:   rgba(243, 241, 250, 0.07);
+    --violet:      #9E8DFF;
+    --violet-deep: #B9ADFF;
+    --violet-wash: #221E3B;
+    --trust:       #4FD3A0;
+    --trust-wash:  #12281F;
+    --coral:       #FF8A75;
+    --coral-wash:  #2E1712;
+    --shadow:      0 1px 2px rgba(0, 0, 0, .40), 0 8px 24px -12px rgba(0, 0, 0, .60);
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 56px 28px 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  .col { max-width: 68ch; }
+
+  a { color: var(--violet-deep); }
+  a:focus-visible,
+  th:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; border-radius: 4px; }
+
+  /* ---------- encabezado ---------- */
+
+  .masthead { display: flex; flex-direction: column; gap: 18px; }
+
+  .kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .kicker b { color: var(--violet); font-weight: 700; }
+  .kicker span[aria-hidden] { color: var(--line); }
+
+  h1 {
+    font-size: clamp(38px, 6vw, 60px);
+    font-weight: 800;
+    letter-spacing: -.033em;
+    line-height: 1.02;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--violet);
+  }
+
+  .standfirst {
+    font-size: 21px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 56ch;
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  /* ---------- veredicto ---------- */
+
+  .verdict {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 30px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .verdict h2 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin: 0;
+  }
+  .verdict p {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.5;
+    max-width: 62ch;
+    text-wrap: pretty;
+  }
+  .verdict strong { font-weight: 800; }
+
+  /* ---------- secciones ---------- */
+
+  section { display: flex; flex-direction: column; gap: 22px; }
+
+  h2.head {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -.022em;
+    margin: 0;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -.012em;
+    margin: 0 0 6px;
+  }
+
+  p { margin: 0 0 14px; text-wrap: pretty; }
+  p:last-child { margin-bottom: 0; }
+
+  .lede { font-size: 19px; color: var(--ink-2); }
+
+  ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
+  li { padding-left: 4px; }
+  li::marker { color: var(--violet); }
+
+  strong { font-weight: 700; }
+
+  code, .mono {
+    font-family: "Space Mono", ui-monospace, SFMono-Regular, monospace;
+    font-size: .88em;
+  }
+  code {
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+
+  /* ---------- tablas ---------- */
+
+  .scroller { overflow-x: auto; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+
+  caption {
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-3);
+    padding: 14px 20px 0;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: baseline;
+  }
+  thead th {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  td.num, th.num {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+  td.num { font-weight: 700; }
+  td.hi { color: var(--violet); }
+
+  tfoot td {
+    border-top: 1px solid var(--line);
+    border-bottom: none;
+    font-weight: 800;
+    background: var(--surface-2);
+  }
+
+  tr.pick td { background: var(--violet-wash); }
+  tr.pick td:first-child { box-shadow: inset 3px 0 0 var(--violet); }
+
+  /* ---------- cifras medidas ---------- */
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .fact { background: var(--surface); padding: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .fact .n {
+    font-family: "Space Mono", monospace;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .fact .l { font-size: 13px; color: var(--ink-2); line-height: 1.35; }
+  .fact.alarm .n { color: var(--coral); }
+
+  /* ---------- fórmula ---------- */
+
+  .formula {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 32px 28px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+  .formula .eq {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: clamp(17px, 2.6vw, 22px);
+    font-weight: 700;
+  }
+  .formula .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .formula .frac .top { padding: 0 12px 6px; border-bottom: 2px solid var(--violet); }
+  .formula .frac .bot { padding: 6px 12px 0; color: var(--violet); }
+  .formula .op { font-family: "Space Mono", monospace; color: var(--ink-3); font-weight: 400; }
+  .formula .note { font-size: 14.5px; color: var(--ink-2); max-width: 54ch; }
+
+  /* ---------- trampas ---------- */
+
+  .traps { display: flex; flex-direction: column; gap: 16px; }
+  .trap {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--coral);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .trap h3 { color: var(--coral); }
+  .trap p { font-size: 16px; color: var(--ink-2); }
+  .trap p strong { color: var(--ink); }
+
+  /* ---------- pasos ---------- */
+
+  .steps { display: flex; flex-direction: column; gap: 0; counter-reset: paso; }
+  .step {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    gap: 18px;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--line-soft);
+    align-items: start;
+  }
+  .step:last-child { border-bottom: none; }
+  .step::before {
+    counter-increment: paso;
+    content: counter(paso);
+    font-family: "Space Mono", monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--violet);
+    background: var(--violet-wash);
+    border-radius: 10px;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+  }
+  .step p { font-size: 16px; color: var(--ink-2); }
+  .step p strong { color: var(--ink); }
+
+  .out {
+    display: inline-block;
+    margin-top: 6px;
+    font-family: "Space Mono", monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--trust);
+    background: var(--trust-wash);
+    border-radius: 999px;
+    padding: 3px 12px;
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 22px;
+    font-size: 14px;
+    color: var(--ink-3);
+    max-width: 68ch;
+  }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .page { padding: 36px 18px 80px; gap: 44px; }
+    .verdict, .formula { padding: 24px 20px; }
+    th, td { padding: 11px 14px; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <div class="kicker">
+      <b>Nota de decisión</b>
+      <span aria-hidden="true">·</span>
+      <span>Q Labs</span>
+      <span aria-hidden="true">·</span>
+      <span>19 de agosto, 2026</span>
+    </div>
+    <h1>Vender Q·OS a <em>otras agencias</em></h1>
+    <p class="standfirst">
+      Qué se cobra, cuánto puede dejar al mes, y qué cuesta de verdad convertir el panel del
+      equipo en un producto que otra agencia pueda usar sin ver los datos de la nuestra.
+    </p>
+  </header>
+
+  <div class="verdict">
+    <h2>La decisión</h2>
+    <p>
+      No arranques construyendo el SaaS. Vendé <strong>3 a 5 instancias dedicadas</strong> al modelo
+      de <span class="mono">$3.500 + $250/mes</span>. Eso deja ~$17.000 de caja y, sobre todo, te dice
+      si el producto se sostiene fuera de Q Labs. Si esas cinco renuevan al año,
+      <strong>ahí</strong> financiás las 12 semanas de multi-tenant con plata y con evidencia. Si no
+      renuevan, te ahorraste tres meses de ingeniería.
+    </p>
+  </div>
+
+  <section class="col">
+    <h2 class="head">Qué se vende</h2>
+    <p class="lede">
+      Q·OS no es un tablero de tareas. Es el sistema operativo de una agencia: el pipeline de
+      clientes, el calendario de contenido, los cronogramas mensuales que el cliente final recibe
+      por link, y McLovin — el agente que mueve tarjetas por WhatsApp.
+    </p>
+    <p>
+      Esa última parte es la que justifica cobrar por encima de un Monday o un ClickUp. Ellos venden
+      un tablero genérico a $12 por usuario. Nosotros vendemos algo que ninguna herramienta
+      horizontal da: que el equipo opere desde WhatsApp y que el cliente reciba su cronograma sin
+      tener una cuenta. Se vende como <strong>sistema operativo de agencia</strong>, no como un CRM
+      más barato.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="head">Precio</h2>
+    <div class="col">
+      <p>
+        Dos modelos posibles. El de instancia dedicada es el que se puede vender <em>esta semana</em>;
+        el de planes exige el multi-tenant que se costea más abajo.
+      </p>
+    </div>
+
+    <div class="scroller">
+      <table>
+        <caption>Instancia dedicada — vendible hoy</caption>
+        <thead>
+          <tr><th>Concepto</th><th>Rango</th><th class="num">Ancla</th><th>Qué incluye</th></tr>
+        </thead>
+        <tbody>
+          <tr class="pick">
+            <td><strong>Implementación</strong></td>
+            <td>$3.000 – $4.500</td>
+            <td class="num hi">$3.500</td>
+            <td>Setup, branding, migración de sus clientes, conexión de WhatsApp, 2 capacitaciones</td>
+          </tr>
+          <tr>
+            <td><strong>Mensual</strong></td>
+            <td>$150 – $400</td>
+            <td class="num hi">$250</td>
+            <td>Hasta 10 usuarios; +$25 por usuario extra</td>
+          </tr>
+          <tr>
+            <td>Aislamiento real</td>
+            <td>—</td>
+            <td class="num">+$1.000<br>+$50/mes</td>
+            <td>Dominio propio y proyecto de Supabase separado</td>
+          </tr>
+          <tr>
+            <td>Costo duro por tenant</td>
+            <td>—</td>
+            <td class="num">$60 – $100</td>
+            <td>Supabase Pro, parte de Vercel, Twilio por conversación, Gemini / ElevenLabs</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <p>
+        Debajo de $2.500 de implementación estás regalando trabajo: el onboarding real son 25 a 40
+        horas. Y debajo de <strong>$150/mes</strong> trabajás gratis, porque la infraestructura sola
+        se come el resto.
+      </p>
+      <p>
+        Condiciones que te protegen: <strong>50% de la implementación por adelantado</strong>,
+        contrato mínimo de 12 meses y ajuste anual. Sin el mínimo de 12 meses te pagan el setup,
+        exportan todo y se van en el mes tres.
+      </p>
+    </div>
+
+    <div class="scroller">
+      <table>
+        <caption>Planes SaaS — requieren multi-tenant</caption>
+        <thead>
+          <tr><th>Plan</th><th class="num">Precio</th><th>Para quién</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Solo</strong></td><td class="num">$49</td><td>1–3 usuarios, sin McLovin</td></tr>
+          <tr class="pick"><td><strong>Agencia</strong></td><td class="num hi">$149</td><td>Hasta 10 usuarios, con WhatsApp — <em>acá cae casi todo el mundo</em></td></tr>
+          <tr><td><strong>Estudio</strong></td><td class="num">$299</td><td>Hasta 25 usuarios, multi-marca</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>ARPU realista</td><td class="num">$150 – $170</td><td>Porque el plan del medio se lleva la mayoría</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="head">Cuánto puede dejar al mes</h2>
+    <div class="col">
+      <p class="lede">
+        El precio no decide los ingresos. Los decide el churn, y la aritmética no se negocia.
+      </p>
+    </div>
+
+    <div class="formula">
+      <div class="eq">
+        <span>clientes en equilibrio</span>
+        <span class="op">=</span>
+        <span class="frac">
+          <span class="top">clientes nuevos por mes</span>
+          <span class="bot">churn mensual</span>
+        </span>
+      </div>
+      <p class="note">
+        En SaaS de PYME latinoamericana, el churn normal es 5–6% al mes. Conseguir 8 clientes nuevos
+        por mes sostenidos ya exige un vendedor a tiempo completo, no referidos.
+      </p>
+    </div>
+
+    <div class="scroller">
+      <table>
+        <caption>Techo de ingresos según ritmo de venta y churn — ARPU $160</caption>
+        <thead>
+          <tr>
+            <th>Escenario</th>
+            <th class="num">Nuevos/mes</th>
+            <th class="num">Churn</th>
+            <th class="num">Clientes</th>
+            <th class="num">MRR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Conservador</td><td class="num">2</td><td class="num">6%</td><td class="num">33</td><td class="num hi">$5.300</td></tr>
+          <tr class="pick"><td><strong>Realista</strong></td><td class="num">4</td><td class="num">5%</td><td class="num">80</td><td class="num hi">$12.800</td></tr>
+          <tr><td>Con equipo de ventas</td><td class="num">8</td><td class="num">4%</td><td class="num">200</td><td class="num hi">$32.000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <p>
+        El margen bruto queda en <strong>70–75%</strong>, peor que un SaaS típico, porque Twilio cobra
+        por conversación de WhatsApp y McLovin es justo lo que más se usa. Sobre $12.800 de MRR quedan
+        unos $9.000 antes de sueldos y soporte.
+      </p>
+      <p>
+        <strong>Y el techo geográfico es real.</strong> En Costa Rica hay quizá 200 a 400 agencias
+        digitales; capturar un 15% son 45 clientes y ~$7.000 de MRR. Para pasar de ahí hay que salir a
+        Panamá, Centroamérica y Colombia — y eso trae soporte en otra zona horaria, cobros y WhatsApp
+        por país.
+      </p>
+      <p>
+        Vale decirlo sin adornos: un cliente de agencia bien atendido probablemente deja más que eso.
+        El SaaS gana en que escala sin que trabajés más horas, no en que pague mejor por cliente.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="head">Qué cuesta hacerlo multi-tenant</h2>
+    <div class="col">
+      <p class="lede">
+        Medido sobre el repo, no estimado a ojo. Esta es la superficie que hay que tocar.
+      </p>
+    </div>
+
+    <div class="facts">
+      <div class="fact"><span class="n">33</span><span class="l">tablas en total, de las cuales <strong>~15</strong> son de Q·OS</span></div>
+      <div class="fact"><span class="n">116</span><span class="l">policies RLS, <strong>40</strong> en el subárbol de Q·OS</span></div>
+      <div class="fact alarm"><span class="n">55</span><span class="l">policies que dicen <code>role = 'admin'</code> — o sea, «ve todo»</span></div>
+      <div class="fact alarm"><span class="n">51</span><span class="l">funciones <code>security definer</code> que saltan RLS</span></div>
+      <div class="fact"><span class="n">24</span><span class="l">triggers y 5 vistas</span></div>
+      <div class="fact"><span class="n">18</span><span class="l">páginas de admin, 26 archivos de server actions, 7 rutas de API</span></div>
+      <div class="fact"><span class="n">6</span><span class="l">buckets de Storage</span></div>
+      <div class="fact"><span class="n">36.766</span><span class="l">líneas de TypeScript en <code>src/</code></span></div>
+    </div>
+
+    <div class="col">
+      <h3>El problema en una línea</h3>
+      <p>
+        Esas 55 policies dicen literalmente <em>«si sos admin, ves todo»</em>. Hoy es correcto porque
+        existe una sola agencia. Multi-tenant significa que cada una pase a decir <em>«si sos admin
+        <strong>de esta org</strong>»</em>. No es un feature que se agrega: es una condición que hay
+        que meter en todos lados sin fallar ni una vez, porque la que falla filtra los clientes de una
+        agencia a otra.
+      </p>
+      <p>
+        <strong>La buena noticia es el alcance.</strong> Si el producto es solo Q·OS, el marketplace
+        —<code>/ugc</code>, unas 18 tablas de campañas, aplicaciones, cupones y books— queda afuera:
+        sigue siendo de Q Labs y de un solo dueño. Eso saca más de la mitad del trabajo.
+      </p>
+    </div>
+
+    <div class="scroller">
+      <table>
+        <caption>Frentes de trabajo</caption>
+        <thead>
+          <tr><th>Frente</th><th class="num">Semanas</th><th>Qué es</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Modelo de org y membresías</td><td class="num">1</td><td><code>organizations</code>, <code>org_members</code>, función <code>current_org_id()</code></td></tr>
+          <tr><td><code>org_id</code> + reescribir 40 policies</td><td class="num">2</td><td>Mecánico, pero no delegable ni salteable</td></tr>
+          <tr><td>Auditar 51 <code>security definer</code></td><td class="num">1–1,5</td><td>Corren como dueño y saltan RLS: cada una necesita filtro de org a mano</td></tr>
+          <tr><td>Agente de WhatsApp por org</td><td class="num">1,5–2</td><td>Hoy resuelve por teléfono global con un solo número de Twilio</td></tr>
+          <tr><td>Storage con prefijo de org</td><td class="num">0,5</td><td>Rutas y policies de los 6 buckets</td></tr>
+          <tr><td>Tests de aislamiento A↔B</td><td class="num">1</td><td>15 tablas × 4 operaciones. Sin esto no se vende</td></tr>
+          <tr><td>Alta, planes, cobro, suspensión</td><td class="num">2–3</td><td><strong>Producto nuevo</strong>, no refactor</td></tr>
+          <tr><td>Migrar Q Labs a la org #1 y QA</td><td class="num">1</td><td>El primer inquilino somos nosotros</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Total</td><td class="num">10–13</td><td>2,5 a 3 meses a tiempo completo; 4 a 5 si Q Labs sigue operando en paralelo</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="head">Las tres trampas</h2>
+    <div class="traps">
+      <div class="trap">
+        <h3>Las 51 funciones <code>security definer</code></h3>
+        <p>
+          Son el agujero clásico: corren con permisos del dueño, así que <strong>RLS no las toca</strong>.
+          Ya pasó una versión chica de esto — en el gate de verificación aparecieron tres huecos de API
+          que el layout no tapaba, y uno era justo un <code>security definer</code>. Acá son 51 para
+          revisar una por una.
+        </p>
+      </div>
+      <div class="trap">
+        <h3>WhatsApp es el cuello de botella, y no es de código</h3>
+        <p>
+          Cada agencia necesita su número de WhatsApp Business aprobado por Meta: <strong>semanas de
+          espera por cliente</strong>, trámite y costo por número en Twilio. Rutear por org son días de
+          programación; que Meta apruebe veinte números es un proceso operativo que no se acelera
+          escribiendo código. El onboarding hay que planificarlo asumiendo 2 a 4 semanas solo por esto.
+        </p>
+      </div>
+      <div class="trap">
+        <h3>¿Un usuario en dos agencias?</h3>
+        <p>
+          Si la respuesta es sí, necesitás org activa en la sesión y todo el árbol pasa a depender de un
+          estado extra: 2 a 3 semanas más y una clase entera de bugs nuevos.
+          <strong>Decí que no al inicio</strong> — un usuario, una org. Es reversible después.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="col">
+    <h2 class="head">El punto de quiebre</h2>
+    <p>
+      La alternativa al multi-tenant es <strong>una instancia dedicada por cliente</strong>: un proyecto
+      de Supabase y un deploy de Vercel por agencia. Refactor: cero. Costo: $45 a $60 mensuales de
+      infraestructura por tenant, más el dolor de aplicar cada migración N veces a mano — que hoy ya se
+      hace pegando SQL en el dashboard, así que con cinco clientes duele de verdad.
+    </p>
+    <p>
+      El cruce está en <strong>6 a 8 tenants</strong>. Por debajo, el multi-tenant no se paga. Por
+      encima, el trabajo manual te come vivo.
+    </p>
+  </section>
+
+  <section class="col">
+    <h2 class="head">Qué hacer ahora</h2>
+    <div class="steps">
+      <div class="step">
+        <p>
+          <strong>Vender 3 a 5 instancias dedicadas</strong> al modelo de $3.500 + $250/mes, con contrato
+          de 12 meses y la mitad del setup por adelantado.
+          <span class="out">~$17.000 de caja · ~$1.250 de MRR</span>
+        </p>
+      </div>
+      <div class="step">
+        <p>
+          <strong>Medir la renovación al año.</strong> Es el único dato que importa: si renuevan, el
+          producto se sostiene fuera de Q Labs; si no, ninguna cantidad de ingeniería lo arregla.
+        </p>
+      </div>
+      <div class="step">
+        <p>
+          <strong>Recién ahí, las 12 semanas de multi-tenant</strong>, financiadas con esa caja y
+          empezando por el frente que más riesgo tiene: las 51 funciones <code>security definer</code>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Las cifras de superficie —tablas, policies, funciones, líneas— salen de medir el repositorio el 19 de
+    agosto de 2026. Los precios, el churn y el tamaño de mercado son estimaciones de criterio, no datos
+    observados: conviene revisarlas contra las primeras ventas reales.
+  </footer>
+
+</div>

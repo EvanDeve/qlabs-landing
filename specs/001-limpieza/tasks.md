@@ -6,7 +6,7 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
   Borrar `testimonios.mp4`, `tsconfig.tsbuildinfo`, `.DS_Store`, `.next/` y `.git/index 2`…`7`.
   *Hecho cuando:* no existen y `npx tsc --noEmit` ya no da los errores de duplicados de `.next`.
 
-- [ ] **T02 — Documentos y prototipos** (RF-02, RF-09)
+- [x] **T02 — Documentos y prototipos** (RF-02, RF-09)
   Borrar los superados, mover `Ideas.md` y la guía a `docs/`, commitear `docs/qos-como-producto.html` y ajustar los comentarios y la constitución que los nombran.
   *Hecho cuando:* la raíz tiene solo configuración + `CLAUDE.md`, `memory.md` y `roadmap-ugc-crc.md`, y `grep` de cada nombre borrado da 0.
 

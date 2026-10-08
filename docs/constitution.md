@@ -43,7 +43,7 @@ Next.js 16 (App Router) + TypeScript · Tailwind CSS v4 (tokens en `@theme` de `
 
 ## 4. Diseño
 
-- **Público y marketplace (`/`, `/ugc/*`):** la referencia 1:1 es `prototypes/index-legacy.html`. Plus Jakarta Sans (800 en títulos), acento violeta, botones pill (`rounded-pill`), fondos blancos/lavanda. Nada de look "dashboard genérico". No usar `qlabs-final.html` ni `final_prototipo_ugc.html` (exploraciones descartadas).
+- **Público y marketplace (`/`, `/ugc/*`):** la referencia 1:1 es `prototypes/index-legacy.html`. Plus Jakarta Sans (800 en títulos), acento violeta, botones pill (`rounded-pill`), fondos blancos/lavanda. Nada de look "dashboard genérico". Las exploraciones con paleta lavanda + Space Mono se descartaron por verse "hechas por IA".
 - **Q·OS (`/admin/*`):** sistema propio en `src/styles/qos.module.css` (monocromo, `.temaQos`).
 - Tokens: `ink #0A0B10`, `ink-soft #5B5570`, `violet #705CF6`, `violet-deep #5641D8`, `periwinkle #8E80F2`, `lavender #F6F4FD`, `lavender-deep #ECE7FB`, `trust #17A673`, `trust-bg #E7F7F1`, `coral #FF6B57`. Radios: 14px cards, 999px pills. Línea: `rgba(10,11,16,0.10)`.
 - Sin dark mode (descartado por Evan). Sin `window.confirm()`: confirmación propia en la página.

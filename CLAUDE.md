@@ -23,6 +23,6 @@
 
 ## Mapa
 - `docs/constitution.md` — principios y arquitectura · `specs/` — specs vivas · `memory.md` — estado
-- `roadmap-ugc-crc.md` — roadmap original y modelo de datos de Fase 1 (histórico)
+- `roadmap-ugc-crc.md` — roadmap original y modelo de datos de Fase 1 (histórico) · `docs/ideas.md` — backlog · `docs/guia-sdd.md` — la guía de esta forma de trabajo
 - `.claude/commands/` — `/feature`, `/sdd-spec`, `/sdd-plan`, `/sdd-implement`
 - `.claude/agents/` — `planner`, `implementer`, `reviewer`
