@@ -3,7 +3,7 @@
 Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit a `main` y parar.
 ⚠️ T01–T04 se pueden pushear cuando sea. **De T05 en adelante nada se pushea hasta que Evan confirme que corrió la migración de T04**: el código nuevo en prod sin la migración rompe el kit y el book.
 
-- [ ] **T01 — Funciones puras de destacadas** (RF-01, RF-02, RF-03, RF-04)
+- [x] **T01 — Funciones puras de destacadas** (RF-01, RF-02, RF-03, RF-04)
   Test primero (`tests/unit/destacadas.test.ts`), después `src/lib/ugc/destacadas.ts`: `MAX_DESTACADAS`, `alternarDestacada`, `moverDestacada`, `separarDestacadas`.
   *Hecho cuando:* el test cubre agregar, quitar, el tope de 3 con su mensaje, mover en los bordes, separar sin repetir y sin destacadas, y `npm test` pasa.
 
