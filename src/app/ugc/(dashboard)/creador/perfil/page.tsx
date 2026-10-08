@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import PerfilEditor from "@/components/ugc/creador/PerfilEditor";
-import styles from "@/styles/qos.module.css";
 import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";

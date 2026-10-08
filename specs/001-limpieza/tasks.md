@@ -12,9 +12,9 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
 
 - [x] **T03 — Componentes, exports y dependencias sin uso** (RF-02, RF-08)
   *Hecho cuando:* `grep` de cada nombre da 0, `npm test`, `npm run lint` y `npm run build` pasan, y las 3 dependencias no están en `package.json`.
-  *Nota:* quedan 2 avisos de lint que ya estaban antes (import de `qos.module.css` sin usar en `creador/perfil` y `creador/pipeline`). No se tocan acá: quitar el import de un CSS module puede cambiar qué estilos carga la página; se ven en T04 junto con el CSS.
+  *Nota:* quedan 2 avisos de lint que ya estaban antes (import de `qos.module.css` sin usar en `creador/perfil` y `creador/pipeline`). No se tocan acá: quitar el import de un CSS module puede cambiar qué estilos carga la página; se ven en T04 junto con el CSS. → En T04 se sacaron: el layout `ugc/(dashboard)/layout.tsx` ya importa ese CSS.
 
-- [ ] **T04 — CSS muerto de `qos.module.css`** (RF-01, RF-02)
+- [x] **T04 — CSS muerto de `qos.module.css`** (RF-01, RF-02)
   *Hecho cuando:* se borraron las clases verificadas, el build pasa y la recorrida visual de Q·OS no muestra cambios.
 
 - [ ] **T05 — Regla de apuntes en un solo lugar** (RF-06)

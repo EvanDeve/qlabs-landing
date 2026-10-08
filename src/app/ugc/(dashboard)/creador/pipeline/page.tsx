@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getColumns } from "@/lib/actions/creator-tasks";
 import CreatorTaskBoard from "@/components/ugc/creador/CreatorTaskBoard";
 import TableroVacio from "@/components/ugc/creador/TableroVacio";
-import styles from "@/styles/qos.module.css";
 import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";

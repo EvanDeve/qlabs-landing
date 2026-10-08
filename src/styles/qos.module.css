@@ -1028,12 +1028,6 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.paceOk {
-  color: var(--ok);
-}
-.paceBad {
-  color: var(--risk);
-}
 
 .av {
   position: relative; /* base para .avImg */
@@ -1118,22 +1112,6 @@
   margin-top: 6px;
 }
 
-/* Las `.kpi*` siguen acá mientras las use alguna otra vista (Loyalty todavía
-   las dibuja); el Dashboard ya no. */
-.kpiRow {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
-}
-/* Las pantallas de TRES KPIs (marca, Loyalty Loop, el book del creador) piden
-   tres columnas en escritorio. Antes lo hacían con `style` inline, y un estilo
-   inline le gana a TODA media query: en un teléfono las tres tarjetas seguían
-   apretadas en una fila y la última se cortaba a la mitad de la palabra. Como
-   clase, las reglas responsive de más abajo la pisan sin pelear. */
-.kpiRow3 {
-  grid-template-columns: repeat(3, 1fr);
-}
 /* El radio grande (--r-xl, 20px) es de la ronda de refresh visual: las tarjetas
    de número son lo primero que se mira al entrar y con 15px se leían como
    cajas. Va en `.kpi` y no solo en admin a propósito — la clase la comparten
@@ -1152,72 +1130,6 @@
 .kpi:hover {
   box-shadow: var(--sh-md);
   transform: translateY(-2px);
-}
-/* Opt-in: se activa poniendo `kpiAccent` + `--kpi-accent: <color>` inline, en las
-   pantallas cuyos KPIs YA tienen un color por tipo (el mismo del ícono y la
-   cifra). Es opt-in y no global porque en admin las etiquetas son largas
-   ("Heroes por debajo del ritmo del mes") y en mayúscula quedarían en tres
-   líneas. `.kpi` ya trae position:relative y overflow:hidden. */
-.kpi.kpiAccent::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--kpi-accent, transparent);
-}
-.kpiAccent .kLabel {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 10.5px;
-}
-.kTop {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.kIc {
-  width: 32px;
-  height: 32px;
-  /* Acompaña al radio de la tarjeta: un cuadrado de esquina dura adentro de una
-     tarjeta de 20px se ve pegado con cinta. */
-  border-radius: var(--r-md);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-.kLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-2);
-  line-height: 1.2;
-}
-.kNum {
-  font-family: var(--font-display);
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-.kSub {
-  font-size: 11px;
-  color: var(--ink-3);
-  margin-top: 6px;
-}
-/* Lo que el número deja afuera y hay que resolver — hoy, los videos terminados
-   sin fecha de publicación. Va en ámbar y no en gris porque no es una nota al
-   pie: es un pendiente. La tarjeta crece 17px y sus hermanas de fila la
-   siguen, que es justo lo que hace que se note. */
-.kAlert {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--warn);
-  margin-top: 6px;
 }
 
 .dashGrid {
@@ -1305,12 +1217,7 @@
 .attnItem + .attnItem {
   margin-top: 8px;
 }
-.attnBar {
-  width: 3px;
-  align-self: stretch;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
+
 .attnBody {
   flex: 1;
   min-width: 0;
@@ -1328,12 +1235,6 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-.attnRight {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
 }
 
 .weekRow {
@@ -1373,23 +1274,6 @@
   color: var(--ink-3);
   font-size: 11.5px;
   font-weight: 400;
-}
-
-/* De la barra de carga quedan solo la pista y el relleno: los usa Loyalty Loop
-   (marca y creador) para el progreso de un cupón. Las filas con nombre y
-   conteo se fueron con "Carga del equipo" del Dashboard. */
-.loadTrack {
-  flex: 1;
-  height: 8px;
-  background: var(--surface-3);
-  border-radius: var(--r-full);
-  overflow: hidden;
-  position: relative;
-}
-.loadFill {
-  height: 100%;
-  border-radius: var(--r-full);
-  transition: width 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .acctTable {
@@ -1509,50 +1393,7 @@
   color: #fff;
   box-shadow: var(--sh-sm);
 }
-/* "· 3 por verificar" en las pestañas del Marketplace. En el celular se achica
-   a "· 3": con la frase entera, la pestaña activa quedaba fuera del riel. */
-.tabAvisoCorto {
-  display: none;
-}
-@media (max-width: 560px) {
-  .tabAvisoLargo {
-    display: none;
-  }
-  .tabAvisoCorto {
-    display: inline;
-  }
-  /* Las cuatro pestañas no entran en una fila de 390: se reparten el ancho y
-     el número baja abajo del nombre. Con el riel deslizándose, la activa
-     podía quedar fuera de la pantalla. */
-  .admTabs {
-    display: flex;
-    width: 100%;
-  }
-  .qosRoot .admTabs .pipeTab {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 6px 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    line-height: 1.25;
-    border-radius: 14px;
-  }
-  .admTabs {
-    border-radius: 17px;
-  }
-  /* Tres botones (Ver book, Verificar, Rechazar) no dejan lugar al texto:
-     bajan a su propia línea en vez de montarse sobre el handle. Modificador
-     propio porque .attnItem lo comparten muchas pantallas. */
-  .mktFila {
-    flex-wrap: wrap;
-  }
-  .mktFila .attnRight {
-    flex-basis: 100%;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-}
+
 /* ---- Los filtros del tablero ----
    Dejaron de ser `<select>` nativos: cada uno es un botón en pastilla que
    muestra QUÉ filtra y POR QUÉ VALOR ("Hero · Todos"), y abre su propia lista.
@@ -2073,15 +1914,7 @@
   padding-top: 9px;
   border-top: 1px solid var(--line-2);
 }
-.kcDue {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-2);
-}
+
 /* Grupo de las dos fechas (grabación + publicación) en la tarjeta del pipeline.
    No reusa .kcDue porque esa lleva `margin-left:auto` y la comparten el tablero
    del creador y CreatorTaskBoard, donde la fecha sí va sola contra la derecha.
@@ -2184,10 +2017,7 @@
   font-size: 19px;
   font-weight: 700;
 }
-.calViewToggle {
-  display: flex;
-  gap: 2px;
-}
+
 .calGrid {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -3137,26 +2967,6 @@
     flex: 1 1 320px;
   }
 }
-.agendaCol {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  padding: 14px;
-  box-shadow: var(--sh-sm);
-}
-.agendaItem {
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-md);
-  padding: 10px;
-  transition: var(--t-fast);
-  text-align: left;
-  width: 100%;
-  background: var(--surface);
-}
-.agendaItem:hover {
-  border-color: var(--line-strong);
-  box-shadow: var(--sh-sm);
-}
 
 /* ============================================================
    HEROES + DOSSIER
@@ -3310,15 +3120,6 @@
   color: #fff;
 }
 
-/* ============================================================
-   DRAWER / MODAL
-   ============================================================ */
-.drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(13, 10, 28, 0.4);
-  z-index: 100;
-}
 .drawer {
   position: fixed;
   top: 0;
@@ -3332,17 +3133,7 @@
   display: flex;
   flex-direction: column;
 }
-.drawerHd {
-  position: sticky;
-  top: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  padding: 18px 22px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  z-index: 2;
-}
+
 .drawerClose {
   width: 34px;
   height: 34px;
@@ -3358,10 +3149,6 @@
 .drawerClose:hover {
   background: var(--line);
   color: var(--ink);
-}
-.drawerBody {
-  padding: 22px;
-  flex: 1;
 }
 
 /* ---- El guion dentro de la tarjeta ----
@@ -3804,45 +3591,6 @@
   color: var(--ink-3);
 }
 
-/* ============================================================
-   MARKETPLACE (creador + marca): subtabs, grid de promos, book, rating
-   ============================================================ */
-.subtabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-/* .qosRoot-prefixed para ganarle al reset de <button> de arriba. */
-.qosRoot .subtab {
-  font-size: 13.5px;
-  font-weight: 600;
-  padding: 9px 16px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-2);
-  transition: var(--t-fast);
-}
-/* :not(.subtabOn) es necesario: `.subtab:hover` (0,2,1) le gana a `.subtabOn`
-   (0,2,0) por el pseudo-clase, así que sin esto el chip activo quedaba con
-   texto --ink sobre fondo --ink-deep al pasar el mouse: ilegible. */
-.qosRoot .subtab:hover:not(.subtabOn) {
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
-.qosRoot .subtabOn {
-  background: var(--ink-deep);
-  color: #fff;
-  border-color: var(--ink-deep);
-}
-
-.cardsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
 .bookGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -3862,16 +3610,7 @@
   display: grid;
   place-items: center;
 }
-.bookPlay {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  display: grid;
-  place-items: center;
-  color: #fff;
-}
+
 .bookViews {
   position: absolute;
   bottom: 10px;
@@ -3884,35 +3623,7 @@
   border-radius: 7px;
   backdrop-filter: blur(4px);
 }
-.bookOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-  padding: 8px;
-  opacity: 0;
-  transition: var(--t-fast);
-}
-.bookThumb:hover .bookOverlay {
-  opacity: 1;
-}
-.qosRoot .bookOverlayBtn {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  font-size: 12px;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-.qosRoot .bookOverlayBtn:disabled {
-  opacity: 0.4;
-}
+
 .bookInfo {
   padding: 12px 14px;
 }
@@ -3942,144 +3653,6 @@
   color: #f5a623;
 }
 
-.sysCard {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.sysHead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.sysIc {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-md);
-  background: var(--b-50);
-  color: var(--b-600);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-.sysHead h3 {
-  font-size: 15.5px;
-  font-weight: 700;
-}
-.sysDesc {
-  font-size: 13px;
-  color: var(--ink-2);
-  line-height: 1.5;
-}
-.sysFoot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 4px;
-}
-
-.campRow {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px 22px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  margin-bottom: 12px;
-}
-.campBody {
-  flex: 1;
-  min-width: 0;
-}
-.campBody b {
-  font-size: 16px;
-  font-weight: 700;
-}
-.campBody span {
-  display: block;
-  font-size: 13px;
-  color: var(--ink-3);
-  margin-top: 3px;
-}
-.campN {
-  text-align: center;
-  padding: 0 10px;
-  flex-shrink: 0;
-}
-.campN b {
-  display: block;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--b-500);
-}
-.campN small {
-  font-size: 11px;
-  color: var(--ink-3);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.applicantRow {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  margin-bottom: 10px;
-}
-.applicantAv {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.applicantBody {
-  flex: 1;
-  min-width: 0;
-}
-.applicantBody b {
-  font-size: 15px;
-  font-weight: 600;
-}
-.applicantBody span {
-  display: block;
-  font-size: 12px;
-  color: var(--ink-3);
-  margin-top: 2px;
-}
-.applicantActs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-/* Sin el max-width + truncado, un título de campaña largo se quedaba con todo
-   el ancho (flex-shrink:0) y aplastaba los datos del creador a la izquierda. */
-.miniStat {
-  font-size: 12.5px;
-  color: var(--ink-3);
-  flex-shrink: 1;
-  min-width: 0;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fileRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 .fileName {
   font-size: 12.5px;
   color: var(--ink-3);
@@ -4101,9 +3674,7 @@
   .stat:nth-child(n + 3) {
     border-top: 1px solid var(--line-2);
   }
-  .kpiRow {
-    grid-template-columns: repeat(3, 1fr);
-  }
+
   /* `minmax(0, …)` y no `1fr` pelado: el mínimo automático de un item de grid es
      su contenido, así que la tabla de cuentas —que en un teléfono no entra—
      ensanchaba el track, y con él la tarjeta y la página entera. Medido: 433px
@@ -4121,11 +3692,7 @@
    El piso de 561px no es de adorno: `:has()` pesa más que `.kpiRow` a secas,
    y sin acotar le ganaría a la regla de una sola columna de más abajo — en un
    teléfono los KPIs se quedarían en dos columnas en vez de apilarse. */
-@media (min-width: 561px) and (max-width: 1140px) {
-  .kpiRow:has(> :nth-child(4)) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
+
 @media (max-width: 900px) {
   .app {
     grid-template-columns: 1fr;
@@ -4148,9 +3715,7 @@
   .topbar {
     padding: 12px 16px;
   }
-  .kpiRow {
-    grid-template-columns: repeat(2, 1fr);
-  }
+
   .sbScrim {
     display: block;
     position: fixed;
@@ -4171,43 +3736,7 @@
     border-left: none;
     border-top: 1px solid var(--line-2);
   }
-  .kpiRow {
-    grid-template-columns: 1fr;
-  }
 
-  /* Las filas de campaña y de aplicante son flex de 4-5 items con flex-shrink:0
-     (columnas de stats, pill de estado, botones de acción). En un teléfono no
-     entran y hacían desbordar la página ENTERA en horizontal, no solo la fila.
-     Se dejan envolver: el título ocupa la fila completa y las acciones bajan. */
-  .campRow,
-  .applicantRow {
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 16px;
-  }
-  .campBody,
-  .applicantBody {
-    flex: 1 1 100%;
-  }
-  .campN {
-    padding: 0;
-    text-align: left;
-    min-width: 84px;
-  }
-  /* El "Ver" a lo ancho: en móvil es la acción principal de la fila. */
-  .campRow > a {
-    flex: 1 1 100%;
-  }
-  .miniStat {
-    flex: 1 1 100%;
-    max-width: 100%;
-  }
-  .applicantActs {
-    flex: 1 1 100%;
-  }
-  .applicantActs > * {
-    flex: 1;
-  }
 }
 
 /* ============================================================
@@ -4314,29 +3843,6 @@
   line-height: 16px;
 }
 
-/* ============================================================
-   PERFIL DE LA MARCA: logo, zona y vista previa en vivo
-   ============================================================ */
-.brandProfileGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 28px;
-  align-items: start;
-}
-@media (max-width: 900px) {
-  .brandProfileGrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-.logoRow {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 22px;
-}
-.hiddenFile {
-  display: none;
-}
 .fieldHint {
   margin-top: 6px;
   font-size: 12px;
@@ -4346,43 +3852,6 @@
   margin-bottom: 12px;
   font-size: 13px;
   color: var(--risk);
-}
-.brandPreviewCol {
-  position: sticky;
-  top: 24px;
-}
-.previewLabel {
-  margin-bottom: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-3);
-}
-.brandPreviewHead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.brandPreviewName {
-  display: block;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.brandPreviewMeta {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--ink-3);
-}
-.brandPreviewDesc {
-  margin-top: 12px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--ink-2);
 }
 
 /* ============================================================
@@ -4971,75 +4440,6 @@
   text-align: center;
   font-size: 12px;
   color: var(--ink-3);
-}
-
-/* ============================================================
-   DETALLE DE LA PROMO
-   ============================================================ */
-.promoDetailGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 24px;
-  align-items: start;
-}
-@media (max-width: 900px) {
-  .promoDetailGrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-.promoDetailBrief {
-  font-size: 14.5px;
-  line-height: 1.65;
-  color: var(--ink-2);
-  white-space: pre-wrap;
-}
-.promoFacts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin: 18px 0 4px;
-}
-.promoFact {
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 12px 14px;
-  background: var(--surface-2);
-}
-.promoFactLabel {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-3);
-}
-.promoFactValue {
-  margin-top: 3px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ink);
-}
-.brandCardHead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.brandCardLinks {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
-.qosRoot .brandCardLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--b-600);
-}
-.qosRoot .brandCardLink:hover {
-  color: var(--b-700);
 }
 
 /* ============================================================
@@ -5933,90 +5333,6 @@
   font-size: 17px;
 }
 
-/* ---------- Checklist de verificación ----------
-   Va DENTRO del aviso ámbar de "en revisión", así que no lleva fondo propio:
-   dos cajas de color anidadas se leen como un error de maquetación. */
-.checklist {
-  margin-top: 12px;
-  border-top: 1px solid rgba(192, 116, 20, 0.2);
-  padding-top: 12px;
-}
-
-.checklistHead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-2);
-}
-
-.checklistCount {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--ink-3);
-}
-
-.checklistLista {
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.checklistItem {
-  font-size: 13.5px;
-  color: var(--ink-2);
-}
-
-.checklistItem,
-.checklistLink {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 0;
-}
-
-.checklistLink {
-  color: inherit;
-  text-decoration: none;
-  border-radius: var(--r-sm);
-}
-
-.checklistLink:hover {
-  color: var(--b-600);
-}
-
-.checkOk,
-.checkPend {
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  border-radius: 50%;
-}
-
-.checkOk {
-  background: var(--ok);
-  color: #fff;
-}
-
-.checkPend {
-  border: 1.5px solid var(--line-strong);
-}
-
-.checklistHecho {
-  color: var(--ink-3);
-  text-decoration: line-through;
-}
-
 /* ============================================================
    FORMULARIO DE CAMPAÑA: tarjetas de opción y grilla de entregables
 
@@ -6078,58 +5394,7 @@
   line-height: 1.45;
   color: var(--ink-3);
 }
-/* Cada formato con su cantidad. La caja del número es angosta a propósito:
-   nadie pide 400 reels, y ancha invitaba a leerla como un campo de texto. */
-.qtyGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.qtyRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 9px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  transition: var(--t-fast);
-}
-.qtyRow:focus-within {
-  border-color: var(--b-400);
-}
-.qtyRowOn {
-  border-color: var(--b-500);
-  background: var(--b-50);
-}
-.qtyName {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--ink);
-}
-.qtyInp {
-  width: 58px;
-  padding: 5px 6px;
-  text-align: center;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  transition: var(--t-fast);
-}
-.qtyInp:focus {
-  outline: none;
-  border-color: var(--b-400);
-  box-shadow: var(--sh-glow);
-}
-/* El aviso de "falta elegir un entregable" tiene que verse como una advertencia
-   sobre el grupo entero, no sobre una tarjeta. Va como marco del bloque. */
-.qtyGridFalta {
-  padding: 8px;
-  margin: -8px;
-  border-radius: var(--r-lg);
-  outline: 1px solid var(--risk-line);
-}
+
 .fieldGroup {
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -6155,56 +5420,16 @@
   color: var(--ink-3);
   line-height: 1.5;
 }
-.formOk {
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--ok);
-}
-.formActions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-.formActions > * {
-  flex: 1;
-}
+
 @media (max-width: 560px) {
-  .optGrid,
-  .qtyGrid {
+  .optGrid {
     grid-template-columns: 1fr;
   }
-  /* Dos botones de 50% dejan "Publicar campaña" en dos líneas en un teléfono. */
-  .formActions {
-    flex-direction: column;
-  }
+
 }
 
-/* ============================================================
-   FILA DE SUBTABS CON ACCIÓN
-
-   "+ Nuevo cupón" vivía como un .subtab más, al lado de los tres filtros de
-   vista. Se veía igual que ellos y hacía otra cosa: abre un formulario. Sale
-   del grupo y pasa a ser un botón, con el mismo peso visual que "+ Nueva
-   campaña" en UGC·CRC.
-   ============================================================ */
-.subtabsRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-.subtabsRow .subtabs {
-  margin-bottom: 0;
-}
 /* En un teléfono el botón se va al ancho completo debajo de los filtros: a la
    derecha de una fila que ya envolvió quedaba colgando solo. */
-@media (max-width: 560px) {
-  .subtabsRow > * {
-    flex: 1 1 100%;
-  }
-}
 
 /* ============================================================
    ESCÁNER DE QR (validar canje en el local)
@@ -7014,7 +6239,6 @@
   color: rgba(255, 255, 255, 0.92);
 }
 
-
 /* ============================================================
    ENCABEZADO PROPIO DE CADA PANTALLA (móvil)
    En el celular, la barra de Q·OS —hamburguesa, rastro y título— no se parece
@@ -7071,22 +6295,6 @@
     display: none;
   }
   /* El aire que necesita el título para no meterse debajo de la campana. */
-}
-
-/* Las dos tarjetas del pie del Resumen. Estaban con `style` inline a dos
-   columnas, y un estilo inline le gana a TODA media query —la misma trampa que
-   ya había mordido a `.kpiRow3`—: en un teléfono quedaban dos columnas de 160px
-   con "Ver tablero" partido en dos líneas. */
-.resumenGrid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  align-items: start;
-}
-@media (max-width: 900px) {
-  .resumenGrid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ============================================================
@@ -7601,16 +6809,6 @@
   margin-top: 3px;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--ink-3);
-}
-
-/* --- La hoja de entregar --- */
-.apliHojaHead {
-  margin-bottom: 16px;
-}
-.apliHojaMarca {
-  margin-top: 2px;
-  font-size: 13px;
   color: var(--ink-3);
 }
 
@@ -9294,22 +8492,12 @@
   border-style: dashed;
   color: var(--b-600);
 }
-.perfilChipQuitar {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
+
 .perfilAyuda {
   margin: 8px 2px 0;
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--ink-3);
-}
-.perfilOk {
-  margin-top: 12px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ok);
 }
 
 .perfilAgregarFila {
@@ -9470,7 +8658,6 @@
   line-height: 1.45;
   color: var(--ink-3);
 }
-
 
 /* ============================================================
    TRANSCRIPCIÓN — rediseño con lenguaje de app de iPhone
@@ -10265,7 +9452,6 @@
     display: none;
   }
 }
-
 
 /* ---------------- La tarjeta negra: lo que hay que decidir ---------------- */
 .mcDecidir {
@@ -11782,88 +10968,6 @@
   color: var(--ink-3);
 }
 
-/* ---------------- LOYALTY ---------------- */
-.qosRoot .mcValidarCard {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  margin: 4px 0 16px;
-  padding: 15px;
-  border-radius: 18px;
-  background: var(--ink-deep);
-  color: rgba(255, 255, 255, 0.55);
-  text-decoration: none;
-  transition: var(--t-fast);
-}
-.qosRoot .mcValidarCard:hover {
-  background: #17141f;
-}
-.mcValidarIc {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-/* Las tres cifras, sin tarjeta y separadas por hairlines: mismo criterio que
-   las del Home del creador — la tarjeta blanca de abajo es la que tiene que
-   llamar la atención. */
-.mcStats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin-bottom: 18px;
-}
-.mcStat {
-  padding: 0 10px;
-}
-.mcStat + .mcStat {
-  border-left: 1px solid var(--line);
-}
-.mcStat:first-child {
-  padding-left: 0;
-}
-.mcStatNum {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--ink);
-}
-.mcStatLabel {
-  margin-top: 1px;
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--ink-3);
-}
-
-/* La barra de stock del cupón. */
-.mcStock {
-  margin-top: 13px;
-}
-.mcStockFila {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-  font-size: 12.5px;
-  color: var(--ink-2);
-}
-.mcStockVia {
-  height: 6px;
-  border-radius: var(--r-full);
-  background: var(--b-100);
-  overflow: hidden;
-}
-.mcStockFill {
-  height: 100%;
-  border-radius: var(--r-full);
-  background: var(--b-600);
-}
 .qosRoot .mcRechazar {
   display: flex;
   align-items: center;
@@ -11903,19 +11007,7 @@
   opacity: 0.55;
   cursor: default;
 }
-.mcCuponFoto {
-  width: 100%;
-  height: 128px;
-  margin-bottom: 12px;
-  border-radius: 13px;
-  object-fit: cover;
-}
-.mcCuponDesc {
-  margin-top: 9px;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: var(--ink-2);
-}
+
 .mcCuponTabla {
   margin-top: 13px;
   border-radius: 13px;
@@ -11924,12 +11016,6 @@
 }
 .mcCuponTabla:empty {
   display: none;
-}
-.mcCuponNota {
-  margin-top: 10px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--ink-3);
 }
 
 /* ---------------- LOYALTY DE LA MARCA (2026-09-29) ----------------
