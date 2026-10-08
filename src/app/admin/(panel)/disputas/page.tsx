@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireArea } from "@/lib/auth/areas";
 import ResolveDisputeForm from "@/components/ugc/admin/ResolveDisputeForm";
-import { FiltroAdmin, PestanasAdmin } from "@/components/ugc/admin/PestanasAdmin";
+import { BarraAdmin, FiltroAdmin, PestanasAdmin } from "@/components/ugc/admin/PestanasAdmin";
 import { creatorPayout } from "@/lib/ugc/payout";
 import { coincide, leerEstado, rutaFichaCreador } from "@/lib/ugc/marketplace-admin";
 import styles from "@/styles/qos.module.css";
@@ -123,24 +123,26 @@ export default async function DisputasPage({
         pausa.
       </p>
 
-      <PestanasAdmin
-        base={BASE}
-        label="Disputas"
-        activa={tab}
-        pestanas={[
-          { id: "abiertas", label: "Abiertas", count: abiertas },
-          { id: "resueltas", label: "Resueltas", count: resueltas },
-        ]}
-      />
-      <FiltroAdmin
-        base={BASE}
-        tab={tab}
-        q={q}
-        placeholder="Campaña, marca o creador"
-        estado={decision}
-        opciones={tab === "resueltas" ? DECISIONES.map((d) => ({ id: d.id, label: d.label })) : undefined}
-        todos="Todas las decisiones"
-      />
+      <BarraAdmin>
+        <PestanasAdmin
+          base={BASE}
+          label="Disputas"
+          activa={tab}
+          pestanas={[
+            { id: "abiertas", label: "Abiertas", count: abiertas },
+            { id: "resueltas", label: "Resueltas", count: resueltas },
+          ]}
+        />
+        <FiltroAdmin
+          base={BASE}
+          tab={tab}
+          q={q}
+          placeholder="Campaña, marca o creador"
+          estado={decision}
+          opciones={tab === "resueltas" ? DECISIONES.map((d) => ({ id: d.id, label: d.label })) : undefined}
+          todos="Todas las decisiones"
+        />
+      </BarraAdmin>
 
       {filtradas.length === 0 ? (
         <div className={`${styles.card} ${styles.empty}`}>

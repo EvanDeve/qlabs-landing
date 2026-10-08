@@ -3,7 +3,7 @@ import { requireArea } from "@/lib/auth/areas";
 import { estadoDeNivel, labelAccion, fechaCorta, COLOR_NIVEL, type Nivel } from "@/lib/ugc/loyalty";
 import { coincide, leerEstado, rutaFichaCreador } from "@/lib/ugc/marketplace-admin";
 import { QosIcon } from "@/lib/ugc/qos-icons";
-import { FiltroAdmin, PestanasAdmin, TarjetaLista } from "@/components/ugc/admin/PestanasAdmin";
+import { BarraAdmin, FiltroAdmin, PestanasAdmin, TarjetaLista } from "@/components/ugc/admin/PestanasAdmin";
 import { CF } from "@/lib/cf/copy";
 import type { RedemptionStatus } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
@@ -128,29 +128,31 @@ export default async function AdminLoyaltyPage({
         ))}
       </div>
 
-      <PestanasAdmin
-        base={BASE}
-        label="Secciones de Loyalty Loop"
-        activa={tab}
-        pestanas={[
-          { id: "creadores", label: "Creadores", count: porCreador.size },
-          {
-            id: "canjes",
-            label: "Canjes",
-            count: totalCanjes,
-            aviso: { n: reclamados, texto: "sin canjear" },
-          },
-        ]}
-      />
-      <FiltroAdmin
-        base={BASE}
-        tab={tab}
-        q={q}
-        placeholder={tab === "creadores" ? "Handle del creador" : "Marca, cupón, creador o código"}
-        estado={estado}
-        opciones={opciones}
-        todos={tab === "creadores" ? "Todos los niveles" : "Todos los estados"}
-      />
+      <BarraAdmin>
+        <PestanasAdmin
+          base={BASE}
+          label="Secciones de Loyalty Loop"
+          activa={tab}
+          pestanas={[
+            { id: "creadores", label: "Creadores", count: porCreador.size },
+            {
+              id: "canjes",
+              label: "Canjes",
+              count: totalCanjes,
+              aviso: { n: reclamados, texto: "sin canjear" },
+            },
+          ]}
+        />
+        <FiltroAdmin
+          base={BASE}
+          tab={tab}
+          q={q}
+          placeholder={tab === "creadores" ? "Handle del creador" : "Marca, cupón, creador o código"}
+          estado={estado}
+          opciones={opciones}
+          todos={tab === "creadores" ? "Todos los niveles" : "Todos los estados"}
+        />
+      </BarraAdmin>
 
       {tab === "creadores" ? (
         <TablaCreadores

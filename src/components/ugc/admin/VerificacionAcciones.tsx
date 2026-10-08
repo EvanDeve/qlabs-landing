@@ -22,10 +22,16 @@ export default function VerificacionAcciones({
   profileId,
   tipo,
   estado,
+  variante = "completa",
 }: {
   profileId: string;
   tipo: "creator" | "brand";
   estado: EstadoCuenta;
+  /**
+   * "fila": la versión de una fila de la lista (mockup 1b). Solo la pendiente
+   * muestra botones —Rechazar y Verificar—; lo demás vive en el menú "⋯".
+   */
+  variante?: "completa" | "fila";
 }) {
   const [rechazando, setRechazando] = useState(false);
   const esMarca = tipo === "brand";
@@ -62,13 +68,38 @@ export default function VerificacionAcciones({
     );
   }
 
+  if (variante === "fila" && estado !== "pendiente") return null;
+
+  // En la fila, Rechazar va antes que Verificar: la acción que confirma queda
+  // a la derecha, donde termina la lectura.
+  if (variante === "fila") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setRechazando(true)}
+          className={`${styles.btn} ${styles.btnSm} ${styles.btnGhostDanger}`}
+        >
+          Rechazar
+        </button>
+        <form action={verificarAction}>
+          <input type="hidden" name="profile_id" value={profileId} />
+          <input type="hidden" name="verified" value="true" />
+          <button type="submit" className={`${styles.btn} ${styles.btnSm} ${styles.btnAccent}`}>
+            Verificar
+          </button>
+        </form>
+      </>
+    );
+  }
+
   return (
     <>
       {estado !== "verificada" && (
         <form action={verificarAction}>
           <input type="hidden" name="profile_id" value={profileId} />
           <input type="hidden" name="verified" value="true" />
-          <button type="submit" className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`}>
+          <button type="submit" className={`${styles.btn} ${styles.btnSm} ${styles.btnAccent}`}>
             Verificar
           </button>
         </form>
@@ -78,7 +109,7 @@ export default function VerificacionAcciones({
         <form action={verificarAction}>
           <input type="hidden" name="profile_id" value={profileId} />
           <input type="hidden" name="verified" value="false" />
-          <button type="submit" className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}>
+          <button type="submit" className={`${styles.btn} ${styles.btnSm} ${styles.btnGhostDanger}`}>
             Quitar verificación
           </button>
         </form>
