@@ -28,8 +28,6 @@ let otraMarca: TestUser;
 async function sembrarPerfil(creator: TestUser, tag: string) {
   const inserts = [
     admin.from("creator_skills").insert({ creator_id: creator.id, name: `skill-${tag}`, level: 3 }),
-    admin.from("creator_services").insert({ creator_id: creator.id, service: `servicio-${tag}` }),
-    admin.from("creator_addons").insert({ creator_id: creator.id, addon: `addon-${tag}` }),
     admin
       .from("creator_past_brands")
       .insert({ creator_id: creator.id, category: "Restaurante", brand_name: `marca-${tag}` }),
@@ -60,9 +58,8 @@ beforeAll(async () => {
         profile_id: u.id,
         handle: `@abajo${i}.${u.id.slice(0, 8)}`,
         followers_count: 1000 * (i + 1),
-        // La tarifa es la columna que la vista esconde a propósito.
-        rate_min: 50000 + i,
-        rate_max: 90000 + i,
+        // El motivo de rechazo es una columna que la vista esconde a propósito.
+        rejection_reason: `motivo-${i}`,
       })
     )
   );
@@ -102,12 +99,10 @@ beforeAll(async () => {
 
 afterAll(cleanup);
 
-// Las cinco tablas hijas comparten policy; se recorren con la misma prueba
+// Las tablas hijas comparten policy; se recorren con la misma prueba
 // para que agregar una sexta sea sumar una línea acá.
 const HIJAS = [
   { tabla: "creator_skills", columna: "name", prefijo: "skill" },
-  { tabla: "creator_services", columna: "service", prefijo: "servicio" },
-  { tabla: "creator_addons", columna: "addon", prefijo: "addon" },
   { tabla: "creator_past_brands", columna: "brand_name", prefijo: "marca" },
   { tabla: "portfolio_items", columna: "storage_path", prefijo: null },
 ] as const;
@@ -124,14 +119,9 @@ describe("las hijas de creator_public_profiles: solo de creadores publicados", (
       expect(ocultas ?? []).toHaveLength(0);
 
       const { data: visibles, error } = await filasDe(anon, tabla, publicado.id);
-      // Las tres tablas del book se muestran afuera; servicios y add-ons son
-      // solo para quien tiene sesión, y para el anónimo dan vacío sin error.
+      // Las tres tablas del book se muestran afuera.
       expect(error).toBeNull();
-      if (tabla === "creator_services" || tabla === "creator_addons") {
-        expect(visibles ?? []).toHaveLength(0);
-      } else {
-        expect(visibles).toHaveLength(1);
-      }
+      expect(visibles).toHaveLength(1);
     });
 
     it(`${tabla}: una marca con sesión tampoco ve al que está sin aprobar`, async () => {
@@ -159,26 +149,26 @@ describe("las hijas de creator_public_profiles: solo de creadores publicados", (
   });
 });
 
-describe("creator_profiles: la tarifa es de cada quien", () => {
-  it("el creador lee su propia fila, tarifa incluida", async () => {
+describe("creator_profiles: lo privado es de cada quien", () => {
+  it("el creador lee su propia fila, motivo de rechazo incluido", async () => {
     const { data, error } = await publicado.client
       .from("creator_profiles")
-      .select("rate_min")
+      .select("rejection_reason")
       .eq("profile_id", publicado.id);
     expect(error).toBeNull();
     expect(data).toHaveLength(1);
-    expect(data![0].rate_min).toBe(50000);
+    expect(data![0].rejection_reason).toBe("motivo-0");
   });
 
   it("un creador no lee la fila de otro, aunque esté publicado", async () => {
     const { data } = await otroCreador.client
       .from("creator_profiles")
-      .select("rate_min")
+      .select("rejection_reason")
       .eq("profile_id", publicado.id);
     expect(data ?? []).toHaveLength(0);
   });
 
-  it("una marca tampoco: para eso está la vista, que no trae la tarifa", async () => {
+  it("una marca tampoco: para eso está la vista, que no trae lo privado", async () => {
     const { data: tabla } = await marca.client
       .from("creator_profiles")
       .select("profile_id")
@@ -194,7 +184,7 @@ describe("creator_profiles: la tarifa es de cada quien", () => {
 
     const { error: sinColumna } = await marca.client
       .from("creator_public_profiles")
-      .select("rate_min")
+      .select("rejection_reason")
       .eq("profile_id", publicado.id);
     expect(sinColumna).not.toBeNull();
   });

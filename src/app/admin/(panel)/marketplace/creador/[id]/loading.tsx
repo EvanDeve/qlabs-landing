@@ -23,8 +23,8 @@ export default function Loading() {
         </div>
       </div>
       <Skel w={380} h={34} r={11} style={{ marginBottom: 14, maxWidth: "100%" }} />
-      <div className={styles.fichaGrid3}>
-        {[4, 5, 4].map((n, i) => (
+      <div className={styles.fichaGrid2}>
+        {[5, 5].map((n, i) => (
           <div key={i} className={`${styles.card} ${styles.cardPad}`}>
             <Skel w={130} h={13} style={{ marginBottom: 18 }} />
             <SkelLineas n={n} />

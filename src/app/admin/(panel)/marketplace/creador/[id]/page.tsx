@@ -82,8 +82,6 @@ export default async function FichaCreadorPage({
   const [
     { data: perfil },
     email,
-    { data: servicios },
-    { data: addons },
     { data: habilidades },
     { data: marcasPasadas },
     { count: piezasBook },
@@ -98,8 +96,6 @@ export default async function FichaCreadorPage({
       .eq("id", id)
       .maybeSingle(),
     getUserEmail(id),
-    supabase.from("creator_services").select("service").eq("creator_id", id),
-    supabase.from("creator_addons").select("addon").eq("creator_id", id),
     supabase.from("creator_skills").select("name, level").eq("creator_id", id).order("position"),
     supabase.from("creator_past_brands").select("brand_name").eq("creator_id", id).order("position"),
     supabase.from("portfolio_items").select("id", { count: "exact", head: true }).eq("creator_id", id),
@@ -290,7 +286,7 @@ export default async function FichaCreadorPage({
       </div>
 
       {tab === "perfil" && (
-        <div className={styles.fichaGrid3}>
+        <div className={styles.fichaGrid2}>
           <div className={`${styles.card} ${styles.cardPad}`}>
             <h3 className={styles.fichaH3}>Contacto y redes</h3>
             <div className={styles.fichaPila}>
@@ -322,38 +318,6 @@ export default async function FichaCreadorPage({
                 )}
               </Dato>
               <Dato k="Idiomas">{creador.languages.join(", ") || "—"}</Dato>
-            </div>
-          </div>
-
-          <div className={`${styles.card} ${styles.cardPad}`}>
-            <h3 className={styles.fichaH3}>Rendimiento promedio</h3>
-            <div className={styles.fichaCajas}>
-              {[
-                { k: "Alcance", v: creador.avg_reach?.toLocaleString("es-CR") },
-                { k: "Vistas", v: creador.avg_views?.toLocaleString("es-CR") },
-                {
-                  k: "Engagement",
-                  v: creador.engagement_rate != null ? `${creador.engagement_rate}%` : null,
-                },
-              ].map((c) => (
-                <div key={c.k} className={styles.fichaCaja}>
-                  <div className={styles.fichaK}>{c.k}</div>
-                  <b>{c.v ?? "—"}</b>
-                </div>
-              ))}
-            </div>
-            <div className={styles.fichaPila}>
-              <Dato k="Tarifa">
-                {creador.rate_min != null
-                  ? `Desde ${colones(creador.rate_min)}`
-                  : creador.rate_max != null
-                    ? `Hasta ${colones(creador.rate_max)}`
-                    : "—"}
-              </Dato>
-              <Dato k="Servicios">{(servicios ?? []).map((s) => s.service).join(" · ") || "—"}</Dato>
-              {(addons ?? []).length > 0 && (
-                <Dato k="Extras">{(addons ?? []).map((a) => a.addon).join(" · ")}</Dato>
-              )}
               <Dato k="Marcas con las que trabajó">
                 {(marcasPasadas ?? []).map((m) => m.brand_name).join(", ") || "—"}
               </Dato>

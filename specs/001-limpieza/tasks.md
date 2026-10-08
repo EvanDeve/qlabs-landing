@@ -21,7 +21,7 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
   Test primero, después `src/lib/ugc/apuntes.ts`, que usa `/grabacion`.
   *Hecho cuando:* el test pasa y `/grabacion/[token]` muestra lo mismo que antes.
 
-- [ ] **T06 — Ficha de admin sin servicios, add-ons ni métricas** (RF-01, RF-03)
+- [x] **T06 — Ficha de admin sin servicios, add-ons ni métricas** (RF-01, RF-03)
   *Hecho cuando:* la ficha del creador abre bien en el navegador y ningún archivo de `src/` nombra esas tablas y columnas.
 
 - [ ] **T07 — Fuera `delivery_note` y `calendar_events.content_piece_id` del código** (RF-03)
