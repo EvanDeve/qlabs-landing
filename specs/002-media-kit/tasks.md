@@ -39,7 +39,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `alternarDestacadaAction` y `moverDestacadaAction` en `src/lib/actions/portfolio.ts`; botón, "Destacada N de 3", mover y marca en la miniatura en `PortfolioGrid.tsx`; `book/page.tsx` pasa `orden_destacada`.
   *Hecho cuando:* en el navegador se destacan 3, la 4ª muestra el aviso, se reordenan, y al borrar una destacada desaparece de las destacadas; la base lo confirma.
 
-- [ ] **T10 — Bloque de destacadas en el kit** (RF-03, RF-04)
+- [x] **T10 — Bloque de destacadas en el kit** (RF-03, RF-04)
   `CreatorDestacadas.tsx` con respaldo para archivo roto; el kit usa `separarDestacadas` y le pasa el resto a `CreatorPublicBook`. Posición provisoria: arriba del book (la final la deciden los mockups, T18).
   *Hecho cuando:* en el navegador el kit muestra las destacadas en su orden y sin repetirlas abajo, no muestra el bloque sin destacadas, y una destacada con el archivo borrado se ve como hueco sin romper el resto.
 

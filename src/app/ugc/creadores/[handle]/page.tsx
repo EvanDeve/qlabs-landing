@@ -9,6 +9,8 @@ import { displayHandle, handleSlug } from "@/lib/ugc/handles";
 import { nichoLabel } from "@/lib/ugc/nichos";
 import TrustRing from "@/components/ugc/TrustRing";
 import CreatorPublicBook from "@/components/ugc/creador/CreatorPublicBook";
+import CreatorDestacadas from "@/components/ugc/creador/CreatorDestacadas";
+import { separarDestacadas } from "@/lib/ugc/destacadas";
 import CompartirPagina from "@/components/ugc/CompartirPagina";
 
 export const dynamic = "force-dynamic";
@@ -130,6 +132,10 @@ export default async function CreatorPublicProfilePage({
     approvedCount,
     onTimeRatio,
   });
+
+  const urlDePieza = (storagePath: string) =>
+    supabase.storage.from(PORTFOLIO_BUCKET).getPublicUrl(storagePath).data.publicUrl;
+  const { destacadas, resto: restoDelBook } = separarDestacadas(portfolioItems ?? []);
 
   const brandsByCategory = new Map<string, string[]>();
   for (const b of pastBrands ?? []) {
@@ -302,15 +308,36 @@ export default async function CreatorPublicProfilePage({
           ))}
         </div>
 
-        {/* BOOK */}
-        {portfolioItems && portfolioItems.length > 0 && (
+        {/* DESTACADAS — el creador las elige desde su book (spec 002). Van
+            arriba del book y no se repiten abajo. Posición provisoria: el
+            orden final de la página sale de los mockups de Evan. */}
+        {destacadas.length > 0 && (
           <section className="mt-10">
-            <h2 className="mb-1 text-lg font-extrabold text-ink">Book</h2>
-            <p className="mb-4 text-sm text-ink-soft">Sus mejores piezas — tocá para reproducir.</p>
-            <CreatorPublicBook
-              items={portfolioItems.map((item) => ({
+            <h2 className="mb-4 text-lg font-extrabold text-ink">Destacadas</h2>
+            <CreatorDestacadas
+              items={destacadas.map((item) => ({
                 id: item.id,
-                url: supabase.storage.from(PORTFOLIO_BUCKET).getPublicUrl(item.storage_path).data.publicUrl,
+                url: urlDePieza(item.storage_path),
+                media_type: item.media_type,
+                caption: item.caption,
+              }))}
+            />
+          </section>
+        )}
+
+        {/* BOOK */}
+        {restoDelBook.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-1 text-lg font-extrabold text-ink">
+              {destacadas.length > 0 ? "Más del book" : "Book"}
+            </h2>
+            <p className="mb-4 text-sm text-ink-soft">
+              {destacadas.length > 0 ? "Tocá para reproducir." : "Sus mejores piezas — tocá para reproducir."}
+            </p>
+            <CreatorPublicBook
+              items={restoDelBook.map((item) => ({
+                id: item.id,
+                url: urlDePieza(item.storage_path),
                 media_type: item.media_type,
                 caption: item.caption,
               }))}
