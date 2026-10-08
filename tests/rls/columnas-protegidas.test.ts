@@ -75,7 +75,19 @@ beforeAll(async () => {
   }
 });
 
-afterAll(cleanup);
+afterAll(async () => {
+  // La disputa de abajo le avisa a los admins REALES del proyecto, no a las
+  // cuentas de prueba: esas notificaciones no se van en cascada con los
+  // usuarios y se quedaban en la campana del equipo en cada corrida.
+  const { error } = await admin
+    .from("notifications")
+    .delete()
+    .eq("type", "application_disputed")
+    .eq("payload->>campaign_id", campaignId);
+  if (error) throw new Error(`no se limpiaron las notificaciones de prueba: ${error.message}`);
+
+  await cleanup();
+});
 
 describe("applications: el creador no puede escribir lo que no es suyo", () => {
   it("no puede ponerse su propio rating", async () => {
