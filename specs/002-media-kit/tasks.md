@@ -43,7 +43,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `CreatorDestacadas.tsx` con respaldo para archivo roto; el kit usa `separarDestacadas` y le pasa el resto a `CreatorPublicBook`. Posición provisoria: arriba del book (la final la deciden los mockups, T18).
   *Hecho cuando:* en el navegador el kit muestra las destacadas en su orden y sin repetirlas abajo, no muestra el bloque sin destacadas, y una destacada con el archivo borrado se ve como hueco sin romper el resto.
 
-- [ ] **T11 — Teléfono en el perfil del creador** (RF-06, RF-07)
+- [x] **T11 — Teléfono en el perfil del creador** (RF-06, RF-07)
   `guardarContactoAction` en `creator-profile.ts`, `ContactoDelKit.tsx` en `creador/perfil/page.tsx`, y la línea del teléfono en la nota de `CompartirPerfil`.
   *Hecho cuando:* en el navegador "8888 7777" queda como +50688887777, un número inválido muestra el error sin guardar, el interruptor arranca apagado, vaciar el número apaga el interruptor, y guardar el resto del perfil NO toca el teléfono.
 

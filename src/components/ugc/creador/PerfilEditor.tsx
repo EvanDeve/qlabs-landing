@@ -28,6 +28,8 @@ export type PerfilInicial = {
   instagram_handle: string;
   tiktok_handle: string;
   avatar_url: string | null;
+  /** Solo para la nota de compartir; el teléfono se edita en ContactoDelKit. */
+  mostrar_telefono?: boolean;
 };
 
 type Skill = { name: string; level: number };
@@ -236,7 +238,7 @@ export default function PerfilEditor({
               {inicial.verified ? "Verificado por Q Labs" : "Todavía sin verificar"}
             </div>
           </div>
-          <CompartirPerfil handle={inicial.handle} />
+          <CompartirPerfil handle={inicial.handle} muestraTelefono={inicial.mostrar_telefono} />
         </div>
 
         <p className={styles.perfilSeccion}>Lo que ven las marcas</p>

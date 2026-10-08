@@ -7,6 +7,7 @@ import { AVATAR_BUCKET } from "@/lib/ugc/avatars";
 import { parseLanguages } from "@/lib/ugc/languages";
 import { parseNichos } from "@/lib/ugc/nichos";
 import { MAX_BIO } from "@/lib/ugc/perfil";
+import { normalizarTelefonoCR } from "@/lib/whatsapp/twilio";
 
 // Ver el comentario gemelo en brand-profile.ts: `ok` es lo que deja avisar
 // que el guardado entró.
@@ -132,5 +133,46 @@ export async function updateCreatorProfileDetailsAction(
     revalidatePath(`/ugc/creadores/${creatorProfile.handle}`);
   }
 
+  return { ok: true };
+}
+
+export type GuardarContactoState = { error: string } | { ok: true } | null;
+
+/**
+ * El teléfono del media kit (spec 002, RF-06, RF-07).
+ *
+ * Va en su propio action y NO dentro de `updateCreatorProfileDetailsAction`:
+ * ese guarda el perfil entero de una vez, y un campo de más ahí es un campo
+ * que un formulario viejo o a medio cargar puede vaciar sin querer.
+ */
+export async function guardarContactoAction(
+  _prev: GuardarContactoState,
+  formData: FormData
+): Promise<GuardarContactoState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/ugc/login");
+
+  const entrada = String(formData.get("telefono") ?? "").trim();
+  const mostrar = formData.get("mostrar_telefono") === "on";
+
+  // Sin número no hay nada que mostrar: vaciarlo apaga el interruptor.
+  let telefono: string | null = null;
+  if (entrada) {
+    telefono = normalizarTelefonoCR(entrada);
+    if (!telefono) {
+      return { error: "Revisá el número: escribilo con 8 dígitos, o con el código de país si no es de Costa Rica." };
+    }
+  }
+
+  const { error } = await supabase
+    .from("creator_profiles")
+    .update({ telefono_e164: telefono, mostrar_telefono: telefono != null && mostrar })
+    .eq("profile_id", user.id);
+  if (error) return { error: "No se pudo guardar tu teléfono. Probá de nuevo." };
+
+  revalidatePath("/ugc/creador/perfil");
   return { ok: true };
 }

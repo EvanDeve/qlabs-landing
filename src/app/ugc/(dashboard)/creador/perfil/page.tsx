@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import PerfilEditor from "@/components/ugc/creador/PerfilEditor";
+import ContactoDelKit from "@/components/ugc/creador/ContactoDelKit";
 import PantallaHeader from "@/components/ugc/PantallaHeader";
 
 export const dynamic = "force-dynamic";
@@ -37,12 +38,18 @@ export default async function CreatorProfileEditPage() {
           instagram_handle: creatorProfile?.instagram_handle ?? "",
           tiktok_handle: creatorProfile?.tiktok_handle ?? "",
           avatar_url: profile?.avatar_url ?? null,
+          mostrar_telefono: creatorProfile?.mostrar_telefono ?? false,
         }}
         skillsIniciales={(skills ?? []).map((s) => ({ name: s.name, level: s.level }))}
         marcasIniciales={(pastBrands ?? []).map((b) => ({
           category: b.category,
           brand_name: b.brand_name,
         }))}
+      />
+
+      <ContactoDelKit
+        telefono={creatorProfile?.telefono_e164 ?? null}
+        mostrar={creatorProfile?.mostrar_telefono ?? false}
       />
     </div>
   );

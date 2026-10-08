@@ -18,7 +18,13 @@ import styles from "@/styles/qos.module.css";
  * ⚠️ El mockup mostraba `ugccrc.cr/creadores/<handle>`. Ese dominio no existe
  * —Evan lo confirmó— y un link que no abre es peor que uno largo.
  */
-export default function CompartirPerfil({ handle }: { handle: string }) {
+export default function CompartirPerfil({
+  handle,
+  muestraTelefono = false,
+}: {
+  handle: string;
+  muestraTelefono?: boolean;
+}) {
   const [abierta, setAbierta] = useState(false);
   const [url, setUrl] = useState("");
   const [copiado, setCopiado] = useState(false);
@@ -149,6 +155,7 @@ export default function CompartirPerfil({ handle }: { handle: string }) {
           <p className={styles.perfilNota}>
             Cualquiera con el enlace ve tu book, tus habilidades y las marcas con las que
             trabajaste. No ve tus pagos ni tus aplicaciones.
+            {muestraTelefono && " Tu teléfono solo lo ven las marcas verificadas."}
           </p>
         </Hoja>
       )}
