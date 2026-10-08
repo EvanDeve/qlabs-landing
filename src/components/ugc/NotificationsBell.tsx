@@ -131,6 +131,17 @@ function describe(notification: Notification): { text: string; href: string } {
     };
   }
 
+  // Una marca verificada tocó "Ver teléfono" en el kit (spec 002). Llega una
+  // por marca y por día; el link lleva a la marca para saber quién es.
+  if (notification.type === "telefono_visto") {
+    const marca = String(payload.brand_name ?? "Una marca");
+    const slug = typeof payload.brand_slug === "string" ? payload.brand_slug : "";
+    return {
+      text: `${marca} vio tu teléfono en tu kit`,
+      href: slug ? `/ugc/marcas/${slug}` : "/ugc/creador",
+    };
+  }
+
   return { text: notification.type, href: "#" };
 }
 

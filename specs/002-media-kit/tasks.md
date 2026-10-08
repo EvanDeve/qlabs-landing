@@ -51,7 +51,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   En `creadores/[handle]/page.tsx`: sesión, rol, verificación de la marca y teléfono propio → `modoContacto`. `KitContacto.tsx` y `verTelefonoAction` en `src/lib/actions/kit.ts`.
   *Hecho cuando:* en el navegador cada visitante ve lo suyo (sin sesión, marca sin verificar, otro creador, marca verificada con WhatsApp y Llamar, el dueño con la aclaración, nada si no lo muestra), y `curl` sin sesión al kit no trae el número en el HTML.
 
-- [ ] **T13 — Aviso en la campanita** (RF-12b, RF-12c)
+- [x] **T13 — Aviso en la campanita** (RF-12b, RF-12c)
   Rama `telefono_visto` en `NotificationsBell.tsx`.
   *Hecho cuando:* una marca de prueba toca "Ver teléfono" dos veces, el creador ve una sola notificación con el nombre de la marca y al tocarla abre la página pública de la marca.
 
