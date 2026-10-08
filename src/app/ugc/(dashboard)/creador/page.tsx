@@ -5,7 +5,10 @@ import { creatorPayout } from "@/lib/ugc/payout";
 import { dueLabel } from "@/lib/ugc/creator-task";
 import { FORMAT_LABEL } from "@/lib/ugc/deliverables";
 import { estadoDeNivel, type Nivel } from "@/lib/ugc/loyalty";
-import { displayHandle } from "@/lib/ugc/handles";
+import { displayHandle, handleSlug } from "@/lib/ugc/handles";
+import { diaCR } from "@/lib/ugc/calendar";
+import { inicioVentanaVisitas, textoVisitas } from "@/lib/ugc/visitas-kit";
+import CopiarLinkKit from "@/components/ugc/creador/CopiarLinkKit";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 import PantallaHeader from "@/components/ugc/PantallaHeader";
@@ -78,6 +81,7 @@ export default async function CreadorHomePage() {
     { data: puntos },
     { data: umbrales },
     { data: publicadas },
+    { data: resumenVisitas },
   ] = await Promise.all([
     supabase.from("applications").select("*").eq("creator_id", user!.id),
     supabase.from("creator_tasks").select("*").eq("creator_id", user!.id),
@@ -96,7 +100,16 @@ export default async function CreadorHomePage() {
     supabase.from("level_thresholds").select("*").order("min_points"),
     // Solo los ids: alcanza para contar las que todavía no miró.
     supabase.from("campaigns").select("id").eq("status", "published"),
+    // Visitas del kit en los últimos 30 días, hora de Costa Rica (spec 002).
+    supabase.rpc("resumen_visitas_kit", {
+      p_creator: user!.id,
+      p_desde: inicioVentanaVisitas(diaCR(new Date())),
+    }),
   ]);
+  const visitas = textoVisitas({
+    total: Number(resumenVisitas?.[0]?.total ?? 0),
+    deMarcas: Number(resumenVisitas?.[0]?.de_marcas ?? 0),
+  });
 
   const apps = applications ?? [];
   const campaignIds = [...new Set(apps.map((a) => a.campaign_id))];
@@ -364,6 +377,23 @@ export default async function CreadorHomePage() {
           ))}
         </div>
       ) : null}
+
+      {/* Visitas del kit. Va al final: es para mirar de vez en cuando, no lo
+          que hay que hacer hoy. */}
+      {perfilCreador?.handle && (
+        <div className={styles.homeCard} style={{ marginTop: 18 }}>
+          <div className={styles.homeEstadoLinea}>Tu kit</div>
+          <div className={styles.homeCardTitulo}>{visitas.titulo}</div>
+          <div className={styles.homeCardNota}>{visitas.nota}</div>
+          {visitas.vacio ? (
+            <CopiarLinkKit handle={perfilCreador.handle} />
+          ) : (
+            <Link href={`/ugc/creadores/${handleSlug(perfilCreador.handle)}`} className={styles.entLink}>
+              Ver mi kit
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

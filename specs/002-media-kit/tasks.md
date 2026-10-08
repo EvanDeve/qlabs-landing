@@ -59,7 +59,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `src/app/api/ugc/visitas-kit/route.ts` y `RegistrarVisitaKit.tsx`, montado en el kit solo para quien no es el dueño ni admin.
   *Hecho cuando:* abrir el kit sin sesión crea la cookie `ugc_visitante` y una fila en `kit_visitas`; recargar no suma; con sesión de marca suma con `es_marca`; como dueño o admin no suma; `curl -A "facebookexternalhit/1.1" -X POST` no suma; la página no muestra errores si el POST falla. (Probar con Chrome normal: el headless se filtra como bot.)
 
-- [ ] **T15 — Visitas en el inicio del creador** (RF-17, RF-18, RF-19)
+- [x] **T15 — Visitas en el inicio del creador** (RF-17, RF-18, RF-19)
   `resumen_visitas_kit` en `creador/page.tsx`, tarjeta con `textoVisitas`, y `CopiarLinkKit.tsx` en el estado vacío.
   *Hecho cuando:* en el navegador un creador sin visitas ve el mensaje que invita a compartir y el botón copia el link correcto; con visitas ve el total de 30 días y cuántas fueron de marcas, y coincide con la base.
 
