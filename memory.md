@@ -29,4 +29,3 @@
 - [ ] Spec 002 T18: reordenar el kit público cuando lleguen los mockups de Evan.
 - [ ] Rediseño general de Q·OS cuando lleguen las capturas.
 - [ ] `/feature` chico: la marca que inicia sesión desde un kit no vuelve al kit (`destinoConNext` solo deja volver dentro del panel).
-- [ ] Decidir si se borran las 12 disputas de prueba del 25/8 en "Reel de prueba" (marca demo).
