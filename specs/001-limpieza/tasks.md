@@ -2,7 +2,7 @@
 
 Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
 
-- [ ] **T01 — Archivos locales** (RF-09)
+- [x] **T01 — Archivos locales** (RF-09)
   Borrar `testimonios.mp4`, `tsconfig.tsbuildinfo`, `.DS_Store`, `.next/` y `.git/index 2`…`7`.
   *Hecho cuando:* no existen y `npx tsc --noEmit` ya no da los errores de duplicados de `.next`.
 
