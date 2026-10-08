@@ -7963,6 +7963,22 @@
   bottom: 8px;
   left: 8px;
 }
+/* La marca de destacada: arriba a la derecha, en violeta para que se distinga
+   de la categoría (oscura) a primera vista en la grilla. */
+.bookDestacada {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: var(--r-full);
+  background: var(--b-500);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
 .bookInfo {
   padding: 10px 11px 12px;
 }
@@ -8258,6 +8274,21 @@
   font-size: 13.5px;
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.72);
+}
+.visorDestacada {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.visorDestacadaTxt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.82);
 }
 .visorConfirmaBtns {
   display: flex;

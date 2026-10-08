@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { PORTFOLIO_BUCKET, PORTFOLIO_CATEGORIES } from "@/lib/ugc/portfolio";
+import { MAX_DESTACADAS, alternarDestacada, moverDestacada } from "@/lib/ugc/destacadas";
 
 export type UploadPortfolioItemState = { error: string } | null;
 
@@ -162,4 +163,58 @@ export async function movePortfolioItemAction(formData: FormData) {
   ]);
 
   revalidatePath("/ugc/creador/book");
+}
+
+export type DestacadaResultado = { ok: true } | { error: string };
+
+const ERROR_TOPE = `Podés destacar hasta ${MAX_DESTACADAS} piezas. Quitá una para sumar esta.`;
+
+/**
+ * Las destacadas del creador, en el orden en que salen en su kit. La lista
+ * nueva se calcula con las funciones puras y se escribe entera con
+ * `fijar_destacadas`, que la reescribe en una sola transacción.
+ */
+async function cambiarDestacadas(
+  calcular: (actuales: string[]) => { ok: true; ids: string[] } | { ok: false; error: string }
+): Promise<DestacadaResultado> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/ugc/login");
+
+  const { data: actuales, error: errorLectura } = await supabase
+    .from("portfolio_items")
+    .select("id")
+    .eq("creator_id", user.id)
+    .not("orden_destacada", "is", null)
+    .order("orden_destacada", { ascending: true });
+  if (errorLectura) return { error: "No se pudieron leer tus destacadas. Probá de nuevo." };
+
+  const r = calcular((actuales ?? []).map((p) => p.id));
+  if (!r.ok) return { error: r.error };
+
+  const { error } = await supabase.rpc("fijar_destacadas", { p_ids: r.ids });
+  if (error) {
+    // Dos pestañas a la vez pueden pasarse del tope: la base lo frena con el
+    // mismo mensaje que la pantalla.
+    if (error.code === "23514" || error.code === "23505") return { error: ERROR_TOPE };
+    return { error: "No se pudo guardar. Probá de nuevo." };
+  }
+
+  revalidatePath("/ugc/creador/book");
+  return { ok: true };
+}
+
+export async function alternarDestacadaAction(itemId: string): Promise<DestacadaResultado> {
+  if (!itemId) return { error: "Falta la pieza." };
+  return cambiarDestacadas((actuales) => alternarDestacada(actuales, itemId));
+}
+
+export async function moverDestacadaAction(
+  itemId: string,
+  direccion: "antes" | "despues"
+): Promise<DestacadaResultado> {
+  if (!itemId) return { error: "Falta la pieza." };
+  return cambiarDestacadas((actuales) => ({ ok: true, ids: moverDestacada(actuales, itemId, direccion) }));
 }

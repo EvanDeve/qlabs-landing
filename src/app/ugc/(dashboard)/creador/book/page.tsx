@@ -37,6 +37,7 @@ export default async function CreatorBookPage() {
     caption: item.caption,
     views: item.views,
     created_at: item.created_at,
+    orden_destacada: item.orden_destacada,
   }));
 
   const totalViews = tiles.reduce((sum, t) => sum + (t.views ?? 0), 0);

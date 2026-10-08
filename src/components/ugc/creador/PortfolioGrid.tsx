@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deletePortfolioItemAction, movePortfolioItemAction } from "@/lib/actions/portfolio";
+import {
+  alternarDestacadaAction,
+  deletePortfolioItemAction,
+  movePortfolioItemAction,
+  moverDestacadaAction,
+  type DestacadaResultado,
+} from "@/lib/actions/portfolio";
+import { MAX_DESTACADAS } from "@/lib/ugc/destacadas";
+import { useToast } from "@/components/ugc/Toaster";
 import { PORTFOLIO_CATEGORIES, PORTFOLIO_CATEGORY_LABEL } from "@/lib/ugc/portfolio";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
@@ -15,6 +23,8 @@ export type PortfolioTile = {
   caption: string | null;
   views: number | null;
   created_at: string;
+  /** 1..3 si sale destacada en el kit, en ese lugar; null si no. */
+  orden_destacada: number | null;
 };
 
 /** "agosto" / "agosto 2026" a partir del `created_at` de la pieza. */
@@ -42,6 +52,7 @@ function bajada(item: PortfolioTile, conAnio = false): string {
 export default function PortfolioGrid({ items }: { items: PortfolioTile[] }) {
   const [categoria, setCategoria] = useState<string>("all");
   const [abierta, setAbierta] = useState<number | null>(null);
+  const totalDestacadas = items.filter((i) => i.orden_destacada != null).length;
 
   const visibles = categoria === "all" ? items : items.filter((i) => i.category === categoria);
   const contar = (c: string) => (c === "all" ? items.length : items.filter((i) => i.category === c).length);
@@ -95,6 +106,12 @@ export default function PortfolioGrid({ items }: { items: PortfolioTile[] }) {
                 <span className={styles.bookCat}>
                   {PORTFOLIO_CATEGORY_LABEL[item.category] ?? item.category}
                 </span>
+                {item.orden_destacada != null && (
+                  <span className={styles.bookDestacada} aria-label={`Destacada ${item.orden_destacada} de ${MAX_DESTACADAS}`}>
+                    <QosIcon name="sparkle" size={10} />
+                    {item.orden_destacada}
+                  </span>
+                )}
                 {item.views != null && (
                   <span className={styles.bookViews}>
                     <QosIcon name="play" size={9} />
@@ -115,6 +132,7 @@ export default function PortfolioGrid({ items }: { items: PortfolioTile[] }) {
         <VisorPieza
           items={visibles}
           indice={abierta}
+          totalDestacadas={totalDestacadas}
           onIr={setAbierta}
           onClose={() => setAbierta(null)}
         />
@@ -133,18 +151,35 @@ export default function PortfolioGrid({ items }: { items: PortfolioTile[] }) {
 function VisorPieza({
   items,
   indice,
+  totalDestacadas,
   onIr,
   onClose,
 }: {
   items: PortfolioTile[];
   indice: number;
+  totalDestacadas: number;
   onIr: (i: number) => void;
   onClose: () => void;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const item = items[indice];
   const [borrando, setBorrando] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
+  const [guardando, startGuardar] = useTransition();
+  const lugar = item.orden_destacada;
+
+  function destacar(accion: () => Promise<DestacadaResultado>, aviso?: string) {
+    startGuardar(async () => {
+      const r = await accion();
+      if ("error" in r) {
+        toast(r.error, "error");
+        return;
+      }
+      if (aviso) toast(aviso);
+      router.refresh();
+    });
+  }
 
   useEffect(() => {
     function alTeclado(e: KeyboardEvent) {
@@ -257,9 +292,54 @@ function VisorPieza({
         </div>
       ) : (
         <div className={styles.visorAcciones}>
-          <button type="button" className={styles.visorAccion} onClick={() => setConfirmar(true)}>
-            Eliminar del book
-          </button>
+          {/* Destacar va arriba de eliminar: es lo que se hace seguido, y
+              borrar queda último, donde no se toca sin querer. */}
+          {lugar != null ? (
+            <div className={styles.visorDestacada}>
+              <span className={styles.visorDestacadaTxt}>
+                <QosIcon name="sparkle" size={14} />
+                Destacada {lugar} de {MAX_DESTACADAS} en tu kit
+              </span>
+              <div className={styles.visorOrden}>
+                <button
+                  type="button"
+                  className={styles.visorIcon}
+                  disabled={guardando || lugar === 1}
+                  onClick={() => destacar(() => moverDestacadaAction(item.id, "antes"))}
+                  aria-label="Subir en las destacadas"
+                >
+                  <QosIcon name="chevL" size={16} />
+                </button>
+                <button
+                  type="button"
+                  className={styles.visorIcon}
+                  disabled={guardando || lugar === totalDestacadas}
+                  onClick={() => destacar(() => moverDestacadaAction(item.id, "despues"))}
+                  aria-label="Bajar en las destacadas"
+                >
+                  <QosIcon name="chevR" size={16} />
+                </button>
+              </div>
+            </div>
+          ) : null}
+          <div className={styles.visorConfirmaBtns} style={{ marginTop: 0 }}>
+            <button
+              type="button"
+              className={styles.visorAccion}
+              disabled={guardando}
+              onClick={() =>
+                destacar(
+                  () => alternarDestacadaAction(item.id),
+                  lugar != null ? "La sacaste de tus destacadas." : "Destacada en tu kit."
+                )
+              }
+            >
+              {lugar != null ? "Quitar de destacadas" : "Destacar en mi kit"}
+            </button>
+            <button type="button" className={styles.visorAccion} onClick={() => setConfirmar(true)}>
+              Eliminar del book
+            </button>
+          </div>
         </div>
       )}
     </div>

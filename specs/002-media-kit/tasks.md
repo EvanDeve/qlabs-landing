@@ -35,7 +35,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `tests/rls/media-kit-visitas.test.ts`: anon suma 1 y repite sin sumar; otro anon suma; dueño y admin no suman; marca suma como `de_marcas`; creador sin verificar no suma; una fila de hace 31 días (sembrada con service role) no entra en la ventana; nadie más que el dueño y admin lee totales ni filas.
   *Hecho cuando:* `npm run test:rls` pasa y no quedan cuentas `rlstest`.
 
-- [ ] **T09 — Destacar desde el book** (RF-01, RF-02, RF-05)
+- [x] **T09 — Destacar desde el book** (RF-01, RF-02, RF-05)
   `alternarDestacadaAction` y `moverDestacadaAction` en `src/lib/actions/portfolio.ts`; botón, "Destacada N de 3", mover y marca en la miniatura en `PortfolioGrid.tsx`; `book/page.tsx` pasa `orden_destacada`.
   *Hecho cuando:* en el navegador se destacan 3, la 4ª muestra el aviso, se reordenan, y al borrar una destacada desaparece de las destacadas; la base lo confirma.
 
