@@ -7,7 +7,8 @@ export { FiltroAdmin };
 export type Pestana = {
   id: string;
   label: string;
-  count: number;
+  /** Sin número (la pestaña "Perfil" de la ficha) no se muestra nada. */
+  count?: number;
   /** La pastilla de "1 pendiente", "2 sin canjear"… Solo se muestra si N > 0. */
   aviso?: { n: number; texto: string };
 };
@@ -38,7 +39,7 @@ export function PestanasAdmin({
           aria-current={activa === p.id ? "page" : undefined}
         >
           {p.label}
-          <span className={styles.segCount}>{p.count}</span>
+          {p.count != null && <span className={styles.segCount}>{p.count}</span>}
           {p.aviso && p.aviso.n > 0 && (
             <span className={styles.segAviso}>
               {p.aviso.n}
