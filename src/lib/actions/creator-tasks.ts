@@ -349,22 +349,3 @@ export async function deleteColumnAction(formData: FormData) {
   revalidar();
 }
 
-/** Reordenar columnas: recibe los ids en el orden nuevo. */
-export async function reorderColumnsAction(formData: FormData) {
-  const { supabase, user } = await requireCreator();
-
-  const ids = String(formData.get("ids") ?? "").split(",").filter(Boolean);
-  if (!ids.length) return;
-
-  await Promise.all(
-    ids.map((id, i) =>
-      supabase
-        .from("creator_task_columns")
-        .update({ position: i })
-        .eq("id", id)
-        .eq("creator_id", user.id)
-    )
-  );
-
-  revalidar();
-}

@@ -39,10 +39,9 @@ const CHIPS_POR_CELDA = 3;
 /**
  * El estado de aprobación en tokens de Q·OS.
  *
- * CONTENT_APPROVAL_STYLE no sirve acá: son clases de Tailwind del landing
- * público, y este panel corre sobre CSS Modules con sus propias variables. Los
- * textos sí se comparten (CONTENT_APPROVAL_LABEL), que es lo que importa que no
- * se desincronice.
+ * Este panel corre sobre CSS Modules con sus propias variables, así que los
+ * colores viven acá. Los textos sí se comparten (CONTENT_APPROVAL_LABEL), que
+ * es lo que importa que no se desincronice.
  */
 const APPROVAL_QOS: Record<ContentApproval, { bg: string; fg: string }> = {
   pendiente: { bg: "var(--surface-3)", fg: "var(--ink-2)" },

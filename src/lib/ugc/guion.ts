@@ -150,17 +150,6 @@ function sinCabecera(texto: string): string {
     .trim();
 }
 
-/**
- * El guion para el portapapeles y para el archivo que se descarga.
- *
- * Se arma desde el texto CRUDO y no desde los bloques: lo que el creador quiere
- * pegar en sus notas es el guion entero tal como lo tiene, con las tomas
- * incluidas. Reconstruirlo desde el parseo solo agrega formas de perder algo.
- */
-export function guionParaCopiar(crudo: string | null | undefined): string {
-  return (crudo ?? "").trim();
-}
-
 /** Nombre del .txt que se descarga. Sin espacios ni acentos. */
 export function nombreDeArchivoDeGuion(titulo: string): string {
   const limpio = titulo

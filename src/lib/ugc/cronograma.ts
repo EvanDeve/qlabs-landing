@@ -52,11 +52,6 @@ export function diasDelMes(mes: string): number {
   return new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0)).getUTCDate();
 }
 
-/** Los días del mes como 'yyyy-MM-dd', para poblar un selector de fecha. */
-export function diasDe(mes: string): string[] {
-  return Array.from({ length: diasDelMes(mes) }, (_, i) => `${mes.slice(0, 8)}${String(i + 1).padStart(2, "0")}`);
-}
-
 /**
  * Valida un mes que llegó de la URL antes de mandarlo a Postgres.
  *
@@ -68,18 +63,6 @@ export function parseMes(valor: string | undefined): string | null {
   return valor && /^\d{4}-\d{2}-01$/.test(valor) && Number(valor.slice(5, 7)) >= 1 && Number(valor.slice(5, 7)) <= 12
     ? valor
     : null;
-}
-
-/**
- * La ventana de meses que ofrece el selector: de un año atrás a tres adelante.
- *
- * Hacia atrás porque el Dashboard mira meses cerrados; hacia adelante porque un
- * cronograma se arma antes de que empiece el mes —ese es todo el punto— y con
- * el mes actual como tope no se podría armar septiembre en agosto.
- */
-export function mesesAlrededor(ahora: Date = new Date()): string[] {
-  const actual = mesCR(ahora);
-  return Array.from({ length: 17 }, (_, i) => sumarMeses(actual, i - 13));
 }
 
 /** La hora 'HH:mm:ss' de Postgres como 'HH:mm', que es lo que espera un input. */

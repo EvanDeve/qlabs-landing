@@ -12,24 +12,6 @@ export const CONTENT_APPROVAL_LABEL: Record<ContentApproval, string> = {
   revisado: "Revisado",
 };
 
-export const CONTENT_APPROVAL_STYLE: Record<ContentApproval, string> = {
-  pendiente: "bg-lavender text-ink-soft",
-  correccion: "bg-coral-bg text-coral",
-  revisado: "bg-trust-bg text-trust",
-};
-
-export const CONTENT_PRIORITY_LABEL: Record<ContentPriority, string> = {
-  baja: "Baja",
-  media: "Media",
-  alta: "Alta",
-};
-
-export const CONTENT_PRIORITY_STYLE: Record<ContentPriority, string> = {
-  baja: "bg-lavender text-ink-soft",
-  media: "bg-lavender-deep text-violet-deep",
-  alta: "bg-coral-bg text-coral",
-};
-
 // Q·OS conserva "Reels" en plural: acá la etiqueta describe el canal donde
 // publica el equipo, no una pieza suelta. Stories, Fotos y Facebook existen para
 // el tablero del creador —Q·OS no los ofrece— pero necesitan etiqueta igual, por

@@ -51,10 +51,6 @@ const PATHS: Record<string, string> = {
   image: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 9"/>',
 };
 
-export function qosIconSvg(name: string, size = 18): string {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PATHS[name] ?? ""}</svg>`;
-}
-
 export function QosIcon({ name, size = 18, className }: { name: string; size?: number; className?: string }) {
   return (
     <svg

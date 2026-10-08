@@ -87,9 +87,8 @@ export default function PromoDetalle({ promo }: { promo: PromoDetalleData }) {
 
       <h2 className={styles.hojaTitulo}>{promo.title}</h2>
 
-      {/* Las mismas tres cifras que ve la marca. Acá se escribe a mano en vez de
-          reusar <DesglosePago> porque la hoja le da otra forma —caja lavanda,
-          sin bordes— pero los números salen de la misma función. */}
+      {/* Las mismas tres cifras que ve la marca: los números salen de la
+          misma función, con la forma de la hoja (caja lavanda, sin bordes). */}
       <div className={styles.hojaPago}>
         <div className={styles.hojaPagoFila}>
           <span>Presupuesto de la campaña</span>

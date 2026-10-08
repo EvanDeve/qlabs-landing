@@ -57,9 +57,3 @@ export function slotsDeCampana(deliverables: Json | null): SlotEntrega[] {
   });
 }
 
-/** Qué extensiones ofrece el selector según lo que se está entregando. */
-export function aceptaDeSlot(type: string): string {
-  if (type === "photos") return "image/*";
-  if (type === "stories") return "image/*,video/*";
-  return "video/*";
-}

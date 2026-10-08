@@ -19,14 +19,6 @@ export type Nivel = {
   min_points: number;
 };
 
-/** El emoji es del demo aprobado. Bronce no lleva: es donde arranca todo el mundo. */
-export const EMOJI_NIVEL: Record<number, string> = {
-  1: "",
-  2: "🥈",
-  3: "🥇",
-  4: "💎",
-};
-
 export const COLOR_NIVEL: Record<number, string> = {
   1: "#a06a3c",
   2: "#7d8794",

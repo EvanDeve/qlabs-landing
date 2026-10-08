@@ -57,33 +57,3 @@ export function BarraAdmin({ children }: { children: React.ReactNode }) {
   return <div className={styles.barraAdmin}>{children}</div>;
 }
 
-/** La tarjeta de la lista con su "N de M" en el título. */
-export function TarjetaLista({
-  titulo,
-  mostrados,
-  total,
-  vacio,
-  children,
-}: {
-  titulo: string;
-  mostrados: number;
-  total: number;
-  vacio: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={`${styles.card} ${styles.cardPad}`}>
-      <div className={styles.sectionHead}>
-        <h2>
-          {titulo} ({mostrados}
-          {mostrados !== total ? ` de ${total}` : ""})
-        </h2>
-      </div>
-      {mostrados === 0 ? (
-        <div className={styles.empty}>{total === 0 ? vacio : "Nada coincide con ese filtro."}</div>
-      ) : (
-        children
-      )}
-    </div>
-  );
-}

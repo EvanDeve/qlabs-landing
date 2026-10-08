@@ -146,24 +146,3 @@ export async function deleteContentColumnAction(formData: FormData) {
   revalidar();
 }
 
-/**
- * Reordenar columnas: recibe los ids en el orden nuevo.
- *
- * ⚠️ Espera TODOS los ids del tablero, no los de una pestaña: asigna posiciones
- * 0..n por índice, así que con un subconjunto las posiciones chocarían entre
- * carriles — y desde 20260818140000 la posición es lo que decide qué columna
- * cierra cada carril. Hoy no la llama nadie.
- */
-export async function reorderContentColumnsAction(formData: FormData) {
-  const { supabase, user } = await requireAdmin();
-  if (!user) return;
-
-  const ids = String(formData.get("ids") ?? "").split(",").filter(Boolean);
-  if (!ids.length) return;
-
-  await Promise.all(
-    ids.map((id, i) => supabase.from("content_columns").update({ position: i }).eq("id", id))
-  );
-
-  revalidar();
-}

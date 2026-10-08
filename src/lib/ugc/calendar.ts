@@ -243,14 +243,6 @@ export const CALENDAR_EVENT_TYPE_DOT: Record<CalendarEventType, string> = {
   guion: "var(--st-guion)",
 };
 
-export const CALENDAR_EVENT_TYPE_BG: Record<CalendarEventType, string> = {
-  publicacion: "rgba(20,160,106,.12)",
-  grabacion: "rgba(31,154,201,.12)",
-  reunion: "rgba(109,84,243,.12)",
-  entrega: "rgba(192,116,20,.12)",
-  guion: "rgba(155,108,240,.12)",
-};
-
 /**
  * El ícono de cada tipo, para la grilla del mes.
  *
