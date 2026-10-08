@@ -38,6 +38,6 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
 - [x] **T10 — Tipos de la base al día** (RF-07)
   *Hecho cuando:* `database.types.ts` coincide con prod y `npx tsc --noEmit` no da errores.
 
-- [ ] **T11 — Validación final y mudanza** (RF-01, RF-08)
+- [x] **T11 — Validación final y mudanza** (RF-01, RF-08)
   Los 5 comandos en verde, la recorrida visual completa, `memory.md` al día, y el comando para mudar el repo a `~/Proyects/` entregado a Evan.
   *Hecho cuando:* todo lo anterior está tildado.

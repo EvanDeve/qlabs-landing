@@ -1,6 +1,6 @@
 # 001 · Limpieza del repo y la base
 
-**Estado:** aprobada 2026-10-08.
+**Estado:** cerrada 2026-10-08 (T01–T11). Pendiente fuera de la spec: mudar el repo fuera de iCloud (lo hace Evan) y el `/feature` de la nota de entrega.
 
 ## Contexto y por qué
 

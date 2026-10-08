@@ -4,12 +4,13 @@
 
 ## Estado actual (2026-10-08)
 - **En prod:** marketplace completo (creador y marca rediseñados estilo iOS), Q·OS (agencia + área UGC rediseñada, mockups 1a–1f), Loyalty Loop, Close Friends (rol `member`, entra por QR), cronogramas mensuales con links para el Hero y para quien graba.
-- **Tarea activa:** spec `001-limpieza` aprobada, con plan y 11 tareas en `specs/001-limpieza/tasks.md`; T01–T10 hechas (migración `limpieza_001` corrida en prod el 2026-10-08).
+- **Tarea activa:** ninguna. Spec `001-limpieza` cerrada el 2026-10-08: ~1.100 líneas de código y CSS muerto, 15 documentos/prototipos, 3 dependencias, 2 tablas, 9 columnas y 1 función con hueco de seguridad menos (migración `limpieza_001` en prod).
 - **Recién hecho:**
   - `e586f42` nichos de creador: catálogo de 22, máximo 5, filtro `?nicho=` en Q·OS.
   - `ff9f563` links de acceso con `token_hash` y botón "Continuar" (los filtros de correo corporativos quemaban las invitaciones) + "Reenviar acceso" en Equipo.
 
 ## Decisiones y trampas vigentes
+- `src/lib/database.types.ts` se mantiene a mano (el CLI de Supabase no tiene sesión): al escribir una migración, actualizarlo; se compara contra prod con el OpenAPI de PostgREST.
 - 2026-10-08 — Se adopta SDD (`docs/guia-sdd.md`) con dos carriles: spec completa para lo nuevo, `/feature` para bugs y cambios chicos. El código sigue en español.
 - Los correos de acceso los manda la app por Resend; los de Supabase ya no se usan para invitar ni recuperar.
 - Supabase guarda un solo token de recuperación por cuenta: un link nuevo invalida el anterior.
@@ -22,7 +23,6 @@
 - Rediseño general de Q·OS (sidebar/header): espera capturas de Claude Design.
 
 ## Próximos pasos
-- [ ] Spec 001: Evan aprueba el plan → `/sdd-implement 001-limpieza T01`.
 - [ ] `/feature`: mostrarle a la marca la "Nota" que el creador escribe al entregar (`applications.delivery_note`, hoy nadie la lee).
-- [ ] Al cerrar la 001: mudar el repo de ~/Documents (iCloud) a ~/Proyects.
+- [ ] Evan muda el repo de ~/Documents (iCloud) a ~/Proyects: iCloud duplica archivos en `.next/` y rompe `tsc` (si pasa, `find .next -name "* [0-9]*" -prune -exec rm -rf {} +`).
 - [ ] Rediseño general de Q·OS cuando lleguen las capturas.
