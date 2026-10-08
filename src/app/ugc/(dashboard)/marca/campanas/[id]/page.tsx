@@ -205,6 +205,11 @@ export default async function CampaignDetailPage({
             </span>
           </div>
 
+          {/* La nota se lee antes de aprobar: suele explicar algo de la pieza. */}
+          {entregaPendiente.delivery_note && (
+            <p className={styles.mcDecidirNota}>“{entregaPendiente.delivery_note}”</p>
+          )}
+
           {/* Ver la pieza va primero: aprobar sin mirar no es una decisión. */}
           <div className={styles.mcAprobarAcciones}>
             {linkPrimeraPieza && (
@@ -362,6 +367,13 @@ export default async function CampaignDetailPage({
                     ) : null;
                   })}
                 </div>
+              )}
+
+              {app.delivery_note && (
+                <p className={styles.mcPitch} style={{ whiteSpace: "pre-wrap" }}>
+                  <strong style={{ fontStyle: "normal" }}>Nota de entrega: </strong>
+                  “{app.delivery_note}”
+                </p>
               )}
 
               {app.rating && (

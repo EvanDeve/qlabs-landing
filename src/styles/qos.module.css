@@ -9491,6 +9491,20 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* La nota de entrega del creador, sobre el fondo oscuro. A diferencia de
+   .mcDecidirSub no se corta: es para leerla entera antes de aprobar. */
+.mcDecidirNota {
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 13.5px;
+  line-height: 1.5;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .qosRoot .mcDecidirBtn {
   display: flex;
   align-items: center;
