@@ -47,7 +47,17 @@ export default async function AdminLayout({
     .select("id", { count: "exact", head: true });
   const tienePipeline = (boardsVisibles ?? 0) > 0;
 
-  const [{ data: activePieces }, { data: heroes }, { count: disputasAbiertas }] = await Promise.all([
+  const contarUgc = (q: PromiseLike<{ count: number | null }>) =>
+    areas.ugc ? q.then((r) => r.count ?? 0) : Promise.resolve(0);
+
+  const [
+    { data: activePieces },
+    { data: heroes },
+    { count: disputasAbiertas },
+    creadoresPorVerificar,
+    marcasPorVerificar,
+    eliminacionesPendientes,
+  ] = await Promise.all([
     tienePipeline
       ? // Piezas activas = las que NO están en una columna marcada como
         // "publicadas". Se pregunta por la bandera y no por el nombre: el
@@ -64,6 +74,29 @@ export default async function AdminLayout({
     areas.ugc
       ? supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "disputed")
       : { count: 0 },
+    // Marketplace y Close Friends cuentan lo que espera a alguien del equipo:
+    // cuentas por verificar (sin verificar nadie opera) y pedidos de borrar
+    // una cuenta (con plazo legal). No cuentan totales: eso no pide nada.
+    contarUgc(
+      supabase
+        .from("creator_profiles")
+        .select("profile_id", { count: "exact", head: true })
+        .eq("verified", false)
+        .is("rejected_at", null)
+    ),
+    contarUgc(
+      supabase
+        .from("brand_profiles")
+        .select("profile_id", { count: "exact", head: true })
+        .eq("verified", false)
+        .is("rejected_at", null)
+    ),
+    contarUgc(
+      supabase
+        .from("member_deletion_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pendiente")
+    ),
   ]);
 
   // Los dos contadores del menú ignoran a los Heroes archivados: el badge de
@@ -118,9 +151,21 @@ export default async function AdminLayout({
     // Alguien de UGC que está en un board: el Pipeline va con lo suyo. (Al
     // director ya le aparece en Operación.)
     ...(areas.agencia ? [] : itemPipeline("UGC")),
-    { href: "/admin/marketplace", label: "Marketplace", icon: "megaphone", group: "UGC" },
+    {
+      href: "/admin/marketplace",
+      label: "Marketplace",
+      icon: "megaphone",
+      group: "UGC",
+      count: creadoresPorVerificar + marcasPorVerificar,
+    },
     { href: "/admin/loyalty", label: "Loyalty Loop", icon: "book", group: "UGC" },
-    { href: "/admin/close-friends", label: "Close Friends", icon: "qr", group: "UGC" },
+    {
+      href: "/admin/close-friends",
+      label: "Close Friends",
+      icon: "qr",
+      group: "UGC",
+      count: eliminacionesPendientes,
+    },
     {
       href: "/admin/disputas",
       label: "Disputas",

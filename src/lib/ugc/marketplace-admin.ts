@@ -56,3 +56,27 @@ export function coincide(busqueda: string, campos: (string | null | undefined)[]
 export function rutaFichaCreador(profileId: string): string {
   return `/admin/marketplace/creador/${profileId}`;
 }
+
+/**
+ * Las dos letras del avatar: las iniciales del nombre si tiene dos palabras
+ * ("Luna Vargas" → "LV"); si no, las dos primeras letras ("@vale" → "VA").
+ */
+export function iniciales(texto: string | null | undefined): string {
+  const limpio = (texto ?? "").replace(/@/g, "").trim();
+  const palabras = limpio.split(/[\s._-]+/).filter((p) => /\p{L}/u.test(p));
+  if (palabras.length >= 2) return (palabras[0][0] + palabras[1][0]).toUpperCase();
+  return (palabras[0] ?? limpio).slice(0, 2).toUpperCase() || "?";
+}
+
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+/** Días enteros desde ese instante. `ahora` se puede pasar para testear. */
+export function diasDesde(iso: string, ahora: number = Date.now()): number {
+  return Math.max(0, Math.floor((ahora - new Date(iso).getTime()) / DIA_MS));
+}
+
+/** "hoy", "1 día", "4 días". */
+export function textoDias(dias: number): string {
+  if (dias === 0) return "hoy";
+  return dias === 1 ? "1 día" : `${dias} días`;
+}

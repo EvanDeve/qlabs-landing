@@ -12755,3 +12755,204 @@
   color: var(--b-600);
   text-decoration: underline;
 }
+
+/* ---- Rediseño UGC (mockups 1a–1f, 2026-10-07) ---- */
+/* El botón violeta de los mockups: la acción que confirma algo (Verificar,
+   Resolver disputa). En el tema monocromo el primario es negro, así que va
+   aparte en vez de pisar .btnPrimary. */
+.btn.btnAccent {
+  background: var(--b-500);
+  color: #fff;
+  border-color: var(--b-500);
+}
+.btn.btnAccent:hover {
+  background: var(--b-600);
+  border-color: var(--b-600);
+}
+/* Dos columnas que bajan a una: las dos tarjetas de números del Resumen y
+   las de abajo (Te esperan + Close Friends). */
+.resGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.resGridAncha {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+@media (max-width: 1140px) {
+  .resGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Una tarjeta de números con su título de grupo ("Marketplace", "Actividad")
+   y cuatro stats más apretadas que las del Dashboard. */
+.statCardGrupo {
+  margin-bottom: 0;
+  padding: 16px 0 6px;
+}
+.statGrupo {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding: 0 14px 4px;
+}
+.statCardGrupo .stat {
+  padding: 8px 14px 12px;
+}
+.statCardGrupo .statLabel {
+  font-size: 12.5px;
+}
+.statCardGrupo .statNum {
+  font-size: 26px;
+}
+.statCardGrupo .statLabel {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.statPunto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+/* Las reglas de .statRow de más arriba (2 columnas a ≤1140, 1 a ≤560) son
+   para la tarjeta de ancho completo del Dashboard. Acá la tarjeta ya ocupa
+   todo el ancho a ≤1140, así que entran las 4; y en el teléfono van 2×2. */
+@media (min-width: 561px) and (max-width: 1140px) {
+  .statCardGrupo .statRow {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .statCardGrupo .stat {
+    border-top: 0;
+  }
+  .statCardGrupo .stat + .stat {
+    border-left: 1px solid var(--line-2);
+  }
+}
+@media (max-width: 560px) {
+  .statCardGrupo .statRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .statCardGrupo .stat:nth-child(2) {
+    border-top: 0;
+  }
+  .statCardGrupo .stat:nth-child(even) {
+    border-left: 1px solid var(--line-2);
+  }
+}
+/* Tabla chica dentro de una tarjeta angosta: encabezados sin mayúsculas y
+   menos aire, como en los mockups. La primera columna (el nombre) no se
+   parte en tres renglones. */
+.tablaCompacta th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+  padding: 0 5px 8px;
+}
+.tablaCompacta td {
+  padding: 11px 5px;
+  font-size: 13px;
+}
+.tablaCompacta td:first-child,
+.tablaCompacta th:first-child {
+  padding-left: 0;
+  white-space: nowrap;
+}
+.tablaCompacta td:last-child,
+.tablaCompacta th:last-child {
+  padding-right: 0;
+}
+/* "Te esperan": una fila por cosa que espera a alguien del equipo. */
+.esperaFila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+}
+.esperaFila + .esperaFila {
+  border-top: 1px solid var(--line-2);
+}
+.esperaAv {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--b-50);
+  color: var(--b-600);
+}
+.esperaAvRisk {
+  background: var(--risk-bg);
+  color: var(--risk);
+}
+.esperaTxt {
+  flex: 1;
+  min-width: 0;
+}
+.esperaT {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.esperaS {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.esperaFin {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+@media (max-width: 560px) {
+  .esperaFila {
+    flex-wrap: wrap;
+  }
+  .esperaFin {
+    width: 100%;
+    padding-left: 42px;
+    justify-content: space-between;
+  }
+}
+.sectionHeadNota {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.linkAccent {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--b-600) !important;
+}
+.linkAccent:hover {
+  text-decoration: underline !important;
+}
+/* Aviso en rojo dentro de una tarjeta ("1 solicitud pasa de 7 días"). */
+.avisoRisk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--risk-bg);
+  color: var(--risk);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.avisoRisk a {
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
