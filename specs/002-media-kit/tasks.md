@@ -55,7 +55,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Rama `telefono_visto` en `NotificationsBell.tsx`.
   *Hecho cuando:* una marca de prueba toca "Ver teléfono" dos veces, el creador ve una sola notificación con el nombre de la marca y al tocarla abre la página pública de la marca.
 
-- [ ] **T14 — Registro de visitas** (RF-13, RF-14, RF-15, RF-16)
+- [x] **T14 — Registro de visitas** (RF-13, RF-14, RF-15, RF-16)
   `src/app/api/ugc/visitas-kit/route.ts` y `RegistrarVisitaKit.tsx`, montado en el kit solo para quien no es el dueño ni admin.
   *Hecho cuando:* abrir el kit sin sesión crea la cookie `ugc_visitante` y una fila en `kit_visitas`; recargar no suma; con sesión de marca suma con `es_marca`; como dueño o admin no suma; `curl -A "facebookexternalhit/1.1" -X POST` no suma; la página no muestra errores si el POST falla. (Probar con Chrome normal: el headless se filtra como bot.)
 

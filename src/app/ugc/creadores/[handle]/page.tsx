@@ -13,6 +13,7 @@ import CreatorDestacadas from "@/components/ugc/creador/CreatorDestacadas";
 import { separarDestacadas } from "@/lib/ugc/destacadas";
 import CompartirPagina from "@/components/ugc/CompartirPagina";
 import KitContacto from "@/components/ugc/KitContacto";
+import RegistrarVisitaKit from "@/components/ugc/RegistrarVisitaKit";
 import { modoContacto } from "@/lib/ugc/contacto-kit";
 
 export const dynamic = "force-dynamic";
@@ -347,6 +348,12 @@ export default async function CreatorPublicProfilePage({
             </div>
           ))}
         </div>
+
+        {/* El dueño y el equipo no suman visitas: ni se manda el aviso (la
+            base igual los descartaría). */}
+        {visitante?.id !== creatorProfile.profile_id && rolVisitante !== "admin" && (
+          <RegistrarVisitaKit creadorId={creatorProfile.profile_id} />
+        )}
 
         {/* CONTACTO — provisorio debajo de los números: el lugar final sale
             de los mockups de Evan (T18). */}
