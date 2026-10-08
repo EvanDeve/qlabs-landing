@@ -227,7 +227,7 @@ function stubSupabase(tablas: Record<string, unknown[]>) {
 describe("getStaffAgenda", () => {
   const AHORA = new Date("2026-08-02T15:00:00Z");
 
-  it("parte una pieza en dos ítems: grabar y publicar son compromisos distintos", async () => {
+  it("una pieza es un solo ítem: su publicación (la grabación vive en el calendario)", async () => {
     const agenda = await getStaffAgenda(
       stubSupabase({
         content_pieces: [
@@ -235,8 +235,7 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "Reel de brunch",
             brand_id: "h1",
-            record_date: "2026-08-02",
-            publish_date: "2026-08-04",
+            publish_date: "2026-08-02",
             priority: "alta",
           },
         ],
@@ -247,12 +246,10 @@ describe("getStaffAgenda", () => {
       AHORA
     );
 
-    expect(agenda.hoy.map((i) => i.accion)).toEqual(["Grabar"]);
-    expect(agenda.proximas.map((i) => i.accion)).toEqual(["Publicar"]);
+    expect(itemsDeAgenda(agenda).map((i) => i.accion)).toEqual(["Publicar"]);
     expect(agenda.hoy[0].heroe).toBe("Zonna");
-    // Cada ítem apunta a su campo: es lo que después deja reprogramar el
-    // correcto de los dos desde el chat.
-    expect(agenda.hoy[0].ref).toEqual({ kind: "piece", pieceId: "p1", campo: "record_date" });
+    // El ítem apunta al campo que se puede reprogramar desde el chat.
+    expect(agenda.hoy[0].ref).toEqual({ kind: "piece", pieceId: "p1", campo: "publish_date" });
   });
 
   // El bug del corrimiento de un día, visto desde el agente: una pieza para
@@ -262,7 +259,7 @@ describe("getStaffAgenda", () => {
       stubSupabase({
         // Columna `date`: llega como día suelto, sin hora ni zona.
         content_pieces: [
-          { id: "p1", title: "Reel", brand_id: null, record_date: null, publish_date: "2026-08-03", priority: "media" },
+          { id: "p1", title: "Reel", brand_id: null, publish_date: "2026-08-03", priority: "media" },
         ],
         calendar_events: [],
         agency_clients: [],
@@ -287,7 +284,6 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "GUION-AGOSTO",
             brand_id: "h1",
-            record_date: null,
             publish_date: null,
             priority: "alta",
             content_columns: { name: "Guiones", is_done: false },
@@ -320,7 +316,6 @@ describe("getStaffAgenda", () => {
           id: `p${i}`,
           title: `Pieza ${i}`,
           brand_id: null,
-          record_date: null,
           publish_date: null,
           priority: "baja",
           content_columns: { name: "Terminado", is_done: false },
@@ -346,7 +341,6 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "Sin fecha",
             brand_id: null,
-            record_date: null,
             publish_date: null,
             priority: "alta",
             content_columns: { name: "Guiones", is_done: false },
@@ -355,7 +349,6 @@ describe("getStaffAgenda", () => {
             id: "p2",
             title: "Con fecha",
             brand_id: null,
-            record_date: null,
             publish_date: "2026-08-02",
             priority: "baja",
             content_columns: { name: "Por editar", is_done: false },
@@ -419,7 +412,6 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "Reel de brunch",
             brand_id: null,
-            record_date: null,
             publish_date: "2026-08-04",
             priority: "media",
             content_columns: { name: "Por editar", is_done: false, is_ready: false },
@@ -444,7 +436,6 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "Reel listo",
             brand_id: null,
-            record_date: null,
             publish_date: "2026-08-03",
             priority: "media",
             // is_ready: el video está editado y aprobado, solo espera la fecha.
@@ -471,7 +462,6 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "Debía salir el viernes",
             brand_id: null,
-            record_date: null,
             publish_date: "2026-07-31",
             priority: "media",
             content_columns: { name: "Por editar", is_done: false, is_ready: false },
@@ -497,7 +487,6 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "Listo, falta publicarlo",
             brand_id: null,
-            record_date: null,
             publish_date: "2026-07-31",
             priority: "media",
             content_columns: { name: "Terminado", is_done: false, is_ready: true },
@@ -513,36 +502,6 @@ describe("getStaffAgenda", () => {
     expect(agenda.vencidas[0].enRiesgo).toBe(false);
   });
 
-  // La grabación de una pieza comparte columna con su publicación. Si el
-  // cálculo no distinguiera el campo, "grabar el jueves" saldría avisado como
-  // "sin terminar" — que no significa nada: todavía no se grabó.
-  it("la grabación de una pieza nunca sale en riesgo", async () => {
-    const agenda = await getStaffAgenda(
-      stubSupabase({
-        content_pieces: [
-          {
-            id: "p1",
-            title: "Reel",
-            brand_id: null,
-            record_date: "2026-08-03",
-            publish_date: "2026-08-04",
-            priority: "media",
-            content_columns: { name: "Por grabar", is_done: false, is_ready: false },
-          },
-        ],
-        calendar_events: [],
-        agency_clients: [],
-      }),
-      "staff-1",
-      AHORA
-    );
-
-    const grabar = itemsDeAgenda(agenda).find((i) => i.accion === "Grabar");
-    const publicar = itemsDeAgenda(agenda).find((i) => i.accion === "Publicar");
-    expect(grabar?.enRiesgo).toBe(false);
-    expect(publicar?.enRiesgo).toBe(true);
-  });
-
   // Archivar un Hero tiene que sacarlo del WhatsApp de la mañana: es lo que
   // impide que un cliente que se fue siga generando avisos para siempre.
   it("ignora las piezas y los eventos de un Hero archivado", async () => {
@@ -553,7 +512,6 @@ describe("getStaffAgenda", () => {
             id: "p1",
             title: "De un cliente que se fue",
             brand_id: "h1",
-            record_date: null,
             publish_date: "2026-08-02",
             priority: "alta",
             content_columns: { name: "Por editar", is_done: false, is_ready: false },
@@ -562,7 +520,6 @@ describe("getStaffAgenda", () => {
             id: "p2",
             title: "De un cliente activo",
             brand_id: "h2",
-            record_date: null,
             publish_date: "2026-08-02",
             priority: "alta",
             content_columns: { name: "Por editar", is_done: false, is_ready: false },

@@ -138,12 +138,10 @@ export type CalendarItem = {
    * La hora que se muestra, o null cuando el item no tiene ninguna.
    *
    * NO se deriva sola de `date`: las tres fuentes del calendario guardan la
-   * hora de forma distinta y dos de ellas directamente no la tienen.
+   * hora de forma distinta.
    *   - `calendar_events.starts_at` es un timestamptz: la hora sale de horaCR.
    *   - `content_pieces.publish_date` es un `date`, pero al lado vive
    *     `publish_time`, que es la hora que el equipo eligió para publicar.
-   *   - `content_pieces.record_date` es un `date` y NO tiene columna de hora:
-   *     una grabación derivada de una pieza va siempre en null.
    *
    * Medido sobre agosto 2026: de 129 items, 29 tienen hora (16 publicaciones
    * con publish_time + 13 eventos de grabación). Los otros 100 salen sin ella,

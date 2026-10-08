@@ -96,11 +96,10 @@ export default async function CalendarioPage({
         // aire, y este calendario es el de publicaciones — el mismo que mira el
         // equipo para saber qué sale esta semana.
         .select(
-          "id, title, brand_id, owner_id, publish_date, record_date, publish_time, platform, approval, content_columns!inner(section)"
+          "id, title, brand_id, owner_id, publish_date, publish_time, platform, approval, content_columns!inner(section)"
         )
-        .or(
-          `and(publish_date.gte.${queryStartStr},publish_date.lte.${queryEndStr}),and(record_date.gte.${queryStartStr},record_date.lte.${queryEndStr})`
-        ),
+        .gte("publish_date", queryStartStr)
+        .lte("publish_date", queryEndStr),
     ]);
 
   const staffIds = (staffMembers ?? []).map((s) => s.profile_id);
@@ -171,33 +170,6 @@ export default async function CalendarioPage({
         // Antes iba null fijo: la pieza traía dueño pero el calendario no lo
         // pedía, así que una publicación no decía de quién era. Ahora sale del
         // mismo owner_id que pinta la tarjeta del Pipeline.
-        responsibleName: piece.owner_id ? staffNameById.get(piece.owner_id) ?? null : null,
-        responsibleId: piece.owner_id,
-        responsibleAvatarUrl: piece.owner_id ? staffAvatarById.get(piece.owner_id) ?? null : null,
-        responsibleColor: piece.owner_id ? staffColorById.get(piece.owner_id) ?? null : null,
-        // Una pieza no tiene estado de calendario: su avance lo dice la columna
-        // del Kanban. El modal la abre en modo lectura, así que no hay <select>
-        // que preseleccionar.
-        status: null,
-        contentPieceId: piece.id,
-      });
-    }
-    if (piece.record_date && piece.record_date >= queryStartStr && piece.record_date <= queryEndStr) {
-      items.push({
-        id: `piece-record-${piece.id}`,
-        type: "grabacion",
-        title: piece.title,
-        date: piece.record_date,
-        // Sin hora y no por olvido: record_date es un `date` y no tiene columna
-        // de hora que la acompañe, como sí la tiene publish_date. Las
-        // grabaciones que muestran hora son las de calendar_events.
-        hora: null,
-        platform: piece.platform,
-        approval: piece.approval,
-        brandId: piece.brand_id,
-        brandName: piece.brand_id ? brandNameById.get(piece.brand_id) ?? null : null,
-        brandLogoUrl: piece.brand_id ? brandLogoById.get(piece.brand_id) ?? null : null,
-        createdByAgent: false,
         responsibleName: piece.owner_id ? staffNameById.get(piece.owner_id) ?? null : null,
         responsibleId: piece.owner_id,
         responsibleAvatarUrl: piece.owner_id ? staffAvatarById.get(piece.owner_id) ?? null : null,

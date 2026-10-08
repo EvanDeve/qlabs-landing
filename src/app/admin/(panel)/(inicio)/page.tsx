@@ -319,9 +319,6 @@ export default async function AdminDashboardPage({
     ...pieces
       .filter((p) => p.publish_date && diaCR(p.publish_date) >= hoyCR && diaCR(p.publish_date) <= en7DiasCR)
       .map((p) => ({ date: p.publish_date as string, title: p.title, type: "Publicación", brandId: p.brand_id })),
-    ...pieces
-      .filter((p) => p.record_date && diaCR(p.record_date) >= hoyCR && diaCR(p.record_date) <= en7DiasCR)
-      .map((p) => ({ date: p.record_date as string, title: p.title, type: "Grabación", brandId: p.brand_id })),
     // Los eventos de un Hero archivado tampoco: la agenda de la semana es lo
     // que hay que hacer, y con un cliente que se fue no hay nada que hacer.
     ...(calendarEvents ?? [])

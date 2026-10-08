@@ -518,24 +518,10 @@ function Card({
         )}
       </div>
       <div className={styles.kcFoot}>
-        {/* La publicación va siempre —con "—" cuando falta, para que una pieza
-            sin fecha se note en vez de desaparecer—; la grabación SOLO si la
-            pieza tiene una.
-
-            Los videos ya no llevan fecha de grabación: esa se planea una vez al
-            mes y vive en el calendario como evento. Pero McLovin todavía puede
-            crear una pieza con record_date desde WhatsApp, y esconderla dejaría
-            un compromiso sin ninguna señal en el tablero.
-
-            El rojo de atrasada va solo en publicación: una grabación con fecha
-            pasada normalmente ya ocurrió, así que pintarla sería ruido fijo. */}
+        {/* La publicación va siempre, con "—" cuando falta, para que una pieza
+            sin fecha se note en vez de desaparecer. La grabación no es dato de
+            la tarjeta: vive en el calendario como evento. */}
         <span className={styles.kcDates}>
-          {piece.record_date && (
-            <span className={styles.kcDate} title="Grabación">
-              <QosIcon name="film" size={12} />
-              {diaCorto(piece.record_date)}
-            </span>
-          )}
           <span
             className={[
               styles.kcDate,

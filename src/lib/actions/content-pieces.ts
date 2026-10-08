@@ -20,7 +20,6 @@ export async function createContentPieceAction(formData: FormData) {
   const priority = String(formData.get("priority") ?? "media") as ContentPriority;
   const ownerId = String(formData.get("owner_id") ?? "") || null;
   const publishDateRaw = String(formData.get("publish_date") ?? "").trim();
-  const recordDateRaw = String(formData.get("record_date") ?? "").trim();
   // Columna en la que nace la pieza. Viene del "+" del Kanban; si no llega,
   // cae en la primera del tablero.
   let columnId = String(formData.get("column_id") ?? "");
@@ -47,7 +46,6 @@ export async function createContentPieceAction(formData: FormData) {
     priority,
     owner_id: ownerId,
     publish_date: publishDateRaw || null,
-    record_date: recordDateRaw || null,
     notes: String(formData.get("notes") ?? "").trim() || null,
   });
 
@@ -122,7 +120,6 @@ export async function updateContentPieceAction(formData: FormData) {
   const platform = String(formData.get("platform") ?? "instagram") as ContentPlatform;
   const approval = String(formData.get("approval") ?? "pendiente") as ContentApproval;
   const publishDateRaw = String(formData.get("publish_date") ?? "").trim();
-  const recordDateRaw = String(formData.get("record_date") ?? "").trim();
   const publishTimeRaw = String(formData.get("publish_time") ?? "").trim();
   const driveUrl = String(formData.get("drive_url") ?? "").trim() || null;
   const scriptUrl = String(formData.get("script_url") ?? "").trim() || null;
@@ -150,7 +147,6 @@ export async function updateContentPieceAction(formData: FormData) {
       platform,
       approval,
       publish_date: publishDateRaw || null,
-      record_date: recordDateRaw || null,
       publish_time: publishTimeRaw || null,
       drive_url: driveUrl,
       script_url: scriptUrl,

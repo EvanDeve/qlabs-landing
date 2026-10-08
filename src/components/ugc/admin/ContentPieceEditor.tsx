@@ -71,8 +71,7 @@ export default function ContentPieceEditor({
    *
    * Los campos que no se dibujan viajan igual como hidden, con el valor que ya
    * tenían: el server action escribe TODO lo que lee del formulario, así que un
-   * campo ausente se guardaría como null. Es el mismo motivo por el que
-   * record_date ya viajaba así.
+   * campo ausente se guardaría como null.
    */
   const esTarea = esCarrilDeTareas(current?.section);
 
@@ -329,13 +328,7 @@ export default function ContentPieceEditor({
             </div>
 
             {/* Solo publicación: la grabación es un hito mensual del calendario,
-                no un dato de cada pieza. Ver el comentario en NewContentPieceModal.
-
-                record_date viaja igual como hidden con el valor que ya tenía. Sin
-                esto, guardar cualquier pieza la dejaría en null —el server action
-                lee el campo del formulario y lo ausente vale ""— y una pieza vieja
-                perdería su fecha en silencio al tocarle cualquier otra cosa. */}
-            <input type="hidden" name="record_date" value={piece.record_date?.slice(0, 10) ?? ""} />
+                no un dato de cada pieza. Ver el comentario en NewContentPieceModal. */}
 
             {/* La hora va en su propio campo y su propia columna, no dentro de
                 publish_date: ese es el bug del día corrido de la migración
@@ -544,8 +537,6 @@ const APROBACION_DEL_GUION: Record<ContentPiece["approval"], { texto: string; co
  * viene vale "" — o sea null. Sin estos hidden, abrir una tarjeta en el carril
  * de IT y guardarla le borraría el guion, el link del documento y el del video
  * final a una pieza que alguna vez estuvo en video.
- *
- * Es el mismo mecanismo que ya usaba record_date, generalizado.
  */
 function CamposDeVideoOcultos({ piece }: { piece: ContentPiece }) {
   return (

@@ -1244,12 +1244,12 @@ async function escribirEdicion(
       await avisarAlDueno(admin, ctx, pieza, "la dio por terminada");
       return { ok: true };
     }
-    // Reprogramar toca la fecha que originó el aviso, no las dos: el campo
-    // viene del ítem, no de lo que el modelo haya querido elegir.
-    // Va el día pelado: las columnas son `date`, sin hora que inventar.
+    // Una pieza tiene una sola fecha que se pueda mover: la de publicación (las
+    // grabaciones son eventos del calendario y se reprograman abajo).
+    // Va el día pelado: la columna es `date`, sin hora que inventar.
     const { error } = await admin
       .from("content_pieces")
-      .update(item.ref.campo === "publish_date" ? { publish_date: accion.fecha } : { record_date: accion.fecha })
+      .update({ publish_date: accion.fecha })
       .eq("id", pieza.id);
     if (error) return { ok: false };
     await avisarAlDueno(admin, ctx, pieza, `la pasó para el ${accion.fecha}`);

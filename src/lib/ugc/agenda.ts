@@ -8,7 +8,7 @@ import { esCarrilDeTareas } from "@/lib/ugc/content-columns";
  * Qué le toca a un miembro del equipo y para cuándo.
  *
  * Sale de las dos tablas que ya tienen responsable y fecha —`content_pieces`
- * (owner_id + publish_date/record_date) y `calendar_events` (responsible_id +
+ * (owner_id + publish_date) y `calendar_events` (responsible_id +
  * starts_at)—. No hay tabla de tareas aparte a propósito: una que hubiera que
  * llenar a mano se llenaría dos semanas y después no, y el agente quedaría
  * recordando el vacío.
@@ -17,9 +17,9 @@ import { esCarrilDeTareas } from "@/lib/ugc/content-columns";
  * de todo el agente que tiene lógica que valga la pena testear en serio.
  */
 
-/** Qué ítem es y, si es una pieza, cuál de sus dos fechas disparó el aviso. */
+/** Qué ítem es. De una pieza, la fecha que dispara el aviso es la de publicación. */
 export type AgendaRef =
-  | { kind: "piece"; pieceId: string; campo: "publish_date" | "record_date" }
+  | { kind: "piece"; pieceId: string; campo: "publish_date" }
   | { kind: "event"; eventId: string };
 
 export type AgendaItem = {
@@ -165,7 +165,7 @@ export async function getStaffAgenda(
       // equipo puede renombrarlas y buscar por texto se rompería en silencio
       // (ver el comentario largo de 20260727200000_content_columns.sql).
       .select(
-        "id, title, brand_id, publish_date, record_date, priority, content_columns!inner(name, is_done, is_ready, section)"
+        "id, title, brand_id, publish_date, priority, content_columns!inner(name, is_done, is_ready, section)"
       )
       .eq("owner_id", profileId)
       .eq("content_columns.is_done", false),
@@ -222,24 +222,6 @@ export async function getStaffAgenda(
       !!p.publish_date &&
       diaCR(p.publish_date) <= diaCR(sumarDias(now, DIAS_PUBLICA_PRONTO));
 
-    // Las dos fechas de una pieza son dos compromisos distintos con dos
-    // fechas distintas, así que van como dos ítems.
-    if (p.record_date) {
-      items.push({
-        key: `piece-record-${p.id}`,
-        ref: { kind: "piece", pieceId: p.id, campo: "record_date" },
-        titulo: p.title,
-        heroe,
-        fecha: p.record_date,
-        conHora: false,
-        accion: "Grabar",
-        columna,
-        prioridad: p.priority,
-        // Una grabación pendiente no está "sin terminar": está por hacerse,
-        // que es lo normal. El aviso es sobre la fecha de publicación.
-        enRiesgo: false,
-      });
-    }
     if (p.publish_date) {
       items.push({
         key: `piece-publish-${p.id}`,
@@ -255,13 +237,13 @@ export async function getStaffAgenda(
       });
     }
 
-    // Sin ninguna de las dos fechas la pieza no desaparece: es trabajo que
+    // Sin fecha la pieza no desaparece: es trabajo que
     // alguien tiene asignado igual. Antes se caía de la agenda y el agente
     // contestaba "no tenés nada" a quien tenía el tablero lleno.
     //
     // Apunta a publish_date porque es la fecha que se le puede poner desde el
     // chat: la grabación se planea aparte, como evento del calendario.
-    if (!p.record_date && !p.publish_date) {
+    if (!p.publish_date) {
       items.push({
         key: `piece-sinfecha-${p.id}`,
         ref: { kind: "piece", pieceId: p.id, campo: "publish_date" },

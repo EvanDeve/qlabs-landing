@@ -28,7 +28,7 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
   *Hecho cuando:* `grep` da 0 en `src/`.
   *Cambio:* `delivery_note` salió de esta tarea: no era un duplicado sino la única copia de la nota del creador. Evan eligió mostrársela a la marca (`/feature` aparte).
 
-- [ ] **T08 — Fuera `content_pieces.record_date` del código** (RF-01, RF-03)
+- [x] **T08 — Fuera `content_pieces.record_date` del código** (RF-01, RF-03)
   *Hecho cuando:* `grep` da 0 en `src/`, el test de agenda pasa, y el inicio, el calendario y el kanban de Q·OS se ven igual. Si "reprogramar" de McLovin necesita más que quitar la columna: parar y preguntar.
 
 - [ ] **T09 — Migración `limpieza_001`** (RF-03, RF-04, RF-05)

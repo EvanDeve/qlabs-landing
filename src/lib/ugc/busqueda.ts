@@ -164,7 +164,7 @@ export async function buscarEnElTablero(
 ): Promise<ItemDelTablero[]> {
   if (!vale(busqueda)) return [];
 
-  const columnas = "id, title, brand_id, owner_id, publish_date, record_date, priority, column_id";
+  const columnas = "id, title, brand_id, owner_id, publish_date, priority, column_id";
   const consultas = [];
 
   if (busqueda.heroIds.length) {
