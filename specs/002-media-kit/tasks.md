@@ -63,7 +63,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `resumen_visitas_kit` en `creador/page.tsx`, tarjeta con `textoVisitas`, y `CopiarLinkKit.tsx` en el estado vacío.
   *Hecho cuando:* en el navegador un creador sin visitas ve el mensaje que invita a compartir y el botón copia el link correcto; con visitas ve el total de 30 días y cuántas fueron de marcas, y coincide con la base.
 
-- [ ] **T16 — Política de privacidad** (RF-06, RF-13)
+- [x] **T16 — Política de privacidad** (RF-06, RF-13)
   Proponerle a Evan el texto para §5 (teléfono visible solo para marcas verificadas) y §10 (cookie aleatoria para no contar dos veces una visita). Se commitea el texto que apruebe.
   *Hecho cuando:* Evan aprobó el texto y la página lo muestra.
 

@@ -13,6 +13,9 @@ import { CF } from "@/lib/cf/copy";
 // sección 3 — una política que describe menos de lo que se recoge es
 // justamente el incumplimiento que la Ley 8968 castiga.
 //
+// 1.3 (2026-10-08): media kit (spec 002) — teléfono opcional del creador
+// (creator_profiles.telefono_e164), registro de qué marca lo vio
+// (kit_telefono_vistas) y visitas al kit con cookie anónima (kit_visitas).
 // 1.2 (2026-09-24): compartir el contacto pasa a ser UN permiso para todos los
 // negocios a los que la persona se une, no uno por negocio (20260924170000).
 // 1.1 (2026-09-24): Close Friends — members, member_consents,
@@ -101,7 +104,7 @@ export default function PrivacidadPage() {
               <td>
                 Handle, cuentas de Instagram y TikTok, cantidad de seguidores, nichos, idiomas,
                 rango de tarifas, promedios de vistas, alcance e interacción, estado de
-                verificación.
+                verificación y, si decidís cargarlo, un teléfono de contacto para marcas.
               </td>
             </tr>
             <tr>
@@ -115,7 +118,9 @@ export default function PrivacidadPage() {
               <td>Actividad en el marketplace</td>
               <td>
                 Campañas publicadas, aplicaciones y su mensaje de presentación, estados y fechas de
-                cada etapa, calificaciones, motivos de cancelación o disputa.
+                cada etapa, calificaciones, motivos de cancelación o disputa. Si sos creador,
+                también cuántas veces se abrió tu perfil público (sin identificar a quien lo
+                abrió) y qué marcas vieron tu teléfono y cuándo.
               </td>
             </tr>
             <tr>
@@ -188,6 +193,17 @@ export default function PrivacidadPage() {
         <li>
           <strong>El contenido que entregás</strong> lo ve la marca de esa campaña.
         </li>
+        <li>
+          <strong>Tu teléfono de contacto</strong>, si sos creador y elegís mostrarlo, lo ven
+          únicamente los negocios verificados con sesión iniciada, y solo cuando tocan &quot;Ver
+          teléfono&quot; en tu perfil, y te avisamos qué negocio lo vio. Nadie más
+          lo ve, y podés ocultarlo o borrarlo cuando quieras, aunque lo que un negocio ya vio pudo
+          haberlo anotado.
+        </li>
+        <li>
+          <strong>Las visitas a tu perfil público</strong> las ves solo vos, como un total de los
+          últimos 30 días y cuántas fueron de negocios. No te mostramos quién entró.
+        </li>
       </ul>
       <h3>Los negocios de {CF.programa}</h3>
       <p>
@@ -249,7 +265,9 @@ export default function PrivacidadPage() {
       <h2 id="cuanto-tiempo">6. Cuánto tiempo los guardamos</h2>
       <ul>
         <li>
-          <strong>Mientras tengas cuenta activa</strong>, conservamos tu perfil y tu actividad.
+          <strong>Mientras tengas cuenta activa</strong>, conservamos tu perfil y tu actividad,
+          incluidas las visitas a tu perfil público y el registro de qué negocios vieron tu
+          teléfono. Al eliminar tu cuenta se borran con ella.
         </li>
         <li>
           <strong>Al eliminar tu cuenta</strong>, borramos tu perfil, tus aplicaciones, tu portafolio
@@ -310,7 +328,10 @@ export default function PrivacidadPage() {
 
       <h2 id="cookies">10. Cookies y tecnologías similares</h2>
       <p>
-        Usamos las cookies estrictamente necesarias para mantener tu sesión iniciada. No usamos
+        Usamos las cookies estrictamente necesarias para mantener tu sesión iniciada. Además, si
+        abrís el perfil público de un creador sin haber iniciado sesión, guardamos una cookie con
+        un número aleatorio para no contar dos veces tu visita en el mismo día; no contiene datos
+        tuyos y en la base solo queda mezclada de forma que no se puede volver a leer. No usamos
         cookies publicitarias ni de seguimiento entre sitios. Las estadísticas de visitas que
         recogemos son agregadas y no te identifican individualmente.
       </p>
