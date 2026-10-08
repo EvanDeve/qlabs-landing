@@ -1025,9 +1025,6 @@ async function crearEventoConfirmado(admin: Admin, ctx: Contexto, propuestaId: s
       responsible_id: responsableId,
       status: "programado",
       created_by_agent: true,
-      // Sin pieza asociada a propósito: la FK es `on delete cascade`, así que
-      // apuntar a una pieza haría que borrarla se llevara puesto el evento.
-      content_piece_id: null,
     })
     .select("id")
     .single();

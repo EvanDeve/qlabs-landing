@@ -138,7 +138,9 @@ export default async function CalendarioPage({
       responsibleAvatarUrl: event.responsible_id ? staffAvatarById.get(event.responsible_id) ?? null : null,
       responsibleColor: event.responsible_id ? staffColorById.get(event.responsible_id) ?? null : null,
       status: event.status,
-      contentPieceId: event.content_piece_id,
+      // Un evento cargado a mano nunca es derivado de una pieza: las fechas de
+      // las piezas entran abajo, como items aparte.
+      contentPieceId: null,
     });
   }
 

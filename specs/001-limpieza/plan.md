@@ -46,7 +46,6 @@ export function apuntesDe(delCronograma: string | null, deLaTarjeta: string | nu
   - Sacar el bloque de métricas y tarifas (`rate_min`, `rate_max`, `avg_reach`, `avg_views`, `engagement_rate`).
   - Ajustar `tests/rls/tablas-de-abajo.test.ts`.
 - **T07:**
-  - `src/lib/actions/delivery-slots.ts:241`: deja de escribir `delivery_note`.
   - `calendar_events.content_piece_id`: sale de `calendario/page.tsx` y de `api/qos/agente/webhook/route.ts:1030`.
 - **T08**, `content_pieces.record_date`:
   - Sale de `calendario/page.tsx`, `(inicio)/page.tsx`, `webhook/route.ts`, `ContentPieceEditor.tsx` (el campo oculto), `KanbanBoard.tsx`, `busqueda.ts`, `calendar.ts`, `agenda.ts` y `actions/content-pieces.ts`.
@@ -60,7 +59,6 @@ drop function if exists public.creator_delivery_stats();
 drop table if exists public.creator_services;
 drop table if exists public.creator_addons;
 alter table public.campaigns drop column if exists min_tier;
-alter table public.applications drop column if exists delivery_note;
 alter table public.calendar_events drop column if exists content_piece_id;
 alter table public.content_pieces drop column if exists record_date;
 -- la vista pública depende de avg_views y engagement_rate: se recrea sin ellas

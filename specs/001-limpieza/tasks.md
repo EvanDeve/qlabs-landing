@@ -24,8 +24,9 @@ Una a la vez; al terminar cada una: tests en verde, commit a `main` y parar.
 - [x] **T06 — Ficha de admin sin servicios, add-ons ni métricas** (RF-01, RF-03)
   *Hecho cuando:* la ficha del creador abre bien en el navegador y ningún archivo de `src/` nombra esas tablas y columnas.
 
-- [ ] **T07 — Fuera `delivery_note` y `calendar_events.content_piece_id` del código** (RF-03)
-  *Hecho cuando:* `grep` da 0 en `src/` y una entrega de prueba sigue guardando su nota en `application_deliveries`.
+- [x] **T07 — Fuera `calendar_events.content_piece_id` del código** (RF-03)
+  *Hecho cuando:* `grep` da 0 en `src/`.
+  *Cambio:* `delivery_note` salió de esta tarea: no era un duplicado sino la única copia de la nota del creador. Evan eligió mostrársela a la marca (`/feature` aparte).
 
 - [ ] **T08 — Fuera `content_pieces.record_date` del código** (RF-01, RF-03)
   *Hecho cuando:* `grep` da 0 en `src/`, el test de agenda pasa, y el inicio, el calendario y el kanban de Q·OS se ven igual. Si "reprogramar" de McLovin necesita más que quitar la columna: parar y preguntar.

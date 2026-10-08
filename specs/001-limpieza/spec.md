@@ -35,6 +35,6 @@ El relevamiento completo está en `inventario.md`. Conclusión principal: el rep
 ## Decisiones de Evan (2026-10-08)
 
 1. `testimonios.mp4`: hay otra copia, se borra.
-2. `applications.delivery_note`: se borra el duplicado (la nota sigue en la entrega).
+2. `applications.delivery_note`: **corregido en T07** — no era un duplicado, es la única copia de la nota del creador. Se conserva y se le muestra a la marca en un `/feature` aparte.
 3. Métricas y tarifas de `creator_profiles`: se borran. Si algún día hacen falta, va una spec con formulario.
 4. El repo se muda fuera de iCloud, a `~/Proyects/`, al final de la limpieza.

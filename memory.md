@@ -4,7 +4,7 @@
 
 ## Estado actual (2026-10-08)
 - **En prod:** marketplace completo (creador y marca rediseñados estilo iOS), Q·OS (agencia + área UGC rediseñada, mockups 1a–1f), Loyalty Loop, Close Friends (rol `member`, entra por QR), cronogramas mensuales con links para el Hero y para quien graba.
-- **Tarea activa:** spec `001-limpieza` aprobada, con plan y 11 tareas en `specs/001-limpieza/tasks.md`; T01–T06 hechas.
+- **Tarea activa:** spec `001-limpieza` aprobada, con plan y 11 tareas en `specs/001-limpieza/tasks.md`; T01–T07 hechas.
 - **Recién hecho:**
   - `e586f42` nichos de creador: catálogo de 22, máximo 5, filtro `?nicho=` en Q·OS.
   - `ff9f563` links de acceso con `token_hash` y botón "Continuar" (los filtros de correo corporativos quemaban las invitaciones) + "Reenviar acceso" en Equipo.
@@ -23,5 +23,6 @@
 
 ## Próximos pasos
 - [ ] Spec 001: Evan aprueba el plan → `/sdd-implement 001-limpieza T01`.
+- [ ] `/feature`: mostrarle a la marca la "Nota" que el creador escribe al entregar (`applications.delivery_note`, hoy nadie la lee).
 - [ ] Al cerrar la 001: mudar el repo de ~/Documents (iCloud) a ~/Proyects.
 - [ ] Rediseño general de Q·OS cuando lleguen las capturas.

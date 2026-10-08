@@ -56,7 +56,7 @@ Features en pausa (McLovin, voz, transcripción) siguen conectadas a la UI: **no
 | `campaigns.min_tier` | 0 datos, 0 referencias | borrar |
 | `calendar_events.content_piece_id` | 0 datos; el código solo la pone en null; FK con `on delete cascade` (trampa) | borrar |
 | `content_pieces.record_date` | 0 datos desde que las grabaciones pasaron al calendario; ~8 archivos todavía la leen | borrar (riesgo medio) |
-| `applications.delivery_note` | Se escribe y nadie la lee; duplica `application_deliveries.note` | borrar |
+| `applications.delivery_note` | Es la única copia de la "Nota" que el creador escribe al entregar (`application_deliveries.note` es otra cosa: el nombre del archivo). Nadie la lee todavía | conservar — se muestra a la marca en un `/feature` aparte (corregido 2026-10-08) |
 | `creator_profiles.rate_min/rate_max/avg_reach/avg_views/engagement_rate` | 0 datos, ningún formulario las llena; la ficha de admin las muestra vacías | borrar (recrear la vista pública sin ellas) |
 | Notas duplicadas cronograma ↔ tarjeta (`calendar_month_items.notes` / `content_pieces.notes`) | Separación intencional (propuesta vs trabajo real), pero la regla "cuál se muestra" está repartida | Centralizar la regla en un solo lugar; no fusionar |
 | `database.types.ts` | Le faltan `member_signup_throttle` y 16 funciones | Regenerar |
