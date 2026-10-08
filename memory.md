@@ -4,7 +4,7 @@
 
 ## Estado actual (2026-10-08)
 - **En prod:** marketplace completo (creador y marca rediseñados estilo iOS), Q·OS (agencia + área UGC rediseñada, mockups 1a–1f), Loyalty Loop, Close Friends (rol `member`, entra por QR), cronogramas mensuales con links para el Hero y para quien graba.
-- **Tarea activa:** spec `001-limpieza` — inventario de código, archivos y base de datos que sobran.
+- **Tarea activa:** spec `001-limpieza` aprobada, con plan y 11 tareas en `specs/001-limpieza/tasks.md`; ninguna empezada.
 - **Recién hecho:**
   - `e586f42` nichos de creador: catálogo de 22, máximo 5, filtro `?nicho=` en Q·OS.
   - `ff9f563` links de acceso con `token_hash` y botón "Continuar" (los filtros de correo corporativos quemaban las invitaciones) + "Reenviar acceso" en Equipo.
@@ -22,6 +22,6 @@
 - Rediseño general de Q·OS (sidebar/header): espera capturas de Claude Design.
 
 ## Próximos pasos
-- [ ] Spec 001: Evan revisa el inventario y marca qué se borra.
-- [ ] Spec 001: plan y tareas de la limpieza aprobada.
+- [ ] Spec 001: Evan aprueba el plan → `/sdd-implement 001-limpieza T01`.
+- [ ] Al cerrar la 001: mudar el repo de ~/Documents (iCloud) a ~/Proyects.
 - [ ] Rediseño general de Q·OS cuando lleguen las capturas.

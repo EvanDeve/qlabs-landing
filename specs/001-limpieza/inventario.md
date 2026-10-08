@@ -8,7 +8,7 @@ Columna **Decisión**: `borrar` · `conservar` · `?` (falta que Evan decida).
 
 | Ruta | Qué es | Decisión |
 |---|---|---|
-| `testimonios.mp4` (214 MB) | Video original sin comprimir; el sitio usa `public/testimonios_compressed.mp4` | ? — ¿hay otra copia del original? |
+| `testimonios.mp4` (214 MB) | Video original sin comprimir; el sitio usa `public/testimonios_compressed.mp4` | borrar (hay otra copia) |
 | `tsconfig.tsbuildinfo`, `.DS_Store` | Caché y basura de macOS, se regeneran | borrar |
 | `.next/` (1,2 GB) | Caché de build con duplicados de iCloud (`routes.d 3.ts`, `server/app 2`…) que rompen `tsc --noEmit` | borrar (se regenera) |
 | `.git/index 2` … `index 7` | Copias en conflicto que dejó iCloud (agosto) | borrar |
@@ -40,8 +40,9 @@ Features en pausa (McLovin, voz, transcripción) siguen conectadas a la UI: **no
 | `Ideas.md` | Backlog vivo | conservar, mover a `docs/ideas.md` |
 | `docs/` de McLovin (4 archivos) | McLovin está en pausa, no muerto | conservar |
 | `docs/plan-rendimiento-y-railway.md`, `docs/brief-diseno-ugc-ios.md`, `docs/auditoria-seguridad-2026-08.md`, `docs/QLabs_Rewards_GuiaDeIngreso.pdf` | Vigentes o referenciados desde el código | conservar |
-| `docs/qos-como-producto.html` | Sin trackear | ? |
-| `supabase/scripts/backfill-loyalty-points.sql`, `cupones-de-prueba.sql` | Scripts de una sola vez (agosto) | ? — ¿ya se corrieron? |
+| `docs/qos-como-producto.html` | Sin trackear; cuenta cómo se derivó Q·OS para Anchia | conservar y commitear |
+| `supabase/scripts/cupones-de-prueba.sql` | Script de una vez; en prod ya no quedan cupones `[PRUEBA]` | borrar |
+| `supabase/scripts/backfill-loyalty-points.sql` | Escrito pero sin correr a propósito: espera una decisión de negocio (¿los creadores arrancan con su nivel?) | conservar |
 | `guia-maestra-claude-code-sdd.md` | La guía de trabajo nueva | conservar, mover a `docs/` |
 
 ## D. Base de datos (42 tablas, 7 vistas)
@@ -55,8 +56,8 @@ Features en pausa (McLovin, voz, transcripción) siguen conectadas a la UI: **no
 | `campaigns.min_tier` | 0 datos, 0 referencias | borrar |
 | `calendar_events.content_piece_id` | 0 datos; el código solo la pone en null; FK con `on delete cascade` (trampa) | borrar |
 | `content_pieces.record_date` | 0 datos desde que las grabaciones pasaron al calendario; ~8 archivos todavía la leen | borrar (riesgo medio) |
-| `applications.delivery_note` | Se escribe y nadie la lee; duplica `application_deliveries.note` | ? — ¿mostrarla o borrarla? |
-| `creator_profiles.rate_min/rate_max/avg_reach/avg_views/engagement_rate` | 0 datos, ningún formulario las llena; la ficha de admin las muestra vacías | ? — ¿construir el formulario o borrarlas? |
+| `applications.delivery_note` | Se escribe y nadie la lee; duplica `application_deliveries.note` | borrar |
+| `creator_profiles.rate_min/rate_max/avg_reach/avg_views/engagement_rate` | 0 datos, ningún formulario las llena; la ficha de admin las muestra vacías | borrar (recrear la vista pública sin ellas) |
 | Notas duplicadas cronograma ↔ tarjeta (`calendar_month_items.notes` / `content_pieces.notes`) | Separación intencional (propuesta vs trabajo real), pero la regla "cuál se muestra" está repartida | Centralizar la regla en un solo lugar; no fusionar |
 | `database.types.ts` | Le faltan `member_signup_throttle` y 16 funciones | Regenerar |
 | `rls_auto_enable` | Existe en prod sin migración | Documentar en una migración |

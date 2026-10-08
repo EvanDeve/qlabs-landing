@@ -1,6 +1,6 @@
 # 001 · Limpieza del repo y la base
 
-**Estado:** borrador — falta que Evan cierre las decisiones `?` de `inventario.md`.
+**Estado:** aprobada 2026-10-08.
 
 ## Contexto y por qué
 
@@ -32,11 +32,9 @@ El relevamiento completo está en `inventario.md`. Conclusión principal: el rep
 - `content_pieces.record_date` la lee el webhook de McLovin (en pausa): quitarla no debe romper el webhook si se reactiva.
 - El repo vive en una carpeta sincronizada por iCloud, que es lo que genera los duplicados en `.next/` y `.git/`: borrarlos sin mover el repo hace que vuelvan.
 
-## Preguntas abiertas
+## Decisiones de Evan (2026-10-08)
 
-1. ¿`testimonios.mp4` (214 MB) tiene otra copia? Si no, se guarda fuera del repo antes de borrarlo.
-2. `docs/qos-como-producto.html`: ¿se commitea o se borra?
-3. Scripts `backfill-loyalty-points.sql` y `cupones-de-prueba.sql`: ¿ya se corrieron?
-4. `applications.delivery_note`: ¿mostrarla a la marca o borrarla?
-5. Métricas y tarifas de `creator_profiles`: ¿se construye el formulario para que el creador las llene, o se borran?
-6. ¿Movemos el repo fuera de iCloud (por ejemplo a `~/Proyects/`)?
+1. `testimonios.mp4`: hay otra copia, se borra.
+2. `applications.delivery_note`: se borra el duplicado (la nota sigue en la entrega).
+3. Métricas y tarifas de `creator_profiles`: se borran. Si algún día hacen falta, va una spec con formulario.
+4. El repo se muda fuera de iCloud, a `~/Proyects/`, al final de la limpieza.
