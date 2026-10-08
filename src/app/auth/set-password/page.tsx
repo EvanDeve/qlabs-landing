@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { destinoTrasSetPasswordAction } from "@/lib/actions/auth";
@@ -11,22 +12,37 @@ import { destinoTrasSetPasswordAction } from "@/lib/actions/auth";
  * - Invitación al equipo (`inviteStaffAction`) — sin parámetro.
  * - Recuperar contraseña (`requestPasswordResetAction`) — con `?modo=recuperar`.
  *
- * Cambia el texto, no el mecanismo: los dos links traen la sesión en el
- * fragmento de la URL y los dos terminan en `updateUser({ password })`.
+ * Cambia el texto, no el mecanismo. Los links de hoy traen `?token_hash=…`
+ * (ver `generarLinkDeAcceso`): la pantalla primero pide apretar "Continuar" y
+ * recién ahí canjea el token, porque los filtros de correo corporativos abren
+ * cada link para revisarlo y un token que se gasta al cargar la página se lo
+ * gastaban ellos. Los links viejos traían la sesión en el fragmento (`#access_
+ * token=…`) y siguen funcionando. Los dos terminan en `updateUser({ password })`.
  */
 function SetPasswordInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const esRecuperacion = searchParams.get("modo") === "recuperar";
+  // Se leen una sola vez: al canjear se borran de la URL, y Next actualiza
+  // `searchParams` con ese replaceState. Si cambiaran, el efecto de abajo
+  // correría el camino viejo y podría mostrar el form sobre otra sesión abierta.
+  const [tokenHash] = useState(() => searchParams.get("token_hash"));
+  const [tipo] = useState<EmailOtpType>(() => (searchParams.get("tipo") === "invite" ? "invite" : "recovery"));
 
-  const [checkingSession, setCheckingSession] = useState(true);
+  // Con token_hash no hay sesión que buscar al cargar: el canje espera al botón.
+  const [checkingSession, setCheckingSession] = useState(!tokenHash);
+
   const [hasSession, setHasSession] = useState(false);
+  const [canjeando, setCanjeando] = useState(false);
+  const [tokenUsado, setTokenUsado] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (tokenHash) return;
+
     const supabase = createClient();
 
     async function establishSession() {
@@ -54,7 +70,23 @@ function SetPasswordInner() {
     }
 
     establishSession();
-  }, []);
+  }, [tokenHash]);
+
+  async function canjearToken() {
+    if (!tokenHash) return;
+    setCanjeando(true);
+    const { error: otpError } = await createClient().auth.verifyOtp({ token_hash: tokenHash, type: tipo });
+    // El token sale de la barra de direcciones con o sin éxito: ya está gastado
+    // o no sirve, y recargar no tiene que volver a mostrar el botón.
+    const sinToken = new URLSearchParams(window.location.search);
+    sinToken.delete("token_hash");
+    sinToken.delete("tipo");
+    const query = sinToken.toString();
+    window.history.replaceState(null, "", window.location.pathname + (query ? `?${query}` : ""));
+    setHasSession(!otpError);
+    setCanjeando(false);
+    setTokenUsado(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,7 +126,7 @@ function SetPasswordInner() {
     : "Último paso para entrar al Centro de Mando.";
   const linkVencido = esRecuperacion
     ? "Este link ya venció o se usó. Pedí uno nuevo desde «Olvidé mi contraseña» en la pantalla de acceso."
-    : "Este link de invitación no es válido o ya venció. Pedí que te reenvíen la invitación desde Equipo.";
+    : "Este link de invitación no es válido o ya venció. Pedí que te reenvíen el acceso desde Equipo.";
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 py-16">
@@ -110,6 +142,15 @@ function SetPasswordInner() {
 
       {checkingSession ? (
         <p className="text-sm text-ink-soft">Validando el link…</p>
+      ) : tokenHash && !tokenUsado ? (
+        <button
+          type="button"
+          onClick={canjearToken}
+          disabled={canjeando}
+          className="rounded-pill bg-violet px-6 py-2.5 text-sm font-bold text-white transition hover:bg-violet-deep disabled:opacity-50"
+        >
+          {canjeando ? "Validando…" : "Continuar"}
+        </button>
       ) : !hasSession ? (
         <p className="text-sm font-bold text-coral">{linkVencido}</p>
       ) : (

@@ -8,13 +8,19 @@ import { normalizarTelefonoCR } from "@/lib/whatsapp/twilio";
 import { enviarRecordatorioDiario } from "@/lib/ugc/recordatorios";
 import type { StaffRole } from "@/lib/database.types";
 import { STAFF_ROLE_LABEL } from "@/lib/ugc/content-meta";
+import { generarLinkDeAcceso, botonDeCorreo } from "@/lib/auth/link-de-acceso";
+import { sendTransactionalEmail } from "@/lib/email/resend";
 
 export type InviteStaffState = { error: string } | { message: string } | null;
 
 // Invita a un colaborador nuevo por email: crea el auth.users (el trigger
-// handle_new_user deja el perfil sin rol y acá se le pone admin) y le manda el
-// correo de invitación de Supabase para que defina su contraseña en
-// /auth/set-password. Ya queda asignado a un staff_role en el mismo paso.
+// handle_new_user deja el perfil sin rol y acá se le pone admin) y le manda
+// por Resend el link para que defina su contraseña en /auth/set-password. Ya
+// queda asignado a un staff_role en el mismo paso.
+//
+// El correo ya no lo manda Supabase (`inviteUserByEmail`): su link se gasta con
+// el solo GET y los filtros de correo corporativos lo abren antes que la
+// persona. Ver `generarLinkDeAcceso`.
 export async function inviteStaffAction(
   _prevState: InviteStaffState,
   formData: FormData
@@ -32,18 +38,18 @@ export async function inviteStaffAction(
   // así que el permiso se chequea acá.
   if (!(await soyDirector())) return { error: "Solo un director puede invitar gente al equipo." };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const admin = createAdminClient();
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+  const { error, link, user: nuevo } = await generarLinkDeAcceso(admin, {
+    tipo: "invite",
+    email,
     data: { role: "admin", full_name: displayName },
-    redirectTo: `${siteUrl}/auth/set-password`,
   });
 
-  if (error || !data.user) {
+  if (error || !link || !nuevo) {
     return {
-      error: error?.message.includes("already been registered")
+      error: error?.includes("already been registered")
         ? "Ese email ya tiene una cuenta."
-        : "No se pudo enviar la invitación. Intentá de nuevo.",
+        : "No se pudo crear la invitación. Intentá de nuevo.",
     };
   }
 
@@ -54,7 +60,7 @@ export async function inviteStaffAction(
   const { error: rolError } = await admin
     .from("profiles")
     .update({ role: "admin" })
-    .eq("id", data.user.id);
+    .eq("id", nuevo.id);
   if (rolError) {
     console.error("[inviteStaffAction] no se pudo poner el rol admin:", rolError.message);
     return { error: "Se mandó la invitación, pero la cuenta quedó sin acceso al panel: hay que ponerle el rol admin a mano en Supabase." };
@@ -62,10 +68,58 @@ export async function inviteStaffAction(
 
   await admin
     .from("staff_members")
-    .upsert({ profile_id: data.user.id, staff_role: staffRole, color }, { onConflict: "profile_id" });
+    .upsert({ profile_id: nuevo.id, staff_role: staffRole, color }, { onConflict: "profile_id" });
 
   revalidatePath("/admin/equipo");
+
+  // La cuenta ya existe: si el correo no sale, se arregla con "Reenviar acceso"
+  // y no volviendo a invitar (eso diría "ya tiene una cuenta").
+  const enviado = await mandarCorreoDeAcceso(email, link);
+  if (!enviado) {
+    return { error: "La cuenta quedó creada pero el correo no salió. Probá «Reenviar acceso» en su fila de Integrantes." };
+  }
   return { message: `Invitación enviada a ${email}.` };
+}
+
+function mandarCorreoDeAcceso(email: string, link: string) {
+  return sendTransactionalEmail(
+    email,
+    "Tu acceso a Q·OS",
+    `<p>Te dieron acceso a Q·OS, el panel del equipo de Q Labs.</p>
+     ${botonDeCorreo(link, "Definir mi contraseña")}
+     <p>El link sirve una sola vez. Si vence, pedí que te reenvíen el acceso.</p>`
+  );
+}
+
+export type ReenviarAccesoState = { error?: string; ok?: string } | null;
+
+/**
+ * Manda de nuevo el link para definir contraseña a alguien del equipo. Sirve
+ * para quien nunca entró y para quien entró y se quedó sin contraseña (el caso
+ * del link quemado por el filtro de correo, que deja la cuenta confirmada pero
+ * sin clave). Va por recovery porque invite no se puede repetir sobre una
+ * cuenta que ya existe.
+ *
+ * Supabase guarda un solo token por cuenta: este link invalida el anterior.
+ */
+export async function reenviarAccesoAction(
+  _prev: ReenviarAccesoState,
+  formData: FormData
+): Promise<ReenviarAccesoState> {
+  // Genera un link que entra a la cuenta de otra persona: solo directores.
+  if (!(await soyDirector())) return { error: "Solo un director puede reenviar accesos." };
+
+  const profileId = String(formData.get("profile_id") ?? "");
+  const admin = createAdminClient();
+  const { data: cuenta } = await admin.auth.admin.getUserById(profileId);
+  const email = cuenta.user?.email;
+  if (!email) return { error: "No encontré el correo de esa cuenta." };
+
+  const { link } = await generarLinkDeAcceso(admin, { tipo: "recovery", email, comoInvitacion: true });
+  if (!link) return { error: "No se pudo generar el link. Intentá de nuevo." };
+
+  if (!(await mandarCorreoDeAcceso(email, link))) return { error: "El correo no salió. Intentá de nuevo en unos minutos." };
+  return { ok: `Listo, le llegó a ${email}.` };
 }
 
 export async function upsertStaffMemberAction(formData: FormData) {

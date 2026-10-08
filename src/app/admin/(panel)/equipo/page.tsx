@@ -8,6 +8,7 @@ import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
 import StaffWhatsAppRow from "@/components/ugc/admin/StaffWhatsAppRow";
 import StaffAvatar from "@/components/ugc/admin/StaffAvatar";
 import StaffRoleSelect from "@/components/ugc/admin/StaffRoleSelect";
+import ReenviarAccesoButton from "@/components/ugc/admin/ReenviarAccesoButton";
 import type { StaffRole } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
 
@@ -59,6 +60,7 @@ export default async function EquipoPage() {
                 esPropio={staff.profile_id === user.id}
               />
             </div>
+            {staff.profile_id !== user.id && <ReenviarAccesoButton profileId={staff.profile_id} />}
             <form action={setStaffActiveAction}>
               <input type="hidden" name="profile_id" value={staff.profile_id} />
               <input type="hidden" name="active" value={(!staff.active).toString()} />

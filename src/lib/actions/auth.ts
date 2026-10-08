@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendTransactionalEmail } from "@/lib/email/resend";
+import { generarLinkDeAcceso, botonDeCorreo } from "@/lib/auth/link-de-acceso";
 import { destinoDeSesion, destinoConNext } from "@/lib/ugc/estado-cuenta";
 
 export type AuthActionState = { error: string } | { message: string } | null;
@@ -156,10 +157,11 @@ const VIDA_DEL_FRENO_MS = 24 * 60 * 60 * 1000;
  *    envíos por hora, mientras el resto de la app ya manda todo por Resend
  *    desde notificaciones@qlabsmethod.com.
  *
- * `generateLink` arma el mismo link de recovery pero sin PKCE (token en el
- * fragmento, flujo implícito) y sin mandar nada — el correo lo mandamos
- * nosotros. Es exactamente la forma que ya sabe leer /auth/set-password,
- * que es como funcionan las invitaciones al equipo desde el día uno.
+ * `generarLinkDeAcceso` usa `generateLink`, que no manda nada y no depende de
+ * PKCE: el correo lo mandamos nosotros con un `token_hash` que
+ * /auth/set-password canjea recién cuando la persona aprieta "Continuar" (así
+ * un filtro de correo que abre el link no lo gasta). Es el mismo camino que las
+ * invitaciones al equipo.
  */
 export async function requestPasswordResetAction(
   _prevState: AuthActionState,
@@ -218,42 +220,20 @@ export async function requestPasswordResetAction(
     .delete()
     .lt("last_requested_at", new Date(ahora - VIDA_DEL_FRENO_MS).toISOString());
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const destino = `${siteUrl}/auth/set-password?modo=recuperar`;
+  const { link, error } = await generarLinkDeAcceso(admin, { tipo: "recovery", email });
 
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: "recovery",
-    email,
-    options: { redirectTo: destino },
-  });
-
-  if (error || !data.properties?.action_link) {
+  if (!link) {
     // El caso normal acá es "no existe esa cuenta", que no es un error nuestro
     // y no se le cuenta a quien pregunta.
-    console.warn("[requestPasswordReset] no se generó link para", email, "—", error?.message);
+    console.warn("[requestPasswordReset] no se generó link para", email, "—", error);
     return respuestaNeutra;
-  }
-
-  const link = data.properties.action_link;
-
-  // Supabase NO falla si el `redirectTo` no está en la allowlist de Redirect
-  // URLs: lo cambia por el Site URL del proyecto y devuelve 200. El link llega
-  // igual, la persona lo abre, y aterriza en la home del sitio con el token
-  // colgando del `#` y sin nada que lo lea. Se ve como "el correo no sirve".
-  // Por eso se compara: si nos lo cambiaron, que quede gritado en los logs.
-  if (!link.includes(encodeURIComponent(destino)) && !link.includes(destino)) {
-    console.error(
-      "[requestPasswordReset] Supabase ignoró el redirect_to y lo reemplazó por el Site URL.",
-      "Agregá", `${siteUrl}/**`, "en Authentication → URL Configuration → Redirect URLs.",
-      "Link generado:", link
-    );
   }
 
   const enviado = await sendTransactionalEmail(
     email,
     "Recuperá tu contraseña",
     `<p>Pediste crear una contraseña nueva para tu cuenta de Q Labs.</p>
-     <p><a href="${link}" style="display:inline-block;background:#705CF6;color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;text-decoration:none">Crear contraseña nueva</a></p>
+     ${botonDeCorreo(link, "Crear contraseña nueva")}
      <p>El link vence en una hora y sirve una sola vez.</p>
      <p style="color:#5B5570;font-size:13px">Si no fuiste vos, ignorá este correo: tu contraseña actual sigue funcionando.</p>`
   );
