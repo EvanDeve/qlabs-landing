@@ -13,3 +13,8 @@ export function displayHandle(handle: string) {
   const bare = handleSlug(handle);
   return bare ? `@${bare}` : "";
 }
+
+/** El link público del kit, el mismo con o sin "@" en el handle. */
+export function urlDelKit(origen: string, handle: string) {
+  return `${origen}/ugc/creadores/${handleSlug(handle)}`;
+}

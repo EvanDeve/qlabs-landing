@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { QosIcon } from "@/lib/ugc/qos-icons";
+import { handleSlug, urlDelKit } from "@/lib/ugc/handles";
 import Hoja from "./Hoja";
 import styles from "@/styles/qos.module.css";
 
@@ -23,13 +24,13 @@ export default function CompartirPerfil({ handle }: { handle: string }) {
   const [copiado, setCopiado] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
 
-  const limpio = handle.replace(/^@/, "");
+  const limpio = handleSlug(handle);
 
   // La URL se arma al abrir y no en un efecto: la hoja solo existe después de
   // un clic, y ahí `window` ya está. Un efecto que hace setState dispara un
   // segundo render con la hoja ya pintada y la URL todavía vacía.
   function abrir() {
-    setUrl(`${window.location.origin}/ugc/creadores/${limpio}`);
+    setUrl(urlDelKit(window.location.origin, handle));
     setAbierta(true);
   }
 

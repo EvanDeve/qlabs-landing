@@ -7,11 +7,11 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Test primero (`tests/unit/destacadas.test.ts`), después `src/lib/ugc/destacadas.ts`: `MAX_DESTACADAS`, `alternarDestacada`, `moverDestacada`, `separarDestacadas`.
   *Hecho cuando:* el test cubre agregar, quitar, el tope de 3 con su mensaje, mover en los bordes, separar sin repetir y sin destacadas, y `npm test` pasa.
 
-- [ ] **T02 — Funciones puras de contacto** (RF-06, RF-07, RF-08, RF-09, RF-11, RF-12)
+- [x] **T02 — Funciones puras de contacto** (RF-06, RF-07, RF-08, RF-09, RF-11, RF-12)
   Test primero (`tests/unit/contacto-kit.test.ts`), después `src/lib/ugc/contacto-kit.ts`: `modoContacto` y `enlacesDeTelefono`. Sumar a `tests/unit/whatsapp.test.ts` los casos de `normalizarTelefonoCR` que falten (vacío, letras).
   *Hecho cuando:* hay un caso por cada `ModoContacto` (incluido admin → "ver" y marca sin verificar), los enlaces salen bien para un +506 y un número de otro país, y `npm test` pasa.
 
-- [ ] **T03 — Funciones puras de visitas y link del kit** (RF-15, RF-17, RF-18, RF-20)
+- [x] **T03 — Funciones puras de visitas y link del kit** (RF-15, RF-17, RF-18, RF-20)
   Test primero (`tests/unit/visitas-kit.test.ts`), después `src/lib/ugc/visitas-kit.ts` (`esBotDeVistaPrevia`, `inicioVentanaVisitas`, `textoVisitas`) y `urlDelKit` en `src/lib/ugc/handles.ts`. `CompartirPerfil` pasa a usar `urlDelKit` sin cambiar lo que muestra.
   *Hecho cuando:* los UA reales de cada bot de la lista dan `true`; Safari, Chrome, Instagram in-app y Facebook in-app dan `false`; la ventana cruza bien fin de mes, de año y un 29 de febrero; `urlDelKit` da lo mismo con y sin "@"; `npm test` pasa.
 
