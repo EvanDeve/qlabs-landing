@@ -47,7 +47,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `guardarContactoAction` en `creator-profile.ts`, `ContactoDelKit.tsx` en `creador/perfil/page.tsx`, y la línea del teléfono en la nota de `CompartirPerfil`.
   *Hecho cuando:* en el navegador "8888 7777" queda como +50688887777, un número inválido muestra el error sin guardar, el interruptor arranca apagado, vaciar el número apaga el interruptor, y guardar el resto del perfil NO toca el teléfono.
 
-- [ ] **T12 — Contacto en el kit** (RF-08, RF-09, RF-10, RF-11, RF-12)
+- [x] **T12 — Contacto en el kit** (RF-08, RF-09, RF-10, RF-11, RF-12)
   En `creadores/[handle]/page.tsx`: sesión, rol, verificación de la marca y teléfono propio → `modoContacto`. `KitContacto.tsx` y `verTelefonoAction` en `src/lib/actions/kit.ts`.
   *Hecho cuando:* en el navegador cada visitante ve lo suyo (sin sesión, marca sin verificar, otro creador, marca verificada con WhatsApp y Llamar, el dueño con la aclaración, nada si no lo muestra), y `curl` sin sesión al kit no trae el número en el HTML.
 

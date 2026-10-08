@@ -12,6 +12,8 @@ import CreatorPublicBook from "@/components/ugc/creador/CreatorPublicBook";
 import CreatorDestacadas from "@/components/ugc/creador/CreatorDestacadas";
 import { separarDestacadas } from "@/lib/ugc/destacadas";
 import CompartirPagina from "@/components/ugc/CompartirPagina";
+import KitContacto from "@/components/ugc/KitContacto";
+import { modoContacto } from "@/lib/ugc/contacto-kit";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +118,44 @@ export default async function CreatorPublicProfilePage({
       .eq("creator_id", creatorProfile.profile_id)
       .order("position"),
   ]);
+
+  // Quién mira, para decidir qué ve del contacto (spec 002). El número no se
+  // lee acá salvo que sea el dueño: para una marca lo pide el botón.
+  const {
+    data: { user: visitante },
+  } = await supabase.auth.getUser();
+  let rolVisitante: string | null = null;
+  let marcaVerificada = false;
+  let telefonoPropio: string | null = null;
+  if (visitante) {
+    const { data: perfilVisitante } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", visitante.id)
+      .maybeSingle();
+    rolVisitante = perfilVisitante?.role ?? null;
+    if (rolVisitante === "brand") {
+      const { data: marca } = await supabase
+        .from("brand_profiles")
+        .select("verified")
+        .eq("profile_id", visitante.id)
+        .maybeSingle();
+      marcaVerificada = marca?.verified ?? false;
+    }
+    if (visitante.id === creatorProfile.profile_id) {
+      const { data: propio } = await supabase
+        .from("creator_profiles")
+        .select("telefono_e164")
+        .eq("profile_id", visitante.id)
+        .maybeSingle();
+      telefonoPropio = propio?.telefono_e164 ?? null;
+    }
+  }
+  const contacto = modoContacto({
+    tieneTelefono: creatorProfile.tiene_telefono,
+    creadorId: creatorProfile.profile_id,
+    visitante: visitante ? { id: visitante.id, rol: rolVisitante, marcaVerificada } : null,
+  });
 
   const { data: statsRows } = await supabase.rpc("creator_public_stats", {
     p_creator_id: creatorProfile.profile_id,
@@ -307,6 +347,14 @@ export default async function CreatorPublicProfilePage({
             </div>
           ))}
         </div>
+
+        {/* CONTACTO — provisorio debajo de los números: el lugar final sale
+            de los mockups de Evan (T18). */}
+        <KitContacto
+          modo={contacto}
+          creadorId={creatorProfile.profile_id}
+          telefonoPropio={telefonoPropio}
+        />
 
         {/* DESTACADAS — el creador las elige desde su book (spec 002). Van
             arriba del book y no se repiten abajo. Posición provisoria: el
