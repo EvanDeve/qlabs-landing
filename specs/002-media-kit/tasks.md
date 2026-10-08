@@ -15,7 +15,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Test primero (`tests/unit/visitas-kit.test.ts`), después `src/lib/ugc/visitas-kit.ts` (`esBotDeVistaPrevia`, `inicioVentanaVisitas`, `textoVisitas`) y `urlDelKit` en `src/lib/ugc/handles.ts`. `CompartirPerfil` pasa a usar `urlDelKit` sin cambiar lo que muestra.
   *Hecho cuando:* los UA reales de cada bot de la lista dan `true`; Safari, Chrome, Instagram in-app y Facebook in-app dan `false`; la ventana cruza bien fin de mes, de año y un 29 de febrero; `urlDelKit` da lo mismo con y sin "@"; `npm test` pasa.
 
-- [ ] **T04 — Migración `media_kit`** (RF-02, RF-05, RF-06, RF-07, RF-10, RF-12b, RF-12c, RF-13, RF-14, RF-16, RF-19, RF-21)
+- [x] **T04 — Migración `media_kit`** (RF-02, RF-05, RF-06, RF-07, RF-10, RF-12b, RF-12c, RF-13, RF-14, RF-16, RF-19, RF-21)
   Escribir `supabase/migrations/20261008200000_media_kit.sql` como dice el plan. Antes: `grep` de dependencias de `creator_public_profiles` y comparar sus columnas con el OpenAPI de prod. Es aditiva, así que se puede correr con el código de hoy en prod. Evan la corre.
   *Hecho cuando:* Evan la corrió y el OpenAPI de prod muestra `orden_destacada`, `telefono_e164`, `mostrar_telefono`, `tiene_telefono` en la vista, las tablas `kit_visitas` y `kit_telefono_vistas` y las rpc `fijar_destacadas`, `ver_telefono_creador`, `registrar_visita_kit` y `resumen_visitas_kit`; `/ugc` y un kit público siguen cargando.
 
