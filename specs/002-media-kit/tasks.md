@@ -67,7 +67,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Proponerle a Evan el texto para §5 (teléfono visible solo para marcas verificadas) y §10 (cookie aleatoria para no contar dos veces una visita). Se commitea el texto que apruebe.
   *Hecho cuando:* Evan aprobó el texto y la página lo muestra.
 
-- [ ] **T17 — Validación y cierre de la parte funcional** (RF-20, RF-21 y todos)
+- [x] **T17 — Validación y cierre de la parte funcional** (RF-20, RF-21 y todos)
   `npm test`, `npm run test:rls`, `npm run lint`, `npm run build`, `npx tsc --noEmit` en verde; la recorrida del plan; `/ugc/creadores/@x` y `/ugc/creadores/x` abren el mismo kit; un creador sin verificar sigue en 404 sin sesión; la vista previa del link en WhatsApp se sigue armando; `memory.md` al día.
   *Hecho cuando:* todo lo anterior está tildado salvo T18.
 

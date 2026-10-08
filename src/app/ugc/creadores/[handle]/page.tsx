@@ -27,7 +27,7 @@ export async function generateMetadata({
   params: Promise<{ handle: string }>;
 }): Promise<Metadata> {
   const { handle } = await params;
-  const bare = handleSlug(handle);
+  const bare = handleSlug(decodeURIComponent(handle));
   const supabase = await createClient();
 
   // Vista pública: legible por anon, sin exponer tarifas ni la tabla de cuentas.
@@ -89,7 +89,9 @@ export default async function CreatorPublicProfilePage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = await params;
-  const bareHandle = handle.replace(/^@/, "");
+  // Next entrega el segmento sin decodificar: un link con "@" llega como
+  // "%40handle" y no lo encontraba (spec 002, RF-20).
+  const bareHandle = handleSlug(decodeURIComponent(handle));
   const supabase = await createClient();
 
   // Tolera handles guardados con o sin "@" (data histórica inconsistente).

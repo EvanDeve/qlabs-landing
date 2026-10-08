@@ -1,6 +1,6 @@
 # 002 · Media kit del creador
 
-**Estado:** aprobada por Evan el 2026-10-08.
+**Estado:** aprobada por Evan el 2026-10-08 · T01–T17 en prod el mismo día; T18 (orden visual) espera los mockups.
 
 ## Contexto y por qué
 
