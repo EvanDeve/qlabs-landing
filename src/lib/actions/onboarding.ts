@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { parseNichos } from "@/lib/ugc/nichos";
 import { normalizarUrl } from "@/lib/ugc/url";
 import { destinoDeSesion } from "@/lib/ugc/estado-cuenta";
 import { notifyAdminsOfPendingVerification } from "@/lib/ugc/admin-alerts";
@@ -42,10 +43,7 @@ export async function completeOnboardingAction(
     // la URL pública /ugc/creadores/[handle]); si no, la vista pública da 404.
     const handle = handleRaw && !handleRaw.startsWith("@") ? `@${handleRaw}` : handleRaw;
     const city = String(formData.get("city") ?? "").trim();
-    const niches = String(formData.get("niches") ?? "")
-      .split(",")
-      .map((n) => n.trim())
-      .filter(Boolean);
+    const niches = parseNichos(String(formData.get("niches") ?? ""));
     const followersCount = Number(formData.get("followers_count") ?? 0) || 0;
     const instagramHandle = String(formData.get("instagram_handle") ?? "").trim() || null;
     const tiktokHandle = String(formData.get("tiktok_handle") ?? "").trim() || null;

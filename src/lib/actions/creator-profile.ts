@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { AVATAR_BUCKET } from "@/lib/ugc/avatars";
 import { parseLanguages } from "@/lib/ugc/languages";
+import { parseNichos } from "@/lib/ugc/nichos";
 import { MAX_BIO } from "@/lib/ugc/perfil";
 
 // Ver el comentario gemelo en brand-profile.ts: `ok` es lo que deja avisar
@@ -41,10 +42,7 @@ export async function updateCreatorProfileDetailsAction(
   // comodidad del navegador, y este action se puede llamar con lo que sea.
   const bio = String(formData.get("bio") ?? "").trim().slice(0, MAX_BIO) || null;
   const city = String(formData.get("city") ?? "").trim() || null;
-  const niches = String(formData.get("niches") ?? "")
-    .split(",")
-    .map((n) => n.trim())
-    .filter(Boolean);
+  const niches = parseNichos(String(formData.get("niches") ?? ""));
   const languages = parseLanguages(formData.getAll("languages").map((v) => String(v)));
   const followersCount = Number(formData.get("followers_count") ?? 0) || 0;
   const instagramHandle = String(formData.get("instagram_handle") ?? "").trim() || null;

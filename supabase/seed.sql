@@ -79,9 +79,9 @@ begin
     (v_entrecot, 'Entrecot', 'Fine dining', 'Experiencia de fine dining y cortes premium.');
 
   insert into public.creator_profiles (profile_id, handle, followers_count, niches, instagram_handle, tiktok_handle, rate_min, rate_max, verified) values
-    (v_vale, '@vale.creates', 12400, array['food', 'lifestyle'], '@vale.creates', '@vale.creates', 80000, 150000, true),
-    (v_pura, '@pura.vida.foodie', 8100, array['food'], '@pura.vida.foodie', null, 60000, 110000, false),
-    (v_carlos, '@carlosreview.cr', 22000, array['reviews', 'restaurantes'], '@carlosreview.cr', '@carlosreview.cr', 100000, 180000, true);
+    (v_vale, '@vale.creates', 12400, array['gastronomia', 'lifestyle'], '@vale.creates', '@vale.creates', 80000, 150000, true),
+    (v_pura, '@pura.vida.foodie', 8100, array['gastronomia'], '@pura.vida.foodie', null, 60000, 110000, false),
+    (v_carlos, '@carlosreview.cr', 22000, array['gastronomia'], '@carlosreview.cr', '@carlosreview.cr', 100000, 180000, true);
 
   insert into public.campaigns (id, brand_id, title, brief, budget_amount, deliverables, target_audience, deadline_days, status, published_at) values
     (v_campaign_brunch, v_zonna, 'Reel de brunch de domingo',

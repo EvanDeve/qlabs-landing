@@ -7,6 +7,7 @@ import {
   type UpdateCreatorProfileDetailsState,
 } from "@/lib/actions/creator-profile";
 import { LANGUAGE_OPTIONS } from "@/lib/ugc/languages";
+import { MAX_NICHOS, NICHOS, nichoLabel } from "@/lib/ugc/nichos";
 import { AVATAR_BUCKET, MAX_AVATAR_FILE_BYTES } from "@/lib/ugc/avatars";
 import { pesoLegible, subirArchivoDirecto } from "@/lib/ugc/uploads";
 import { displayHandle } from "@/lib/ugc/handles";
@@ -265,16 +266,18 @@ export default function PerfilEditor({
         <div className={styles.platChips}>
           {niches.map((n) => (
             <span key={n} className={styles.platChip}>
-              {n}
+              {nichoLabel(n)}
             </span>
           ))}
-          <button
-            type="button"
-            className={`${styles.platChip} ${styles.perfilChipAgregar}`}
-            onClick={() => setCampo("niches")}
-          >
-            + Agregar
-          </button>
+          {niches.length < MAX_NICHOS && (
+            <button
+              type="button"
+              className={`${styles.platChip} ${styles.perfilChipAgregar}`}
+              onClick={() => setCampo("niches")}
+            >
+              + Agregar
+            </button>
+          )}
         </div>
 
         <p className={styles.perfilSeccion}>Idiomas para grabar</p>
@@ -446,7 +449,7 @@ export default function PerfilEditor({
             </label>
           )}
 
-          {campo === "niches" && <EditorLista valores={niches} onCambio={setNiches} placeholder="food" />}
+          {campo === "niches" && <EditorNichos valores={niches} onCambio={setNiches} />}
 
           {campo === "skills" && <EditorHabilidades skills={skills} onCambio={setSkills} />}
 
@@ -470,61 +473,37 @@ export default function PerfilEditor({
   );
 }
 
-/** Lista de textos sueltos (los nichos): agregar, quitar. */
-function EditorLista({
-  valores,
-  onCambio,
-  placeholder,
-}: {
-  valores: string[];
-  onCambio: (v: string[]) => void;
-  placeholder: string;
-}) {
-  const [nuevo, setNuevo] = useState("");
-
-  function agregar() {
-    const v = nuevo.trim().toLowerCase();
-    // Sin repetidos: dos chips iguales no aportan y ensucian el perfil público.
-    if (!v || valores.includes(v)) return;
-    onCambio([...valores, v]);
-    setNuevo("");
-  }
+/**
+ * Los nichos se eligen de la lista, no se escriben: es lo que deja que el
+ * equipo busque creadores por nicho desde Q·OS.
+ */
+function EditorNichos({ valores, onCambio }: { valores: string[]; onCambio: (v: string[]) => void }) {
+  const lleno = valores.length >= MAX_NICHOS;
 
   return (
     <>
       <div className={styles.platChips}>
-        {valores.map((v) => (
-          <button
-            key={v}
-            type="button"
-            className={`${styles.platChip} ${styles.perfilChipQuitar}`}
-            onClick={() => onCambio(valores.filter((x) => x !== v))}
-          >
-            {v}
-            <QosIcon name="x" size={11} />
-          </button>
-        ))}
+        {NICHOS.map((n) => {
+          const on = valores.includes(n.id);
+          return (
+            <button
+              key={n.id}
+              type="button"
+              aria-pressed={on}
+              disabled={!on && lleno}
+              onClick={() => onCambio(on ? valores.filter((x) => x !== n.id) : [...valores, n.id])}
+              className={`${styles.platChip} ${on ? styles.platChipOn : ""}`}
+            >
+              {n.label}
+            </button>
+          );
+        })}
       </div>
-      <div className={styles.perfilAgregarFila}>
-        <input
-          value={nuevo}
-          onChange={(e) => setNuevo(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              // Sin esto, Enter manda el formulario de afuera y la hoja se
-              // cierra a mitad de camino.
-              e.preventDefault();
-              agregar();
-            }
-          }}
-          placeholder={placeholder}
-          className={styles.perfilAgregarInput}
-        />
-        <button type="button" className={styles.perfilAgregarBtn} onClick={agregar}>
-          Agregar
-        </button>
-      </div>
-      <p className={styles.perfilAyuda}>Tocá un nicho para sacarlo.</p>
+      <p className={styles.perfilAyuda}>
+        {lleno
+          ? `Llegaste a ${MAX_NICHOS}. Sacá uno para elegir otro.`
+          : `Elegí hasta ${MAX_NICHOS}: los que de verdad hacés. Así te encuentran las marcas.`}
+      </p>
     </>
   );
 }

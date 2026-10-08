@@ -6,6 +6,7 @@ import {
   type OnboardingActionState,
 } from "@/lib/actions/onboarding";
 import BrandAvatar from "@/components/ugc/BrandAvatar";
+import { MAX_NICHOS, NICHOS, nichoLabel, parseNichos } from "@/lib/ugc/nichos";
 
 type Role = "creator" | "brand";
 
@@ -118,10 +119,9 @@ function CreatorWizard({ valores }: { valores?: ValoresCreador }) {
   const [tiktok, setTiktok] = useState(valores?.tiktok ?? "");
   const [city, setCity] = useState(valores?.city ?? "");
   const [bio, setBio] = useState(valores?.bio ?? "");
-  const [nichesStr, setNichesStr] = useState(valores?.niches ?? "");
+  const [niches, setNiches] = useState<string[]>(() => parseNichos(valores?.niches ?? ""));
   const [followers, setFollowers] = useState(valores?.followers ?? "");
 
-  const niches = nichesStr.split(",").map((n) => n.trim()).filter(Boolean);
   const last = CREATOR_STEPS.length - 1;
   const canContinue = handle.trim().length > 0;
 
@@ -137,7 +137,7 @@ function CreatorWizard({ valores }: { valores?: ValoresCreador }) {
     fd.set("tiktok_handle", tiktok);
     fd.set("city", city);
     fd.set("bio", bio);
-    fd.set("niches", nichesStr);
+    fd.set("niches", niches.join(","));
     fd.set("followers_count", followers);
     // useActionState exige que el dispatch manual vaya dentro de una transition
     startTransition(() => formAction(fd));
@@ -249,12 +249,34 @@ function CreatorWizard({ valores }: { valores?: ValoresCreador }) {
               <h2 className="text-2xl font-extrabold tracking-tight text-ink">Tu alcance</h2>
               <p className="mt-1.5 text-sm text-ink-soft">Opcional — tus nichos y cuántos te siguen.</p>
               <div className="mt-5 flex flex-col gap-3">
-                <input
-                  value={nichesStr}
-                  onChange={(e) => setNichesStr(e.target.value)}
-                  placeholder="Nichos separados por coma (food, lifestyle…)"
-                  className={inputCls}
-                />
+                <div>
+                  <p className="mb-2 text-sm font-bold text-ink">
+                    Tus nichos <span className="font-normal text-ink-soft">· hasta {MAX_NICHOS}</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {NICHOS.map((n) => {
+                      const on = niches.includes(n.id);
+                      return (
+                        <button
+                          key={n.id}
+                          type="button"
+                          aria-pressed={on}
+                          disabled={!on && niches.length >= MAX_NICHOS}
+                          onClick={() =>
+                            setNiches((prev) => (on ? prev.filter((x) => x !== n.id) : [...prev, n.id]))
+                          }
+                          className={`rounded-pill border px-3.5 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                            on
+                              ? "border-violet bg-violet text-white"
+                              : "border-line bg-white text-ink hover:border-violet hover:text-violet"
+                          }`}
+                        >
+                          {n.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <input
                   type="number"
                   min={0}
@@ -398,7 +420,7 @@ function ProfilePreview({
           <div className="mt-3 flex flex-wrap gap-1.5">
             {niches.map((n) => (
               <span key={n} className="rounded-pill bg-lavender px-2.5 py-0.5 text-[11px] font-semibold text-violet-deep">
-                {n}
+                {nichoLabel(n)}
               </span>
             ))}
           </div>

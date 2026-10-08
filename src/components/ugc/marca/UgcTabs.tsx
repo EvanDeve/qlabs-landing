@@ -8,6 +8,7 @@ import { CAMPAIGN_STATUS_LABEL } from "@/lib/ugc/campaign-status";
 import { APPLICATION_STATUS_LABEL } from "@/lib/ugc/application-status";
 import { displayHandle } from "@/lib/ugc/handles";
 import { languageLabel } from "@/lib/ugc/languages";
+import { nichoLabel } from "@/lib/ugc/nichos";
 import RielCampana from "./RielCampana";
 import AvataresAplicantes from "./AvataresAplicantes";
 import ApplicantDecisionButtons from "./ApplicantDecisionButtons";
@@ -358,7 +359,7 @@ function ListaAplicantes({
                             ? `${cp.followers_count.toLocaleString("es-CR")} seguidores`
                             : null,
                           p?.city,
-                          cp?.niches?.[0],
+                          cp?.niches?.[0] && nichoLabel(cp.niches[0]),
                         ]
                           .filter(Boolean)
                           .join(" · ")}

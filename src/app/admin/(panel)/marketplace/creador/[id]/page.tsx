@@ -8,6 +8,7 @@ import { APPLICATION_STATUS_LABEL, APPLICATION_STATUS_STYLE } from "@/lib/ugc/ap
 import { estadoDeNivel, labelAccion, fechaCorta, COLOR_NIVEL, type Nivel } from "@/lib/ugc/loyalty";
 import { creatorPayout } from "@/lib/ugc/payout";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
+import { nichoLabel } from "@/lib/ugc/nichos";
 import { iniciales, leerEstado, rutaFichaCreador } from "@/lib/ugc/marketplace-admin";
 import { getUserEmail } from "@/lib/email/resend";
 import { QosIcon } from "@/lib/ugc/qos-icons";
@@ -381,7 +382,7 @@ export default async function FichaCreadorPage({
               className={styles.fichaPila}
               style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line-2)" }}
             >
-              <Dato k="Nichos">{creador.niches.join(" · ") || "—"}</Dato>
+              <Dato k="Nichos">{creador.niches.map(nichoLabel).join(" · ") || "—"}</Dato>
               <div className={styles.fichaV} style={{ color: "var(--ink-2)" }}>
                 {perfil?.bio && <span style={{ whiteSpace: "pre-line" }}>{perfil.bio} </span>}
                 {piezasBook ?? 0} {piezasBook === 1 ? "pieza" : "piezas"} en el book.

@@ -8632,6 +8632,11 @@
   border-color: var(--ink);
   color: var(--ink-inv);
 }
+/* Los nichos llegan al tope de 5: el resto se apaga, no desaparece. */
+.platChip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .bookSubir {
   display: inline-flex;

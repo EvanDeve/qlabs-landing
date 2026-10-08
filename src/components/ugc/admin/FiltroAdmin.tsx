@@ -22,6 +22,7 @@ export default function FiltroAdmin({
   estado,
   opciones,
   todos = "Todos los estados",
+  extra,
 }: {
   base: string;
   tab: string;
@@ -31,6 +32,8 @@ export default function FiltroAdmin({
   /** Sin opciones no hay select: solo buscador. */
   opciones?: { id: string; label: string }[];
   todos?: string;
+  /** Un segundo select propio de la pestaña (el nicho, en Creadores). */
+  extra?: { name: string; label: string; valor: string | null; todos: string; opciones: { id: string; label: string }[] };
 }) {
   const form = useRef<HTMLFormElement>(null);
   const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,7 +79,23 @@ export default function FiltroAdmin({
           ))}
         </select>
       )}
-      {(q || estado) && (
+      {extra && (
+        <select
+          name={extra.name}
+          defaultValue={extra.valor ?? ""}
+          className={styles.selectInp}
+          aria-label={extra.label}
+          onChange={enviar}
+        >
+          <option value="">{extra.todos}</option>
+          {extra.opciones.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      )}
+      {(q || estado || extra?.valor) && (
         <Link href={`${base}?tab=${tab}`} className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}>
           Limpiar
         </Link>

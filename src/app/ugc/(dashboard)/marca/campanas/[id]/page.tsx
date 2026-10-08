@@ -22,6 +22,7 @@ import { hasUsageRights, usageRightsChips } from "@/lib/ugc/usage-rights";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import styles from "@/styles/qos.module.css";
 import { displayHandle } from "@/lib/ugc/handles";
+import { nichoLabel } from "@/lib/ugc/nichos";
 
 export const dynamic = "force-dynamic";
 
@@ -321,7 +322,7 @@ export default async function CampaignDetailPage({
                         ? `${cp.followers_count.toLocaleString("es-CR")} seguidores`
                         : null,
                       profile?.city,
-                      cp?.niches?.[0],
+                      cp?.niches?.[0] && nichoLabel(cp.niches[0]),
                     ]
                       .filter(Boolean)
                       .join(" · ")}

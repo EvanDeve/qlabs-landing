@@ -27,6 +27,7 @@ import { BarraAdmin, FiltroAdmin, PestanasAdmin } from "@/components/ugc/admin/P
 import type { ApplicationStatus, CampaignStatus } from "@/lib/database.types";
 import styles from "@/styles/qos.module.css";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
+import { NICHOS, esNicho, nichoLabel } from "@/lib/ugc/nichos";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +90,7 @@ function accionesDeEstado(estado: EstadoCuenta, profileId: string, tipo: "creato
   return [];
 }
 
-type Busqueda = { tab?: string; q?: string; estado?: string };
+type Busqueda = { tab?: string; q?: string; estado?: string; nicho?: string };
 
 /**
  * El marketplace desde adentro (mockup 1b): cuatro pestañas, cada una una
@@ -108,6 +109,9 @@ export default async function AdminMarketplacePage({ searchParams }: { searchPar
   const params = await searchParams;
   const tab = leerPestana(params.tab);
   const q = (params.q ?? "").trim();
+  // Solo en Creadores, y solo si es un nicho del catálogo: un link viejo con
+  // otro valor se ignora en vez de dejar la lista vacía.
+  const nicho = tab === "creadores" && esNicho(params.nicho) ? params.nicho : null;
 
   const contar = (query: PromiseLike<{ count: number | null }>) => query.then((r) => r.count ?? 0);
   const [creadores, creadoresPendientes, marcas, marcasPendientes, campanas, aplicaciones] =
@@ -150,7 +154,7 @@ export default async function AdminMarketplacePage({ searchParams }: { searchPar
   );
 
   const placeholder: Record<PestanaMarketplace, string> = {
-    creadores: "Handle, nombre o ciudad",
+    creadores: "Handle, nombre, ciudad o nicho",
     marcas: "Nombre, rubro o ubicación",
     campanas: "Título o marca",
     aplicaciones: "Creador, campaña o marca",
@@ -158,7 +162,7 @@ export default async function AdminMarketplacePage({ searchParams }: { searchPar
 
   const lista =
     tab === "creadores" ? (
-      <ListaCreadores supabase={supabase} q={q} estado={estado as EstadoCuenta | null} />
+      <ListaCreadores supabase={supabase} q={q} estado={estado as EstadoCuenta | null} nicho={nicho} />
     ) : tab === "marcas" ? (
       <ListaMarcas supabase={supabase} q={q} estado={estado as EstadoCuenta | null} />
     ) : tab === "campanas" ? (
@@ -197,6 +201,17 @@ export default async function AdminMarketplacePage({ searchParams }: { searchPar
           placeholder={placeholder[tab]}
           estado={estado}
           opciones={opcionesEstado}
+          extra={
+            tab === "creadores"
+              ? {
+                  name: "nicho",
+                  label: "Nicho",
+                  valor: nicho,
+                  todos: "Todos los nichos",
+                  opciones: NICHOS.map((n) => ({ id: n.id, label: n.label })),
+                }
+              : undefined
+          }
         />
       </BarraAdmin>
       {lista}
@@ -249,10 +264,12 @@ async function ListaCreadores({
   supabase,
   q,
   estado,
+  nicho,
 }: {
   supabase: Supabase;
   q: string;
   estado: EstadoCuenta | null;
+  nicho: string | null;
 }) {
   const { data: creatorProfiles } = await supabase
     .from("creator_profiles")
@@ -271,7 +288,15 @@ async function ListaCreadores({
       const cuenta = cuentaPorId.get(c.profile_id);
       return (
         (!estado || estadoCuenta(c) === estado) &&
-        coincide(q, [c.handle, c.instagram_handle, c.tiktok_handle, cuenta?.display_name, cuenta?.city])
+        (!nicho || c.niches.includes(nicho)) &&
+        coincide(q, [
+          c.handle,
+          c.instagram_handle,
+          c.tiktok_handle,
+          cuenta?.display_name,
+          cuenta?.city,
+          ...c.niches.map(nichoLabel),
+        ])
       );
     })
     .sort((a, b) => ORDEN_ESTADO[estadoCuenta(a)] - ORDEN_ESTADO[estadoCuenta(b)]);
@@ -283,6 +308,7 @@ async function ListaCreadores({
           <tr>
             <th>Creador</th>
             <th className={styles.colEscritorio}>Ciudad</th>
+            <th className={styles.colEscritorio}>Nichos</th>
             <th className={`${styles.numCelda} ${styles.colEscritorio}`}>Seguidores</th>
             <th>Estado</th>
             <th aria-label="Acciones" />
@@ -331,6 +357,7 @@ async function ListaCreadores({
                   </Link>
                 </td>
                 <td className={styles.colEscritorio}>{account?.city || "—"}</td>
+                <td className={styles.colEscritorio}>{creator.niches.map(nichoLabel).join(" · ") || "—"}</td>
                 <td className={`${styles.numCelda} ${styles.colEscritorio}`}>
                   <b>{creator.followers_count.toLocaleString("es-CR")}</b>
                 </td>

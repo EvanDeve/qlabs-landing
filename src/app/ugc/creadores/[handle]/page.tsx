@@ -6,6 +6,7 @@ import { PORTFOLIO_BUCKET } from "@/lib/ugc/portfolio";
 import { computeTrustScore } from "@/lib/ugc/trust-score";
 import { languageLabel } from "@/lib/ugc/languages";
 import { displayHandle, handleSlug } from "@/lib/ugc/handles";
+import { nichoLabel } from "@/lib/ugc/nichos";
 import TrustRing from "@/components/ugc/TrustRing";
 import CreatorPublicBook from "@/components/ugc/creador/CreatorPublicBook";
 import CompartirPagina from "@/components/ugc/CompartirPagina";
@@ -43,7 +44,7 @@ export async function generateMetadata({
   const description =
     profile?.bio?.trim() ||
     [
-      creator.niches.length > 0 ? `Contenido de ${creator.niches.slice(0, 3).join(", ")}` : null,
+      creator.niches.length > 0 ? `Contenido de ${creator.niches.slice(0, 3).map(nichoLabel).join(", ")}` : null,
       profile?.city,
       creator.followers_count > 0
         ? `${creator.followers_count.toLocaleString("es-CR")} seguidores`
@@ -240,7 +241,7 @@ export default async function CreatorPublicProfilePage({
                     key={niche}
                     className="rounded-pill bg-lavender px-3 py-1 text-xs font-semibold text-violet-deep"
                   >
-                    {niche}
+                    {nichoLabel(niche)}
                   </span>
                 ))}
                 {creatorProfile.languages.map((lang) => (
