@@ -166,3 +166,38 @@ export async function updateContentPieceAction(formData: FormData) {
   if (current?.brand_id) revalidatePath(`/admin/heroes/${current.brand_id}`);
   if (brandId && brandId !== current?.brand_id) revalidatePath(`/admin/heroes/${brandId}`);
 }
+
+/**
+ * Marca o desmarca un video como grabado.
+ *
+ * Es la misma bandera en los tres lugares donde se ve —el check del
+ * cronograma, el switch de la ficha y el "Grabado" de la tarjeta del Kanban— y
+ * la lee también el link de quien graba, que no la puede tocar. Vive en la
+ * tarjeta (`content_pieces.recorded_at`) y no en la fila del cronograma porque
+ * grabar es trabajo, igual que los apuntes. Ver la migración 20261106120000.
+ *
+ * Se guarda al toque y no con el botón Guardar de la ficha: es un dato que se
+ * marca desde el set, con el teléfono, y pedir "Guardar" después es la forma
+ * de que quede sin marcar.
+ */
+export async function marcarGrabadaAction(pieceId: string, grabada: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: pieza } = await supabase
+    .from("content_pieces")
+    .update({ recorded_at: grabada ? new Date().toISOString() : null })
+    .eq("id", pieceId)
+    .select("brand_id, calendar_month")
+    .maybeSingle();
+
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin");
+  if (pieza?.brand_id) revalidatePath(`/admin/heroes/${pieza.brand_id}`);
+  if (pieza?.brand_id && pieza.calendar_month) {
+    revalidatePath(`/admin/cronogramas/${pieza.brand_id}/${pieza.calendar_month}`);
+  }
+}

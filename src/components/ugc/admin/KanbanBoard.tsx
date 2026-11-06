@@ -516,6 +516,14 @@ function Card({
             <QosIcon name="chat" size={11} /> WhatsApp
           </span>
         )}
+        {/* Grabado, a la vista en el tablero. Es la misma bandera que el check
+            del cronograma (`recorded_at`); acá solo se lee, se marca desde el
+            cronograma o desde la ficha de la pieza. */}
+        {piece.recorded_at && (
+          <span className={`${styles.tag} ${styles.tagGrabada}`} title="Ya se grabó">
+            <QosIcon name="check" size={11} /> Grabado
+          </span>
+        )}
       </div>
       <div className={styles.kcFoot}>
         {/* La publicación va siempre, con "—" cuando falta, para que una pieza

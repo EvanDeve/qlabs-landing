@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { Database } from "@/lib/database.types";
-import { updateContentPieceAction, updateContentPieceColumnAction, deleteContentPieceAction } from "@/lib/actions/content-pieces";
+import {
+  updateContentPieceAction,
+  updateContentPieceColumnAction,
+  deleteContentPieceAction,
+  marcarGrabadaAction,
+} from "@/lib/actions/content-pieces";
 import { esCarrilDeTareas, nextColumn, type ContentColumn } from "@/lib/ugc/content-columns";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
@@ -54,6 +59,9 @@ export default function ContentPieceEditor({
   // sin esperar a guardar: los dos miran el mismo dato y verlos discrepar
   // dentro de la misma pantalla se lee como que algo se rompió.
   const [approval, setApproval] = useState(piece.approval);
+  // Grabado en estado por lo mismo: se marca al toque, sin pasar por Guardar,
+  // y el switch tiene que reflejarlo ya.
+  const [grabada, setGrabada] = useState(piece.recorded_at !== null);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
@@ -131,6 +139,14 @@ export default function ContentPieceEditor({
     startTransition(async () => {
       await updateContentPieceColumnAction(piece.id, destinoId);
       setColumnId(destinoId);
+    });
+  }
+
+  /** Marcar o desmarcar grabado se guarda al toque, como el cambio de columna. */
+  function handleGrabada(valor: boolean) {
+    setGrabada(valor);
+    startTransition(async () => {
+      await marcarGrabadaAction(piece.id, valor);
     });
   }
 
@@ -327,8 +343,28 @@ export default function ContentPieceEditor({
               </select>
             </div>
 
-            {/* Solo publicación: la grabación es un hito mensual del calendario,
-                no un dato de cada pieza. Ver el comentario en NewContentPieceModal. */}
+            {/* Grabado: se guarda al toque, sin pasar por Guardar. Es la misma
+                bandera que el check del cronograma y el "Grabado" de la tarjeta
+                del Kanban (`recorded_at`). Fuera de `.field` para que el label
+                no herede el tamaño de los rótulos. Oculto en tareas: una tarea
+                de IT no se graba. */}
+            <div style={esTarea ? { display: "none" } : { margin: "2px 0 16px" }}>
+              <label className={styles.switchCheck}>
+                <input
+                  type="checkbox"
+                  checked={grabada}
+                  onChange={(e) => handleGrabada(e.target.checked)}
+                  disabled={isPending}
+                />
+                <span className={styles.switchTrack} />
+                {grabada ? "Grabado" : "Sin grabar"}
+              </label>
+            </div>
+
+            {/* Solo la FECHA de publicación: la de grabación es un hito mensual
+                del calendario, no un dato de cada pieza (ver el comentario en
+                NewContentPieceModal). Que ya se grabó sí lo es: el switch de
+                arriba. */}
 
             {/* La hora va en su propio campo y su propia columna, no dentro de
                 publish_date: ese es el bug del día corrido de la migración

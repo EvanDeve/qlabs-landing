@@ -73,11 +73,11 @@ async function cargar(token: string) {
   // fila sin el embed.
   const pieceIds = items.map((i) => i.piece_id).filter((id): id is string => id !== null);
   const { data: tarjetas } = pieceIds.length
-    ? await supabase.from("content_pieces").select("id, notes").in("id", pieceIds)
+    ? await supabase.from("content_pieces").select("id, notes, recorded_at").in("id", pieceIds)
     : { data: [] };
-  const apuntesPorPieza = new Map((tarjetas ?? []).map((t) => [t.id, t.notes]));
+  const tarjetaPorId = new Map((tarjetas ?? []).map((t) => [t.id, t]));
 
-  return { cronograma, hero, items, apuntesPorPieza };
+  return { cronograma, hero, items, tarjetaPorId };
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
@@ -99,7 +99,7 @@ export default async function GrabacionPage({ params }: { params: Promise<{ toke
 
   if (!datos) notFound();
 
-  const { cronograma, hero, items, apuntesPorPieza } = datos;
+  const { cronograma, hero, items, tarjetaPorId } = datos;
 
   // Las fechas se formatean acá, en el servidor, y en día de Costa Rica. Si se
   // hicieran en el navegador saldrían en la zona de quien mire.
@@ -113,7 +113,10 @@ export default async function GrabacionPage({ params }: { params: Promise<{ toke
     script_idea: v.script_idea,
     script_desarrollo: v.script_desarrollo,
     script_cta: v.script_cta,
-    apuntes: apuntesDe(v.notes, v.piece_id ? apuntesPorPieza.get(v.piece_id) : null),
+    apuntes: apuntesDe(v.notes, v.piece_id ? tarjetaPorId.get(v.piece_id)?.notes : null),
+    // Se muestra y no se toca: este link es solo lectura (Evan, 2026-08-26) y
+    // marcar grabado es del equipo, desde el cronograma o desde la tarjeta.
+    grabado: v.piece_id ? (tarjetaPorId.get(v.piece_id)?.recorded_at ?? null) !== null : false,
   }));
 
   return (

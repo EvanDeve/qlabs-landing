@@ -263,19 +263,47 @@ export async function borrarCronogramaAction(heroId: string, mesRaw: string) {
   redirect("/admin/cronogramas");
 }
 
+/**
+ * Quita un video del cronograma, esté aprobado o no.
+ *
+ * Hasta el 2026-11-06 un video con tarjeta no se podía quitar: la idea era
+ * proteger el trabajo del tablero. Evan lo dio vuelta porque en el mes surgen
+ * cambios —se cae un video, se reemplaza otro— y el cronograma tiene que poder
+ * reflejarlos, si no el Hero ve en su link cosas que ya no van.
+ *
+ * Si el video ya es tarjeta se borra LA TARJETA, y el trigger
+ * `borrar_video_del_cronograma_con_la_tarjeta` se lleva la fila del
+ * cronograma. El cronograma manda: un video que se saca de lo prometido no
+ * sigue como trabajo en el tablero. Se entra por la tarjeta y no por la fila a
+ * propósito, para que las dos salidas pasen por el mismo camino y no haya forma
+ * de que quede una sin la otra. El delete de la fila que sigue es para el video
+ * que nunca tuvo tarjeta; si el trigger ya la borró, no encuentra nada.
+ *
+ * La meta sellada del mes (`target`) no se toca: sigue diciendo lo que el
+ * cliente aprobó, y la pantalla ya muestra la diferencia.
+ */
 export async function borrarVideoAction(id: string, heroId: string, mesRaw: string) {
   const supabase = await admin();
   const mes = parseMes(mesRaw);
   if (!supabase || !mes) return;
 
-  // Un video ya aprobado no se borra desde acá: su tarjeta ya está en el
-  // tablero y alguien puede estar trabajándola. Borrar la fila dejaría la
-  // tarjeta huérfana y el cronograma diciendo que se prometió una cosa
-  // distinta de la que se prometió.
-  const { data: item } = await supabase.from("calendar_month_items").select("piece_id").eq("id", id).maybeSingle();
-  if (item?.piece_id) return;
+  // El id viaja desde el navegador: se acota al cronograma de la URL para que
+  // un id ajeno no borre el video de otro Hero.
+  const { data: item } = await supabase
+    .from("calendar_month_items")
+    .select("piece_id")
+    .eq("id", id)
+    .eq("hero_id", heroId)
+    .eq("month", mes)
+    .maybeSingle();
+  if (!item) return;
 
+  if (item.piece_id) {
+    await supabase.from("content_pieces").delete().eq("id", item.piece_id);
+  }
   await supabase.from("calendar_month_items").delete().eq("id", id);
 
   revalidar(heroId, mes);
+  // La tarjeta también vivía en el calendario.
+  revalidatePath("/admin/calendario");
 }

@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import type { Database } from "@/lib/database.types";
 import { guardarVideoAction, borrarVideoAction } from "@/lib/actions/cronogramas";
-import { horaCorta, estadoDelGuion } from "@/lib/ugc/cronograma";
+import { marcarGrabadaAction } from "@/lib/actions/content-pieces";
+import { horaCorta, estadoDelGuion, mensajeAlQuitarVideo } from "@/lib/ugc/cronograma";
 import { diaCorto } from "@/lib/ugc/calendar";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
@@ -60,6 +61,7 @@ export default function CronogramaVideoRow({
   item,
   numero,
   apuntes,
+  grabadoEl,
 }: {
   item: Item;
   numero: number;
@@ -72,6 +74,12 @@ export default function CronogramaVideoRow({
    * los pisa al sincronizar (ver `sincronizarConLaTarjeta`).
    */
   apuntes: string | null;
+  /**
+   * `content_pieces.recorded_at` de la tarjeta: cuándo se marcó como grabado, o
+   * null. Vive en la tarjeta y no en esta fila por lo mismo que los apuntes
+   * —grabar es trabajo—, así que solo existe cuando el video ya es tarjeta.
+   */
+  grabadoEl: string | null;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -79,9 +87,23 @@ export default function CronogramaVideoRow({
   // El título en estado para que la cabecera lo diga mientras se escribe: es la
   // única parte del video que se ve con la fila cerrada.
   const [titulo, setTitulo] = useState(item.title);
+  // Grabado en estado y optimista: se marca desde el set, con el teléfono, y
+  // esperar la vuelta del servidor para pintar el check lo hace sentir roto.
+  const [grabado, setGrabado] = useState(grabadoEl !== null);
+  const [marcando, startMarcar] = useTransition();
 
-  const aprobado = item.piece_id !== null;
+  const pieceId = item.piece_id;
+  const aprobado = pieceId !== null;
   const apuntesLimpios = apuntes?.trim() || null;
+
+  function toggleGrabado() {
+    if (!pieceId) return;
+    const siguiente = !grabado;
+    setGrabado(siguiente);
+    startMarcar(async () => {
+      await marcarGrabadaAction(pieceId, siguiente);
+    });
+  }
 
   function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -95,6 +117,29 @@ export default function CronogramaVideoRow({
 
   return (
     <div className={`${styles.videoRow} ${abierto ? styles.videoRowAbierta : ""}`}>
+      <div className={styles.videoHdFila}>
+        {/* El check de grabado, con la fila CERRADA: la pregunta en el set es
+            "¿cuáles me faltan?", y se contesta recorriendo la lista, no
+            abriendo cada video. Solo para los que ya son tarjeta: antes de
+            aprobar el mes no hay nada que grabar. Es un botón hermano del que
+            abre la fila y no un hijo: un <button> dentro de otro no es HTML
+            válido, y el clic marcaría Y abriría. */}
+        {pieceId && (
+          <button
+            type="button"
+            onClick={toggleGrabado}
+            disabled={marcando}
+            className={`${styles.videoCheck} ${grabado ? styles.videoCheckOn : ""}`}
+            aria-pressed={grabado}
+            aria-label={grabado ? `Video ${numero}: grabado. Desmarcar` : `Video ${numero}: sin grabar. Marcar como grabado`}
+            title={grabado ? "Grabado · clic para desmarcar" : "Marcar como grabado"}
+          >
+            <span className={styles.videoCheckDot}>
+              <QosIcon name="check" size={12} />
+            </span>
+          </button>
+        )}
+
       <button
         type="button"
         onClick={() => setAbierto((v) => !v)}
@@ -138,6 +183,7 @@ export default function CronogramaVideoRow({
 
         <QosIcon name="chevR" size={15} className={`${styles.guionChev} ${abierto ? styles.guionChevOpen : ""}`} />
       </button>
+      </div>
 
       <div id={`video-${item.id}`} className={styles.videoBody} hidden={!abierto}>
         <form onSubmit={handleSave}>
@@ -291,22 +337,19 @@ export default function CronogramaVideoRow({
               {guardado && !isPending && <QosIcon name="check" size={15} />}
             </button>
 
-            {/* Ya aprobado no se borra: su tarjeta está en el tablero y alguien
-                puede estar trabajándola. El server action lo rechaza igual; esto
-                es para que no parezca posible. */}
-            {aprobado ? (
-              <span className={styles.formNote}>Ya está en el pipeline, no se puede quitar del cronograma.</span>
-            ) : (
-              <ConfirmDeleteButton
-                action={async () => {
-                  await borrarVideoAction(item.id, item.hero_id, item.month);
-                }}
-                confirmMessage={`¿Quitar el video ${numero} del cronograma?`}
-                className={`${styles.btn} ${styles.btnGhostDanger}`}
-              >
-                Quitar
-              </ConfirmDeleteButton>
-            )}
+            {/* Se puede quitar aprobado o no (Evan, 2026-11-06): en el mes
+                surgen cambios y el cronograma tiene que poder reflejarlos. Si ya
+                es tarjeta, quitarlo se lleva la tarjeta del pipeline; el mensaje
+                lo dice antes de confirmar, y también si ya estaba grabado. */}
+            <ConfirmDeleteButton
+              action={async () => {
+                await borrarVideoAction(item.id, item.hero_id, item.month);
+              }}
+              confirmMessage={mensajeAlQuitarVideo(numero, { enPipeline: aprobado, grabado })}
+              className={`${styles.btn} ${styles.btnGhostDanger}`}
+            >
+              Quitar
+            </ConfirmDeleteButton>
           </div>
         </form>
       </div>

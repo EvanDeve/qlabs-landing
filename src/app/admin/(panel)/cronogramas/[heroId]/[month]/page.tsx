@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { agregarVideoAction, borrarCronogramaAction } from "@/lib/actions/cronogramas";
 import ConfirmDeleteButton from "@/components/ugc/admin/ConfirmDeleteButton";
-import { parseMes, nombreDeMes, estadoDelGuion } from "@/lib/ugc/cronograma";
+import { parseMes, nombreDeMes, estadoDelGuion, resumenDeGrabacion } from "@/lib/ugc/cronograma";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import CronogramaVideoRow from "@/components/ugc/admin/CronogramaVideoRow";
 import CronogramaShareLink from "@/components/ugc/admin/CronogramaShareLink";
@@ -83,9 +83,18 @@ export default async function ArmarCronogramaPage({
   // entera y `data` vuelve null, sin excepción.
   const pieceIds = items.map((i) => i.piece_id).filter((id): id is string => id !== null);
   const { data: tarjetas } = pieceIds.length
-    ? await supabase.from("content_pieces").select("id, notes").in("id", pieceIds)
+    ? await supabase.from("content_pieces").select("id, notes, recorded_at").in("id", pieceIds)
     : { data: [] };
-  const apuntesPorPieza = new Map((tarjetas ?? []).map((t) => [t.id, t.notes]));
+  const tarjetaPorId = new Map((tarjetas ?? []).map((t) => [t.id, t]));
+
+  // Cuántos ya se grabaron. Solo cuentan los que son tarjeta: antes de aprobar
+  // no hay nada que grabar, y "0 de 10 grabados" sobre un mes en revisión se
+  // leería como un atraso.
+  const grabacion = resumenDeGrabacion(
+    items.map((i) => ({
+      grabado: i.piece_id ? (tarjetaPorId.get(i.piece_id)?.recorded_at ?? null) !== null : null,
+    }))
+  );
 
   const aprobado = cronograma.status === "aprobado";
   const comentados = items.filter((i) => i.client_comment).length;
@@ -164,6 +173,20 @@ export default async function ArmarCronogramaPage({
               <QosIcon name="chat" size={12} /> el cliente comentó {comentados}
             </span>
           )}
+          {/* Grabados, de un vistazo. Verde solo cuando están todos: a medias es
+              el estado normal del mes y no hay que pintarlo de nada. */}
+          {grabacion.conTarjeta > 0 && (
+            <span
+              className={styles.chip}
+              style={
+                grabacion.estado === "todos"
+                  ? { background: "var(--ok-bg)", color: "var(--ok)", borderColor: "var(--ok-line)" }
+                  : undefined
+              }
+            >
+              <QosIcon name="camera" size={12} /> {grabacion.grabados} de {grabacion.conTarjeta} grabados
+            </span>
+          )}
         </div>
       </div>
 
@@ -201,7 +224,8 @@ export default async function ArmarCronogramaPage({
               key={item.id}
               item={item}
               numero={i + 1}
-              apuntes={(item.piece_id && apuntesPorPieza.get(item.piece_id)) || null}
+              apuntes={(item.piece_id && tarjetaPorId.get(item.piece_id)?.notes) || null}
+              grabadoEl={(item.piece_id && tarjetaPorId.get(item.piece_id)?.recorded_at) || null}
             />
           ))
         )}

@@ -12721,3 +12721,67 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* ─── Grabado: el check de la fila del cronograma y la etiqueta del Kanban ───
+   El check va FUERA del botón que abre la fila: un <button> dentro de otro no
+   es HTML válido, y el clic marcaría Y abriría. Por eso la cabecera pasó a ser
+   una fila flex con dos botones hermanos, y `.videoHd` deja de medir 100%. */
+.videoHdFila {
+  display: flex;
+  align-items: stretch;
+}
+.videoHdFila > .videoHd {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+.videoCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--line);
+  cursor: pointer;
+  color: var(--ink-3);
+  transition: var(--t-fast);
+}
+.videoCheck:hover {
+  background: var(--surface-2);
+}
+.videoCheck:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+.videoCheck:focus-visible {
+  outline: 2px solid var(--b-400);
+  outline-offset: -2px;
+}
+/* El círculo vacío dice "falta grabar" sin texto; lleno y verde, "grabado". El
+   ícono está siempre, transparente cuando no, para que el círculo no cambie de
+   tamaño al marcar. */
+.videoCheckDot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: var(--t-fast);
+}
+.videoCheck:hover .videoCheckDot {
+  border-color: var(--ok);
+}
+.videoCheckOn .videoCheckDot {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+.tagGrabada {
+  background: var(--ok-bg);
+  color: var(--ok);
+}

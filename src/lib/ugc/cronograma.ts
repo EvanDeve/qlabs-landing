@@ -141,3 +141,47 @@ export function rangoDelMes(mes: string): { gte: string; lte: string } {
   const ultimo = diasDelMes(`${mes}-01`);
   return { gte: `${mes}-01`, lte: `${mes}-${String(ultimo).padStart(2, "0")}` };
 }
+
+/**
+ * Cuántos videos del mes ya se grabaron, para el chip de arriba del cronograma.
+ *
+ * `grabado` viene por video: true o false si ya es tarjeta del pipeline, null
+ * si todavía no lo es. Los null no cuentan ni en el total: antes de aprobar el
+ * mes no hay nada que grabar, y contarlos daría "0 de 10 grabados" sobre un
+ * cronograma que todavía está en revisión.
+ */
+export type ResumenDeGrabacion = {
+  grabados: number;
+  conTarjeta: number;
+  estado: "sin-tarjetas" | "ninguno" | "parcial" | "todos";
+};
+
+export function resumenDeGrabacion(videos: { grabado: boolean | null }[]): ResumenDeGrabacion {
+  const conTarjeta = videos.filter((v) => v.grabado !== null).length;
+  const grabados = videos.filter((v) => v.grabado === true).length;
+
+  return {
+    grabados,
+    conTarjeta,
+    estado:
+      conTarjeta === 0 ? "sin-tarjetas" : grabados === 0 ? "ninguno" : grabados === conTarjeta ? "todos" : "parcial",
+  };
+}
+
+/**
+ * Lo que se le dice a quien va a quitar un video del cronograma.
+ *
+ * Desde el 2026-11-06 se puede quitar cualquier video, aprobado o no: en el mes
+ * surgen cambios y el cronograma tiene que poder reflejarlos. El costo es que
+ * quitar un video aprobado borra también su tarjeta del pipeline (el
+ * cronograma manda), y si ya estaba grabado se está tirando trabajo hecho. El
+ * mensaje dice exactamente eso y no un "no se puede deshacer" genérico.
+ */
+export function mensajeAlQuitarVideo(numero: number, video: { enPipeline: boolean; grabado: boolean }): string {
+  const base = `¿Quitar el video ${numero} del cronograma?`;
+  if (!video.enPipeline) return `${base} El Hero deja de verlo en su link.`;
+  if (video.grabado) {
+    return `${base} Se borra también su tarjeta del pipeline, que ya figura como grabada, y el Hero deja de verlo en su link.`;
+  }
+  return `${base} Se borra también su tarjeta del pipeline y el Hero deja de verlo en su link.`;
+}

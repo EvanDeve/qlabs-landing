@@ -706,6 +706,10 @@ export interface Database {
           // La cargó McLovin desde el chat de WhatsApp, no una persona desde el
           // tablero. Ver la migración 20260802000000.
           created_by_agent: boolean;
+          // Cuándo se marcó el video como grabado; null = sin grabar. Vive en
+          // la tarjeta y no en la fila del cronograma porque grabar es
+          // trabajo, como los apuntes. Ver la migración 20261106120000.
+          recorded_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -731,6 +735,7 @@ export interface Database {
           calendar_month?: string | null;
           notes?: string | null;
           created_by_agent?: boolean;
+          recorded_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

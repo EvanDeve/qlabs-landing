@@ -9,6 +9,8 @@ type Video = {
   script_desarrollo: string | null;
   script_cta: string | null;
   apuntes: string | null;
+  /** Ya se grabó. Se lee y nada más: lo marca el equipo desde Q·OS. */
+  grabado: boolean;
 };
 
 const PLATAFORMA: Record<string, string> = {
@@ -48,6 +50,7 @@ export default function CronogramaGrabacion({
   videos: Video[];
 }) {
   const conApuntes = videos.filter((v) => v.apuntes).length;
+  const grabados = videos.filter((v) => v.grabado).length;
 
   return (
     <main className="min-h-screen bg-lavender/40 px-5 py-10 md:py-16">
@@ -68,6 +71,17 @@ export default function CronogramaGrabacion({
             <h1 className="text-2xl font-extrabold text-ink md:text-3xl">Grabación de {mesLegible}</h1>
           </div>
         </header>
+
+        {/* Cuántos van, antes de la lista: quien graba abre esto para saber qué
+            le falta, y el número contesta sin recorrer los videos. Con cero no
+            se dice nada: "0 de 12" al arrancar el mes no aporta. */}
+        {grabados > 0 && (
+          <p className="mb-4 text-sm font-bold text-trust">
+            {grabados === videos.length
+              ? "Todos los videos están grabados."
+              : `${grabados} de ${videos.length} videos ya grabados.`}
+          </p>
+        )}
 
         {/* Acá NO va el estado de aprobación del mes. Lo pidió Evan el
             2026-08-26 y no es un olvido: quien graba no decide sobre eso, y el
@@ -118,6 +132,9 @@ function VideoCard({ video, numero }: { video: Video; numero: number }) {
         <span className="rounded-pill bg-lavender px-3 py-1 text-xs font-bold text-ink-soft">
           {PLATAFORMA[video.platform] ?? video.platform}
         </span>
+        {video.grabado && (
+          <span className="rounded-pill bg-trust-bg px-3 py-1 text-xs font-bold text-trust">✓ Grabado</span>
+        )}
       </div>
 
       <h2 className="text-lg font-extrabold text-ink">{video.title || `Video ${numero}`}</h2>
