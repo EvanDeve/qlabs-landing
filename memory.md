@@ -6,7 +6,7 @@
 - **En prod:** marketplace completo (creador y marca rediseñados estilo iOS), Q·OS (agencia + área UGC rediseñada, mockups 1a–1f), Loyalty Loop, Close Friends (rol `member`, entra por QR), cronogramas mensuales con links para el Hero y para quien graba.
 - **Tarea activa:** spec `002-media-kit` — T01–T17 en prod (2026-10-08); **T18 bloqueada** hasta que Evan mande los mockups del orden visual del kit. Evan está revisando lo hecho.
 - **Recién hecho:**
-  - 2026-11-06 cronogramas: borrar una tarjeta borra su video del cronograma (trigger), cualquier video se puede quitar aunque esté aprobado (se lleva su tarjeta), y check de **grabado** (`content_pieces.recorded_at`) en el cronograma, la ficha, el Kanban y el link de grabación. **Migración `20261106120000` pendiente de correr en prod** (incluye limpieza de 65 videos huérfanos).
+  - 2026-11-06 cronogramas: borrar una tarjeta borra su video del cronograma (trigger), cualquier video se puede quitar aunque esté aprobado (se lleva su tarjeta), y check de **grabado** (`content_pieces.recorded_at`) en el cronograma, la ficha, el Kanban y el link de grabación. Migración `20261106120000` corrida en prod el 2026-11-06 (limpió 65 videos huérfanos); verificado en prod: trigger, check del cronograma, switch de la ficha y pill en /grabacion.
   - Spec 002, media kit: piezas destacadas (hasta 3, desde el book), teléfono del creador solo para marcas verificadas con aviso en la campanita (una vez por marca y día), visitas del kit en el inicio, política de privacidad 1.3. El kit ahora también abre con `/ugc/creadores/@handle`.
   - La marca ve la nota de entrega del creador: en "Te toca aprobar" y en la tarjeta de cada aplicación.
   - `e586f42` nichos de creador: catálogo de 22, máximo 5, filtro `?nicho=` en Q·OS.
@@ -28,7 +28,6 @@
 - Rediseño general de Q·OS (sidebar/header): espera capturas de Claude Design.
 
 ## Próximos pasos
-- [ ] Correr `20261106120000_grabado_y_borrado_ligado.sql` en prod y verificar en el navegador (check de grabado, quitar aprobado, borrar tarjeta → desaparece del link del Hero).
 - [ ] Aprobar un mes desde el Dashboard (botón del equipo, `toggleCalendarMonthAction`) NO crea las tarjetas: los videos quedan sin llegar al pipeline (Delitalia sept, 11). Decidir si debe crearlas.
 - [ ] Spec 002 T18: reordenar el kit público cuando lleguen los mockups de Evan.
 - [ ] Rediseño general de Q·OS cuando lleguen las capturas.
