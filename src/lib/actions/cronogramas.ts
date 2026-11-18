@@ -31,6 +31,7 @@ function revalidar(heroId: string, mes: string) {
   revalidatePath("/admin/cronogramas");
   revalidatePath(`/admin/cronogramas/${heroId}/${mes}`);
   revalidatePath("/admin/pipeline");
+  revalidatePath("/admin/calendario");
   revalidatePath("/admin");
   revalidatePath(`/admin/heroes/${heroId}`);
 }

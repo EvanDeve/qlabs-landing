@@ -161,6 +161,10 @@ export async function updateContentPieceAction(formData: FormData) {
   // El calendario muestra las piezas por fecha de publicación: si acá se movió
   // la fecha, su caché también quedó vieja.
   revalidatePath("/admin/calendario");
+  // Lo editado sube al video del cronograma por trigger (migración
+  // 20261118120000); sin esto la pantalla del cronograma quedaba con la fecha
+  // vieja en caché. "layout" cubre todos los meses de todos los Heroes.
+  revalidatePath("/admin/cronogramas", "layout");
   // Los dos expedientes: la pieza sale de uno y entra en el otro cuando se
   // corrige el Hero.
   if (current?.brand_id) revalidatePath(`/admin/heroes/${current.brand_id}`);
