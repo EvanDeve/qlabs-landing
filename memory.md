@@ -4,7 +4,8 @@
 
 ## Estado actual (2026-11-18)
 - **En prod:** marketplace completo (creador y marca rediseñados estilo iOS), Q·OS (agencia + área UGC rediseñada, mockups 1a–1f), Loyalty Loop, Close Friends (rol `member`, entra por QR), cronogramas mensuales con links para el Hero y para quien graba.
-- **Tarea activa:** spec `002-media-kit` — T01–T17 en prod (2026-10-08); **T18 bloqueada** hasta que Evan mande los mockups del orden visual del kit. Evan está revisando lo hecho.
+- **Tarea activa:** spec `003-dashboard-editor` — spec, plan y 19 tareas aprobados (2026-11-18, `df76c81`); **arrancar por T01** en sesión nueva. T05 = migración que corre Evan (parar ahí). Pendiente de Evan: ¿2 o 3 editores? (en prod hay 2 activos). Decisiones provisionales P-02..P-13 en el plan.
+- **Spec 002:** `002-media-kit` — T01–T17 en prod (2026-10-08); **T18 bloqueada** hasta que Evan mande los mockups del orden visual del kit. Evan está revisando lo hecho.
 - **Recién hecho:**
   - 2026-11-18 `ad85154` cronogramas: lo editado en la TARJETA sube a la fila (trigger `subir_tarjeta_al_cronograma`, security definer, sin apuntes). Bajar ya andaba; subir no existía y el equipo reprograma en la tarjeta: 81 separados, corregidos con la tarjeta ganando. Migración `20261118120000` corrida y verificada (0 separados + mover/devolver con sesión de director).
   - 2026-11-06 cronogramas: borrar una tarjeta borra su video del cronograma (trigger), cualquier video se puede quitar aunque esté aprobado (se lleva su tarjeta), y check de **grabado** (`content_pieces.recorded_at`) en el cronograma, la ficha, el Kanban y el link de grabación. Migración `20261106120000` corrida en prod el 2026-11-06 (limpió 65 videos huérfanos); verificado en prod: trigger, check del cronograma, switch de la ficha y pill en /grabacion.
