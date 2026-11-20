@@ -64,7 +64,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `src/app/admin/(panel)/editores/page.tsx` con `requireDirector()`, bloque del equipo (disponibles, atrasados, sin aprobar por mes) y una fila por editor (hoy contra 8, pendientes, atrasados, adelanto); `loading.tsx`.
   *Hecho cuando:* en el navegador un director ve los números de T14 y a todos los editores activos, también con cero; un editor que pega `/admin/editores` rebota a `/admin`.
 
-- [ ] **T16 — Panel de editores: historial y cumplimiento** (RF-26, RF-27, RF-28, RF-29, RF-32)
+- [x] **T16 — Panel de editores: historial y cumplimiento** (RF-26, RF-27, RF-28, RF-29, RF-32)
   Historial de 10 días hábiles por editor (terminados y si llegó a 8), semanas y meses (total, meta, %), y el aviso de desde cuándo se mide.
   *Hecho cuando:* en el navegador los números coinciden con `resumenDelPanel` sobre los datos de T14; antes del primer reparto se ve "la medición arranca con el primer reparto" y no hay porcentajes inventados.
 
