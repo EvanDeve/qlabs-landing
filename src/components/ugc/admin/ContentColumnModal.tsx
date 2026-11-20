@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import {
   createContentColumnAction,
   updateContentColumnAction,
   deleteContentColumnAction,
+  moverColumnaAction,
   type ColumnState,
 } from "@/lib/actions/content-columns";
 import { COLORES_COLUMNA, type ContentColumn, type PipelineBoard } from "@/lib/ugc/content-columns";
@@ -18,6 +19,7 @@ export default function ContentColumnModal({
   totalColumns,
   pieceCount,
   esUnicaDelCarril,
+  posicionEnCarril,
   seccionAbierta,
   boards,
   onClose,
@@ -31,6 +33,11 @@ export default function ContentColumnModal({
    * sus piezas se mudarían a la columna de al lado, que sería de OTRO carril.
    */
   esUnicaDelCarril: boolean;
+  /**
+   * Dónde está la columna dentro de su board (0 = la primera), para los
+   * botones de mover. null en una columna nueva.
+   */
+  posicionEnCarril: { indice: number; total: number } | null;
   /**
    * La pestaña desde la que se abrió el modal; null en "Todo". Es el default
    * de una columna nueva: crear una columna estando en IT y que aparezca en
@@ -63,6 +70,19 @@ export default function ContentColumnModal({
   // esa la mantiene la base sola, y si se borra la última columna de un carril,
   // la que queda antes pasa a ser la que cierra.
   const puedeBorrar = editando && totalColumns > 1 && !esUnicaDelCarril;
+
+  const [moviendo, startMover] = useTransition();
+  const [errorMover, setErrorMover] = useState<string | null>(null);
+  const esFinal = posicionEnCarril !== null && posicionEnCarril.indice === posicionEnCarril.total - 1;
+  function mover(direccion: -1 | 1) {
+    if (!column) return;
+    setErrorMover(null);
+    startMover(async () => {
+      const r = await moverColumnaAction(column.id, direccion);
+      if (r?.error) setErrorMover(r.error);
+      else onClose();
+    });
+  }
 
   return (
     <div className={styles.modalOverlay} onClick={() => !pending && onClose()}>
@@ -122,6 +142,46 @@ export default function ContentColumnModal({
               ))}
             </div>
           </div>
+
+          {/* La última columna de cada board es la que cuenta como publicada: lo
+              pone la base sola mirando la posición (20260818140000). Por eso
+              mover es también decidir eso, y se avisa. */}
+          {posicionEnCarril && posicionEnCarril.total > 1 && (
+            <div className={styles.field}>
+              <label>Posición</label>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => mover(-1)}
+                  disabled={moviendo || posicionEnCarril.indice === 0}
+                  className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+                >
+                  ← Mover antes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => mover(1)}
+                  disabled={moviendo || esFinal}
+                  className={`${styles.btn} ${styles.btnSm} ${styles.btnGhost}`}
+                >
+                  Mover después →
+                </button>
+              </div>
+              <p style={{ fontSize: "12.5px", color: "var(--ink-2)", marginTop: "4px" }}>
+                {esFinal ? (
+                  <>
+                    <b>Esta es la columna final</b>: lo que está acá cuenta como publicado (o cerrado). Si la
+                    movés antes, la que quede última pasa a serlo.
+                  </>
+                ) : posicionEnCarril.indice === posicionEnCarril.total - 2 ? (
+                  "Si la movés después, pasa a ser la columna final: lo que esté acá contará como publicado."
+                ) : (
+                  `Es la ${posicionEnCarril.indice + 1}ª de ${posicionEnCarril.total}. La última de cada board cuenta como publicada.`
+                )}
+              </p>
+              {errorMover && <p style={{ color: "var(--danger)", fontSize: "13px" }}>{errorMover}</p>}
+            </div>
+          )}
 
           <div className={styles.field}>
             <label>Sección</label>

@@ -301,6 +301,15 @@ export default function KanbanBoard({
             columnModal !== "nueva" &&
             columns.filter((c) => c.section === columnModal.section).length === 1
           }
+          posicionEnCarril={
+            columnModal === "nueva"
+              ? null
+              : (() => {
+                  // `columns` llega ordenado por posición desde el server.
+                  const delCarril = columns.filter((c) => c.section === columnModal.section);
+                  return { indice: delCarril.findIndex((c) => c.id === columnModal.id), total: delCarril.length };
+                })()
+          }
           seccionAbierta={seccion}
           boards={boards}
           onClose={() => setColumnModal(null)}

@@ -68,7 +68,7 @@ export default async function PipelinePage({
     // Con UGC incluido: alguien de UGC puede estar en un board y hacerse
     // cargo de una tarjeta.
     supabase.from("staff_directory").select("profile_id, staff_role, color").eq("active", true),
-    supabase.from("content_columns").select("*").order("position", { ascending: true }),
+    supabase.from("content_columns").select("*").order("position", { ascending: true }).order("created_at"),
     (() => {
       // El orden manda la fecha de publicación, no la creación: lo que el
       // equipo necesita ver arriba de cada columna es lo que sale primero.
