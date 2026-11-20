@@ -1,45 +1,52 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Space_Mono, Playfair_Display, Outfit, Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
+/*
+ * Las fuentes se sirven desde el repo (src/app/fuentes), no con next/font/google.
+ *
+ * El 2026-11-20 los builds de Vercel empezaron a fallar al bajar las fuentes de
+ * Google ("next/font/google queries have exactly one entry", Turbopack), con
+ * caché y sin caché, aunque en local compilaba. Con los archivos en el repo el
+ * build no depende de la red. Son los mismos .woff2 que servía Google, subset
+ * latino; las cinco variables van en un solo archivo cada una con su rango de
+ * pesos. Para sumar un peso o una familia: bajar el .woff2 latino de
+ * fonts.googleapis.com/css2 y agregarlo acá.
+ */
+const jakarta = localFont({
   variable: "--font-jakarta",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  src: [{ path: "./fuentes/plus-jakarta-sans.woff2", weight: "400 800", style: "normal" }],
 });
 
-const spaceMono = Space_Mono({
+const spaceMono = localFont({
   variable: "--font-space-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  src: [
+    { path: "./fuentes/space-mono-400.woff2", weight: "400", style: "normal" },
+    { path: "./fuentes/space-mono-700.woff2", weight: "700", style: "normal" },
+  ],
 });
 
-const playfair = Playfair_Display({
+const playfair = localFont({
   variable: "--font-playfair",
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  style: ["italic"],
+  src: [{ path: "./fuentes/playfair-display-italic.woff2", weight: "600 700", style: "italic" }],
 });
 
 // Q·OS (módulo interno /admin) usa su propia identidad visual, distinta del
 // resto de la app a pedido del usuario.
-const outfit = Outfit({
+const outfit = localFont({
   variable: "--font-outfit",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  src: [{ path: "./fuentes/outfit.woff2", weight: "400 800", style: "normal" }],
 });
 
-const inter = Inter({
+const inter = localFont({
   variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  src: [{ path: "./fuentes/inter.woff2", weight: "400 700", style: "normal" }],
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
   variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  src: [{ path: "./fuentes/jetbrains-mono.woff2", weight: "400 600", style: "normal" }],
 });
 
 export const metadata: Metadata = {
