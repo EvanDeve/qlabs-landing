@@ -56,7 +56,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `src/app/api/qos/editores/reparto/route.ts` (mismo control de `CRON_SECRET` que `agente/cron`, explicación del horario en el comentario) y el segundo cron en `vercel.json` (`0 12 * * 1-5`).
   *Hecho cuando:* `npm run build` pasa; en local, sin header → 401 y sin `CRON_SECRET` → 503; tras el deploy, `vercel crons ls` (o el dashboard) muestra los dos crons. **No se llama la ruta con secreto en prod en esta tarea**: el primer reparto real se mira en T18.
 
-- [ ] **T14 — Datos del panel** (RF-25, RF-26, RF-27, RF-29, RF-30, RF-31, RF-32)
+- [x] **T14 — Datos del panel** (RF-25, RF-26, RF-27, RF-29, RF-30, RF-31, RF-32)
   `getPanelEditores` en `edicion-datos.ts`: editores activos con nombre, fila de todos, terminados desde el primer día del mes anterior (paginados), disponibles y atrasados disponibles con `count`, `videos_esperando_aprobacion`, `min(dia)` de repartos.
   *Hecho cuando:* desde un script de una vez con sesión de director, los conteos coinciden con GET `count` a la base (disponibles, atrasados, videos sin aprobar de diciembre y enero) y aparecen los dos editores activos.
 

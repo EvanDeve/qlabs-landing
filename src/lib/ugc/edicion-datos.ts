@@ -2,8 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContentPlatform, Database } from "@/lib/database.types";
 import { traerTodas } from "@/lib/supabase/paginar";
 import { diaCR } from "./calendar";
-import { esDiaHabil, rangoUtcDelDia } from "./dias-habiles";
+import { esDiaHabil, inicioDeMes, rangoUtcDelDia, sumarDiasAlDia } from "./dias-habiles";
 import type { VideoDeFila } from "./edicion";
+import type { EditorDelPanel, TerminadoRegistrado } from "./panel-editores";
 import { repartir } from "./reparto";
 
 /*
@@ -151,4 +152,71 @@ export async function ejecutarReparto(admin: Cliente, now: Date = new Date()): P
   // Si otro cron ganó la carrera entre la lectura y la rpc, la rpc devuelve 0
   // sin tocar nada; en el log se ve como pedidas > 0 y asignados 0.
   return { dia, estado: "repartido", pedidas: asignaciones.length, asignados: asignados ?? 0 };
+}
+
+export type DatosPanelEditores = {
+  hoy: string;
+  editores: EditorDelPanel[];
+  fila: { ownerId: string; publishDate: string | null }[];
+  terminados: TerminadoRegistrado[];
+  disponibles: number;
+  atrasadosDisponibles: number;
+  /** Videos de cronogramas sin aprobar que todavía no son tarjeta, por mes (RF-30). */
+  esperandoAprobacion: { mes: string; videos: number }[];
+  /** El primer día con reparto; null si todavía no hubo ninguno (RF-32). */
+  inicioMedicion: string | null;
+};
+
+/** RF-25..32. Lo lee un director con su sesión: la RLS de staff_members y de repartos lo exige. */
+export async function getPanelEditores(supabase: Cliente, now: Date = new Date()): Promise<DatosPanelEditores> {
+  const hoy = diaCR(now);
+  // Desde el primero del mes anterior: es lo más viejo que muestra el panel.
+  const desde = rangoUtcDelDia(inicioDeMes(sumarDiasAlDia(inicioDeMes(hoy), -1))).desde;
+
+  const [staff, fila, terminados, disponibles, atrasados, esperando, primerReparto] = await Promise.all([
+    supabase.from("staff_members").select("profile_id").eq("staff_role", "editor").eq("active", true).order("created_at"),
+    traerTodas((d, h) =>
+      supabase.from("videos_por_editar").select("owner_id, publish_date").not("owner_id", "is", null).order("id").range(d, h)
+    ),
+    traerTodas((d, h) =>
+      supabase
+        .from("content_pieces")
+        .select("owner_id, terminado_at")
+        .not("owner_id", "is", null)
+        .gte("terminado_at", desde)
+        .order("id")
+        .range(d, h)
+    ),
+    supabase.from("videos_por_editar").select("id", { count: "exact", head: true }).is("owner_id", null),
+    supabase.from("videos_por_editar").select("id", { count: "exact", head: true }).is("owner_id", null).lt("publish_date", hoy),
+    supabase.from("videos_esperando_aprobacion").select("month, videos").order("month"),
+    supabase.from("repartos_de_edicion").select("dia").order("dia").limit(1).maybeSingle(),
+  ]);
+  for (const [nombre, r] of [
+    ["editores", staff],
+    ["disponibles", disponibles],
+    ["atrasados", atrasados],
+    ["esperando aprobación", esperando],
+    ["primer reparto", primerReparto],
+  ] as const) {
+    if (r.error) throw new Error(`panel de editores, ${nombre}: ${r.error.message}`);
+  }
+
+  const ids = (staff.data ?? []).map((s) => s.profile_id);
+  const { data: perfiles, error: eP } = ids.length
+    ? await supabase.from("profiles").select("id, display_name").in("id", ids)
+    : { data: [], error: null };
+  if (eP) throw new Error(`panel de editores, nombres: ${eP.message}`);
+  const nombre = new Map((perfiles ?? []).map((p) => [p.id, p.display_name]));
+
+  return {
+    hoy,
+    editores: ids.map((id) => ({ profileId: id, nombre: nombre.get(id) || "Sin nombre" })),
+    fila: fila.map((v) => ({ ownerId: v.owner_id!, publishDate: v.publish_date })),
+    terminados: terminados.map((t) => ({ ownerId: t.owner_id!, terminadoAt: t.terminado_at! })),
+    disponibles: disponibles.count ?? 0,
+    atrasadosDisponibles: atrasados.count ?? 0,
+    esperandoAprobacion: (esperando.data ?? []).map((e) => ({ mes: e.month, videos: e.videos })),
+    inicioMedicion: primerReparto.data?.dia ?? null,
+  };
 }
