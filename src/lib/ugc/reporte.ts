@@ -36,7 +36,9 @@ export const TOPE_CARGA = 6;
  * - **Sin cronograma del mes → null.** No es "meta cero", es "todavía no se
  *   acordó nada". Mostrar 0 haría que un Hero sin planificar aparezca como si
  *   estuviera cumpliendo perfecto.
- * - **Cronograma pendiente → null.** Hasta el 2026-11-20 contaba sus videos
+ * - **Videos extra → suman siempre** (ver extrasPorHero). Un Hero sin
+ *   cronograma pero con tarjetas sueltas en el mes tiene meta = esas tarjetas.
+ * - **Cronograma pendiente → sus videos no cuentan.** Hasta el 2026-11-20 contaba sus videos
  *   cargados, pero Evan definió que la meta es SOLO lo que el cliente aprobó:
  *   un cronograma armado que todavía no se va a hacer (Q Labs, noviembre: 122
  *   videos) inflaba la meta del mes de 104 a 256.
@@ -50,13 +52,41 @@ export const TOPE_CARGA = 6;
  */
 export function metaDelMes(
   cronograma: { status: string; target: number | null } | undefined,
-  videosPlanificados: number
+  videosPlanificados: number,
+  extras = 0
 ): number | null {
-  if (!cronograma) return null;
+  // Lo aprobado: el número sellado, o el conteo si es un aprobado viejo sin sellar.
+  let aprobado: number | null = null;
+  if (cronograma?.status === "aprobado") {
+    aprobado = cronograma.target ?? (videosPlanificados > 0 ? videosPlanificados : null);
+  }
+  // Los extras suman siempre: son videos que se decidió hacer, aunque el Hero
+  // no tenga cronograma o lo tenga pendiente (ver extrasPorHero).
+  if (aprobado === null && extras === 0) return null;
+  return (aprobado ?? 0) + extras;
+}
 
-  if (cronograma.status !== "aprobado") return null;
-  if (cronograma.target != null) return cronograma.target;
-  return videosPlanificados > 0 ? videosPlanificados : null;
+/**
+ * Los videos extra del mes por Hero: tarjetas del board video que NO nacieron
+ * de un cronograma (`calendar_month` null) y se publican ese mes. Suman a la
+ * meta (Evan, 2026-11-20): lo ideal es hacer solo lo del cronograma, pero a
+ * veces hacen falta videos de más y se cargan como tarjeta suelta. Los
+ * publicados ya los contaban; la meta no, y el avance de cada Hero se inflaba.
+ *
+ * `piezas` tiene que venir ya filtrada a board video y sin Heroes archivados,
+ * igual que el resto de los conteos. `mes` = 'yyyy-MM'.
+ */
+export function extrasPorHero(
+  piezas: { brand_id: string | null; calendar_month: string | null; publish_date: string | null }[],
+  mes: string
+): Map<string, number> {
+  const extras = new Map<string, number>();
+  for (const p of piezas) {
+    if (!p.brand_id || p.calendar_month !== null || !p.publish_date) continue;
+    if (diaCR(p.publish_date).slice(0, 7) !== mes) continue;
+    extras.set(p.brand_id, (extras.get(p.brand_id) ?? 0) + 1);
+  }
+  return extras;
 }
 
 /**
@@ -141,7 +171,7 @@ export async function getReporte(
   const [{ data: clientes }, { data: piezasCrudas }, { data: meses }, { data: columnas }, { data: planificados }] =
     await Promise.all([
       supabase.from("agency_clients").select("id, name, archived"),
-      supabase.from("content_pieces").select("id, title, brand_id, column_id, owner_id, publish_date"),
+      supabase.from("content_pieces").select("id, title, brand_id, column_id, owner_id, publish_date, calendar_month"),
       supabase.from("hero_calendar_months").select("hero_id, status, target").eq("month", `${mesCR}-01`),
       supabase.from("content_columns").select("id, is_done, is_pending_approval, section"),
       // Los videos del cronograma de este mes: la meta de un cronograma
@@ -175,6 +205,8 @@ export async function getReporte(
     planificadosPorHero.set(p.hero_id, (planificadosPorHero.get(p.hero_id) ?? 0) + 1);
   }
 
+  const extras = extrasPorHero(piezas, mesCR);
+
   const pieza = (p: (typeof piezas)[number]): PiezaReporte => ({
     titulo: p.title,
     hero: (p.brand_id ? nombreDeHero.get(p.brand_id) : null) ?? "sin Hero",
@@ -192,7 +224,7 @@ export async function getReporte(
     ).length;
     const cronograma = cronogramaPorHero.get(hero.id);
     const cronogramaAprobado = cronograma?.status === "aprobado";
-    const meta = metaDelMes(cronograma, planificadosPorHero.get(hero.id) ?? 0);
+    const meta = metaDelMes(cronograma, planificadosPorHero.get(hero.id) ?? 0, extras.get(hero.id) ?? 0);
 
     if (meta == null) {
       return { nombre: hero.name, meta: null, publicados, restantes: null, deficit: 0, cronogramaAprobado, riesgo: null };
@@ -287,7 +319,7 @@ Piezas atrasadas: ${r.atrasadas.length} · esperando aprobación del cliente: ${
   );
 
   const porHero = r.heroes.map((h) => {
-    if (h.meta == null) return `- ${h.nombre}: sin cronograma aprobado este mes, así que no tiene meta. Publicados este mes: ${h.publicados}.`;
+    if (h.meta == null) return `- ${h.nombre}: sin cronograma aprobado ni videos extra este mes, así que no tiene meta. Publicados este mes: ${h.publicados}.`;
     const cron = h.cronogramaAprobado ? "cronograma aprobado" : "SIN cronograma aprobado";
     const ritmo = h.deficit > 0 ? `va ${h.deficit} por debajo del ritmo` : "al día con el ritmo";
     return `- ${h.nombre}: ${h.publicados}/${h.meta} publicados, faltan ${h.restantes}, ${ritmo}, ${cron}. Riesgo ${h.riesgo}.`;

@@ -4,7 +4,7 @@ import { toggleCalendarMonthAction } from "@/lib/actions/heroes";
 import { QosIcon } from "@/lib/ugc/qos-icons";
 import { coloresDeHeroes } from "@/lib/ugc/content-meta";
 import { diaCR, diaCorto, sumarDias } from "@/lib/ugc/calendar";
-import { riesgoDeHero, metaDelMes } from "@/lib/ugc/reporte";
+import { riesgoDeHero, metaDelMes, extrasPorHero } from "@/lib/ugc/reporte";
 // El selector de mes vive en la barra superior (lo monta el layout), no acá.
 import { mesCR as mesCRDe, parseMes, diasDelMes, nombreDeMes } from "@/lib/ugc/cronograma";
 import styles from "@/styles/qos.module.css";
@@ -129,6 +129,9 @@ export default async function AdminDashboardPage({
   const activePieces = pieces.filter((p) => !doneColumnIds.has(p.column_id));
 
   const heroesManaged = (agencyClients ?? []).filter((c) => !c.archived);
+  // Videos extra del mes: tarjetas sueltas, fuera del cronograma. Suman a la
+  // meta, igual que ya sumaban a los publicados. Ver extrasPorHero.
+  const extrasDelMes = extrasPorHero(pieces, mesCR);
 
   // ---- Pase de servicio: progreso del mes por Hero ----
   const calendarByHeroId = new Map((calendarMonths ?? []).map((r) => [r.hero_id, r]));
@@ -154,7 +157,7 @@ export default async function AdminDashboardPage({
     // La meta sale del cronograma, no de un número suelto en el expediente.
     // La fórmula vive en reporte.ts por lo mismo que riesgoDeHero: McLovin
     // responde el mismo número por WhatsApp.
-    const target = metaDelMes(calendar, plannedByHeroId.get(hero.id) ?? 0);
+    const target = metaDelMes(calendar, plannedByHeroId.get(hero.id) ?? 0, extrasDelMes.get(hero.id) ?? 0);
 
     // "No hay cronograma" y "hay cronograma sin aprobar" dejaron de ser lo
     // mismo. Antes daba igual —la meta salía del expediente— pero ahora el
@@ -194,6 +197,7 @@ export default async function AdminDashboardPage({
 
   const withTarget = heroStats.filter((s) => s.target != null);
   const metaTotal = withTarget.reduce((sum, s) => sum + (s.target ?? 0), 0);
+  const totalExtras = heroesManaged.reduce((sum, h) => sum + (extrasDelMes.get(h.id) ?? 0), 0);
   const publishedTotal = heroStats.reduce((sum, s) => sum + s.published, 0);
   const remainingTotal = withTarget.reduce((sum, s) => sum + (s.remaining ?? 0), 0);
   const expectedTotal = Math.round(metaTotal * monthFraction);
@@ -275,8 +279,11 @@ export default async function AdminDashboardPage({
       value: metaTotal,
       // "paquete definido" era el lenguaje de monthly_target, que ya no existe:
       // la meta ahora sale del cronograma.
-      // Solo los aprobados: un cronograma pendiente no es meta (ver metaDelMes).
-      sub: `${withTarget.length} de ${heroesManaged.length} heroes con cronograma aprobado`,
+      // Cronogramas aprobados + videos extra; un cronograma pendiente no es meta
+      // (ver metaDelMes y extrasPorHero).
+      sub: `${heroStats.filter((s) => s.calendarApproved).length} de ${heroesManaged.length} heroes con cronograma aprobado${
+        totalExtras > 0 ? ` + ${totalExtras} extra${totalExtras === 1 ? "" : "s"}` : ""
+      }`,
       tone: heroesManaged.length > 0 && withTarget.length < heroesManaged.length ? "warn" : undefined,
     },
 
@@ -484,7 +491,7 @@ export default async function AdminDashboardPage({
                         <span className={`${styles.riskPill} ${styles.riskMuted}`} title={
                             sinCronograma
                               ? "Este Hero todavía no tiene cronograma del mes"
-                              : "El cronograma del mes todavía no está aprobado: no cuenta como meta"
+                              : "El cronograma del mes todavía no está aprobado y no hay videos extra: no hay meta"
                           }
                         >
                           Sin meta
