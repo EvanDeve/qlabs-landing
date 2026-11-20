@@ -125,6 +125,12 @@ export default async function AdminLayout({
     // cada vez que cambia el valor de `group`.
     { href: "/admin/cronogramas", label: "Cronogramas", icon: "book", group: "Operación" },
     { href: "/admin/heroes", label: "Heroes", icon: "users", group: "Operación", count: heroesActivos.length },
+    // El panel de editores (spec 003), solo para directores. Va en Operación y
+    // pegado a Heroes: si quedara después de Herramientas, el menú abriría un
+    // segundo encabezado "Operación".
+    ...(director
+      ? [{ href: "/admin/editores", label: "Editores", icon: "film", group: "Operación" } satisfies QosNavItem]
+      : []),
 
     // Misma herramienta que la del creador, sobre el material propio del
     // equipo. No da acceso a las transcripciones de los creadores: la policy

@@ -68,7 +68,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Historial de 10 días hábiles por editor (terminados y si llegó a 8), semanas y meses (total, meta, %), y el aviso de desde cuándo se mide.
   *Hecho cuando:* en el navegador los números coinciden con `resumenDelPanel` sobre los datos de T14; antes del primer reparto se ve "la medición arranca con el primer reparto" y no hay porcentajes inventados.
 
-- [ ] **T17 — Item del menú** (RF-24)
+- [x] **T17 — Item del menú** (RF-24)
   "Editores" en `layout.tsx`, solo para director, en Operación después de Heroes.
   *Hecho cuando:* en el navegador el director lo ve, ilumina bien y el título de la barra dice "Editores"; un editor y un guionista no lo ven; no aparece un segundo encabezado "Operación".
 
