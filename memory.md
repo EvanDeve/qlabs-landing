@@ -4,7 +4,7 @@
 
 ## Estado actual (2026-11-18)
 - **En prod:** marketplace completo (creador y marca rediseñados estilo iOS), Q·OS (agencia + área UGC rediseñada, mockups 1a–1f), Loyalty Loop, Close Friends (rol `member`, entra por QR), cronogramas mensuales con links para el Hero y para quien graba.
-- **Tarea activa:** spec `003-dashboard-editor` — T01–T04 (funciones puras) en `main` el 2026-11-20 (`cf075e5`). **T05: migración `20261119120000_dashboard_editor.sql` escrita y probada en un Postgres local (21 casos); espera que Evan la corra.** Nada de T06 en adelante se pushea antes. Ojo: en prod apareció la columna "Por Grabar" (pos. 16, `is_done`, 23 tarjetas sin grabar) y hoy hay 1 solo editor activo (la cuenta del 18/11 es director). Editores: 2 hoy, entra un tercero (el reparto toma a todos los activos solo; al entrar, crearle la cuenta con rol editor en Equipo). Decisiones provisionales P-02..P-13 en el plan.
+- **Tarea activa:** spec `003-dashboard-editor` — T01–T17 en prod el 2026-11-20 (hasta `c63e1bc`); migración `20261119120000` corrida por Evan y verificada. Falta **T18** (verificación en prod: necesita permiso de Evan; el primer reparto real corre solo el lunes 23/11 entre 6:00 y 6:59 CR) y **T19** (cierre). Editor activo real: 1 (Carlos); la cuenta del 18/11 es director. En prod apareció la columna "Por Grabar" (pos. 16, `is_done`) sin banderas de la spec. Decisiones provisionales P-02..P-13 en el plan.
 - **Spec 002:** `002-media-kit` — T01–T17 en prod (2026-10-08); **T18 bloqueada** hasta que Evan mande los mockups del orden visual del kit. Evan está revisando lo hecho.
 - **Recién hecho:**
   - 2026-11-18 `ad85154` cronogramas: lo editado en la TARJETA sube a la fila (trigger `subir_tarjeta_al_cronograma`, security definer, sin apuntes). Bajar ya andaba; subir no existía y el equipo reprograma en la tarjeta: 81 separados, corregidos con la tarjeta ganando. Migración `20261118120000` corrida y verificada (0 separados + mover/devolver con sesión de director).
@@ -30,6 +30,7 @@
 - Rediseño general de Q·OS (sidebar/header): espera capturas de Claude Design.
 
 ## Próximos pasos
+- [ ] `/feature` chico: McLovin, "qué hay en EN CURSO/Revision" trae tarjetas de otras columnas (`leerBusqueda` parte el nombre por espacios pero las palabras también por "/"); rompe `tests/rls/busqueda-humo.test.ts` desde el 2026-11-20.
 - [ ] Aprobar un mes desde el Dashboard (botón del equipo, `toggleCalendarMonthAction`) NO crea las tarjetas: los videos quedan sin llegar al pipeline (Delitalia sept, 11). Decidir si debe crearlas.
 - [ ] Spec 002 T18: reordenar el kit público cuando lleguen los mockups de Evan.
 - [ ] Rediseño general de Q·OS cuando lleguen las capturas.
