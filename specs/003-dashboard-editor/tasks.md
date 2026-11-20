@@ -44,7 +44,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `requireArea` devuelve `staff`; en `(inicio)/page.tsx` el `return <VistaEditor/>` va antes de las consultas de la agencia; `VistaEditor.tsx` con el bloque "Llevás N de 8" y los días de adelanto.
   *Hecho cuando:* en el navegador un editor ve su vista y NO el Pase de servicio ni la meta por cliente; un director y un guionista siguen viendo el Dashboard de la agencia igual que antes; con la hora del server forzada a un sábado (parámetro en `getVistaEditor`, no en la UI) no aparece "de 8".
 
-- [ ] **T11 — Dashboard del editor: fila, atrasados, terminados de hoy y vacío** (RF-16, RF-17, RF-18, RF-20, CL-10, CL-12, CL-14)
+- [x] **T11 — Dashboard del editor: fila, atrasados, terminados de hoy y vacío** (RF-16, RF-17, RF-18, RF-20, CL-10, CL-12, CL-14)
   Completar `VistaEditor.tsx`: atrasados destacados arriba con días de atraso, fila con cliente, título, fecha, plataforma, grabado y días para publicarse, link a `/admin/pipeline/{id}`; terminados de hoy; estado vacío con disponibles.
   *Hecho cuando:* en el navegador, con un editor de prueba: el orden coincide con RF-05; abrir un video lleva a la ficha; mover uno propio a Terminado y recargar lo pasa a terminados y sube N; devolverlo a Por editar lo vuelve a la fila (CL-12); ponerse responsable desde la ficha lo agrega (CL-14); sin fila se ve el vacío con el número de disponibles.
 
