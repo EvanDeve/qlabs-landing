@@ -148,7 +148,7 @@ function FilaVideo({ video: v }: { video: VideoEnFila }) {
       <div className={styles.weekBody}>
         {v.titulo}
         <small>
-          {[v.cliente, CONTENT_PLATFORM_LABEL[v.plataforma], v.grabado ? "Grabado" : "Sin grabar"]
+          {[v.columna, v.cliente, CONTENT_PLATFORM_LABEL[v.plataforma], v.grabado ? "Grabado" : "Sin grabar"]
             .filter(Boolean)
             .join(" · ")}
         </small>

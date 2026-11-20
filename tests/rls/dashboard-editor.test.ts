@@ -361,4 +361,21 @@ describe("acceso, vistas y reparto (board video real)", () => {
     expect(otraVez).toBe(0);
     expect(await dueno(tarjetas.paraInactivo)).toBeNull();
   });
+
+  it("fila_de_edicion: lo suyo sin terminar en cualquier columna; Revisión no cuenta para el reparto", async () => {
+    // La disponible ya es de editorSolo (la asignó la rpc del test anterior).
+    const ver = async () =>
+      (await editorSolo.client.from("fila_de_edicion").select("columna, cuenta_para_reparto").eq("id", tarjetas.disponible)).data;
+
+    expect(await ver()).toEqual([{ columna: "Por editar", cuenta_para_reparto: true }]);
+
+    await admin.from("content_pieces").update({ column_id: REVISION_VIDEO }).eq("id", tarjetas.disponible);
+    expect(await ver()).toEqual([{ columna: "En revisión", cuenta_para_reparto: false }]);
+
+    await admin.from("content_pieces").update({ column_id: TERMINADO_VIDEO }).eq("id", tarjetas.disponible);
+    expect(await ver()).toEqual([]);
+
+    const { data: deAnon } = await anonClient().from("fila_de_edicion").select("id").limit(1);
+    expect(deAnon ?? []).toEqual([]);
+  });
 });

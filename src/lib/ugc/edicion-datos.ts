@@ -44,10 +44,11 @@ export async function getVistaEditor(supabase: Cliente, profileId: string, now: 
   const { desde, hasta } = rangoUtcDelDia(hoy);
 
   const [fila, terminados, disponibles] = await Promise.all([
+    // La fila es todo lo suyo sin terminar, en cualquier columna (fila_de_edicion).
     traerTodas((d, h) =>
       supabase
-        .from("videos_por_editar")
-        .select("id, title, brand_id, publish_date, publish_time, platform, recorded_at, created_at")
+        .from("fila_de_edicion")
+        .select("id, title, brand_id, publish_date, publish_time, platform, recorded_at, created_at, columna")
         .eq("owner_id", profileId)
         .order("id")
         .range(d, h)
@@ -81,6 +82,7 @@ export async function getVistaEditor(supabase: Cliente, profileId: string, now: 
       createdAt: v.created_at,
       plataforma: v.platform,
       grabado: v.recorded_at !== null,
+      columna: v.columna,
     })),
     terminadosHoy: (terminados.data ?? []).map((t) => ({
       id: t.id,
@@ -125,22 +127,29 @@ export async function ejecutarReparto(admin: Cliente, now: Date = new Date()): P
     .order("created_at");
   if (eEd) throw new Error(`editores: ${eEd.message}`);
 
-  const videos = await traerTodas((d, h) =>
-    admin
-      .from("videos_por_editar")
-      .select("id, owner_id, publish_date, publish_time, created_at")
-      .order("id")
-      .range(d, h)
-  );
+  // Disponibles: Por editar sin responsable. Pendientes de cada editor: su
+  // fila sin lo que espera al cliente (cuenta_para_reparto), así una demora del
+  // cliente no le frena el trabajo (Evan, 2026-11-20).
+  const [disponibles, fila] = await Promise.all([
+    traerTodas((d, h) =>
+      admin
+        .from("videos_por_editar")
+        .select("id, publish_date, publish_time, created_at")
+        .is("owner_id", null)
+        .order("id")
+        .range(d, h)
+    ),
+    traerTodas((d, h) =>
+      admin.from("fila_de_edicion").select("owner_id").eq("cuenta_para_reparto", true).order("id").range(d, h)
+    ),
+  ]);
 
   const pendientes = new Map<string, number>();
-  for (const v of videos) if (v.owner_id) pendientes.set(v.owner_id, (pendientes.get(v.owner_id) ?? 0) + 1);
+  for (const v of fila) pendientes.set(v.owner_id, (pendientes.get(v.owner_id) ?? 0) + 1);
 
   const asignaciones = repartir(
     (editores ?? []).map((e) => ({ profileId: e.profile_id, pendientes: pendientes.get(e.profile_id) ?? 0 })),
-    videos
-      .filter((v) => v.owner_id === null)
-      .map((v) => ({ id: v.id, publishDate: v.publish_date, publishTime: v.publish_time, createdAt: v.created_at }))
+    disponibles.map((v) => ({ id: v.id, publishDate: v.publish_date, publishTime: v.publish_time, createdAt: v.created_at }))
   );
 
   const { data: asignados, error: eRpc } = await admin.rpc("aplicar_reparto_de_edicion", {
@@ -175,9 +184,7 @@ export async function getPanelEditores(supabase: Cliente, now: Date = new Date()
 
   const [staff, fila, terminados, disponibles, atrasados, esperando, primerReparto] = await Promise.all([
     supabase.from("staff_members").select("profile_id").eq("staff_role", "editor").eq("active", true).order("created_at"),
-    traerTodas((d, h) =>
-      supabase.from("videos_por_editar").select("owner_id, publish_date").not("owner_id", "is", null).order("id").range(d, h)
-    ),
+    traerTodas((d, h) => supabase.from("fila_de_edicion").select("owner_id, publish_date").order("id").range(d, h)),
     traerTodas((d, h) =>
       supabase
         .from("content_pieces")
@@ -212,7 +219,7 @@ export async function getPanelEditores(supabase: Cliente, now: Date = new Date()
   return {
     hoy,
     editores: ids.map((id) => ({ profileId: id, nombre: nombre.get(id) || "Sin nombre" })),
-    fila: fila.map((v) => ({ ownerId: v.owner_id!, publishDate: v.publish_date })),
+    fila: fila.map((v) => ({ ownerId: v.owner_id, publishDate: v.publish_date })),
     terminados: terminados.map((t) => ({ ownerId: t.owner_id!, terminadoAt: t.terminado_at! })),
     disponibles: disponibles.count ?? 0,
     atrasadosDisponibles: atrasados.count ?? 0,

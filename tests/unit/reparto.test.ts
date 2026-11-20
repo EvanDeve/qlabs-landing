@@ -172,6 +172,7 @@ type Tablas = {
   repartos_de_edicion?: { dia: string }[];
   staff_members?: { profile_id: string; staff_role: string; active: boolean; created_at: string }[];
   videos_por_editar?: { id: string; owner_id: string | null; publish_date: string | null; publish_time: string | null; created_at: string }[];
+  fila_de_edicion?: { owner_id: string; cuenta_para_reparto: boolean }[];
 };
 
 /** Un PostgREST de juguete: eq/is/order/range/maybeSingle sobre arrays en memoria. */
@@ -232,9 +233,13 @@ describe("ejecutarReparto", () => {
           { profile_id: "inactivo", staff_role: "editor", active: false, created_at: "2026-01-01T00:00:00Z" },
           { profile_id: "dire", staff_role: "director", active: true, created_at: "2026-01-01T00:00:00Z" },
         ],
+        // ana tiene 7 que cuentan; beto tiene 3, pero esperando al cliente
+        // (En revisión): no cuentan para sus 8, así que beto está en 0.
+        fila_de_edicion: [
+          ...Array.from({ length: 7 }, () => ({ owner_id: "ana", cuenta_para_reparto: true })),
+          ...Array.from({ length: 3 }, () => ({ owner_id: "beto", cuenta_para_reparto: false })),
+        ],
         videos_por_editar: [
-          // ana ya tiene 7, beto 0
-          ...Array.from({ length: 7 }, (_, i) => vid(`a${i}`, "ana", "2026-12-01")),
           vid("viejo", null, "2026-09-01"),
           vid("nuevo", null, "2026-11-25"),
           vid("sin-fecha", null, null),

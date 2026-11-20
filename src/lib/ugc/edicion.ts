@@ -16,6 +16,8 @@ export type VideoDeFila = {
   createdAt: string;
   plataforma: ContentPlatform;
   grabado: boolean;
+  /** En qué columna está: la fila es todo lo suyo sin terminar, no solo Por editar. */
+  columna: string;
 };
 
 /** diasParaPublicar negativo = días de atraso; null = sin fecha. */

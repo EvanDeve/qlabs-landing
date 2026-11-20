@@ -22,6 +22,7 @@ function video(id: string, publishDate: string | null, extra: Partial<VideoDeFil
     createdAt: "2026-11-01T12:00:00Z",
     plataforma: "reels",
     grabado: false,
+    columna: "Por editar",
     ...extra,
   };
 }

@@ -1421,6 +1421,26 @@ export interface Database {
         };
         Relationships: [];
       };
+      // La fila de cada editor: sus tarjetas del board video sin terminar, en
+      // cualquier columna (spec 003, 2026-11-20). cuenta_para_reparto = false
+      // en las columnas que esperan al cliente. Migración 20261120120000.
+      fila_de_edicion: {
+        Row: {
+          id: string;
+          owner_id: string;
+          title: string;
+          brand_id: string | null;
+          publish_date: string | null;
+          publish_time: string | null;
+          platform: ContentPlatform;
+          recorded_at: string | null;
+          created_at: string;
+          column_id: string;
+          columna: string;
+          cuenta_para_reparto: boolean;
+        };
+        Relationships: [];
+      };
       // Videos de cronogramas sin aprobar que todavía no son tarjeta, por mes.
       videos_esperando_aprobacion: {
         Row: {
