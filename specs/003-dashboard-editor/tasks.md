@@ -7,7 +7,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Test primero (`tests/unit/dias-habiles.test.ts`), después `src/lib/ugc/dias-habiles.ts` con las firmas del plan.
   *Hecho cuando:* hay casos de sábado, domingo y lunes; `diasHabilesEntre` cruza fin de mes, de año y un 29 de febrero; `ultimosDiasHabiles` un lunes salta el fin de semana y un sábado no incluye hoy; `inicioDeSemana` de un domingo da el lunes anterior; `rangoUtcDelDia('2026-11-19')` da `06:00Z` a `06:00Z` del 20; `npm test` pasa.
 
-- [ ] **T02 — Algoritmo del reparto** (RF-05, RF-06, RF-07, RF-09, RF-11)
+- [x] **T02 — Algoritmo del reparto** (RF-05, RF-06, RF-07, RF-09, RF-11)
   Test primero (`tests/unit/reparto.test.ts`), después `src/lib/ugc/reparto.ts`: `META_DIARIA`, `compararParaReparto`, `repartir`.
   *Hecho cuando:* el test cubre orden atrasado viejo → atrasado nuevo → hoy → futuro → sin fecha, desempate por hora y creación; editor con 3 recibe 5; con 8 o más, 0; parejo al que menos tiene; empate por orden del array; 5 disponibles para 3 editores en 0 → 2/2/1; 0 disponibles → []; sin editores → []; las entradas no se mutan; `npm test` pasa.
 
