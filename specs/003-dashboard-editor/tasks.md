@@ -28,7 +28,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Actualizar `src/lib/database.types.ts` a mano con lo de T05 (`terminado_at` solo en `Row`).
   *Hecho cuando:* coincide con el OpenAPI de prod y `npx tsc --noEmit` no da errores.
 
-- [ ] **T07 — Tests RLS del momento de terminado** (RF-01, RF-02, RF-03, CL-01, CL-02, CL-03, CL-04)
+- [x] **T07 — Tests RLS del momento de terminado** (RF-01, RF-02, RF-03, CL-01, CL-02, CL-03, CL-04)
   `tests/rls/dashboard-editor.test.ts` (primer bloque), con un board de prueba `v_rls…` y sus columnas (una `es_por_editar`, una intermedia, dos `cuenta_como_terminado`): Por editar → Terminado registra (con sesión de editor y con service role); vuelta a la intermedia lo borra y conserva `owner_id`; Terminado → Publicado lo conserva exacto; ida y vuelta deja el último; Por editar → Publicado registra; insert en Terminado (también con `terminado_at` puesto) queda null; `update` de `terminado_at` a mano no cambia.
   *Hecho cuando:* `npm run test:rls` pasa, no quedan cuentas `rlstest` ni el board de prueba.
 
