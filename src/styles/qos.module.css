@@ -12859,3 +12859,63 @@
   min-width: 16px;
   line-height: 15px;
 }
+
+/* ---- Menú lateral de Q·OS angosto (Evan, 2026-11-20) ----
+   Sin "Centro de Mando", sin títulos de sección y sin botón de encoger (lo
+   apaga la prop `encogible` del layout del equipo): un riel de 88px con el
+   ícono arriba y el nombre abajo. Solo `temaQos`; creador y marca, igual. */
+@media (min-width: 901px) {
+  :where(.temaQos) .app {
+    grid-template-columns: 88px 1fr;
+  }
+}
+@media (max-width: 900px) {
+  /* El drawer del teléfono también angosto: es el mismo menú. */
+  :where(.temaQos) .sidebar {
+    width: 92px;
+  }
+}
+:where(.temaQos) .sbBrand {
+  padding: 18px 8px 10px;
+}
+:where(.temaQos) .sbBrand .sub,
+:where(.temaQos) .navLabel {
+  display: none;
+}
+:where(.temaQos) .sbNav {
+  padding: 6px 6px 10px;
+}
+/* Sin títulos, los grupos se separan con un poco de aire. */
+:where(.temaQos) .sbNav > div + div {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+:where(.temaQos) .navItem {
+  padding: 9px 0 8px;
+  gap: 5px;
+  font-size: 10px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+:where(.temaQos) .navItemActive::before {
+  left: -6px;
+}
+:where(.temaQos) .navCount {
+  left: calc(50% + 4px);
+}
+/* El pie: la foto (lleva a Mi perfil) y, abajo, salir. Sin nombre ni rol:
+   en 88px no entran, y el nombre ya está en Mi perfil. */
+:where(.temaQos) .sbFoot {
+  flex-direction: column;
+  padding: 10px 6px 12px;
+}
+:where(.temaQos) .sbUser {
+  justify-content: center;
+  padding: 4px;
+  flex: none;
+}
+:where(.temaQos) .sbUser .uName,
+:where(.temaQos) .sbUser .uRole {
+  display: none;
+}

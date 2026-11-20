@@ -86,6 +86,7 @@ export default function QosShell({
   section = "Operación",
   topbarActions,
   encabezadoPropio = false,
+  encogible = true,
   children,
 }: {
   navItems: QosNavItem[];
@@ -114,15 +115,23 @@ export default function QosShell({
    * le corresponde aparecer (ver SelectorDeMes).
    */
   topbarActions?: React.ReactNode;
+  /**
+   * Si la sidebar se puede encoger a un riel de íconos. Q·OS la apaga
+   * (2026-11-20): su menú ya es angosto, con el ícono arriba y el nombre
+   * abajo. Apagada, se ignora también lo que haya quedado guardado en el
+   * navegador; si no, quien la había encogido se quedaría así sin botón.
+   */
+  encogible?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const collapsed = useSyncExternalStore(
+  const encogidaGuardada = useSyncExternalStore(
     subscribeSidebar,
     getSidebarSnapshot,
     getSidebarServerSnapshot
   );
+  const collapsed = encogible && encogidaGuardada;
 
   function toggleSidebar() {
     localStorage.setItem(SIDEBAR_KEY, collapsed ? "0" : "1");
@@ -178,6 +187,7 @@ export default function QosShell({
             <div className={styles.sub}>Centro de Mando</div>
           </div>
 
+          {encogible && (
           <button
             type="button"
             onClick={toggleSidebar}
@@ -187,6 +197,7 @@ export default function QosShell({
           >
             <QosIcon name={collapsed ? "chevR" : "chevL"} size={14} />
           </button>
+          )}
 
           <nav className={styles.sbNav} aria-label="Navegación principal">
             {groups.map((g, gi) => (

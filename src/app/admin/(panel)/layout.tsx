@@ -229,6 +229,7 @@ export default async function AdminLayout({
           profileHref="/admin/perfil"
           userRole={staffMember ? STAFF_ROLE_LABEL[staffMember.staff_role] : "Admin"}
           topbarActions={areas.agencia ? <SelectorDeMes /> : undefined}
+          encogible={false}
         >
           {children}
         </QosShell>
