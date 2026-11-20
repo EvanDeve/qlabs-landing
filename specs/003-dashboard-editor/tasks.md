@@ -11,7 +11,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Test primero (`tests/unit/reparto.test.ts`), después `src/lib/ugc/reparto.ts`: `META_DIARIA`, `compararParaReparto`, `repartir`.
   *Hecho cuando:* el test cubre orden atrasado viejo → atrasado nuevo → hoy → futuro → sin fecha, desempate por hora y creación; editor con 3 recibe 5; con 8 o más, 0; parejo al que menos tiene; empate por orden del array; 5 disponibles para 3 editores en 0 → 2/2/1; 0 disponibles → []; sin editores → []; las entradas no se mutan; `npm test` pasa.
 
-- [ ] **T03 — Fila, avance y adelanto del editor** (RF-13, RF-14, RF-15, RF-16, RF-17, RF-19, RF-20, RF-21, CL-11, CL-13)
+- [x] **T03 — Fila, avance y adelanto del editor** (RF-13, RF-14, RF-15, RF-16, RF-17, RF-19, RF-20, RF-21, CL-11, CL-13)
   Test primero (`tests/unit/edicion.test.ts`), después `src/lib/ugc/edicion.ts`: `vistaDelDashboard`, `armarFila`, `diasDeAdelanto`, `textoAdelanto`, `avanceDelDia`, `textoFilaVacia`. Textos con voseo ("Llevás 3 de 8").
   *Hecho cuando:* hay un caso por cada rol de `vistaDelDashboard` (editor activo, editor inactivo, director, guionista, null); "Llevás 10 de 8" con `cumplida` true; sábado sin meta; atrasados separados con sus días; adelanto positivo, 0, negativo ("N días de atraso") y null sin fechas; fila vacía con 0 y con N disponibles; `npm test` pasa.
 
