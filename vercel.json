@@ -4,6 +4,10 @@
     {
       "path": "/api/qos/agente/cron?todos=1",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/qos/editores/reparto",
+      "schedule": "0 12 * * 1-5"
     }
   ]
 }

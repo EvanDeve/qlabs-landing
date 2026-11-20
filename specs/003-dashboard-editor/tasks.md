@@ -52,7 +52,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `ejecutarReparto(admin, now)` en `edicion-datos.ts`, con test unitario (`tests/unit/reparto.test.ts`) usando un cliente falso.
   *Hecho cuando:* `npm test` pasa con casos: sábado → `no-habil` sin llamar a la base; ya hay fila del día → `ya-repartido` sin llamar a la rpc; día hábil → llama a la rpc con las asignaciones de `repartir` y solo con editores activos ordenados por `created_at`.
 
-- [ ] **T13 — Ruta y cron del reparto** (RF-04, RF-12)
+- [x] **T13 — Ruta y cron del reparto** (RF-04, RF-12)
   `src/app/api/qos/editores/reparto/route.ts` (mismo control de `CRON_SECRET` que `agente/cron`, explicación del horario en el comentario) y el segundo cron en `vercel.json` (`0 12 * * 1-5`).
   *Hecho cuando:* `npm run build` pasa; en local, sin header → 401 y sin `CRON_SECRET` → 503; tras el deploy, `vercel crons ls` (o el dashboard) muestra los dos crons. **No se llama la ruta con secreto en prod en esta tarea**: el primer reparto real se mira en T18.
 
