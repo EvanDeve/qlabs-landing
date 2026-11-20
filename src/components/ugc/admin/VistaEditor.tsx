@@ -43,7 +43,7 @@ export function VistaEditor({ datos }: { datos: DatosVistaEditor }) {
             <div className={styles.statLabel}>Adelanto</div>
             <div className={styles.statNum}>{textoDeAdelanto ?? "—"}</div>
             <div className={styles.statSub} data-tone={adelanto === null ? undefined : adelanto < 0 ? "risk" : adelanto === 0 ? "warn" : "ok"}>
-              {textoDeAdelanto === null
+              {adelanto === null
                 ? "Ningún video de tu fila tiene fecha"
                 : adelanto < 0
                   ? "lo que lleva el más atrasado de tu fila"
