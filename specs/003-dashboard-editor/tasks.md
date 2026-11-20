@@ -19,12 +19,12 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Test primero (`tests/unit/panel-editores.test.ts`), después `src/lib/ugc/panel-editores.ts`: `metaDelPeriodo`, `resumenDelPanel`, `textoInicioMedicion`.
   *Hecho cuando:* un miércoles la meta de la semana es 24 (hoy incluido); un mes en curso cuenta solo los días hábiles hasta hoy; los días antes de `inicioMedicion` no suman ni a meta ni a total; `inicioMedicion` null → meta 0 y porcentaje null; el historial tiene 10 días hábiles sin fines de semana y marca `llego`; un editor sin nada aparece en ceros; cambiar el `ownerId` de un terminado lo mueve de editor; `npm test` pasa.
 
-- [ ] **T05 — Migración `dashboard_editor`** (RF-01, RF-02, RF-03, RF-08, RF-10, RF-11, RF-23, RF-24, RF-30, RF-32, CL-04, CL-08)
+- [x] **T05 — Migración `dashboard_editor`** (RF-01, RF-02, RF-03, RF-08, RF-10, RF-11, RF-23, RF-24, RF-30, RF-32, CL-04, CL-08)
   Escribir `supabase/migrations/20261119120000_dashboard_editor.sql` como dice el plan. Antes: GET a `content_columns?section=eq.video` para confirmar que los cuatro ids y posiciones siguen iguales, y `grep` de `puede_ver_board` en `supabase/migrations/` para no perder nada de la definición vigente.
   **⏸ PUNTO DE PARADA: Evan corre la migración en el SQL Editor de Supabase.** Es compatible con el código de hoy en prod; desde que corre, el trigger ya registra terminados.
   *Hecho cuando:* Evan la corrió y el OpenAPI de prod muestra `es_por_editar` y `cuenta_como_terminado` en `content_columns`, `terminado_at` en `content_pieces`, la tabla `repartos_de_edicion`, las vistas `videos_por_editar` y `videos_esperando_aprobacion` y la rpc `aplicar_reparto_de_edicion`; un GET muestra Por editar con `es_por_editar` y Terminado/Publicado con `cuenta_como_terminado`; el Pipeline y el Dashboard siguen cargando.
 
-- [ ] **T06 — Tipos de la base** (todos)
+- [x] **T06 — Tipos de la base** (todos)
   Actualizar `src/lib/database.types.ts` a mano con lo de T05 (`terminado_at` solo en `Row`).
   *Hecho cuando:* coincide con el OpenAPI de prod y `npx tsc --noEmit` no da errores.
 

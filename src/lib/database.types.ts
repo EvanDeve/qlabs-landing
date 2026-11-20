@@ -617,6 +617,10 @@ export interface Database {
           is_pending_approval: boolean;
           /** La pieza ya está hecha y solo espera la fecha. Migración 20260803120000. */
           is_ready: boolean;
+          /** De acá sale la fila de cada editor y el reparto (spec 003). Una por board. */
+          es_por_editar: boolean;
+          /** Llegar acá registra content_pieces.terminado_at (spec 003): Terminado y Publicado. */
+          cuenta_como_terminado: boolean;
           section: PipelineSection;
           created_at: string;
         };
@@ -630,6 +634,8 @@ export interface Database {
           is_done?: boolean;
           is_pending_approval?: boolean;
           is_ready?: boolean;
+          es_por_editar?: boolean;
+          cuenta_como_terminado?: boolean;
           section?: PipelineSection;
           created_at?: string;
         };
@@ -710,6 +716,11 @@ export interface Database {
           // la tarjeta y no en la fila del cronograma porque grabar es
           // trabajo, como los apuntes. Ver la migración 20261106120000.
           recorded_at: string | null;
+          // Cuándo llegó por última vez a una columna cuenta_como_terminado
+          // viniendo de una que no. Lo escribe SOLO el trigger
+          // registrar_terminado: por eso no está en Insert ni en Update, y si
+          // alguien lo manda igual el trigger lo pisa. Migración 20261119120000.
+          terminado_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1263,6 +1274,24 @@ export interface Database {
         Relationships: [];
       };
       // Solo admin lo lee; lo escriben las funciones y triggers de Close Friends.
+      // Un reparto por día hábil (spec 003). La escribe solo la rpc
+      // aplicar_reparto_de_edicion con service role; la leen los directores.
+      repartos_de_edicion: {
+        Row: {
+          dia: string;
+          asignaciones: Json;
+          asignados: number;
+          created_at: string;
+        };
+        Insert: {
+          dia: string;
+          asignaciones?: Json;
+          asignados?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["repartos_de_edicion"]["Insert"]>;
+        Relationships: [];
+      };
       member_audit_log: {
         Row: {
           id: number;
@@ -1375,8 +1404,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      // Tarjetas en la columna es_por_editar del board video, sin Heroes
+      // archivados (spec 003). owner_id null = disponible para el reparto.
+      // Invoker: cada uno ve lo que su RLS le deja ver de content_pieces.
+      videos_por_editar: {
+        Row: {
+          id: string;
+          owner_id: string | null;
+          title: string;
+          brand_id: string | null;
+          publish_date: string | null;
+          publish_time: string | null;
+          platform: ContentPlatform;
+          recorded_at: string | null;
+          created_at: string;
+        };
+        Relationships: [];
+      };
+      // Videos de cronogramas sin aprobar que todavía no son tarjeta, por mes.
+      videos_esperando_aprobacion: {
+        Row: {
+          month: string;
+          videos: number;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
+      // Solo service role (el cron del reparto). Devuelve cuántas aplicó; 0 si
+      // ese día ya se había repartido.
+      aplicar_reparto_de_edicion: {
+        Args: { p_dia: string; p_asignaciones: Json };
+        Returns: number;
+      };
       fijar_destacadas: {
         Args: { p_ids: string[] };
         Returns: undefined;
