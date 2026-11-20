@@ -12832,3 +12832,30 @@
 .panelEditoresTabla .acctTable th {
   white-space: nowrap;
 }
+
+/* ---- Menú lateral de Q·OS: ícono arriba, nombre abajo, centrados ----
+   Pedido de Evan (2026-11-20). Solo en el panel del equipo (`temaQos`): el
+   menú de creador y marca, que comparten QosShell, queda como estaba. Va al
+   final del archivo para ganarle a `.navItem` de arriba; el modo encogido
+   (`.appCollapsed .sidebar …`) tiene más especificidad y sigue mandando. */
+:where(.temaQos) .navItem {
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 11px 8px 10px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+/* El contador ya no puede ir empujado a la derecha (margin-left: auto en una
+   columna lo correría hacia abajo): va como globito pegado al ícono. */
+:where(.temaQos) .navCount {
+  position: absolute;
+  top: 5px;
+  left: calc(50% + 6px);
+  margin-left: 0;
+  font-size: 9.5px;
+  padding: 0 5px;
+  min-width: 16px;
+  line-height: 15px;
+}
