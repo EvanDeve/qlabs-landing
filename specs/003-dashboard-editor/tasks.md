@@ -32,7 +32,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `tests/rls/dashboard-editor.test.ts` (primer bloque), con un board de prueba `v_rls…` y sus columnas (una `es_por_editar`, una intermedia, dos `cuenta_como_terminado`): Por editar → Terminado registra (con sesión de editor y con service role); vuelta a la intermedia lo borra y conserva `owner_id`; Terminado → Publicado lo conserva exacto; ida y vuelta deja el último; Por editar → Publicado registra; insert en Terminado (también con `terminado_at` puesto) queda null; `update` de `terminado_at` a mano no cambia.
   *Hecho cuando:* `npm run test:rls` pasa, no quedan cuentas `rlstest` ni el board de prueba.
 
-- [ ] **T08 — Tests RLS de acceso, vistas y reparto** (RF-08, RF-10, RF-11, RF-23, RF-24, RF-30, CL-07)
+- [x] **T08 — Tests RLS de acceso, vistas y reparto** (RF-08, RF-10, RF-11, RF-23, RF-24, RF-30, CL-07)
   Segundo bloque del mismo archivo, con una tarjeta de prueba sin Hero en Por editar del board `video` real: editor activo sin membresía ve el board video, sus columnas y la tarjeta, y la puede mover; no ve `it`; editor inactivo y guionista sin membresía no ven nada; `videos_por_editar` la trae para el editor y no para anon; `videos_esperando_aprobacion` responde para director y no para anon; editor no lee `repartos_de_edicion` ni ejecuta la rpc, director lee; la rpc (service role, día `2099-01-05`) asigna la disponible, no toca una con dueño, una en Terminado ni una de otro board, no asigna a un editor inactivo ni a un no-editor, y una segunda llamada el mismo día devuelve 0.
   *Hecho cuando:* `npm run test:rls` pasa; no quedan cuentas `rlstest`, ni la tarjeta de prueba, ni la fila `2099-01-05` en `repartos_de_edicion`.
 

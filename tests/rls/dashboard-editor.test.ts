@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
-import { admin, makeUser, cleanup, type TestUser } from "./helpers";
+import { admin, anonClient, makeUser, cleanup, type TestUser } from "./helpers";
 
 /**
  * Spec 003, dashboard del editor. Migración 20261119120000_dashboard_editor.sql.
@@ -170,5 +170,195 @@ describe("terminado_at: lo registra el trigger", () => {
     await editor.client.from("content_pieces").update({ terminado_at: "2026-01-01T12:00:00Z" }).eq("id", id);
     await admin.from("content_pieces").update({ terminado_at: "2026-01-01T12:00:00Z", title: "RLS test 003 b" }).eq("id", id);
     expect((await leer(id)).terminado_at).toBe(real);
+  });
+});
+
+/**
+ * Segundo bloque (T08): acceso, vistas y reparto, contra el board `video`
+ * REAL (es el único que puede_ver_board abre a los editores). Se usa una sola
+ * tarjeta de prueba sin Hero en Por editar, que se borra al final, y la rpc se
+ * llama con un día imposible (2099-01-05) para no pisar el reparto de verdad.
+ * La rpc solo toca las tarjetas que se le pasan: las del equipo no se rozan.
+ */
+const POR_EDITAR_VIDEO = "dc307d54-8010-47b9-a546-9978d084b342";
+const REVISION_VIDEO = "fee3f550-929c-4876-bad7-9f671399ce55";
+const TERMINADO_VIDEO = "91e3aa85-a18c-45f6-8ccd-f34ecb6b771c";
+const DIA_DE_PRUEBA = "2099-01-05";
+
+describe("acceso, vistas y reparto (board video real)", () => {
+  let editorSolo: TestUser;
+  let editorInactivo: TestUser;
+  let guionista: TestUser;
+  let director: TestUser;
+  const tarjetas = { disponible: "", conDueno: "", enTerminado: "", otroBoard: "", paraInactivo: "", paraGuionista: "" };
+  const propias: string[] = [];
+
+  async function tarjeta(columnId: string, ownerId: string | null = null): Promise<string> {
+    const { data, error } = await admin
+      .from("content_pieces")
+      .insert({ title: "RLS test 003 video", brand_id: null, column_id: columnId, owner_id: ownerId })
+      .select("id")
+      .single();
+    if (error || !data) throw new Error(`setup tarjeta: ${error?.message}`);
+    propias.push(data.id);
+    return data.id;
+  }
+
+  async function dueno(id: string): Promise<string | null> {
+    const { data, error } = await admin.from("content_pieces").select("owner_id").eq("id", id).single();
+    if (error || !data) throw new Error(`leer dueño: ${error?.message}`);
+    return data.owner_id;
+  }
+
+  beforeAll(async () => {
+    [editorSolo, editorInactivo, guionista, director] = await Promise.all([
+      makeUser("admin"),
+      makeUser("admin"),
+      makeUser("admin"),
+      makeUser("admin"),
+    ]);
+    // Ninguno es miembro de ningún board: lo que vean, lo ven por la función.
+    const { error } = await admin.from("staff_members").insert([
+      { profile_id: editorSolo.id, staff_role: "editor", active: true },
+      { profile_id: editorInactivo.id, staff_role: "editor", active: false },
+      { profile_id: guionista.id, staff_role: "guionista", active: true },
+      { profile_id: director.id, staff_role: "director", active: true },
+    ]);
+    if (error) throw new Error(`setup staff_members: ${error.message}`);
+
+    tarjetas.disponible = await tarjeta(POR_EDITAR_VIDEO);
+    tarjetas.conDueno = await tarjeta(POR_EDITAR_VIDEO, director.id);
+    tarjetas.enTerminado = await tarjeta(TERMINADO_VIDEO);
+    tarjetas.otroBoard = await tarjeta(col.porEditar); // la Por editar del board de prueba
+    tarjetas.paraInactivo = await tarjeta(POR_EDITAR_VIDEO);
+    tarjetas.paraGuionista = await tarjeta(POR_EDITAR_VIDEO);
+  });
+
+  afterAll(async () => {
+    const errores: string[] = [];
+    if (propias.length) {
+      const { error } = await admin.from("content_pieces").delete().in("id", propias);
+      if (error) errores.push(`content_pieces: ${error.message}`);
+    }
+    const { error: eR } = await admin.from("repartos_de_edicion").delete().eq("dia", DIA_DE_PRUEBA);
+    if (eR) errores.push(`repartos_de_edicion: ${eR.message}`);
+    if (errores.length) throw new Error(`Quedó basura del test 003 (bloque 2):\n${errores.join("\n")}`);
+  });
+
+  it("RF-23: el editor activo ve el board video, sus columnas y la tarjeta, sin ser miembro", async () => {
+    const { data: boards } = await editorSolo.client.from("pipeline_boards").select("id").eq("id", "video");
+    expect(boards).toHaveLength(1);
+    const { data: cols } = await editorSolo.client.from("content_columns").select("id").eq("section", "video");
+    expect(cols!.length).toBeGreaterThanOrEqual(4);
+    const { data: piezas } = await editorSolo.client.from("content_pieces").select("id").eq("id", tarjetas.disponible);
+    expect(piezas).toHaveLength(1);
+  });
+
+  it("RF-23: y la puede mover", async () => {
+    const { data, error } = await editorSolo.client
+      .from("content_pieces")
+      .update({ column_id: REVISION_VIDEO })
+      .eq("id", tarjetas.paraGuionista)
+      .select("id");
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+    // De vuelta a Por editar para los casos de la rpc.
+    await admin.from("content_pieces").update({ column_id: POR_EDITAR_VIDEO }).eq("id", tarjetas.paraGuionista);
+  });
+
+  it("RF-23: no ve otros boards", async () => {
+    const { data: boards } = await editorSolo.client.from("pipeline_boards").select("id").eq("id", "it");
+    expect(boards).toEqual([]);
+    const { data: cols } = await editorSolo.client.from("content_columns").select("id").eq("section", "it");
+    expect(cols).toEqual([]);
+  });
+
+  it("CL-07: el editor inactivo y el guionista sin membresía no ven nada", async () => {
+    for (const u of [editorInactivo, guionista]) {
+      const { data: boards } = await u.client.from("pipeline_boards").select("id").eq("id", "video");
+      expect(boards).toEqual([]);
+      const { data: piezas } = await u.client.from("content_pieces").select("id").eq("id", tarjetas.disponible);
+      expect(piezas).toEqual([]);
+      const { data: fila } = await u.client.from("videos_por_editar").select("id").eq("id", tarjetas.disponible);
+      expect(fila).toEqual([]);
+    }
+  });
+
+  it("videos_por_editar: la trae para el editor, no para anon, y no trae otro board ni Terminado", async () => {
+    const { data } = await editorSolo.client
+      .from("videos_por_editar")
+      .select("id")
+      .in("id", [tarjetas.disponible, tarjetas.enTerminado, tarjetas.otroBoard]);
+    expect(data!.map((r) => r.id)).toEqual([tarjetas.disponible]);
+
+    const { data: deAnon } = await anonClient().from("videos_por_editar").select("id").limit(1);
+    expect(deAnon ?? []).toEqual([]);
+  });
+
+  it("RF-30: videos_esperando_aprobacion responde para el director y no para anon", async () => {
+    const { data, error } = await director.client.from("videos_esperando_aprobacion").select("month, videos");
+    expect(error).toBeNull();
+    expect(Array.isArray(data)).toBe(true);
+    const { data: deAnon } = await anonClient().from("videos_esperando_aprobacion").select("month").limit(1);
+    expect(deAnon ?? []).toEqual([]);
+  });
+
+  it("repartos_de_edicion: el director la lee, el editor no la lee ni ejecuta la rpc", async () => {
+    const { error: eDir } = await director.client.from("repartos_de_edicion").select("dia").limit(1);
+    expect(eDir).toBeNull();
+
+    // Fila sembrada para que "no lee" signifique algo y no sea una tabla vacía.
+    const { error: eSemilla } = await admin.from("repartos_de_edicion").insert({ dia: DIA_DE_PRUEBA, asignados: 0 });
+    if (eSemilla) throw eSemilla;
+    const { data: delEditor } = await editorSolo.client.from("repartos_de_edicion").select("dia").eq("dia", DIA_DE_PRUEBA);
+    expect(delEditor ?? []).toEqual([]);
+    const { data: delDirector } = await director.client.from("repartos_de_edicion").select("dia").eq("dia", DIA_DE_PRUEBA);
+    expect(delDirector).toHaveLength(1);
+    await admin.from("repartos_de_edicion").delete().eq("dia", DIA_DE_PRUEBA);
+
+    const { error: eRpc } = await editorSolo.client.rpc("aplicar_reparto_de_edicion", {
+      p_dia: DIA_DE_PRUEBA,
+      p_asignaciones: [{ piece_id: tarjetas.disponible, owner_id: editorSolo.id }],
+    });
+    expect(eRpc).not.toBeNull();
+    expect(await dueno(tarjetas.disponible)).toBeNull();
+    const { data: sinFila } = await admin.from("repartos_de_edicion").select("dia").eq("dia", DIA_DE_PRUEBA);
+    expect(sinFila).toEqual([]);
+  });
+
+  it("RF-08, RF-10, RF-11: la rpc asigna solo lo que corresponde, y una sola vez por día", async () => {
+    const pedidas = [
+      { piece_id: tarjetas.disponible, owner_id: editorSolo.id },
+      { piece_id: tarjetas.conDueno, owner_id: editorSolo.id },
+      { piece_id: tarjetas.enTerminado, owner_id: editorSolo.id },
+      { piece_id: tarjetas.otroBoard, owner_id: editorSolo.id },
+      { piece_id: tarjetas.paraInactivo, owner_id: editorInactivo.id },
+      { piece_id: tarjetas.paraGuionista, owner_id: guionista.id },
+    ];
+    const { data: asignados, error } = await admin.rpc("aplicar_reparto_de_edicion", {
+      p_dia: DIA_DE_PRUEBA,
+      p_asignaciones: pedidas,
+    });
+    expect(error).toBeNull();
+    expect(asignados).toBe(1);
+
+    expect(await dueno(tarjetas.disponible)).toBe(editorSolo.id);
+    expect(await dueno(tarjetas.conDueno)).toBe(director.id);
+    expect(await dueno(tarjetas.enTerminado)).toBeNull();
+    expect(await dueno(tarjetas.otroBoard)).toBeNull();
+    expect(await dueno(tarjetas.paraInactivo)).toBeNull();
+    expect(await dueno(tarjetas.paraGuionista)).toBeNull();
+
+    const { data: fila } = await admin.from("repartos_de_edicion").select("asignados, asignaciones").eq("dia", DIA_DE_PRUEBA).single();
+    expect(fila!.asignados).toBe(1);
+    expect(fila!.asignaciones).toHaveLength(6);
+
+    // Segunda vez el mismo día: 0, y nada cambia.
+    const { data: otraVez } = await admin.rpc("aplicar_reparto_de_edicion", {
+      p_dia: DIA_DE_PRUEBA,
+      p_asignaciones: [{ piece_id: tarjetas.paraInactivo, owner_id: editorSolo.id }],
+    });
+    expect(otraVez).toBe(0);
+    expect(await dueno(tarjetas.paraInactivo)).toBeNull();
   });
 });
