@@ -9,12 +9,12 @@ describe("metaDelMes", () => {
     expect(metaDelMes(undefined, 5)).toBe(null);
   });
 
-  it("pendiente: la meta es el conteo vivo de sus videos", () => {
-    expect(metaDelMes({ status: "pendiente", target: null }, 8)).toBe(8);
-    expect(metaDelMes({ status: "pendiente", target: null }, 1)).toBe(1);
-  });
-
-  it("pendiente y vacío todavía no es una meta", () => {
+  it("pendiente: todavía no es meta, por más videos que tenga cargados", () => {
+    // Evan, 2026-11-20: la meta es solo lo que el cliente aprobó. El cronograma
+    // de Q Labs de noviembre (122 videos, sin aprobar y que no se va a hacer
+    // todavía) inflaba la meta de 104 a 256.
+    expect(metaDelMes({ status: "pendiente", target: null }, 122)).toBe(null);
+    expect(metaDelMes({ status: "pendiente", target: null }, 1)).toBe(null);
     expect(metaDelMes({ status: "pendiente", target: null }, 0)).toBe(null);
   });
 

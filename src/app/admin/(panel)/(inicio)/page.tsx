@@ -75,7 +75,7 @@ export default async function AdminDashboardPage({
   ]);
 
   // Los videos del cronograma del mes elegido: son la meta mientras el
-  // cronograma siga pendiente. Ver metaDelMes en reporte.ts.
+  // cronograma aprobado no tenga número sellado. Ver metaDelMes en reporte.ts.
   const { data: planificados } = await supabase
     .from("calendar_month_items")
     .select("hero_id")
@@ -275,7 +275,8 @@ export default async function AdminDashboardPage({
       value: metaTotal,
       // "paquete definido" era el lenguaje de monthly_target, que ya no existe:
       // la meta ahora sale del cronograma.
-      sub: `${withTarget.length} de ${heroesManaged.length} heroes con cronograma`,
+      // Solo los aprobados: un cronograma pendiente no es meta (ver metaDelMes).
+      sub: `${withTarget.length} de ${heroesManaged.length} heroes con cronograma aprobado`,
       tone: heroesManaged.length > 0 && withTarget.length < heroesManaged.length ? "warn" : undefined,
     },
 
@@ -480,7 +481,12 @@ export default async function AdminDashboardPage({
                           {risk === "alto" ? "Alto" : risk === "medio" ? "Medio" : "Bajo"}
                         </span>
                       ) : (
-                        <span className={`${styles.riskPill} ${styles.riskMuted}`} title="Este Hero todavía no tiene cronograma del mes">
+                        <span className={`${styles.riskPill} ${styles.riskMuted}`} title={
+                            sinCronograma
+                              ? "Este Hero todavía no tiene cronograma del mes"
+                              : "El cronograma del mes todavía no está aprobado: no cuenta como meta"
+                          }
+                        >
                           Sin meta
                         </span>
                       )}

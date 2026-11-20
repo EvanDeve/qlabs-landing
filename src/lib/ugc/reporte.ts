@@ -36,9 +36,10 @@ export const TOPE_CARGA = 6;
  * - **Sin cronograma del mes → null.** No es "meta cero", es "todavía no se
  *   acordó nada". Mostrar 0 haría que un Hero sin planificar aparezca como si
  *   estuviera cumpliendo perfecto.
- * - **Cronograma pendiente → el conteo vivo de sus videos.** Se está armando,
- *   así que el número se mueve con cada fila. Sirve igual: ya dice cuánto se le
- *   va a pedir al mes.
+ * - **Cronograma pendiente → null.** Hasta el 2026-11-20 contaba sus videos
+ *   cargados, pero Evan definió que la meta es SOLO lo que el cliente aprobó:
+ *   un cronograma armado que todavía no se va a hacer (Q Labs, noviembre: 122
+ *   videos) inflaba la meta del mes de 104 a 256.
  * - **Cronograma aprobado → el número sellado.** Es lo que el cliente aceptó, y
  *   no puede bajar porque alguien borre una tarjeta después.
  *
@@ -53,11 +54,8 @@ export function metaDelMes(
 ): number | null {
   if (!cronograma) return null;
 
-  if (cronograma.status === "aprobado") {
-    if (cronograma.target != null) return cronograma.target;
-    return videosPlanificados > 0 ? videosPlanificados : null;
-  }
-
+  if (cronograma.status !== "aprobado") return null;
+  if (cronograma.target != null) return cronograma.target;
   return videosPlanificados > 0 ? videosPlanificados : null;
 }
 
@@ -146,8 +144,8 @@ export async function getReporte(
       supabase.from("content_pieces").select("id, title, brand_id, column_id, owner_id, publish_date"),
       supabase.from("hero_calendar_months").select("hero_id, status, target").eq("month", `${mesCR}-01`),
       supabase.from("content_columns").select("id, is_done, is_pending_approval, section"),
-      // Los videos del cronograma de este mes: son la meta mientras siga
-      // pendiente. Ver metaDelMes.
+      // Los videos del cronograma de este mes: la meta de un cronograma
+      // aprobado sin número sellado. Ver metaDelMes.
       supabase.from("calendar_month_items").select("hero_id").eq("month", `${mesCR}-01`),
     ]);
 
@@ -289,7 +287,7 @@ Piezas atrasadas: ${r.atrasadas.length} · esperando aprobación del cliente: ${
   );
 
   const porHero = r.heroes.map((h) => {
-    if (h.meta == null) return `- ${h.nombre}: sin meta mensual cargada. Publicados este mes: ${h.publicados}.`;
+    if (h.meta == null) return `- ${h.nombre}: sin cronograma aprobado este mes, así que no tiene meta. Publicados este mes: ${h.publicados}.`;
     const cron = h.cronogramaAprobado ? "cronograma aprobado" : "SIN cronograma aprobado";
     const ritmo = h.deficit > 0 ? `va ${h.deficit} por debajo del ritmo` : "al día con el ritmo";
     return `- ${h.nombre}: ${h.publicados}/${h.meta} publicados, faltan ${h.restantes}, ${ritmo}, ${cron}. Riesgo ${h.riesgo}.`;
