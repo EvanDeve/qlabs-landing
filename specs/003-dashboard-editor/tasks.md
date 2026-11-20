@@ -48,7 +48,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Completar `VistaEditor.tsx`: atrasados destacados arriba con días de atraso, fila con cliente, título, fecha, plataforma, grabado y días para publicarse, link a `/admin/pipeline/{id}`; terminados de hoy; estado vacío con disponibles.
   *Hecho cuando:* en el navegador, con un editor de prueba: el orden coincide con RF-05; abrir un video lleva a la ficha; mover uno propio a Terminado y recargar lo pasa a terminados y sube N; devolverlo a Por editar lo vuelve a la fila (CL-12); ponerse responsable desde la ficha lo agrega (CL-14); sin fila se ve el vacío con el número de disponibles.
 
-- [ ] **T12 — Ejecutor del reparto** (RF-04, RF-06, RF-08, RF-10, RF-11, RF-12, CL-07)
+- [x] **T12 — Ejecutor del reparto** (RF-04, RF-06, RF-08, RF-10, RF-11, RF-12, CL-07)
   `ejecutarReparto(admin, now)` en `edicion-datos.ts`, con test unitario (`tests/unit/reparto.test.ts`) usando un cliente falso.
   *Hecho cuando:* `npm test` pasa con casos: sábado → `no-habil` sin llamar a la base; ya hay fila del día → `ya-repartido` sin llamar a la rpc; día hábil → llama a la rpc con las asignaciones de `repartir` y solo con editores activos ordenados por `created_at`.
 

@@ -162,3 +162,108 @@ describe("repartir", () => {
     expect(repartir(editores, lista)).toEqual(repartir(editores, lista));
   });
 });
+
+// ───────────── ejecutarReparto (T12) con un cliente falso ─────────────
+import { ejecutarReparto } from "@/lib/ugc/edicion-datos";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/database.types";
+
+type Tablas = {
+  repartos_de_edicion?: { dia: string }[];
+  staff_members?: { profile_id: string; staff_role: string; active: boolean; created_at: string }[];
+  videos_por_editar?: { id: string; owner_id: string | null; publish_date: string | null; publish_time: string | null; created_at: string }[];
+};
+
+/** Un PostgREST de juguete: eq/is/order/range/maybeSingle sobre arrays en memoria. */
+function clienteFalso(tablas: Tablas, asignadosQueDevuelve = 0) {
+  const llamadas: string[] = [];
+  const rpcs: { fn: string; args: Record<string, unknown> }[] = [];
+  const from = (tabla: keyof Tablas) => {
+    llamadas.push(tabla);
+    let filas = [...((tablas[tabla] ?? []) as Record<string, unknown>[])];
+    const b = {
+      select: () => b,
+      eq: (c: string, v: unknown) => ((filas = filas.filter((f) => f[c] === v)), b),
+      is: (c: string, v: unknown) => ((filas = filas.filter((f) => f[c] === v)), b),
+      order: (c: string) => ((filas = [...filas].sort((x, y) => String(x[c]).localeCompare(String(y[c])))), b),
+      limit: (n: number) => ((filas = filas.slice(0, n)), b),
+      range: (d: number, h: number) => Promise.resolve({ data: filas.slice(d, h + 1), error: null }),
+      maybeSingle: () => Promise.resolve({ data: filas[0] ?? null, error: null }),
+      then: (ok: (v: { data: unknown[]; error: null }) => unknown) => Promise.resolve({ data: filas, error: null }).then(ok),
+    };
+    return b;
+  };
+  const rpc = (fn: string, args: Record<string, unknown>) => {
+    llamadas.push(`rpc:${fn}`);
+    rpcs.push({ fn, args });
+    return Promise.resolve({ data: asignadosQueDevuelve, error: null });
+  };
+  return { cliente: { from, rpc } as unknown as SupabaseClient<Database>, llamadas, rpcs };
+}
+
+const VIERNES_6AM = new Date("2026-11-20T12:00:00Z"); // 6:00 CR
+const SABADO_6AM = new Date("2026-11-21T12:00:00Z");
+
+describe("ejecutarReparto", () => {
+  it("sábado → no-habil sin tocar la base", async () => {
+    const { cliente, llamadas } = clienteFalso({});
+    const r = await ejecutarReparto(cliente, SABADO_6AM);
+    expect(r).toEqual({ dia: "2026-11-21", estado: "no-habil", pedidas: 0, asignados: 0 });
+    expect(llamadas).toEqual([]);
+  });
+
+  it("ya hay fila del día → ya-repartido sin llamar a la rpc", async () => {
+    const { cliente, llamadas } = clienteFalso({ repartos_de_edicion: [{ dia: "2026-11-20" }] });
+    const r = await ejecutarReparto(cliente, VIERNES_6AM);
+    expect(r.estado).toBe("ya-repartido");
+    expect(llamadas.some((l) => l.startsWith("rpc:"))).toBe(false);
+  });
+
+  it("día hábil → rpc con lo que decide repartir, solo editores activos y en orden de created_at", async () => {
+    const vid = (id: string, owner: string | null, fecha: string | null) => ({
+      id, owner_id: owner, publish_date: fecha, publish_time: null, created_at: "2026-11-01T00:00:00Z",
+    });
+    const { cliente, rpcs } = clienteFalso(
+      {
+        repartos_de_edicion: [{ dia: "2026-11-19" }], // ayer sí, hoy no
+        staff_members: [
+          { profile_id: "beto", staff_role: "editor", active: true, created_at: "2026-11-18T00:00:00Z" },
+          { profile_id: "ana", staff_role: "editor", active: true, created_at: "2026-07-31T00:00:00Z" },
+          { profile_id: "inactivo", staff_role: "editor", active: false, created_at: "2026-01-01T00:00:00Z" },
+          { profile_id: "dire", staff_role: "director", active: true, created_at: "2026-01-01T00:00:00Z" },
+        ],
+        videos_por_editar: [
+          // ana ya tiene 7, beto 0
+          ...Array.from({ length: 7 }, (_, i) => vid(`a${i}`, "ana", "2026-12-01")),
+          vid("viejo", null, "2026-09-01"),
+          vid("nuevo", null, "2026-11-25"),
+          vid("sin-fecha", null, null),
+        ],
+      },
+      3
+    );
+    const r = await ejecutarReparto(cliente, VIERNES_6AM);
+    expect(rpcs).toHaveLength(1);
+    expect(rpcs[0].fn).toBe("aplicar_reparto_de_edicion");
+    expect(rpcs[0].args.p_dia).toBe("2026-11-20");
+    // beto (0) se lleva todo: ana (7) recibiría solo con empate, y nunca empatan.
+    expect(rpcs[0].args.p_asignaciones).toEqual([
+      { piece_id: "viejo", owner_id: "beto" },
+      { piece_id: "nuevo", owner_id: "beto" },
+      { piece_id: "sin-fecha", owner_id: "beto" },
+    ]);
+    expect(r).toEqual({ dia: "2026-11-20", estado: "repartido", pedidas: 3, asignados: 3 });
+  });
+
+  it("el orden de created_at decide el empate", async () => {
+    const { cliente, rpcs } = clienteFalso({
+      staff_members: [
+        { profile_id: "nuevo", staff_role: "editor", active: true, created_at: "2026-11-18T00:00:00Z" },
+        { profile_id: "viejo", staff_role: "editor", active: true, created_at: "2026-07-31T00:00:00Z" },
+      ],
+      videos_por_editar: [{ id: "x", owner_id: null, publish_date: null, publish_time: null, created_at: "2026-11-01T00:00:00Z" }],
+    });
+    await ejecutarReparto(cliente, VIERNES_6AM);
+    expect(rpcs[0].args.p_asignaciones).toEqual([{ piece_id: "x", owner_id: "viejo" }]);
+  });
+});
