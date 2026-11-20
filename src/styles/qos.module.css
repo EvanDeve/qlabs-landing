@@ -12818,3 +12818,17 @@
   color: var(--risk);
   padding: 4px 4px 2px;
 }
+
+/* ---- Panel de editores (spec 003) ----
+   Las tablas tienen más columnas que el ancho de un teléfono: scrollean por
+   dentro en vez de empujar la página. */
+.panelEditoresTabla {
+  overflow-x: auto;
+}
+.panelEditoresTabla .acctTable tr {
+  cursor: default;
+}
+.panelEditoresTabla .acctTable td,
+.panelEditoresTabla .acctTable th {
+  white-space: nowrap;
+}

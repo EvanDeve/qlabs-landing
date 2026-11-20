@@ -60,7 +60,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `getPanelEditores` en `edicion-datos.ts`: editores activos con nombre, fila de todos, terminados desde el primer día del mes anterior (paginados), disponibles y atrasados disponibles con `count`, `videos_esperando_aprobacion`, `min(dia)` de repartos.
   *Hecho cuando:* desde un script de una vez con sesión de director, los conteos coinciden con GET `count` a la base (disponibles, atrasados, videos sin aprobar de diciembre y enero) y aparecen los dos editores activos.
 
-- [ ] **T15 — Panel de editores: equipo y hoy** (RF-24, RF-25, RF-30, RF-31)
+- [x] **T15 — Panel de editores: equipo y hoy** (RF-24, RF-25, RF-30, RF-31)
   `src/app/admin/(panel)/editores/page.tsx` con `requireDirector()`, bloque del equipo (disponibles, atrasados, sin aprobar por mes) y una fila por editor (hoy contra 8, pendientes, atrasados, adelanto); `loading.tsx`.
   *Hecho cuando:* en el navegador un director ve los números de T14 y a todos los editores activos, también con cero; un editor que pega `/admin/editores` rebota a `/admin`.
 
