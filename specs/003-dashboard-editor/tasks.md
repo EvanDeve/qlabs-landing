@@ -15,7 +15,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Test primero (`tests/unit/edicion.test.ts`), después `src/lib/ugc/edicion.ts`: `vistaDelDashboard`, `armarFila`, `diasDeAdelanto`, `textoAdelanto`, `avanceDelDia`, `textoFilaVacia`. Textos con voseo ("Llevás 3 de 8").
   *Hecho cuando:* hay un caso por cada rol de `vistaDelDashboard` (editor activo, editor inactivo, director, guionista, null); "Llevás 10 de 8" con `cumplida` true; sábado sin meta; atrasados separados con sus días; adelanto positivo, 0, negativo ("N días de atraso") y null sin fechas; fila vacía con 0 y con N disponibles; `npm test` pasa.
 
-- [ ] **T04 — Resumen del panel** (RF-25, RF-26, RF-27, RF-28, RF-29, RF-31, RF-32, CL-05)
+- [x] **T04 — Resumen del panel** (RF-25, RF-26, RF-27, RF-28, RF-29, RF-31, RF-32, CL-05)
   Test primero (`tests/unit/panel-editores.test.ts`), después `src/lib/ugc/panel-editores.ts`: `metaDelPeriodo`, `resumenDelPanel`, `textoInicioMedicion`.
   *Hecho cuando:* un miércoles la meta de la semana es 24 (hoy incluido); un mes en curso cuenta solo los días hábiles hasta hoy; los días antes de `inicioMedicion` no suman ni a meta ni a total; `inicioMedicion` null → meta 0 y porcentaje null; el historial tiene 10 días hábiles sin fines de semana y marca `llego`; un editor sin nada aparece en ceros; cambiar el `ownerId` de un terminado lo mueve de editor; `npm test` pasa.
 
