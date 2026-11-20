@@ -64,7 +64,7 @@ Ya existe una "agenda por persona" (la que arma el recordatorio diario por Whats
 - **Video:** tarjeta del board de video del Pipeline.
 - **Día hábil:** de lunes a viernes, en hora de Costa Rica.
 - **Disponible:** video en Por editar y sin responsable.
-- **Fila del editor:** sus videos en Por editar, en orden de reparto (RF-05).
+- **Fila del editor:** sus videos del board de video que todavía no llegaron a Terminado, en cualquier columna (Por editar, En curso, En revisión…), en orden de reparto (RF-05). *(Corregido por Evan el 2026-11-20: antes era solo Por editar, y el video se le borraba al pasarlo a En curso.)*
 - **Terminado:** el video está en Terminado o en una columna posterior (Publicado).
 - **Momento de terminado:** cuándo el video entró por última vez a Terminado o a una columna posterior, viniendo de una anterior.
 - **Terminados del día (de un editor):** videos que lo tienen como responsable y cuyo momento de terminado cae ese día.
@@ -81,7 +81,7 @@ Ya existe una "agenda por persona" (la que arma el recordatorio diario por Whats
 ### Reparto automático
 - **RF-04** CUANDO empieza un día hábil, a una hora fija antes de la jornada (ver P-02), EL SISTEMA reparte los videos disponibles entre los editores activos.
 - **RF-05** EL SISTEMA reparte en este orden: primero los atrasados, después los que tienen fecha de publicación, de la más cercana a la más lejana, y por último los que no tienen fecha.
-- **RF-06** EL SISTEMA le completa a cada editor hasta 8 videos pendientes en su fila. Si le quedaron 3 sin terminar del día anterior, ese día recibe 5 nuevos. Si ya tiene 8 o más, no recibe ninguno.
+- **RF-06** EL SISTEMA le completa a cada editor hasta 8 videos pendientes en su fila. Si le quedaron 3 sin terminar del día anterior, ese día recibe 5 nuevos. Si ya tiene 8 o más, no recibe ninguno. Lo que está en una columna que espera al cliente (hoy En revisión) no cuenta como pendiente: una demora del cliente no le frena el trabajo (Evan, 2026-11-20).
 - **RF-07** EL SISTEMA reparte parejo: cada video siguiente va al editor que en ese momento tiene menos pendientes en su fila. Si empatan, va a cualquiera de ellos en un orden fijo.
 - **RF-08** CUANDO el sistema le asigna un video a un editor, EL SISTEMA lo deja como responsable de la tarjeta, igual que si se lo hubiera puesto una persona.
 - **RF-09** SI no alcanzan los disponibles para darle 8 a todos, ENTONCES EL SISTEMA reparte los que hay con el mismo criterio, y ese día algún editor queda con menos de 8.
@@ -93,7 +93,7 @@ Ya existe una "agenda por persona" (la que arma el recordatorio diario por Whats
 - **RF-13** CUANDO un editor abre el Dashboard, EL SISTEMA le muestra su vista de editor en vez del Dashboard de la agencia.
 - **RF-14** EL SISTEMA muestra el avance del día con el formato "llevás N de 8": N son sus terminados del día.
 - **RF-15** MIENTRAS el día no es hábil, EL SISTEMA muestra los terminados del día sin la meta de 8 ni el avance contra ella.
-- **RF-16** EL SISTEMA muestra la fila del editor en el orden de RF-05. Cada video muestra cliente, título, fecha de publicación, plataforma, si está grabado, y cuántos días faltan para publicarse. Abrirlo lleva a la ficha.
+- **RF-16** EL SISTEMA muestra la fila del editor en el orden de RF-05. Cada video muestra en qué columna está, cliente, título, fecha de publicación, plataforma, si está grabado, y cuántos días faltan para publicarse. Abrirlo lleva a la ficha.
 - **RF-17** SI el editor tiene atrasados en su fila, ENTONCES EL SISTEMA los muestra destacados arriba de todo, con los días de atraso de cada uno.
 - **RF-18** EL SISTEMA muestra también, como terminados, los videos que el editor terminó hoy, para que vea lo que ya completó.
 - **RF-19** EL SISTEMA muestra los días de adelanto del editor.
@@ -131,7 +131,7 @@ Ya existe una "agenda por persona" (la que arma el recordatorio diario por Whats
 - **CL-09 — Un editor de vacaciones o enfermo:** el sistema le sigue completando hasta 8, que se quedan quietos (ver P-05).
 - **CL-10 — Un video sin grabar en la fila:** entra igual, porque Evan eligió no exigir grabación. La fila muestra si está grabado o no para que el editor lo vea.
 - **CL-11 — Un director con rol de editor:** el rol del equipo es uno solo. Un director ve el Dashboard de la agencia y el panel, no recibe reparto.
-- **CL-12 — Un video que vuelve de Revisión a Por editar:** sigue siendo del mismo editor y vuelve a su fila. Cuenta en sus 8 pendientes (RF-06).
+- **CL-12 — Un video que va y vuelve de En revisión:** nunca sale de la fila del editor. Mientras está en En revisión no cuenta en sus 8 pendientes; al volver a Por editar o En curso, sí (RF-06).
 - **CL-13 — Más de 8 terminados en un día:** el avance puede pasar de 8 ("llevás 10 de 8").
 - **CL-14 — Un editor que se pone como responsable a mano:** el video entra en su fila y cuenta en sus pendientes para el reparto del día siguiente.
 - **CL-15 — Una tarjeta que nace de un cronograma aprobado a mitad del día:** queda disponible y entra en el reparto de la mañana siguiente. Alguien puede tomarla antes desde la ficha.
