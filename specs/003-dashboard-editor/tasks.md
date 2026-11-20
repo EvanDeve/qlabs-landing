@@ -36,7 +36,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   Segundo bloque del mismo archivo, con una tarjeta de prueba sin Hero en Por editar del board `video` real: editor activo sin membresía ve el board video, sus columnas y la tarjeta, y la puede mover; no ve `it`; editor inactivo y guionista sin membresía no ven nada; `videos_por_editar` la trae para el editor y no para anon; `videos_esperando_aprobacion` responde para director y no para anon; editor no lee `repartos_de_edicion` ni ejecuta la rpc, director lee; la rpc (service role, día `2099-01-05`) asigna la disponible, no toca una con dueño, una en Terminado ni una de otro board, no asigna a un editor inactivo ni a un no-editor, y una segunda llamada el mismo día devuelve 0.
   *Hecho cuando:* `npm run test:rls` pasa; no quedan cuentas `rlstest`, ni la tarjeta de prueba, ni la fila `2099-01-05` en `repartos_de_edicion`.
 
-- [ ] **T09 — Paginación y datos de la vista del editor** (RF-14, RF-16, RF-18, RF-20)
+- [x] **T09 — Paginación y datos de la vista del editor** (RF-14, RF-16, RF-18, RF-20)
   `src/lib/supabase/paginar.ts` (`traerTodas`) y `getVistaEditor` en `src/lib/ugc/edicion-datos.ts`.
   *Hecho cuando:* `npm test` pasa con un test de `traerTodas` (cliente falso de 2.300 filas → 3 páginas, sin repetir); llamado desde un script de una vez con la sesión de un editor real devuelve su fila, sus terminados de hoy y los disponibles, y coincide con un GET a la base.
 
