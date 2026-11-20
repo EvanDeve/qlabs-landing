@@ -8,6 +8,9 @@ import { riesgoDeHero, metaDelMes } from "@/lib/ugc/reporte";
 // El selector de mes vive en la barra superior (lo monta el layout), no acá.
 import { mesCR as mesCRDe, parseMes, diasDelMes, nombreDeMes } from "@/lib/ugc/cronograma";
 import styles from "@/styles/qos.module.css";
+import { vistaDelDashboard } from "@/lib/ugc/edicion";
+import { getVistaEditor } from "@/lib/ugc/edicion-datos";
+import { VistaEditor } from "@/components/ugc/admin/VistaEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +20,13 @@ export default async function AdminDashboardPage({
 }: {
   searchParams: Promise<{ mes?: string }>;
 }) {
-  const { supabase } = await requireArea("agencia");
+  const { supabase, user, staff } = await requireArea("agencia");
+
+  // El editor tiene su propia vista (spec 003). El return va ANTES de las
+  // consultas de la agencia: no es que no las vea, es que no se piden (RF-22).
+  if (vistaDelDashboard(staff) === "editor") {
+    return <VistaEditor datos={await getVistaEditor(supabase, user.id)} />;
+  }
 
   const now = new Date();
   const in7Days = sumarDias(now, 7);

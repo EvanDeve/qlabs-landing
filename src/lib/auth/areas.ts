@@ -51,7 +51,9 @@ export async function requireArea(area: Area) {
   const areas = areasDelRol(staff);
   if (!areas[area]) redirect(inicioDe(areas));
 
-  return { user, supabase, areas };
+  // `staff` va también: el Dashboard decide con él si muestra la vista del
+  // editor (spec 003), sin volver a pedirlo.
+  return { user, supabase, areas, staff };
 }
 
 /**

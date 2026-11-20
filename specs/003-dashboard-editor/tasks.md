@@ -40,7 +40,7 @@ Una a la vez; al terminar cada una: `npm test` y `npm run lint` en verde, commit
   `src/lib/supabase/paginar.ts` (`traerTodas`) y `getVistaEditor` en `src/lib/ugc/edicion-datos.ts`.
   *Hecho cuando:* `npm test` pasa con un test de `traerTodas` (cliente falso de 2.300 filas → 3 páginas, sin repetir); llamado desde un script de una vez con la sesión de un editor real devuelve su fila, sus terminados de hoy y los disponibles, y coincide con un GET a la base.
 
-- [ ] **T10 — Dashboard bifurcado: avance y adelanto** (RF-13, RF-14, RF-15, RF-19, RF-21, RF-22, CL-11)
+- [x] **T10 — Dashboard bifurcado: avance y adelanto** (RF-13, RF-14, RF-15, RF-19, RF-21, RF-22, CL-11)
   `requireArea` devuelve `staff`; en `(inicio)/page.tsx` el `return <VistaEditor/>` va antes de las consultas de la agencia; `VistaEditor.tsx` con el bloque "Llevás N de 8" y los días de adelanto.
   *Hecho cuando:* en el navegador un editor ve su vista y NO el Pase de servicio ni la meta por cliente; un director y un guionista siguen viendo el Dashboard de la agencia igual que antes; con la hora del server forzada a un sábado (parámetro en `getVistaEditor`, no en la UI) no aparece "de 8".
 
