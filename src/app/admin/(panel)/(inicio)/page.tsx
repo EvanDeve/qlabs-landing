@@ -157,7 +157,10 @@ export default async function AdminDashboardPage({
     // La meta sale del cronograma, no de un número suelto en el expediente.
     // La fórmula vive en reporte.ts por lo mismo que riesgoDeHero: McLovin
     // responde el mismo número por WhatsApp.
-    const target = metaDelMes(calendar, plannedByHeroId.get(hero.id) ?? 0, extrasDelMes.get(hero.id) ?? 0);
+    const extras = extrasDelMes.get(hero.id) ?? 0;
+    const target = metaDelMes(calendar, plannedByHeroId.get(hero.id) ?? 0, extras);
+    // La parte del cronograma sola, para mostrar las dos: con y sin extras.
+    const metaCronograma = target == null ? 0 : target - extras;
 
     // "No hay cronograma" y "hay cronograma sin aprobar" dejaron de ser lo
     // mismo. Antes daba igual —la meta salía del expediente— pero ahora el
@@ -165,7 +168,7 @@ export default async function AdminDashboardPage({
     const sinCronograma = !calendar;
 
     if (target == null) {
-      return { hero, target: null, published, remaining: null, deficit: 0, calendarApproved, sinCronograma, risk: null };
+      return { hero, target: null, metaCronograma, extras, published, remaining: null, deficit: 0, calendarApproved, sinCronograma, risk: null };
     }
 
     // Ritmo esperado proporcional al día del mes (meta × día/días del mes).
@@ -180,6 +183,8 @@ export default async function AdminDashboardPage({
     return {
       hero,
       target,
+      metaCronograma,
+      extras,
       published,
       remaining: Math.max(target - published, 0),
       deficit,
@@ -197,7 +202,8 @@ export default async function AdminDashboardPage({
 
   const withTarget = heroStats.filter((s) => s.target != null);
   const metaTotal = withTarget.reduce((sum, s) => sum + (s.target ?? 0), 0);
-  const totalExtras = heroesManaged.reduce((sum, h) => sum + (extrasDelMes.get(h.id) ?? 0), 0);
+  const totalExtras = heroStats.reduce((sum, s) => sum + s.extras, 0);
+  const metaCronogramaTotal = heroStats.reduce((sum, s) => sum + s.metaCronograma, 0);
   const publishedTotal = heroStats.reduce((sum, s) => sum + s.published, 0);
   const remainingTotal = withTarget.reduce((sum, s) => sum + (s.remaining ?? 0), 0);
   const expectedTotal = Math.round(metaTotal * monthFraction);
@@ -281,9 +287,11 @@ export default async function AdminDashboardPage({
       // la meta ahora sale del cronograma.
       // Cronogramas aprobados + videos extra; un cronograma pendiente no es meta
       // (ver metaDelMes y extrasPorHero).
-      sub: `${heroStats.filter((s) => s.calendarApproved).length} de ${heroesManaged.length} heroes con cronograma aprobado${
-        totalExtras > 0 ? ` + ${totalExtras} extra${totalExtras === 1 ? "" : "s"}` : ""
-      }`,
+      // Las dos metas: la del cronograma sola y, sumando los extras, el total
+      // (el número grande). Evan pidió ver las dos.
+      sub: `${metaCronogramaTotal} del cronograma + ${totalExtras} extra${totalExtras === 1 ? "" : "s"} · ${
+        heroStats.filter((s) => s.calendarApproved).length
+      } de ${heroesManaged.length} heroes con cronograma aprobado`,
       tone: heroesManaged.length > 0 && withTarget.length < heroesManaged.length ? "warn" : undefined,
     },
 
@@ -419,7 +427,7 @@ export default async function AdminDashboardPage({
                 </tr>
               </thead>
               <tbody>
-                {sortedHeroStats.map(({ hero, target, published, deficit, calendarApproved, sinCronograma, risk }) => (
+                {sortedHeroStats.map(({ hero, target, metaCronograma, extras, published, deficit, calendarApproved, sinCronograma, risk }) => (
                   <tr key={hero.id}>
                     <td>
                       <Link href={`/admin/heroes/${hero.id}`} className={styles.acctHero}>
@@ -465,8 +473,16 @@ export default async function AdminDashboardPage({
                         </form>
                       )}
                     </td>
-                    <td className={styles.paceCell}>
+                    <td
+                      className={styles.paceCell}
+                      title={target != null ? `Meta ${target}: ${metaCronograma} del cronograma + ${extras} extra${extras === 1 ? "" : "s"}` : undefined}
+                    >
                       {published}/{target ?? "—"}
+                      {target != null && extras > 0 && (
+                        <small style={{ display: "block", color: "var(--ink-3)", fontWeight: 500, fontSize: "11px" }}>
+                          {metaCronograma} + {extras} extra{extras === 1 ? "" : "s"}
+                        </small>
+                      )}
                     </td>
                     <td>
                       {risk ? (
